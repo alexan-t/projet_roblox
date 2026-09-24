@@ -1,0 +1,4 @@
+# Fichiers Roblox binaires : jamais de diff texte ni de merge automatique.
+# En cas de conflit, on remplace le fichier complet (voir règles du snapshot sandbox).
+*.rbxl binary merge=binary
+*.rbxm binary merge=binary
