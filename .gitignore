@@ -1,0 +1,21 @@
+# Places générées par `rojo build` (le snapshot studio/sandbox/*.rbxl reste versionné)
+/build/
+/*.rbxl
+/*.rbxlx
+
+# Fichiers de verrou créés par Studio à l'ouverture d'un place
+*.rbxl.lock
+*.rbxlx.lock
+
+# Généré par `rojo sourcemap` pour luau-lsp
+sourcemap.json
+
+# Dépendances Wally (si utilisé plus tard)
+/Packages/
+/ServerPackages/
+
+# Systèmes / éditeurs
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
