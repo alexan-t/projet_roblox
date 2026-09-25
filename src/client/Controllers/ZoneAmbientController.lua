@@ -6,7 +6,8 @@
 --       Attributs : Amplitude (studs), Periode (s), Rotation (degrés/s).
 --   • Tag "FlammeVacille" (BasePart) : la flamme change de taille par à-coups, sa PointLight suit.
 --       Attributs : Intensite (0-1).
---   • Tag "DrapeauFlotte" (BasePart) : oscille autour d'un point d'attache.
+--   • Tag "DrapeauFlotte" (BasePart ou Model, ex. tissu + emblème qui bougent ensemble) :
+--       oscille autour d'un point d'attache (repère du pivot du modèle).
 --       Attributs : AncrageLocal (Vector3, point d'attache dans le repère de la pièce),
 --       AxeLocal (Vector3, axe de rotation), Amplitude (degrés), Periode (s).
 -- Tous les attributs sont optionnels (valeurs par défaut ci-dessous). Aucune logique gameplay ici.
@@ -66,7 +67,7 @@ local function register(instance: Instance, kind: Kind)
 	if kind == "slime" and not instance:IsA("Model") then
 		return
 	end
-	if (kind == "flamme" or kind == "drapeau") and not instance:IsA("BasePart") then
+	if kind == "flamme" and not instance:IsA("BasePart") then
 		return
 	end
 	local pv = instance :: PVInstance
