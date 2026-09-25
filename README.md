@@ -75,6 +75,16 @@ return MonService
 
 Le bootstrap le charge automatiquement. Tous les fichiers commencent par `--!strict`.
 
+## Données joueur (DataService)
+
+Basé sur [ProfileStore](https://github.com/MadStudioRoblox/ProfileStore) (verrou de session, sauvegarde auto). Copie figée dans `src/server/Vendor/ProfileStore.luau` (commit `45c9847`, licence dans `licenses/`) : ne pas la modifier.
+
+- Structure : `src/shared/Types/PlayerDataTypes.lua`. Valeurs de départ : `src/server/Data/DefaultPlayerData.lua`.
+- Ajouter un champ : l'ajouter aux deux fichiers, il apparaît tout seul dans les profils existants.
+- Renommer, déplacer ou convertir un champ : ajouter une migration dans `src/server/Data/Migrations.lua`.
+- Les autres services attendent le profil avec `DataService:WaitForData(player)` ou `DataService:OnPlayerReady(fn)`.
+- En Studio, les données vont dans un store séparé (`PlayerData_Studio`). Pour qu'elles persistent entre deux Play, activer *Game Settings → Security → Enable Studio Access to API Services* ; sinon ProfileStore travaille en mémoire.
+
 ## Workflow Git
 
 - On part toujours de `develop` à jour, sur une branche `feature/<sujet>`.
