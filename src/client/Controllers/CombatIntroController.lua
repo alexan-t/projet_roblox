@@ -1,6 +1,7 @@
 --!strict
 -- Mise en scène de l'entrée en combat (purement visuelle, côté client, sans toucher à la caméra).
---   1. L'étendard du royaume tombe du ciel et se plante sur Emplacements.PointEtendard (onde de choc).
+--   1. L'étendard du royaume tombe du ciel et se plante sur Emplacements.PointEtendard (onde de choc),
+--      au milieu du champ de bataille ; il s'enfonce dans le sol une fois tous les ennemis en place.
 --   2. Les héros se matérialisent en silhouettes dorées sur les cases taguées "CaseHeros".
 --   3. Les ennemis sortent du décor de la zone, depuis les repères de Zones.<Zone>.SourcesEnnemis :
 --        attribut Mode = SautMare | SautPlateau | DescenteRampe | SortieTente | SortieBuisson | SautTour
@@ -301,12 +302,12 @@ local function setApercuHidden(hidden: boolean)
 	end
 end
 
-local function spawnBanner(arena: Instance, stage: Folder, speed: number)
+local function spawnBanner(arena: Instance, stage: Folder, speed: number): Model?
 	local emplacements = arena:FindFirstChild("Emplacements")
 	local point = emplacements and emplacements:FindFirstChild("PointEtendard")
 	local template = templates and templates:FindFirstChild("Etendard_Niveau1")
 	if not point or not point:IsA("BasePart") or not template or not template:IsA("Model") then
-		return
+		return nil
 	end
 	local banner = template:Clone()
 	local flutter = {}
@@ -337,6 +338,7 @@ local function spawnBanner(arena: Instance, stage: Folder, speed: number)
 	for _, d in flutter do
 		CollectionService:AddTag(d, "DrapeauFlotte")
 	end
+	return banner
 end
 
 local function spawnHeroes(arena: Instance, stage: Folder, speed: number, facing: Vector3)
@@ -466,6 +468,7 @@ local function spawnEnemies(arena: Instance, stage: Folder, speed: number, facin
 	end
 	local used: { [string]: number } = {}
 	local slot = 0
+	local pending = 0
 	local frontY = groundY(front)
 	for _, entry in DEMO_WAVE do
 		local list = byMode[entry.mode]
@@ -481,10 +484,37 @@ local function spawnEnemies(arena: Instance, stage: Folder, speed: number, facin
 			end
 			local p = (front.CFrame * CFrame.new(offset)).Position
 			local dest = Vector3.new(p.X, frontY, p.Z)
-			task.spawn(enemyEntrance, stage, source, entry.type, dest, facing, speed)
+			pending += 1
+			task.spawn(function()
+				enemyEntrance(stage, source, entry.type, dest, facing, speed)
+				pending -= 1
+			end)
 			task.wait((if entry.type == "Boss" then 0.6 else 0.3) / speed)
 		end
 	end
+	-- attend que tous les ennemis soient en place
+	while pending > 0 and stage.Parent do
+		RunService.Heartbeat:Wait()
+	end
+end
+
+-- l'étendard s'enfonce dans le sol et s'efface quand le combat commence
+local function removeBanner(banner: Model?, stage: Folder, speed: number)
+	if not banner or not banner.Parent then
+		return
+	end
+	for _, d in banner:GetDescendants() do
+		CollectionService:RemoveTag(d, "DrapeauFlotte") -- sinon le tissu resterait accroché à sa position d'ondulation
+	end
+	local base = banner:GetPivot()
+	burst(stage, base.Position, Color3.fromRGB(210, 190, 150), 8, 3, 0.5 / speed)
+	run(0.6 / speed, function(a)
+		banner:PivotTo(base - Vector3.new(0, 4 * a * a, 0))
+		for _, p in parts(banner) do
+			p.LocalTransparencyModifier = a
+		end
+	end)
+	banner:Destroy()
 end
 
 function CombatIntroController:Play(arena: Instance)
@@ -505,13 +535,24 @@ function CombatIntroController:Play(arena: Instance)
 	local sources = zone and zone:FindFirstChild("SourcesEnnemis")
 	local front = sources and sources:FindFirstChild("FrontEnnemi")
 	local heroesFace = if front and front:IsA("BasePart") then front.Position else Vector3.zero
-	local enemiesFace = if bannerPoint and bannerPoint:IsA("BasePart") then bannerPoint.Position else Vector3.zero
+	-- les ennemis regardent le centre de la formation des héros
+	local sum, n = Vector3.zero, 0
+	for _, c in CollectionService:GetTagged(TAG_CASE) do
+		local pose = c:IsDescendantOf(arena) and c:FindFirstChild("PointDePose")
+		if pose and pose:IsA("BasePart") then
+			sum += pose.Position
+			n += 1
+		end
+	end
+	local enemiesFace = if n > 0 then sum / n elseif bannerPoint and bannerPoint:IsA("BasePart") then bannerPoint.Position else Vector3.zero
 
-	spawnBanner(arena, stage, speed)
+	local banner = spawnBanner(arena, stage, speed)
 	task.wait(0.15 / speed)
 	spawnHeroes(arena, stage, speed, heroesFace)
 	task.wait(0.5 / speed)
 	spawnEnemies(arena, stage, speed, enemiesFace)
+	task.wait(0.5 / speed)
+	removeBanner(banner, stage, speed)
 end
 
 function CombatIntroController:Init()
