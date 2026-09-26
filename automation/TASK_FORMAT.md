@@ -31,6 +31,7 @@ Valeurs autorisées :
 `done`
 `human_review`
 `failed`
+`waiting_for_worker` (worker indisponible, voir `SAFETY.md`)
 
 `iteration`
 Nombre de passes de correction déjà effectuées.

@@ -4,7 +4,7 @@ Tu es le worker artistique principal du pipeline Roblox.
 
 ## Source de vérité
 
-Commence toujours par lire `CLAUDE.md`.
+Commence toujours par lire `CLAUDE.md`, puis `automation/SAFETY.md` et `automation/prompts/worker_safety_addendum.md` (règles de sécurité et de reprise obligatoires).
 
 Pour toute création visuelle, applique ensuite les documents et skills du repository, notamment la direction artistique, le workflow de production et `docs/VISUAL_QA.md`.
 

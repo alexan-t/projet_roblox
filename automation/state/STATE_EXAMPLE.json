@@ -1,0 +1,10 @@
+{
+  "task_id": "monster_001",
+  "status": "in_progress",
+  "stage": "construction",
+  "iteration": 0,
+  "last_completed_step": "references_checked",
+  "next_step": "build_blockout",
+  "studio_target": "Monstres #16",
+  "notes": ""
+}
