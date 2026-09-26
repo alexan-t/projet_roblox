@@ -29,7 +29,8 @@ Chaque ligne est notée **OK** ou **KO**. Un seul KO bloquant suffit à donner F
 | Proportions | Haut du corps lourd, jambes courtes, mains fortes (ART_DIRECTION § 3 / CHARACTER § 2) ? Hauteur dans la bonne tranche ? | oui |
 | Volumes | Formes gonflées et arrondies, couches superposées ? Aucune boîte ni facette low-poly visible ? | oui |
 | Lisibilité | Un point focal (yeux, cœur, gemme) visible de loin ? Aucun détail essentiel sous 0,5 stud ? | oui |
-| Cohérence DA | À côté des références principales, paraît-elle du **même niveau** (volumes, stylisation, finition, présence) sans en être une copie ? Au moins 5 des 8 points de ART_DIRECTION § 14 ? Rien de la liste § 15 (hors DA) ? Si elle ressemble davantage aux gobelins qu'aux quatre principales par sa finition ou sa présence, c'est KO. | oui |
+| Cohérence DA | Au moins 5 des 8 points de ART_DIRECTION § 14 ? Rien de la liste § 15 (hors DA) ? | oui |
+| Niveau de qualité | À côté des références principales, le niveau de volumes, de présence visuelle, de finition, de richesse des formes et de sophistication générale est-il **sensiblement inférieur** à celui de King Tréant, Tréant, Slime King et King Orc ? Si oui, KO. Ces quatre modèles fixent le plafond actuel de qualité et le langage artistique, **pas une complexité ni une silhouette imposées** : une créature plus simple ou plus petite peut être OK si son niveau de réalisation tient la comparaison. Ressembler aux gobelins n'est pas un défaut en soi, car ce sont des créations valides du jeu. | oui |
 | Originalité | L'idée visuelle principale tient-elle en une phrase ? La créature est-elle différente de toutes les validées, et pas seulement un « gobelin, slime ou golem de fantasy » ? | oui |
 | Géométrie | Pas de trous, pas de pièces retournées, pas de membre tordu, orientation face à l'avant ? | oui |
 | Détails | Groupes impairs concentrés en haut, zones de repos, détails accrochés (rien ne flotte sans raison magique) ? | oui |
