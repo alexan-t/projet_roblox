@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Roblox Visual QA Review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "task_id",
+    "iteration",
+    "verdict",
+    "summary",
+    "visible_issues",
+    "required_changes",
+    "references_checked",
+    "confidence"
+  ],
+  "properties": {
+    "task_id": {
+      "type": "string"
+    },
+    "iteration": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "verdict": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "FIX"
+      ]
+    },
+    "summary": {
+      "type": "string"
+    },
+    "visible_issues": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "required_changes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "references_checked": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "confidence": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "human_attention": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

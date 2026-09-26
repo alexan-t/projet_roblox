@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "queue": [
+    {
+      "id": "monster_001",
+      "name": "Le Pilleur de la rivière",
+      "type": "monster",
+      "brief_source": "docs/HANDOFF_TEST.md",
+      "target_studio_slot": "Monstres #16",
+      "worker": "windows",
+      "status": "awaiting_review",
+      "iteration": 0,
+      "max_iterations": 3,
+      "priority": 100,
+      "reference_priority": [
+        "KingTreant",
+        "Treant_Masque",
+        "KingSlime",
+        "RoiOrc"
+      ],
+      "screenshots": [
+        "automation/screenshots/monster_001/iteration_00_main.png",
+        "automation/screenshots/monster_001/iteration_00_compare.png",
+        "automation/screenshots/monster_001/iteration_00_front.png",
+        "automation/screenshots/monster_001/iteration_00_profile.png",
+        "automation/screenshots/monster_001/iteration_00_back.png",
+        "automation/screenshots/monster_001/iteration_00_face.png",
+        "automation/screenshots/monster_001/iteration_00_far.png"
+      ],
+      "latest_review": null,
+      "notes": "Worker windows, passe 00. Studio place 'test' : Workspace.HandoffTest_Pilleur, socle Monstres #16, attribut MonstreId=pilleur_riviere, taille 5.2 x 6.8 (gaffe incluse 7.5 de profondeur). Idée visuelle : pillard de vase voûté qui porte une nasse de pêche en osier en guise de tête (deux yeux ambrés Neon derrière l'osier), carapace de galets polis, pèlerine en filet de pêche, touffes de roseaux, brassards de tissu rouge, gaffe de batelier (crochet devant, 6 studs) tenue horizontalement dans le poing. Références inspectées : Treant_Masque, RoiOrc, KingTreant. Compare = copies temporaires de Treant_Masque (#17) et RoiOrc (#18), supprimées après capture. Mesures : aucun point de la gaffe à l'intérieur du corps ou du bras (test 6 rayons). Variante B et pièces d'origine dans ServerStorage.Archive_HandoffTest. Captures : fenêtre Studio recadrée sur la vue 3D (le coin bas-droit est coupé pour exclure une notification Rojo). Aucune auto-validation : en attente du Manager QA."
+    }
+  ]
+}
