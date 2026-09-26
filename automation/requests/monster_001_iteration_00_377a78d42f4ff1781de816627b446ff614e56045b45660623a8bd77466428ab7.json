@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "task_id": "monster_001",
+  "iteration": 0,
+  "task": {
+    "id": "monster_001",
+    "name": "Le Pilleur de la rivière",
+    "type": "monster",
+    "brief_source": "docs/HANDOFF_TEST.md",
+    "target_studio_slot": "Monstres #16",
+    "worker": "windows",
+    "iteration": 0,
+    "max_iterations": 3,
+    "priority": 100,
+    "reference_priority": [
+      "KingTreant",
+      "Treant_Masque",
+      "KingSlime",
+      "RoiOrc"
+    ]
+  },
+  "screenshots": [
+    "automation/screenshots/monster_001/iteration_00_back.png",
+    "automation/screenshots/monster_001/iteration_00_compare.png",
+    "automation/screenshots/monster_001/iteration_00_face.png",
+    "automation/screenshots/monster_001/iteration_00_far.png",
+    "automation/screenshots/monster_001/iteration_00_front.png",
+    "automation/screenshots/monster_001/iteration_00_main.png",
+    "automation/screenshots/monster_001/iteration_00_profile.png"
+  ],
+  "sha256": {
+    "CLAUDE.md": "d9893ecefde232b6e6962b38f9625e308e03cb11a99d06946d91d97e9c67cd44",
+    "automation/review.schema.json": "d10381ffec677554149717c043845f0cb3e6853b121225635e85c528b772c61d",
+    "automation/screenshots/monster_001/iteration_00_back.png": "f47840efad47bb2b94ed8c0f8fbdba784be57f5c358a1021da2fc18f6d18ffd3",
+    "automation/screenshots/monster_001/iteration_00_compare.png": "f6e5d29e26195238680b7f3d78b62d0e246fb3a773c05d970a4c3edbcb48bccb",
+    "automation/screenshots/monster_001/iteration_00_face.png": "4b9ceaf89938d7b6121c41ec0ce6e5cfc30a3c88167689519b740cd7728e1587",
+    "automation/screenshots/monster_001/iteration_00_far.png": "dde3e478ced23f914c7989052f42e0bfe48275ef3d3823343ee94160844d9059",
+    "automation/screenshots/monster_001/iteration_00_front.png": "56e85d1f4acca2541a6ecb655bcfd93cbc0f2f2e71534c0e01986b0152e3e65a",
+    "automation/screenshots/monster_001/iteration_00_main.png": "a8753bc00cabf55283556d4962959198b12b3c09c6bbed664d835df707d58c3d",
+    "automation/screenshots/monster_001/iteration_00_profile.png": "68e885579111bc60aedc24cdff12cfb71687c8734b3e0e13cfd3b84dd2da2fd7",
+    "docs/ART_DIRECTION.md": "6cf65e8c8ab12462553dd41d6dcd855256f19ad148bdddb54169f03dcd2577ba",
+    "docs/HANDOFF_TEST.md": "1cebf7faf3ec5c2dd6e714ef413f31f1e3181e0703a58d95c24f68d1dd61e0b8",
+    "docs/MONSTER_PRODUCTION.md": "8349c1834cbd7b003be870ddcf007e5fa6f9ce79e8e41ab2bbdb85bf2034f455",
+    "docs/VISUAL_QA.md": "25ef277cbacd12e7810077c74073eac80fca18845b0a73f53acb9aa488f4dc22",
+    "docs/references/moodboards/boss_king_slime.webp": "e3500d723afafea211c5372f60ead582cecc0a208cdeff73c69c642559eb3db6",
+    "docs/references/moodboards/boss_king_treant.webp": "4fdc2a521f56387c19a402f70f49ce16ee7cc5c577c4b56abb5e5bdc1d48a411",
+    "docs/references/moodboards/boss_roi_orc.webp": "dc9f96f1b22fc2c469bad4c3f990e4ca1a6c172fdd0adb398e16c8372087a872",
+    "docs/references/moodboards/gobelin.webp": "8909c08628286d5575cdf11ed27ca5559ecb555b2d3c75ae41e0e812d15cda7e",
+    "docs/references/moodboards/slime_source.webp": "24aae60ba28033a6e50305d4072b0df14d1532018b77db2660ebe810d8328b96",
+    "docs/references/moodboards/treant.webp": "3e360cb3f98b45946d77a19ad36f0485055514b8482aedec5b5eb544e0be8651"
+  },
+  "request_id": "377a78d42f4ff1781de816627b446ff614e56045b45660623a8bd77466428ab7"
+}
