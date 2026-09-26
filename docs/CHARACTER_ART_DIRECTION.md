@@ -2,7 +2,7 @@
 
 Ce document explique comment appliquer aux **futurs héros** la direction artistique extraite de nos monstres et boss validés (`ART_DIRECTION.md`). **Il ne s'appuie sur aucun personnage existant du jeu**, qui ne sont pas des références. Il ne s'appuie pas non plus sur les avatars Roblox standards.
 
-**Objectif :** placer un héros sur un socle à côté de `KingTreant`, `RoiOrc` ou `GobLanceT_A` doit donner l'impression d'une seule et même planche de concept art.
+**Objectif :** placer un héros sur un socle à côté de l'une des références principales (`KingTreant`, `Treant_Masque`, `KingSlime`, `RoiOrc`) doit donner l'impression d'une seule et même planche de concept art.
 
 ## 1. Principe
 
@@ -92,7 +92,7 @@ On augmente la présence **avec les mêmes outils que les boss**, pas en changea
 
 ## 14. Test de cohérence rapide
 
-Placer le héros à côté de `KingTreant` et de `GobLanceT_A`, puis faire une capture de face et une de loin. Ils doivent partager :
+Placer le héros à côté de `KingTreant` et de `RoiOrc` (références principales), puis faire une capture de face et une de loin. Ils doivent partager :
 1. le même type de texture peinte (pas de pièces unies ni lisses) ;
 2. le même poids visuel en haut du corps ;
 3. des matériaux de la même famille (bois, cuir, fer, tissu, os ou cristal) ;

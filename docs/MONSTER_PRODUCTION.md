@@ -1,6 +1,14 @@
 # Production d'un monstre ou d'un boss
 
-Workflow utilisé pour produire les créatures validées : slimes, tréants, gobelins de style tréant, Roi Orc, King Slime, King Tréant. À lire après `ART_DIRECTION.md`. Il n'y a **aucune rareté** pour les monstres : ne pas en inventer, ni dans les noms, ni dans les couleurs, ni dans les attributs.
+Workflow utilisé pour produire les créatures validées : slimes, tréants, gobelins de style tréant, Roi Orc, King Slime, King Tréant. À lire après `ART_DIRECTION.md`.
+
+**Hiérarchie des références** (ART_DIRECTION § 1) :
+- **Principales**, qui définissent la DA : `KingTreant` (King Tréant), `Treant_Masque` (Tréant), `KingSlime` (Slime King), `RoiOrc` (King Orc).
+- **Secondaires**, utiles pour un point précis : gobelins `GobLanceT_A` et `GobDagueT_B`, slimes, `Treant_Arbre`.
+
+À chaque étape où un choix visuel hésite, trancher en faveur de la logique des références principales. **Ne pas les copier** : la nouvelle créature doit avoir sa propre idée, avec leur niveau de volumes, de finition et de présence.
+
+Il n'y a **aucune rareté** pour les monstres : ne pas en inventer, ni dans les noms, ni dans les couleurs, ni dans les attributs.
 
 ## Étape 1 — Analyse du brief
 
@@ -21,11 +29,12 @@ Inspecter la zone dans Studio. Exemple pour la zone 1 : `Workspace.PlotTravail.A
 
 ## Étape 3 — Idée visuelle principale
 
-Écrire **une phrase** qui décrit l'idée, lisible sur une vignette de 64 px. Exemples validés :
+Écrire **une phrase** qui décrit l'idée, lisible sur une vignette de 64 px. Exemples validés (les trois premiers sont des références principales) :
 - King Tréant : « un colosse d'écorce avec un masque d'os à spirale et des bois de cerf géants ».
 - King Slime : « une gelée royale couronnée de cristaux, avec une cour de cristaux flottants ».
 - Roi Orc : « une brute couverte de trophées, avec une lance-hache et un bouclier-blason ».
-- Gobelin à dague : « un assassin trapu encapuchonné de rouge, armuré de bois et de cuir ».
+- Tréant : « un gardien d'écorce voûté, avec un masque d'os en losange et un cœur de cristal ».
+- Gobelin à dague (secondaire) : « un assassin trapu encapuchonné de rouge, armuré de bois et de cuir ».
 
 **Comment éviter le générique :**
 - **Gobelin générique** : petit bonhomme vert en pagne avec une massue. **Notre version** : trapu et musclé, capuche rouge, armure tribale en bois, os et cuir, mousse, yeux jaunes lumineux.
@@ -37,6 +46,7 @@ Inspecter la zone dans Studio. Exemple pour la zone 1 : `Workspace.PlotTravail.A
 
 - Définir les **3 masses principales et 1 à 2 éléments qui dépassent** (ART_DIRECTION § 5).
 - Le **contour supérieur** doit être unique et différent de toutes les créatures validées.
+- **Étalonner la présence** sur les références principales. La silhouette doit être aussi affirmée et aussi lisible que celle de King Tréant ou du Tréant, pas seulement « correcte » comme un gobelin.
 - Prévoir l'**asymétrie** par l'équipement (arme d'un côté, bouclier ou main libre de l'autre).
 
 ## Étape 5 — Proportions
@@ -126,16 +136,18 @@ Par mesure, pas seulement à l'œil :
 
 ## Annexe — prompts qui ont produit des validés
 
-Corps de boss (King Tréant, validé) :
+Les prompts de King Tréant et de King Orc produisent des **références principales** : partir d'eux en priorité. Ceux des gobelins produisent des références secondaires, utiles pour un petit humanoïde équipé.
+
+Corps de boss (King Tréant, référence principale n°1) :
 > Stylized hand-painted KING TREANT boss, massive hulking tree golem, facing front, hunched powerful stance, very broad shoulders. Body of twisted brown bark and roots densely covered with green ivy leaves and small white flowers. Head is a cream bone-colored carved wooden mask shaped like a pointed diamond with a brown spiral rune and two glowing cyan eyes. Huge branching antler-like branches growing from the head and shoulders with leaves. Glowing cyan diamond crystal core in the chest held by twisted roots. Grey carved stone shoulder pads with diamond runes. Long heavy arms ending in huge curved pale wooden claws, stone plate with diamond rune on the forearms. Thick root legs. Red spotted mushrooms growing on shoulders. Rope belt.
 
-Gobelin (`GobLanceT_A`, validé) :
+Gobelin (`GobLanceT_A`, référence secondaire) :
 > Stylized hand-painted goblin warrior in the same art style as a chunky forest treant boss: rich painterly textures, earthy palette, adult and fierce, not cute. Wiry but muscular body, hunched aggressive stance, facing forward. Dark olive green skin with scars, long pointed ears with bone rings, fierce face with heavy brow, glowing yellow eyes, snarl with sharp fangs. Layered tribal gear: dark red tattered hood, carved bone and wooden shoulder plate with diamond rune, leather straps, rope belt with small skulls and wooden charms, moss and leaves tucked in, cloth-wrapped forearms, clawed bare feet. Right hand holds a long wooden spear with a jagged stone-and-iron head and red rag; left arm holds a round wooden shield with bone rim and a carved diamond rune.
 
-Gobelin (`GobDagueT_B`, validé, formulation « Warcraft-like ») :
+Gobelin (`GobDagueT_B`, référence secondaire, formulation « Warcraft-like ») :
 > Warcraft-like stylized goblin rogue with a dagger, chunky readable silhouette, painterly hand-painted texture, earthy browns and dark greens with red cloth accents, crouched ready to strike, glowing yellow eyes, fanged snarl, pointed ears, hood, tribal gear of carved wood, bone and leather with diamond rune carvings, moss and leaves, charms on a rope belt, holding a jagged curved dagger. Adult, menacing, detailed.
 
-Corps de boss mains vides (`RoiOrc`, validé après assemblage) :
+Corps de boss mains vides (`RoiOrc` / King Orc, référence principale, validé après assemblage) :
 > Massive orc warlord king, stylized fantasy game character, hand-painted texture, extremely detailed armor. Giant muscular green body, hunched, fists clenched, front view. Angry face with yellow eyes, giant tusks jutting up from lower jaw, pierced ears with gold hoops. Spiked crown of iron and wooden stakes crowned with many bone spikes and two large ivory horns. Enormous shoulder armor: stacked wooden planks bound by riveted iron plates with big bone spikes. Red ragged scarf, crossed leather straps with dangling skulls, fangs and bone totems, heavy belt with skull trophies and gold rings, long ragged red banner loincloth with cream diamond emblem, iron knee guards, bulky plated boots. Earthy palette olive green, red, brown, iron grey, bone white.
 
 Accessoire (modèle de formulation) :

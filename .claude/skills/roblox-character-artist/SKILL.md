@@ -17,7 +17,7 @@ description: Première version du workflow de création d'un personnage jouable 
 ## 2. Inspecter
 
 1. Studio en mode Edit sur la place `test`.
-2. Relever la taille et le découpage de `KingTreant`, `RoiOrc` et `GobLanceT_A` : ce sont les points de comparaison de style et d'échelle. On compare le **style** à ces références, pas leur anatomie.
+2. Relever la taille et le découpage des références **principales** `KingTreant`, `Treant_Masque`, `KingSlime` et `RoiOrc`. `RoiOrc` est la plus proche d'une anatomie humanoïde. On compare le **style** à ces références, pas leur anatomie. `GobLanceT_A` (secondaire) peut servir pour l'échelle d'un petit humanoïde équipé.
 3. Une capture de ces références si besoin, puis réinitialiser la caméra.
 
 ## 3. Concevoir
@@ -37,7 +37,7 @@ description: Première version du workflow de création d'un personnage jouable 
 
 ## 5. Capturer et contrôler
 
-1. Captures de `VISUAL_QA.md` § 1, **plus une capture côte à côte avec `KingTreant` et `GobLanceT_A`** (test de `CHARACTER_ART_DIRECTION.md` § 14).
+1. Captures de `VISUAL_QA.md` § 1, **plus une capture côte à côte avec `KingTreant` et `RoiOrc`** (test de `CHARACTER_ART_DIRECTION.md` § 14).
 2. Grille `VISUAL_QA.md` : PASS ou FIX. En cas de FIX, corriger, recapturer, puis repasser la grille.
 3. Réinitialiser la caméra après les captures.
 

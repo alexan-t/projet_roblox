@@ -13,7 +13,7 @@ Protocole commun aux monstres, aux boss et aux futurs personnages. Il se fait **
 | 5 | Loin, légèrement en plongée | 30–60 studs | lisibilité en jeu |
 | 6 | Gros plan du visage (si visage) | 3–5 studs | expression, défauts de texture |
 
-Ajouter une capture **à côté d'une référence validée** (`GobLanceT_A`, `KingTreant`, etc. ; voir `ART_DIRECTION.md` § 1) pour comparer l'échelle et le style.
+Ajouter une capture **à côté d'au moins une référence PRINCIPALE** (`KingTreant`, `Treant_Masque`, `KingSlime` ou `RoiOrc` ; voir `ART_DIRECTION.md` § 1.1) pour comparer le style, la finition et la présence. Une référence secondaire (gobelins `GobLanceT_A` / `GobDagueT_B`, slimes) peut s'ajouter pour l'échelle d'un petit monstre, mais **ne remplace jamais** la comparaison avec une principale.
 
 Avant de juger : si une pièce est grise ou noire, attendre et recapturer, car c'est souvent un chargement. Si elle le reste, c'est un défaut (FIX, `MONSTER_PRODUCTION.md` Outils § E).
 
@@ -29,7 +29,7 @@ Chaque ligne est notée **OK** ou **KO**. Un seul KO bloquant suffit à donner F
 | Proportions | Haut du corps lourd, jambes courtes, mains fortes (ART_DIRECTION § 3 / CHARACTER § 2) ? Hauteur dans la bonne tranche ? | oui |
 | Volumes | Formes gonflées et arrondies, couches superposées ? Aucune boîte ni facette low-poly visible ? | oui |
 | Lisibilité | Un point focal (yeux, cœur, gemme) visible de loin ? Aucun détail essentiel sous 0,5 stud ? | oui |
-| Cohérence DA | Au moins 5 des 8 points de ART_DIRECTION § 14 ? Rien de la liste § 15 (hors DA) ? | oui |
+| Cohérence DA | À côté des références principales, paraît-elle du **même niveau** (volumes, stylisation, finition, présence) sans en être une copie ? Au moins 5 des 8 points de ART_DIRECTION § 14 ? Rien de la liste § 15 (hors DA) ? Si elle ressemble davantage aux gobelins qu'aux quatre principales par sa finition ou sa présence, c'est KO. | oui |
 | Originalité | L'idée visuelle principale tient-elle en une phrase ? La créature est-elle différente de toutes les validées, et pas seulement un « gobelin, slime ou golem de fantasy » ? | oui |
 | Géométrie | Pas de trous, pas de pièces retournées, pas de membre tordu, orientation face à l'avant ? | oui |
 | Détails | Groupes impairs concentrés en haut, zones de repos, détails accrochés (rien ne flotte sans raison magique) ? | oui |
@@ -43,6 +43,8 @@ Chaque ligne est notée **OK** ou **KO**. Un seul KO bloquant suffit à donner F
 | Zone | Matières et ambiance de la zone présentes, sans association trop évidente ? | non |
 | Présence | La créature a-t-elle l'air dangereuse ou importante ? Un boss domine-t-il clairement son socle de 18 studs ? | oui pour un boss |
 | Finition | Coutures, taches ou artefacts de texture visibles ? Pièces ancrées, noms propres, variantes archivées ? | non |
+
+**Arbitrage :** si deux critères ou deux références se contredisent, on tranche selon la logique visuelle de King Tréant, Tréant, Slime King et King Orc.
 
 ## 3. Verdict
 

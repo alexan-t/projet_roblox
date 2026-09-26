@@ -17,11 +17,13 @@ Workflow obligatoire. On ne saute aucune étape, et on ne déclare rien terminé
 ## 2. Inspecter (MCP Roblox Studio)
 
 1. `list_roblox_studios`, puis viser la place `test`. `get_studio_state` doit être en **Edit** ; si Studio est en Play, demander d'arrêter le Play.
-2. Pour les 2 ou 3 créatures validées les plus proches du brief (liste dans `ART_DIRECTION.md` § 1) : relever dans `execute_luau` leur taille (`GetBoundingBox`), leur découpage (enfants et `MeshPart`), leurs lumières et leur palette si c'est utile. **Ne pas utiliser** les modèles marqués comme non-références (gobelin chibi, `Heros_Base`, mannequins).
+2. **Toujours** inspecter au moins deux des **références principales** (`KingTreant`, `Treant_Masque`, `KingSlime`, `RoiOrc` ; `ART_DIRECTION.md` § 1.1), qui fixent le niveau attendu. Y ajouter, seulement si le brief s'y rapporte, une référence **secondaire** (gobelins #12 / #15, slimes, `Treant_Arbre`) pour un point précis. Pour chacune, relever dans `execute_luau` leur taille (`GetBoundingBox`), leur découpage (enfants et `MeshPart`), leurs lumières et leur palette si c'est utile. **Ne pas utiliser** les modèles marqués comme non-références (gobelin chibi, `Heros_Base`, mannequins).
 3. Inspecter la zone du brief (ex. `Workspace.PlotTravail.Arene.Zones.<Zone>`) : matières, sources d'ennemis.
 4. Une capture de comparaison des références proches si leur aspect n'est pas clair, puis réinitialiser la caméra.
 
 ## 3. Concevoir (court, écrit dans la réponse)
+
+En cas d'hésitation entre plusieurs directions visuelles, choisir celle qui suit la logique de King Tréant, Tréant, Slime King et King Orc. On suit leur **langage** (volumes, stylisation, lisibilité, finition, traitement des détails, présence), pas leur apparence : la créature ne doit ressembler à aucune d'elles. Les gobelins ne servent jamais d'arbitre de la DA générale.
 
 - **Idée visuelle principale** en une phrase, et ce qui la rend unique par rapport aux validés.
 - **Silhouette :** 3 masses, 1 à 2 éléments qui dépassent, contour supérieur identitaire.
@@ -39,7 +41,7 @@ Workflow obligatoire. On ne saute aucune étape, et on ne déclare rien terminé
 
 ## 5. Capturer, puis contrôler
 
-1. Faire les captures du tableau 1 de `VISUAL_QA.md` (au minimum face, profil, loin et visage), plus une capture à côté d'une référence validée.
+1. Faire les captures du tableau 1 de `VISUAL_QA.md` (au minimum face, profil, loin et visage), plus une capture à côté d'au moins une **référence principale**.
 2. Remplir la grille de `VISUAL_QA.md` en ne jugeant **que ce qui est visible**.
 3. **FIX** : lister les défauts visibles avec leur correction concrète, corriger, **recapturer**, puis repasser la grille entière.
 4. **PASS** : réinitialiser la caméra (Outils § A), archiver les variantes non retenues dans `ServerStorage.Archive_<Famille>`, puis nommer le modèle (`PascalCase`) et poser l'attribut `MonstreId` (`snake_case`).

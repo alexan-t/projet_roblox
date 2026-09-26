@@ -30,11 +30,11 @@
 
 ## Évaluation (par l'équipe)
 
-Placer `HandoffTest_<Nom>` à côté de `GobLanceT_A`, `Treant_Masque` et `Slime_Eau`, puis noter chaque critère de 0 à 2 :
+Placer `HandoffTest_<Nom>` à côté des références principales `Treant_Masque` (même catégorie de taille), `KingTreant`, `KingSlime` et `RoiOrc`. Ajouter `GobLanceT_A` seulement pour situer l'échelle. Puis noter chaque critère de 0 à 2 :
 
 | Critère | 0 | 1 | 2 |
 |---|---|---|---|
-| Appartient visiblement au même jeu | non | partiellement | évident |
+| Appartient visiblement au même jeu, au niveau des 4 références principales | non | partiellement, ou au niveau des gobelins seulement | évident, au niveau de King Tréant, Tréant, Slime King et King Orc |
 | Idée visuelle principale | générique | présente mais faible | forte, mémorable |
 | Silhouette et proportions (ART_DIRECTION § 3, § 5) | hors DA | approchant | conforme |
 | Matériaux, couleurs, point lumineux | hors DA | approchant | conforme |

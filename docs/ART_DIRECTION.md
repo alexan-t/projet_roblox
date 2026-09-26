@@ -1,24 +1,39 @@
 # Direction artistique — créatures (monstres et boss)
 
-Ce document décrit ce que **nos monstres et boss validés** ont réellement en commun. Il est tiré de l'inspection des modèles dans Studio (tailles mesurées, découpage, matériaux, palettes de texture échantillonnées) et des retours de validation et de refus de l'équipe. Ce n'est pas un guide générique de modélisation.
+Ce document décrit ce que **nos monstres et boss validés** ont réellement en commun, en donnant le plus de poids aux **quatre références principales : King Tréant, Tréant, Slime King et King Orc** (§ 1.1). Il est tiré de l'inspection des modèles dans Studio (tailles mesurées, découpage, matériaux, palettes de texture échantillonnées) et des retours de validation et de refus de l'équipe. Ce n'est pas un guide générique de modélisation.
 
-## 1. Références validées
+## 1. Références validées et hiérarchie
 
 Place Studio « test » (Sandbox), `Workspace`. Les modèles sont posés sur les socles du `Workspace.Bestiaire`.
 
-| Modèle (Workspace) | Rôle | Socle | Taille mesurée (L × H × P, studs) | Moodboard |
-|---|---|---|---|---|
-| `Slime_Eau` | monstre, base des slimes | Monstres #03 | 4,8 × 4,7 × 3,4 (corps seul 3,8 × 2,9) | `slime_source.webp` |
-| `Slime_Lave`, `Slime_Plante`, `Slime_Champignon` | variantes élémentaires | Monstres #04 à #06 | idem (champignon 4,4 × 3,3 avec chapeau 5,6 de large) | `slime_source.webp` (bas de planche) |
-| `Treant_Masque` | monstre | Monstres #07 | 6,1 × 8,0 × 2,8 | `treant.webp` |
-| `Treant_Arbre` | monstre | Monstres #08 | 9,8 × 9,8 × 6,9 | `treant.webp` (variante) |
-| `GobLanceT_A` | monstre, gobelin à lance | Monstres #12 | 4,2 × 4,1 × 3,0 | `gobelin.webp` (équipement seulement, voir § 9) |
-| `GobDagueT_B` | monstre, gobelin à dague | Monstres #15 | 4,0 × 4,2 × 2,7 | — |
-| `RoiOrc` | boss | Boss #01 | 12,4 × 13,0 (lance-hache 13) | `boss_roi_orc.webp` |
-| `KingSlime` | boss | Boss #02 | 14 × 12 corps, 19,9 de haut avec couronne | `boss_king_slime.webp` |
-| `KingTreant` | boss | Boss #03 | 16,2 × 16 corps, 21,3 avec bois | `boss_king_treant.webp` |
+### 1.1 Références PRINCIPALES (elles définissent la DA)
 
-**Les gobelins de référence sont `GobLanceT_A` et `GobDagueT_B`** (style « tréant »). Ne sont **pas** des références, parce qu'ils ont été refusés comme hors DA : `Gobelin` (#02, chibi), `GobelinDague_A/B` (#01, #09), `GobelinLance_A/B` (#10, #11), et le premier tréant `Treant_Arbre` avant son feuillage refait. `GobLanceT_B` et `GobDagueT_A` (#13, #14) sont dans le bon style, mais n'ont pas été retenus.
+Par ordre d'importance, désignées par l'équipe comme les plus réussies et les plus représentatives du jeu :
+
+| Rang | Modèle (Workspace) | Nom d'équipe | Rôle | Socle | Taille mesurée (L × H × P, studs) | Moodboard |
+|---|---|---|---|---|---|---|
+| 1 | `KingTreant` | King Tréant | boss | Boss #03 | 16,2 × 16 corps, 21,3 avec bois | `boss_king_treant.webp` |
+| 2 | `Treant_Masque` | Tréant | monstre | Monstres #07 | 6,1 × 8,0 × 2,8 | `treant.webp` |
+| 3 | `KingSlime` | Slime King | boss | Boss #02 | 14 × 12 corps, 19,9 de haut avec couronne | `boss_king_slime.webp` |
+| 4 | `RoiOrc` | King Orc (Roi Orc) | boss | Boss #01 | 12,4 × 13,0 (lance-hache 13) | `boss_roi_orc.webp` |
+
+**Ces quatre modèles définissent le langage artistique général** : qualité des volumes, stylisation, lisibilité, niveau de finition, traitement des détails, présence visuelle et cohérence d'ensemble. **Quand un agent hésite entre plusieurs directions visuelles, il privilégie la logique visuelle observée sur eux.**
+
+Ce ne sont **pas des gabarits à copier**. Une nouvelle créature ne doit pas ressembler à un tréant, à un slime ou à un orc. Elle doit atteindre leur **niveau** et parler leur **langage**.
+
+### 1.2 Références SECONDAIRES (utiles, mais ne définissent pas la DA)
+
+| Modèle (Workspace) | Rôle | Socle | Taille mesurée | Utile pour |
+|---|---|---|---|---|
+| `GobLanceT_A` | gobelin à lance | Monstres #12 | 4,2 × 4,1 × 3,0 | proportions d'un petit humanoïde, équipement tribal, tenue d'arme d'hast et de bouclier |
+| `GobDagueT_B` | gobelin à dague | Monstres #15 | 4,0 × 4,2 × 2,7 | posture accroupie, armure bois et cuir, arme courte |
+| `Slime_Eau` | monstre, base des slimes | Monstres #03 | 4,8 × 4,7 × 3,4 (corps seul 3,8 × 2,9) | traitement de la gelée, déclinaison élémentaire par teinte |
+| `Slime_Lave`, `Slime_Plante`, `Slime_Champignon` | variantes élémentaires | Monstres #04 à #06 | idem | méthode de variante (même design, autre teinte et autre coiffe) |
+| `Treant_Arbre` | monstre | Monstres #08 | 9,8 × 9,8 × 6,9 | feuillage en dôme de feuilles peintes |
+
+Les références secondaires servent pour un **point précis** (une proportion, un équipement, un traitement). En cas de conflit avec une référence principale, **la référence principale l'emporte**. Les gobelins restent valides, mais ne doivent pas devenir la référence dominante : leur tête plus grande et leur échelle réduite sont propres à leur famille, pas des règles générales.
+
+**Les gobelins de référence secondaire sont `GobLanceT_A` et `GobDagueT_B`** (style « tréant »). Ne sont **pas** des références, parce qu'ils ont été refusés comme hors DA : `Gobelin` (#02, chibi), `GobelinDague_A/B` (#01, #09), `GobelinLance_A/B` (#10, #11), et le premier tréant `Treant_Arbre` avant son feuillage refait. `GobLanceT_B` et `GobDagueT_A` (#13, #14) sont dans le bon style, mais n'ont pas été retenus.
 
 Les versions refusées et les pièces d'origine sont rangées dans `ServerStorage.Archive_*` (`Archive_Gobelin`, `Archive_Slime`, `Archive_RoiOrc`, `Archive_KingSlime`, `Archive_KingTreant`). Elles montrent ce qu'il **ne faut pas** faire.
 
@@ -33,7 +48,7 @@ Des créatures de **fantasy stylisée peinte à la main**, aux **silhouettes mas
 Mesures réelles, en proportion de la hauteur du corps (sans arme ni couronne) :
 
 - **Haut du corps lourd, jambes courtes.** Sur `RoiOrc` : torse de 8,9 et bras de 7,6 pour des jambes de 4,5. Sur `KingTreant` : bras de 11,3 et jambes de 7,3. Les jambes font environ **un tiers** de la hauteur, jamais la moitié.
-- **Bras longs et épais.** Chez le tréant et les boss humanoïdes, les mains descendent presque aux genoux. Les bras sont aussi larges, voire plus larges, que les jambes (`GobLanceT_A` : bras droit 1,9 × 2,1 contre jambes 0,9 × 1,5).
+- **Bras longs et épais.** Chez le tréant et les boss humanoïdes, les mains descendent presque aux genoux. Les bras sont aussi larges, voire plus larges, que les jambes (`Treant_Masque` : bras de 2,4 × 5,0 contre jambes de 2,2 × 3,7 ; `KingTreant` : bras de 6,8 de large).
 - **Épaules très larges.** Largeur totale entre 1,0 et 1,3 fois la hauteur du corps pour les humanoïdes massifs (`RoiOrc` 12,4 × 13 ; `KingTreant` 16,2 × 16).
 - **Tête relativement petite pour les créatures fortes** (tréants, orc), environ 1/5 à 1/6 de la hauteur, souvent **enfoncée dans les épaules** (dos voûté, tête projetée vers l'avant). **Plus grande chez les gobelins** (≈ 1/3 : tête de 1,4 à 2,3 pour 4,1 de haut). C'est leur marque, mais sans aller jusqu'au chibi.
 - **Posture voûtée, genoux fléchis, centre de gravité bas.** Les créatures sont prêtes à bondir, jamais droites comme un piquet.
@@ -63,7 +78,7 @@ Chaque créature validée se lit par **3 masses principales et 1 à 2 éléments
 - `RoiOrc` : masse du torse et des épaules, bouclier, lance-hache verticale. Ce qui dépasse : cornes et pics d'os de la couronne.
 - `KingTreant` : torse et épaules de pierre, deux bras-griffes, jambes-racines. Ce qui dépasse : **deux grands bois ramifiés** qui augmentent la hauteur d'un tiers.
 - `KingSlime` : dôme de gelée, couronne de lianes, couronne dorée. Ce qui dépasse : grands cristaux de la couronne et **6 cristaux flottants** qui élargissent la silhouette (19,8 de large pour un corps de 14).
-- Gobelins : grosse tête à capuche et longues oreilles, torse voûté, arme.
+- Gobelins (référence secondaire) : grosse tête à capuche et longues oreilles, torse voûté, arme.
 
 Règles observées :
 
@@ -164,6 +179,8 @@ Les combats se jouent **en arrière-plan, sans zoom caméra**, pendant que le jo
 
 ## 14. Ce qui rend une créature « de notre jeu »
 
+**Test décisif :** posée à côté de King Tréant, Tréant, Slime King et King Orc, la créature doit paraître **du même niveau** (volumes, finition, présence) et **du même langage**, sans en être une copie. En cas de doute entre deux directions, choisir celle qui se rapproche le plus de la logique de ces quatre-là, pas de celle des gobelins.
+
 Une créature appartient à notre jeu si elle coche au moins 5 de ces points :
 
 1. Silhouette massive, haut du corps lourd, posture voûtée.
@@ -185,7 +202,7 @@ Une créature appartient à notre jeu si elle coche au moins 5 de ces points :
 
 ## 16. Application de cette DA aux personnages jouables
 
-Les héros doivent sembler **sortir du même atelier** que les monstres. Ils ne doivent pas copier l'anatomie des monstres. Ils doivent partager leur **langage** :
+Les héros doivent sembler **sortir du même atelier** que les monstres. Comme pour les créatures, la référence de langage est donnée par les quatre références principales (§ 1.1). Pour un humanoïde, King Orc est la plus proche en anatomie, King Tréant et Tréant pour les matériaux et la finition. Ils ne doivent pas copier l'anatomie des monstres. Ils doivent partager leur **langage** :
 
 - **Mêmes proportions de principe :** haut du corps renforcé, mains et avant-bras forts, jambes plus courtes que la normale, tête légèrement grande. Moins voûtés que les monstres, mais **jamais des proportions humaines réalistes**.
 - **Même traitement des volumes :** formes gonflées et arrondies, épaulières et gants surdimensionnés, couches superposées (tissu, cuir, métal, trophée).
