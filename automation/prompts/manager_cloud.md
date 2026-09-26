@@ -79,3 +79,10 @@ Exemple :
 }
 
 N'ajoute aucun texte avant ou après le JSON dans une review automatisée.
+
+## Extension V1.2
+
+Appliquer aussi `manager_cloud_bootstrap.md`. L'exemple V1 ci-dessus est illustratif :
+chaque review automatisée doit désormais inclure la `request_id` exacte du manifeste.
+Un PASS exige des listes `visible_issues` et `required_changes` vides. Si une décision
+humaine est nécessaire, utiliser `human_attention` et indiquer la confiance réelle.

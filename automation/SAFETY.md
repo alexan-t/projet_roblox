@@ -76,6 +76,17 @@ Mettre à jour ce fichier après chaque étape importante :
 - nouvelle capture ;
 - PASS.
 
+## Conservation des variantes
+
+Quand un monstre ou un personnage est généré en plusieurs variantes (par défaut deux) et qu'une seule est choisie :
+
+- la variante non retenue est **toujours conservée**, jamais supprimée ;
+- la déplacer entière (modèle complet, avec ses pièces sources) dans `ServerStorage.Archive_<Famille>`, sans la modifier ;
+- la renommer de façon explicite, par exemple `<Nom>_VarianteB_nonRetenue`, et lui laisser son attribut `MonstreId` s'il existe ;
+- noter son chemin d'archive dans `automation/state/<task_id>.json` (champ `notes` ou `completed_steps`).
+
+Aucun `Destroy()` sur une variante, même si elle paraît ratée : seul un humain peut décider de supprimer une variante archivée.
+
 ## Reprise
 
 Lorsqu'un worker redémarre :
@@ -86,3 +97,12 @@ Lorsqu'un worker redémarre :
 4. lire son fichier d'état ;
 5. reprendre `next_step` ;
 6. ne prendre une nouvelle tâche `todo` que s'il n'y a aucune tâche interrompue.
+
+## Précisions V1.2
+
+Le STOP doit être créé dans le worktree actif du pipeline, pas dans une autre copie.
+Le bridge respecte ces contrôles avant chaque commande et chaque seconde d'attente.
+Une commande déjà lancée peut se terminer avant l'arrêt (délai maximal 60 secondes).
+Un STOP local n'annule pas une demande Cloud déjà transmise. Pour l'interrompre,
+arrêter aussi la session Cloud. Le réveil du worker après quota nécessite encore
+une reprise de sa session Windows ; voir `CLOUD_REVIEW_README.md`.

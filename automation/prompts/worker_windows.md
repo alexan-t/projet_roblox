@@ -82,3 +82,11 @@ Ne baisse pas le niveau de qualité demandé pour terminer plus vite.
 Ne crée pas de rareté pour les monstres.
 
 Ne boucle jamais au-delà de `max_iterations`.
+
+Ne supprime jamais une variante non retenue d'un monstre ou d'un personnage : archive-la dans `ServerStorage.Archive_<Famille>` (voir `automation/SAFETY.md`, « Conservation des variantes »).
+
+## Extension V1.2
+
+Lire aussi `worker_cloud_review_addendum.md` dans ce dossier. Il précise le transport
+Cloud, la reprise d'une review et le moment d'incrémenter l'itération. En cas de
+contradiction sur ces mécanismes, appliquer cet addendum ; la DA reste inchangée.

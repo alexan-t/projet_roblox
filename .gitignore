@@ -19,3 +19,10 @@ sourcemap.json
 Thumbs.db
 desktop.ini
 .idea/
+
+# Pipeline : contrôles locaux, identifiants et reçus d'envoi
+/automation/STOP
+/automation/.local/
+/automation/cloud_manager_config.local.json
+__pycache__/
+*.pyc

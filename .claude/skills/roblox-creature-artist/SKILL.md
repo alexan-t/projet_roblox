@@ -44,7 +44,7 @@ En cas d'hésitation entre plusieurs directions visuelles, choisir celle qui sui
 1. Faire les captures du tableau 1 de `VISUAL_QA.md` (au minimum face, profil, loin et visage), plus une capture à côté d'au moins une **référence principale**.
 2. Remplir la grille de `VISUAL_QA.md` en ne jugeant **que ce qui est visible**.
 3. **FIX** : lister les défauts visibles avec leur correction concrète, corriger, **recapturer**, puis repasser la grille entière.
-4. **PASS** : réinitialiser la caméra (Outils § A), archiver les variantes non retenues dans `ServerStorage.Archive_<Famille>`, puis nommer le modèle (`PascalCase`) et poser l'attribut `MonstreId` (`snake_case`).
+4. **PASS** : réinitialiser la caméra (Outils § A), archiver les variantes non retenues dans `ServerStorage.Archive_<Famille>` (jamais les supprimer), puis nommer le modèle (`PascalCase`) et poser l'attribut `MonstreId` (`snake_case`).
 
 ## 6. Rendre compte
 

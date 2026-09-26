@@ -43,7 +43,7 @@ description: Première version du workflow de création d'un personnage jouable 
 
 ## 6. Rendre compte
 
-Verdict, emplacement, taille, idée visuelle, comparaison avec les références, limites restantes. Présenter les deux variantes si elles sont toutes deux valables.
+Verdict, emplacement, taille, idée visuelle, comparaison avec les références, limites restantes. Présenter les deux variantes si elles sont toutes deux valables. Une fois l'une choisie, archiver l'autre dans `ServerStorage.Archive_<Famille>` : ne jamais la supprimer.
 
 ## Interdits
 

@@ -59,3 +59,13 @@ Informations spécifiques ne relevant pas du brief artistique.
 Une tâche ne peut passer à `done` que si la dernière review contient `PASS`.
 
 Si `max_iterations` est atteint sans PASS, utiliser `human_review`. Ne jamais boucler indéfiniment.
+
+## Contrat de review V1.2
+
+Chaque demande a une `request_id` SHA256 calculée sur la tâche et les entrées visuelles.
+Le manager doit la recopier dans son JSON. `latest_review` désigne le chemin exact,
+avec le hash dans le nom ; une ancienne review V1 ne valide pas automatiquement une
+nouvelle demande. Voir `CLOUD_REVIEW_README.md`.
+L'itération 0 est la création initiale, les passes 1 à `max_iterations` sont des
+corrections. Le worker incrémente au début d'une nouvelle passe, une seule fois.
+Une confiance faible ou une alerte humaine mène à `human_review`, même avec PASS.

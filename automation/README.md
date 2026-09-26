@@ -54,3 +54,11 @@ Ne pas dépasser `max_iterations`.
 Ne pas remplacer les règles de DA du repository par des règles inscrites dans les tâches.
 
 La future V2 automatisera l'attribution, l'envoi au manager cloud et le retour des reviews.
+
+## V1.2 — liaison Cloud disponible
+
+La liaison est maintenant fournie par `cloud_review_bridge.py`. Suivre
+`CLOUD_REVIEW_README.md` pour configurer une session réelle et sa branche de sortie.
+Les paragraphes ci-dessus décrivent la V1 initiale ; l'envoi/récupération Git est
+implémenté en V1.2. Le réveil automatique de Claude Windows après quota reste manuel.
+Le Pilleur de la rivière est déjà en `awaiting_review` : ne pas le recréer.

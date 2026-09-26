@@ -11,7 +11,8 @@
     "visible_issues",
     "required_changes",
     "references_checked",
-    "confidence"
+    "confidence",
+    "request_id"
   ],
   "properties": {
     "task_id": {
@@ -62,6 +63,10 @@
       "items": {
         "type": "string"
       }
+    },
+    "request_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
     }
   }
 }

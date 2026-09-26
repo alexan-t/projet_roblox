@@ -98,7 +98,7 @@ Petits groupes impairs, concentrés en haut du corps : 3 pics d'épaule, 5 à 7 
 - Retirer les artefacts de texture : couture sombre (bord de texture qui déborde), taches de couleur parasites.
 - Ancrer toutes les pièces (`Anchored = true`, `CanCollide = false` sur les accessoires).
 - Nommer : `Model` racine en PascalCase (`KingTreant`), attribut `MonstreId` en snake_case (`boss_king_treant`). Pièces : `<membre>/<membre>_geom`, ajouts dans `equipement` ou `accessoires`.
-- Déplacer les variantes non retenues et les pièces sources dans `ServerStorage.Archive_<Famille>`.
+- Déplacer les variantes non retenues et les pièces sources dans `ServerStorage.Archive_<Famille>`. **Ne jamais supprimer une variante non retenue** : elle est toujours conservée en archive (monstres comme personnages).
 
 ## Étape 13 — Contrôle du clipping
 
