@@ -1,0 +1,6 @@
+{
+  "paused": false,
+  "emergency_stop": false,
+  "resume_mode": "same_task",
+  "max_retries_after_worker_unavailable": 999
+}
