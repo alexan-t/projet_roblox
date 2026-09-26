@@ -5,11 +5,18 @@
 -- Ce service expose une BindableFunction ServerStorage.DebugData qu'on appelle depuis la ligne de commande (côté Serveur) :
 --   game.ServerStorage.DebugData:Invoke(player, "Get")                     -> copie des données
 --   game.ServerStorage.DebugData:Invoke(player, "AddCurrency", "Gold", 100) -> nouveau montant
+--   game.ServerStorage.DebugData:Invoke(player, "SetKingdomState", 2)       -> résultat de KingdomService:Refresh
+--   game.ServerStorage.DebugData:Invoke(player, "AddHero", "Chevalier")     -> identifiant de l'exemplaire ajouté
+--   game.ServerStorage.DebugData:Invoke(player, "RemoveHero", id)           -> résultat de KingdomService:Refresh
+--   game.ServerStorage.DebugData:Invoke(player, "RefreshKingdom")           -> résultat de KingdomService:Refresh
 
 local RunService = game:GetService("RunService")
 local ServerStorage = game:GetService("ServerStorage")
 
 local DataService = require(script.Parent.DataService)
+local KingdomService = require(script.Parent.KingdomService)
+
+local debugHeroCount = 0
 
 local DebugService = {}
 
@@ -28,6 +35,26 @@ local function handle(player: Player, command: string, ...: any): any
 		end
 		currencies[currency] += amount
 		return currencies[currency]
+	elseif command == "SetKingdomState" then
+		local state = ...
+		data.Kingdom.VisualState = state
+		return KingdomService:Refresh(player)
+	elseif command == "AddHero" then
+		local heroId = ...
+		if typeof(heroId) ~= "string" then
+			return "HeroId invalide"
+		end
+		debugHeroCount += 1
+		local id = `Debug_{os.time()}_{debugHeroCount}`
+		data.Heroes[id] = { HeroId = heroId, Level = 1 }
+		KingdomService:Refresh(player)
+		return id
+	elseif command == "RemoveHero" then
+		local id = ...
+		data.Heroes[id] = nil
+		return KingdomService:Refresh(player)
+	elseif command == "RefreshKingdom" then
+		return KingdomService:Refresh(player)
 	end
 	return `Commande inconnue : {command}`
 end
