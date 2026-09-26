@@ -107,6 +107,19 @@ class BridgeTests(unittest.TestCase):
         with self.assertRaises(b.BridgeError):
             b.make_request(self.root, self.task)
 
+    def test_brief_paths_for_queued_monsters(self):
+        brief = self.root / "automation/briefs/monster_001.md"
+        brief.parent.mkdir(parents=True, exist_ok=True)
+        brief.write_text("Brief de test\n", encoding="utf-8")
+        self.task["brief_source"] = "automation/briefs/monster_001.md"
+        self.assertIn("automation/briefs/monster_001.md", b.make_request(self.root, self.task)["sha256"])
+        self.task["brief_source"] = "automation/control.json"
+        with self.assertRaises(b.BridgeError):
+            b.make_request(self.root, self.task)
+        self.task["brief_source"] = "automation/briefs/missing.md"
+        with self.assertRaises(b.BridgeError):
+            b.make_request(self.root, self.task)
+
     def test_crlf_does_not_change_request_id(self):
         (self.root / "docs/brief.md").write_bytes(b"Document de test\r\n")
         self.assertEqual(b.make_request(self.root, self.task), self.request)
