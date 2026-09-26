@@ -92,6 +92,12 @@ joueur au respawn, puis libère l'emplacement et ses objets temporaires au dépa
 Les 8 à 12 emplacements restent créés dans Studio : voir le
 [contrat de map, l'API serveur et les tests](docs/PLOTS.md).
 
+## Royaume (KingdomService)
+
+Le serveur clone sur le plot du joueur le modèle de royaume qui correspond à
+`Kingdom.VisualState`, puis un modèle par héros possédé. Les modèles et les
+repères restent dans Studio : voir le [contrat d'assets, l'API et les tests](docs/KINGDOM.md).
+
 ## Workflow Git
 
 - On part toujours de `develop` à jour, sur une branche `feature/<sujet>`.
