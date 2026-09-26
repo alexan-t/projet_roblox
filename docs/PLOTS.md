@@ -34,6 +34,12 @@ Workspace
   l'Alpha). Un nombre inférieur reste utilisable pour les tests avec un avertissement.
 - Redémarrer le test après une modification des emplacements. L'ajout, le retrait
   ou le remplacement de plots pendant une partie n'est pas pris en charge.
+  Par sécurité, avant chaque attribution ou utilisation, le service revérifie
+  le parentage du plot, son ID enregistré et le repère Spawn (nom, parent, ancrage).
+  Un plot devenu invalide n'est plus exposé par l'API et ne reçoit plus de
+  téléportation ni de notification. Une attribution existante reste réservée
+  jusqu'au leave ou à la perte de DataLoaded ; aucune réattribution automatique
+  ni réparation de la map n'est tentée.
 
 ## Attribution et nettoyage
 
@@ -43,8 +49,15 @@ reçoit `OwnerUserId`. Ces attributs répliqués servent à la présentation ; l
 tables privées du service restent la source de vérité côté serveur.
 
 Le personnage existant, puis chaque nouveau personnage après un respawn, est
-positionné sur le repère. Une attente du personnage expirée, un leave ou une
+positionné sur le repère. Le service attend le HumanoidRootPart et l'arrivée du
+personnage dans Workspace avec un budget total de 10 secondes, puis laisse passer
+une reprise du scheduler pour que le moteur termine son spawn initial. Une
+attente du personnage expirée, un leave ou une
 perte de session empêchent une téléportation tardive sur un plot réattribué.
+Les téléportations, lectures d'attribution et notifications revérifient aussi
+DataLoaded, la présence du profil et le dossier Runtime, sans attendre la
+livraison des signaux différés de nettoyage. Les notifications identifient
+l'attribution elle-même : un ancien replay ne peut pas annoncer sa remplaçante.
 Sans emplacement libre, le joueur est déconnecté avec un message explicite lui
 proposant une autre partie. Un dossier absent ou des plots invalides sont aussi
 signalés dans les logs, sans bloquer les autres services.
@@ -63,10 +76,10 @@ Appeler depuis `Start()` ou après celui-ci :
 
 | Méthode | Résultat / usage |
 | --- | --- |
-| `GetPlot(player)` | Modèle attribué, ou `nil` |
-| `GetOwner(plot)` | Joueur propriétaire, ou `nil` |
-| `GetRuntime(player)` | Dossier destiné aux clones de royaume/héros, ou `nil` |
-| `TeleportToPlot(player)` | Retour d'expédition ; `true` si déplacé, sinon `false`. Peut attendre le `HumanoidRootPart` jusqu'à 10 secondes. |
+| `GetPlot(player)` | Modèle attribué encore utilisable, ou `nil` |
+| `GetOwner(plot)` | Joueur propriétaire d'une attribution encore utilisable, ou `nil` |
+| `GetRuntime(player)` | Dossier destiné aux clones de royaume/héros de l'attribution encore utilisable, ou `nil` |
+| `TeleportToPlot(player)` | Retour d'expédition ; `true` si déplacé, sinon `false`. Peut attendre le root et le parentage du personnage jusqu'à 10 secondes. |
 | `OnPlotAssigned(callback)` | `callback(player, plot)` pour chaque attribution, y compris celles déjà faites ; retourne une connexion déconnectable |
 
 `KingdomService` pourra écouter `OnPlotAssigned` puis lire `DataService:GetData`
@@ -83,7 +96,12 @@ Tests locaux du vrai module, avec doubles des API Roblox (Luau CLI officiel) :
 rojo build -o build/test.rbxl
 ```
 
-Ces tests couvrent les règles d'attribution et les courses du cycle de vie.
+Ces tests couvrent les règles d'attribution et les courses du cycle de vie,
+y compris les joins groupés, les notifications avant livraison du nettoyage,
+les changements de validité du plot et CharacterAdded avant le parentage.
+Le scheduler simulé contrôle les attentes ; les vrais timings moteur et la
+physique ne sont pas reproduits. La suite rapporte tous les échecs et retourne
+un code non nul si au moins un test échoue.
 Ils ne remplacent pas les tests moteur suivants dans Studio :
 
 1. Préparer au moins deux plots conformes, connecter Rojo, lancer un test serveur
@@ -99,5 +117,8 @@ Ils ne remplacent pas les tests moteur suivants dans Studio :
    un dossier Plots absent : logs explicites, assets inchangés, autres services actifs.
 7. Quitter/rejoindre avec une progression existante : données inchangées, plot
    attribué à nouveau. Vérifier aussi le placement avec les avatars autorisés et StreamingEnabled.
+8. Vérifier le spawn et les départs avec SignalBehavior Immediate et Deferred ;
+   aucun callback exploitable ne doit annoncer un joueur déjà parti ou sans données.
 
-Référence moteur : [Player.CharacterAdded et spawn manuel avec PivotTo](https://create.roblox.com/docs/reference/engine/classes/Player).
+Références moteur : [Player.CharacterAdded et ordre du spawn](https://create.roblox.com/docs/reference/engine/classes/Player),
+[signaux différés et déconnexion](https://create.roblox.com/docs/scripting/events/deferred).

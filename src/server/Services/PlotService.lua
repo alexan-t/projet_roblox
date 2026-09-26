@@ -25,22 +25,59 @@ type AssignedCallback = (player: Player, plot: Model) -> ()
 
 local PlotService = {}
 local plots: { Plot } = {}
+local plotsFolder: Folder? = nil
 local assignments: { [Player]: Assignment } = {}
 local owners: { [Model]: Player } = {}
 local assigned = Instance.new("BindableEvent")
 
 local function isUsable(plot: Plot): boolean
-	return plot.model:IsDescendantOf(Workspace) and plot.spawn.Parent == plot.model
+	local folder = plotsFolder
+	return folder ~= nil and folder.Parent == Workspace and folder.Name == "Plots"
+		and plot.model.Parent == folder and plot.model:GetAttribute("PlotId") == plot.id
+		and plot.spawn.Parent == plot.model and plot.spawn.Name == "Spawn" and plot.spawn.Anchored
 end
 
-local function moveCharacter(player: Player, character: Model, assignment: Assignment): boolean
-	local root = character:WaitForChild("HumanoidRootPart", ROOT_TIMEOUT)
-	-- L'attente peut finir après un leave, une perte de session ou un autre respawn.
-	if not root or not root:IsA("BasePart")
-		or assignments[player] ~= assignment
-		or player.Parent ~= Players or player.Character ~= character
-		or not character:IsDescendantOf(Workspace) or not isUsable(assignment.plot)
+local function isReady(player: Player): boolean
+	return player.Parent == Players and player:GetAttribute("DataLoaded") == true
+		and DataService:GetData(player) ~= nil
+end
+
+-- Ne pas dépendre de l'ordre de livraison des signaux différés de nettoyage.
+local function currentAssignment(player: Player): Assignment?
+	local assignment = assignments[player]
+	if assignment and isReady(player) and isUsable(assignment.plot)
+		and assignment.runtime.Parent == assignment.plot.model and assignment.runtime.Name == RUNTIME_NAME
 	then
+		return assignment
+	end
+	return nil
+end
+
+local function moveCharacter(player: Player, character: Model, assignment: Assignment, settleSpawn: boolean?): boolean
+	local function isCurrent(): boolean
+		return currentAssignment(player) == assignment and player.Character == character
+	end
+	if not isCurrent() then
+		return false
+	end
+	local deadline = os.clock() + ROOT_TIMEOUT
+	local root = character:WaitForChild("HumanoidRootPart", ROOT_TIMEOUT)
+	if not root or not root:IsA("BasePart") then
+		return false
+	end
+	-- CharacterAdded peut précéder le parentage dans Workspace, même avec un root.
+	while not character:IsDescendantOf(Workspace) do
+		if not isCurrent() or os.clock() >= deadline then
+			return false
+		end
+		task.wait()
+	end
+	if settleSpawn then
+		-- Laisser le moteur terminer le placement initial avant de le remplacer.
+		task.wait()
+	end
+	-- Toute attente peut finir après un leave, une perte de session ou un respawn.
+	if not isCurrent() or root.Parent ~= character or not character:IsDescendantOf(Workspace) then
 		return false
 	end
 
@@ -72,7 +109,7 @@ end
 
 local function assign(player: Player)
 	-- OnPlayerReady peut rejouer un joueur déjà prêt ; aucune double attribution.
-	if assignments[player] or player.Parent ~= Players or not DataService:GetData(player) then
+	if assignments[player] or not isReady(player) then
 		return
 	end
 
@@ -100,7 +137,7 @@ local function assign(player: Player)
 	available.model:SetAttribute("OwnerUserId", player.UserId)
 	player:SetAttribute("PlotId", available.id)
 	assignment.characterConnection = player.CharacterAdded:Connect(function(character: Model)
-		task.defer(moveCharacter, player, character, assignment)
+		task.defer(moveCharacter, player, character, assignment, true)
 	end)
 	assignment.dataConnection = player:GetAttributeChangedSignal("DataLoaded"):Connect(function()
 		if player:GetAttribute("DataLoaded") ~= true then
@@ -108,9 +145,10 @@ local function assign(player: Player)
 		end
 	end)
 	if player.Character then
-		task.defer(moveCharacter, player, player.Character, assignment)
+		task.defer(moveCharacter, player, player.Character, assignment, true)
 	end
-	assigned:Fire(player, available.model)
+	-- Runtime est une Instance unique par attribution ; BindableEvent copie les tables.
+	assigned:Fire(player, runtime)
 	Log.debug(SCOPE, `Plot {available.id} attribué à {player.Name}`)
 end
 
@@ -120,6 +158,7 @@ function PlotService:Init()
 		Log.warn(SCOPE, "Workspace.Plots (Folder) introuvable ; préparer la map selon docs/PLOTS.md")
 		return
 	end
+	plotsFolder = folder
 
 	-- Compter les identifiants avant de valider : aucun des doublons n'est retenu.
 	local idCounts: { [number]: number } = {}
@@ -156,22 +195,24 @@ function PlotService:Start()
 end
 
 function PlotService:GetPlot(player: Player): Model?
-	local assignment = assignments[player]
+	local assignment = currentAssignment(player)
 	return if assignment then assignment.plot.model else nil
 end
 
 function PlotService:GetOwner(plot: Model): Player?
-	return owners[plot]
+	local player = owners[plot]
+	local assignment = if player then currentAssignment(player) else nil
+	return if assignment and assignment.plot.model == plot then player else nil
 end
 
 function PlotService:GetRuntime(player: Player): Folder?
-	local assignment = assignments[player]
+	local assignment = currentAssignment(player)
 	return if assignment then assignment.runtime else nil
 end
 
--- Retour d'expédition : peut attendre le HumanoidRootPart jusqu'à ROOT_TIMEOUT.
+-- Retour d'expédition : attente bornée du root et du parentage dans Workspace.
 function PlotService:TeleportToPlot(player: Player): boolean
-	local assignment = assignments[player]
+	local assignment = currentAssignment(player)
 	local character = player.Character
 	if not assignment or not character then
 		return false
@@ -182,16 +223,17 @@ end
 -- Depuis Start(), comme DataService:OnPlayerReady. Inclut les plots déjà attribués.
 -- Les callbacks doivent revérifier GetPlot/GetRuntime après toute attente.
 function PlotService:OnPlotAssigned(callback: AssignedCallback): RBXScriptConnection
-	local function notify(player: Player, plot: Model)
-		if self:GetPlot(player) == plot then
-			callback(player, plot)
+	local function notify(player: Player, runtime: Folder)
+		local assignment = currentAssignment(player)
+		if assignment and assignment.runtime == runtime then
+			callback(player, assignment.plot.model)
 		end
 	end
 	local connection = assigned.Event:Connect(notify)
 	for player, assignment in assignments do
 		task.defer(function()
 			if connection.Connected then
-				notify(player, assignment.plot.model)
+				notify(player, assignment.runtime)
 			end
 		end)
 	end

@@ -13,6 +13,7 @@ $runnerSource = @'
 local function createService(env)
     local game, script, require = env.game, env.script, env.require
     local Instance, CFrame, Vector3, task = env.Instance, env.CFrame, env.Vector3, env.task
+    local os = env.os
 '@ + "`n" + $serviceSource + "`nend`nlocal runTests = (function()`n" + $testSource + "`nend)()`nrunTests(createService)`n"
 $runnerPath = Join-Path $testBuild 'plot-service-tests.luau'
 [System.IO.File]::WriteAllText($runnerPath, $runnerSource, [System.Text.UTF8Encoding]::new($false))

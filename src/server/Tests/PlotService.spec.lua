@@ -4,18 +4,30 @@
 
 return function(createService: any)
 	local function fixture(count: number): any
-		local env: any = { queue = {}, waiting = {}, instances = {}, ready = {}, callbacks = {}, warnings = {} }
+		local env: any = { queue = {}, waiting = {}, instances = {}, ready = {}, callbacks = {}, warnings = {}, now = 0 }
 		local function defer(fn: any, ...: any)
 			table.insert(env.queue, { thread = coroutine.create(fn), args = table.pack(...) })
 		end
-		function env.flush()
-			while #env.queue > 0 do
-				local item = table.remove(env.queue, 1)
-				local ok, err = coroutine.resume(item.thread, table.unpack(item.args, 1, item.args.n))
-				assert(ok, tostring(err))
-				if coroutine.status(item.thread) ~= "dead" then
+		function env.step()
+			local item = table.remove(env.queue, 1)
+			assert(item, "Empty scheduler")
+			local ok, result = coroutine.resume(item.thread, table.unpack(item.args, 1, item.args.n))
+			assert(ok, tostring(result))
+			if coroutine.status(item.thread) ~= "dead" then
+				if result == "frame" then
+					env.now += 1 / 60
+					table.insert(env.queue, { thread = item.thread, args = table.pack(1 / 60) })
+				else
 					table.insert(env.waiting, item)
 				end
+			end
+		end
+		function env.flush()
+			local steps = 0
+			while #env.queue > 0 do
+				steps += 1
+				assert(steps < 10000, "Unbounded scheduler wait")
+				env.step()
 			end
 		end
 		function env.wake()
@@ -35,7 +47,13 @@ return function(createService: any)
 			end
 			function event:Fire(...: any)
 				for _, connection in self.listeners do
-					if connection.Connected then defer(connection.callback, ...) end
+					if connection.Connected then
+						local args = table.pack(...)
+						defer(function()
+							-- Disconnect annule aussi les invocations moteur en attente.
+							if connection.Connected then connection.callback(table.unpack(args, 1, args.n)) end
+						end)
+					end
 				end
 			end
 			return event
@@ -97,7 +115,18 @@ return function(createService: any)
 				Parent = parent, attributes = {}, signals = {}, Anchored = true }, { __index = methods })
 			if class == "BindableEvent" then
 				instance.Event = signal()
-				function instance:Fire(...: any) self.Event:Fire(...) end
+				function instance:Fire(...: any)
+					local args = table.pack(...)
+					for index = 1, args.n do
+						local value = args[index]
+						-- Roblox copie les tables transmises ; les Instances gardent leur identité.
+						-- Une copie du premier niveau suffit pour détecter une comparaison de référence.
+						if type(value) == "table" and getmetatable(value) == nil then
+							args[index] = table.clone(value)
+						end
+					end
+					self.Event:Fire(table.unpack(args, 1, args.n))
+				end
 			end
 			table.insert(env.instances, instance)
 			return instance
@@ -110,7 +139,10 @@ return function(createService: any)
 		env.CFrame = { new = cf }
 		env.Vector3 = { zero = {} }
 		env.Instance = { new = function(class: string): any return env.new(class, nil, nil) end }
-		env.task = { defer = defer, spawn = defer }
+		env.task = { defer = defer, spawn = defer, wait = function(): number
+			return coroutine.yield("frame")
+		end }
+		env.os = { clock = function(): number return env.now end }
 		env.players = env.new("Players", "Players", nil)
 		env.players.PlayerRemoving = signal()
 		env.workspace = env.new("Workspace", "Workspace", nil)
@@ -172,11 +204,16 @@ return function(createService: any)
 		return env
 	end
 
-	local passed = 0
+	local passed, failed = 0, 0
 	local function test(name: string, run: () -> ())
-		run()
-		passed += 1
-		print("PASS " .. name)
+		local ok, err = pcall(run)
+		if ok then
+			passed += 1
+			print("PASS " .. name)
+		else
+			failed += 1
+			print("FAIL " .. name .. ": " .. tostring(err))
+		end
 	end
 
 	for _, capacity in { 8, 12 } do
@@ -307,16 +344,21 @@ return function(createService: any)
 		e.plot(1)
 		e.plot(1)
 		e.plot(-1)
+		e.plot(0)
 		e.plot(1.5)
 		e.plot(math.huge)
+		e.plot(-math.huge)
 		e.plot(0 / 0)
 		e.plot("2")
+		e.plot(false)
 		e.plot(nil)
 		e.plot(3):FindFirstChild("Spawn"):Destroy()
 		e.plot(4):FindFirstChild("Spawn").Anchored = false
 		local authored = e.plot(5)
 		local runtime = e.new("Folder", "Runtime", authored)
 		e.plot(6):FindFirstChild("Spawn").ClassName = "SpawnLocation"
+		e.plot(8):FindFirstChild("Spawn").ClassName = "Folder"
+		e.new("Part", "NotAPlotModel", e.folder):SetAttribute("PlotId", 9)
 		local valid = e.plot(7)
 		local s = e.start()
 		local p = e.player(1)
@@ -364,5 +406,191 @@ return function(createService: any)
 		s:OnPlotAssigned(function() error("Stale owner reported") end)
 		e.flush()
 	end)
+	for _, capacity in { 8, 12 } do
+		test(`{capacity} concurrent ready callbacks reserve before character waits`, function()
+			local e = fixture(capacity)
+			local s = e.start()
+			local players = {}
+			for id = 1, capacity + 1 do
+				local p = e.player(id)
+				e.character(p, false)
+				table.insert(players, p)
+				e.load(p)
+			end
+			e.flush()
+			local seen = {}
+			for id = 1, capacity do
+				local plot = s:GetPlot(players[id])
+				assert(plot and not seen[plot] and players[id]:GetAttribute("PlotId") == id)
+				seen[plot] = true
+			end
+			assert(players[capacity + 1].kicked and #e.waiting == capacity)
+		end)
+	end
+	test("replay ahead of removal handler does not report departed player", function()
+		local e = fixture(1)
+		local s = e.start()
+		local p = e.player(1)
+		e.load(p)
+		e.flush()
+		s:OnPlotAssigned(function() error("Departed player reported before release") end)
+		e.leave(p) -- Notification dans la queue AVANT PlayerRemoving.
+	end)
+	test("live notification ahead of removal handler ignores departed player", function()
+		local e = fixture(1)
+		local s = e.start()
+		s:OnPlotAssigned(function() error("Departed player reported by event") end)
+		local p = e.player(1)
+		e.load(p)
+		e.step() -- L'attribution déclenche l'événement, sans livrer son callback.
+		e.leave(p)
+	end)
+	test("data loss blocks notifications and teleport before deferred release", function()
+		local e = fixture(1)
+		local s = e.start()
+		local p = e.player(1)
+		local char = e.character(p, true)
+		e.load(p)
+		e.flush()
+		s:OnPlotAssigned(function() error("Unready player reported before release") end)
+		p:SetAttribute("DataLoaded", nil)
+		assert(not s:TeleportToPlot(p), "Teleport after DataLoaded loss")
+		assert(not s:GetPlot(p) and not s:GetRuntime(p))
+		e.flush()
+		assert(char.moves == 1)
+	end)
+	test("profile loss blocks notifications even while DataLoaded is stale", function()
+		local e = fixture(1)
+		local s = e.start()
+		local p = e.player(1)
+		e.load(p)
+		e.flush()
+		s:OnPlotAssigned(function() error("Inactive profile reported") end)
+		e.ready[p] = nil
+		e.flush()
+	end)
+	test("ready callback requires DataLoaded as well as profile", function()
+		local e = fixture(1)
+		local s = e.start()
+		local p = e.player(1)
+		e.load(p)
+		p:SetAttribute("DataLoaded", false)
+		e.flush()
+		assert(not s:GetPlot(p) and not p:GetAttribute("PlotId"))
+	end)
+	test("CharacterAdded before parenting waits for Workspace and default spawn", function()
+		local e = fixture(1)
+		local s = e.start()
+		local p = e.player(1)
+		e.load(p)
+		e.flush()
+		local char = e.character(p, true)
+		char.Parent = nil
+		e.step() -- CharacterAdded programme la téléportation.
+		e.task.defer(function()
+			char.Parent = e.workspace
+			char:PivotTo(e.CFrame.new(999, 0, 0)) -- Spawn moteur.
+		end)
+		e.flush()
+		assert(char.pivot.x == 100 and s:GetPlot(p))
+	end)
+	test("character never parented has a bounded wait", function()
+		local e = fixture(1)
+		e.start()
+		local p = e.player(1)
+		e.load(p)
+		e.flush()
+		local char = e.character(p, true)
+		char.Parent = nil
+		e.flush()
+		assert(not char.moves and #e.queue == 0 and #e.waiting == 0)
+	end)
+	local invalidations = {
+		{ name = "deleted model", mutate = function(_e: any, plot: any) plot:Destroy() end },
+		{ name = "deleted spawn", mutate = function(_e: any, plot: any) plot:FindFirstChild("Spawn"):Destroy() end },
+		{ name = "unanchored spawn", mutate = function(_e: any, plot: any) plot:FindFirstChild("Spawn").Anchored = false end },
+		{ name = "renamed spawn", mutate = function(_e: any, plot: any) plot:FindFirstChild("Spawn").Name = "OldSpawn" end },
+		{ name = "moved model", mutate = function(e: any, plot: any) plot.Parent = e.workspace end },
+		{ name = "detached folder", mutate = function(e: any, _plot: any) e.folder.Parent = nil end },
+		{ name = "changed id", mutate = function(_e: any, plot: any) plot:SetAttribute("PlotId", 99) end },
+		{ name = "deleted runtime", mutate = function(_e: any, plot: any) plot:FindFirstChild("Runtime"):Destroy() end },
+	}
+	for _, invalidation in invalidations do
+		test("assigned plot invalidated: " .. invalidation.name, function()
+			local e = fixture(1)
+			local s = e.start()
+			local p = e.player(1)
+			e.character(p, true)
+			e.load(p)
+			e.flush()
+			local plot = s:GetPlot(p)
+			s:OnPlotAssigned(function() error("Invalid plot reported") end)
+			invalidation.mutate(e, plot)
+			assert(not s:TeleportToPlot(p), "Teleport to invalid plot")
+			assert(not s:GetPlot(p) and not s:GetRuntime(p) and not s:GetOwner(plot), "Invalid assignment exposed")
+			e.flush()
+			e.leave(p)
+			assert(not plot:GetAttribute("OwnerUserId"))
+		end)
+	end
+	test("free plot invalidated after Init is skipped", function()
+		local e = fixture(2)
+		local s = e.start()
+		e.folder:FindFirstChild("Plot_1"):FindFirstChild("Spawn").Anchored = false
+		local p = e.player(1)
+		e.load(p)
+		e.flush()
+		assert(p:GetAttribute("PlotId") == 2 and s:GetPlot(p))
+	end)
+	test("Runtime added after Init is preserved and skipped", function()
+		local e = fixture(2)
+		local s = e.start()
+		local runtime = e.new("Folder", "Runtime", e.folder:FindFirstChild("Plot_1"))
+		local p = e.player(1)
+		e.load(p)
+		e.flush()
+		assert(p:GetAttribute("PlotId") == 2 and not runtime.destroyed and s:GetPlot(p))
+	end)
+	test("old replay cannot report a new assignment of the same model", function()
+		local e = fixture(1)
+		local s = e.start()
+		local p = e.player(1)
+		e.load(p)
+		e.flush()
+		local previousRuntime = s:GetRuntime(p)
+		p:SetAttribute("DataLoaded", nil)
+		local calls = 0
+		s:OnPlotAssigned(function() calls += 1 end) -- Capture l'ancienne attribution.
+		e.step() -- Libération, avant livraison du replay.
+		e.load(p)
+		e.callbacks[1](p) -- Callback prêt immédiat, comme task.spawn dans DataService.
+		e.flush()
+		assert(calls == 1 and previousRuntime.destroyed and s:GetRuntime(p) ~= previousRuntime)
+	end)
+	test("leave during spawn settling cannot move old character after reuse", function()
+		local e = fixture(1)
+		local s = e.start()
+		local p = e.player(1)
+		local char = e.character(p, true)
+		e.load(p)
+		e.step() -- Attribution.
+		e.step() -- Téléportation suspendue pour laisser finir le spawn moteur.
+		assert(not char.moves)
+		e.leave(p)
+		local nextPlayer = e.player(2)
+		e.load(nextPlayer)
+		e.flush()
+		assert(not char.moves and s:GetPlot(nextPlayer))
+	end)
+	test("invalid Workspace.Plots class refuses allocation", function()
+		local e = fixture(1)
+		e.folder.ClassName = "Model"
+		local s = e.start()
+		local p = e.player(1)
+		e.load(p)
+		e.flush()
+		assert(p.kicked and not s:GetPlot(p))
+	end)
+	assert(failed == 0, `PlotService: {failed} failed, {passed} passed`)
 	print(`PlotService: {passed} tests passed`)
 end
