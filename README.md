@@ -85,6 +85,13 @@ Basé sur [ProfileStore](https://github.com/MadStudioRoblox/ProfileStore) (verro
 - Les autres services attendent le profil avec `DataService:WaitForData(player)` ou `DataService:OnPlayerReady(fn)`.
 - En Studio, les données vont dans un store séparé (`PlayerData_Studio`). Pour qu'elles persistent entre deux Play, activer *Game Settings → Security → Enable Studio Access to API Services* ; sinon ProfileStore travaille en mémoire.
 
+## Plots joueur (PlotService)
+
+Le serveur attribue un plot libre après le chargement des données, y replace le
+joueur au respawn, puis libère l'emplacement et ses objets temporaires au départ.
+Les 8 à 12 emplacements restent créés dans Studio : voir le
+[contrat de map, l'API serveur et les tests](docs/PLOTS.md).
+
 ## Workflow Git
 
 - On part toujours de `develop` à jour, sur une branche `feature/<sujet>`.
