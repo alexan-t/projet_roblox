@@ -1,0 +1,111 @@
+# Royaume miniature — KingdomService V1
+
+`KingdomService` (#4) affiche le royaume et les héros de chaque joueur sur son plot.
+Il décide **quoi** afficher (quel état, quels héros, pour quel joueur, quand) ;
+les modèles fournis par le design (#5) décident **à quoi ça ressemble**.
+Aucune couleur, matière, forme, taille ou VFX n'est réglée dans le code : les
+modèles sont clonés tels quels.
+
+## Contrat d'assets (Studio)
+
+Les chemins sont centralisés dans `src/server/Config/KingdomConfig.lua`.
+
+```text
+ServerStorage
+  Assets
+    RoyaumeEtats (Folder)
+      <nom libre> (Model, attribut numérique VisualState = 1)
+        Emplacements (Folder)
+          Heros (Folder)
+            Heros_1, Heros_2, ... (BasePart)   repères des héros, facultatifs
+      <nom libre> (Model, VisualState = 2)
+      ...
+    Heros (Folder)
+      <nom libre> (Model, attribut texte HeroId = "Chevalier")
+      ...
+
+Workspace.Plots.<plot> (voir docs/PLOTS.md)
+  Royaume
+    EmplacementCentral (BasePart)   repère du royaume
+```
+
+- **États du royaume** : un `Model` par `VisualState`, identifié par l'attribut,
+  pas par son nom. Ajouter l'état 3 = ajouter un modèle avec `VisualState = 3`,
+  sans toucher au code. Deux modèles avec la même valeur sont refusés.
+- **Repère du royaume** : `Royaume.EmplacementCentral` dans le plot, comme dans
+  `Workspace.PlotTravail`. Le **pivot** du modèle d'état est posé sur la
+  position de ce repère, avec son orientation horizontale uniquement (un disque
+  couché ne fait pas basculer le royaume). Le design règle donc le pivot du
+  modèle (base, face avant) et l'orientation du repère.
+- **Repères des héros** : dans chaque modèle d'état, sous `Emplacements.Heros`,
+  sur le modèle de l'arène (`Arene.Emplacements.Heros`). Ils sont triés par le
+  numéro final du nom (`Heros_2` avant `Heros_10`). Chaque état peut avoir sa
+  propre disposition et son propre nombre de places.
+- **Modèles de héros** : un `Model` par `HeroId` (valeur de `PlayerData.Heroes[id].HeroId`),
+  pivot posé comme pour le royaume.
+- Tous les assets doivent être ancrés, `Archivable` et sans script.
+
+Ce qui n'existe pas encore dans la DEV (constaté le 27/09/2026) : un modèle
+d'état 2, les modèles de héros, les repères de héros dans le royaume, et
+`Royaume.EmplacementCentral` dans les plots de `Workspace.Plots`. Sans eux, le
+service journalise la raison et n'affiche pas l'élément manquant.
+
+## Runtime
+
+```text
+<plot>.Runtime          (créé et détruit par PlotService)
+  Kingdom (Model)       clone du modèle d'état courant
+  Heroes (Folder)
+    <modèle de héros>   attribut HeroInstanceId = clé dans PlayerData.Heroes
+```
+
+Tout vit sous le `Runtime` de l'attribution : au départ du joueur ou à la perte
+de ses données, PlotService détruit le royaume et les héros avec lui. Le décor
+permanent du plot n'est jamais modifié. Les autres futurs systèmes peuvent
+ajouter leurs propres dossiers dans `Runtime` : KingdomService ne touche qu'à
+`Kingdom` et `Heroes`.
+
+## Cycle de vie
+
+1. `PlotService:OnPlotAssigned` (y compris les attributions déjà faites) appelle `Refresh`.
+2. `Refresh` relit `GetPlot`, `GetRuntime` et `DataService:GetData` ; sans l'un d'eux, rien n'est fait.
+3. Il cherche le modèle d'état et le repère ; en cas de problème, il journalise la raison
+   et **garde l'affichage actuel**.
+4. Si l'état affiché vient déjà de ce modèle, il est conservé. Sinon le nouveau clone est
+   créé, posé et parenté avant la destruction de l'ancien.
+5. Les héros sont synchronisés : un modèle par exemplaire possédé, dans l'ordre des
+   identifiants, un par repère. Les héros déjà affichés sont conservés et replacés ; ceux
+   qui ont disparu ou changé de `HeroId` sont retirés.
+
+Tout `Refresh` est synchrone (aucune attente) : le joueur ne peut pas partir au milieu.
+Le service ne garde aucune référence aux données ou aux joueurs entre deux appels.
+
+## API serveur
+
+| Méthode | Résultat / usage |
+| --- | --- |
+| `Refresh(player)` | Met l'affichage en accord avec `Kingdom.VisualState` et `Heroes`. `true` si c'est le cas, `false` sinon (pas de plot, pas de données, asset ou repère manquant) |
+| `GetKingdom(player)` | Modèle `Kingdom` affiché, ou `nil` |
+
+**Intégration HeroService (#10)** : il n'existe pas encore de signal `HeroObtained`.
+Après avoir ajouté un héros à `PlayerData.Heroes` (ou changé `Kingdom.VisualState`),
+le service concerné appelle `KingdomService:Refresh(player)`. Aucun système
+d'événements n'est ajouté tant qu'un seul appelant existe.
+
+## Validation
+
+Tests locaux du vrai module, avec doubles des API Roblox (Luau CLI officiel) :
+
+```powershell
+./tools/test-kingdom.ps1 -LuauPath <chemin-vers-luau.exe>
+```
+
+Ils couvrent : création des états 1 et 2 sur le repère, remplacement sans doublon,
+refresh répété, départ, Runtime détruit, plot réattribué, dossier, repère ou asset
+manquant ou invalide, VisualState invalide, plusieurs joueurs indépendants, rejoin,
+placement et synchronisation des héros. Le rendu, la physique et la réplication se
+valident dans Studio.
+
+En Studio, `ServerStorage.DebugData` (DebugService, Studio uniquement) permet depuis la
+ligne de commande côté Serveur : `"SetKingdomState", 2`, `"AddHero", "<HeroId>"`,
+`"RemoveHero", id` et `"RefreshKingdom"`.
