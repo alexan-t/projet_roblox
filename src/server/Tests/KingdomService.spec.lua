@@ -473,20 +473,58 @@ return function(createService: any, config: any)
 		e.data[p].Heroes.e = { HeroId = "Chevalier", Level = 1 }
 		e.data[p].Heroes.f = { HeroId = "Chevalier", Level = 1 }
 		local before = #e.warnings
-		assert(s:Refresh(p))
+		assert(s:Refresh(p) == false, "beyond markers is a partial failure")
 		heroes = e.heroes(p)
 		assert(e.count(heroes) == 3 and heroes.f == nil and #e.warnings > before)
 		-- Asset absent pour un HeroId : ce héros est ignoré, les autres restent.
 		e.data[p].Heroes.a.HeroId = "Inconnu"
-		assert(s:Refresh(p))
+		assert(s:Refresh(p) == false)
 		heroes = e.heroes(p)
 		assert(heroes.a == nil and heroes.c and heroes.d)
 		-- Passage à l'état 2 : les héros restent et suivent les repères du nouveau royaume.
 		local keptC = heroes.c
 		e.data[p].Kingdom.VisualState = 2
-		assert(s:Refresh(p))
+		assert(s:Refresh(p) == false, "hero 'Inconnu' still has no asset")
 		heroes = e.heroes(p)
 		assert(heroes.c == keptC and keptC.pivot.Position.X > 2000 and e.count(heroes) == 4)
+		e.data[p].Heroes.a = nil
+		assert(s:Refresh(p) == true, "every owned hero is displayed again")
+	end)
+
+	test("Refresh is true only when the kingdom and every owned hero are displayed", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		e.load(p, 1)
+		e.assign(p, e.plotModel(1))
+		assert(s:Refresh(p) == true, "no hero owned + valid kingdom")
+		e.data[p].Heroes.a = { HeroId = "Chevalier", Level = 1 }
+		e.data[p].Heroes.b = { HeroId = "Archere", Level = 1 }
+		assert(s:Refresh(p) == true, "all heroes valid")
+		local kingdom, a, b = e.kingdoms(p)[1], e.heroes(p).a, e.heroes(p).b
+
+		-- 2 héros possédés, 1 sans asset : l'autre reste affiché, le royaume aussi, résultat false.
+		e.data[p].Heroes.b.HeroId = "SansAsset"
+		assert(s:Refresh(p) == false, "hero without asset")
+		assert(e.heroes(p).a == a and not a.destroyed and e.heroes(p).b == nil and b.destroyed)
+		assert(e.kingdoms(p)[1] == kingdom and not kingdom.destroyed, "valid kingdom kept on partial failure")
+		e.data[p].Heroes.b = nil
+
+		-- 4 héros pour 3 repères : les 3 premiers restent affichés, résultat false.
+		e.data[p].Heroes.c = { HeroId = "Archere", Level = 1 }
+		e.data[p].Heroes.d = { HeroId = "Archere", Level = 1 }
+		e.data[p].Heroes.e = { HeroId = "Archere", Level = 1 }
+		assert(s:Refresh(p) == false, "heroes beyond markers")
+		local shown = e.heroes(p)
+		assert(e.count(shown) == 3 and shown.a == a and shown.e == nil)
+		assert(e.kingdoms(p)[1] == kingdom and not kingdom.destroyed)
+
+		-- Royaume invalide : toujours false, même avec des héros valides, et rien n'est retiré.
+		e.data[p].Heroes.e = nil
+		assert(s:Refresh(p) == true)
+		e.data[p].Kingdom.VisualState = 99
+		assert(s:Refresh(p) == false, "invalid kingdom")
+		assert(e.kingdoms(p)[1] == kingdom and e.heroes(p).a == a and e.count(e.heroes(p)) == 3)
 	end)
 
 	print(`KingdomService: {passed} passed, {failed} failed`)

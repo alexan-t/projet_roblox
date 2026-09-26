@@ -75,7 +75,8 @@ ajouter leurs propres dossiers dans `Runtime` : KingdomService ne touche qu'à
    créé, posé et parenté avant la destruction de l'ancien.
 5. Les héros sont synchronisés : un modèle par exemplaire possédé, dans l'ordre des
    identifiants, un par repère. Les héros déjà affichés sont conservés et replacés ; ceux
-   qui ont disparu ou changé de `HeroId` sont retirés.
+   qui ont disparu ou changé de `HeroId` sont retirés. Un héros sans asset ou sans repère
+   n'est pas affiché et rend le résultat `false`, sans retirer les autres.
 
 Tout `Refresh` est synchrone (aucune attente) : le joueur ne peut pas partir au milieu.
 Le service ne garde aucune référence aux données ou aux joueurs entre deux appels.
@@ -84,8 +85,21 @@ Le service ne garde aucune référence aux données ou aux joueurs entre deux ap
 
 | Méthode | Résultat / usage |
 | --- | --- |
-| `Refresh(player)` | Met l'affichage en accord avec `Kingdom.VisualState` et `Heroes`. `true` si c'est le cas, `false` sinon (pas de plot, pas de données, asset ou repère manquant) |
+| `Refresh(player)` | Met l'affichage en accord avec `Kingdom.VisualState` et `Heroes`. Voir le résultat ci-dessous |
 | `GetKingdom(player)` | Modèle `Kingdom` affiché, ou `nil` |
+
+**Résultat de `Refresh`** :
+
+- `true` : l'affichage complet attendu est synchronisé avec PlayerData, c'est-à-dire le
+  royaume de l'état courant **et** chaque héros possédé, chacun sur son repère.
+- `false` : une partie de cet affichage n'a pas pu l'être. Causes possibles : pas de plot
+  ou de données, `VisualState` invalide, modèle d'état, repère du royaume, asset de héros
+  ou repère de héros manquant. La raison est journalisée.
+
+Un échec partiel n'est pas destructeur : tout ce qui est valide reste ou devient visible.
+Par exemple, royaume valide et 2 héros possédés dont l'un sans asset : le royaume et le
+héros valide sont affichés, l'autre est absent, et `Refresh` renvoie `false`. De même,
+un royaume invalide laisse en place le royaume et les héros déjà affichés.
 
 **Intégration HeroService (#10)** : il n'existe pas encore de signal `HeroObtained`.
 Après avoir ajouté un héros à `PlayerData.Heroes` (ou changé `Kingdom.VisualState`),
@@ -103,7 +117,8 @@ Tests locaux du vrai module, avec doubles des API Roblox (Luau CLI officiel) :
 Ils couvrent : création des états 1 et 2 sur le repère, remplacement sans doublon,
 refresh répété, départ, Runtime détruit, plot réattribué, dossier, repère ou asset
 manquant ou invalide, VisualState invalide, plusieurs joueurs indépendants, rejoin,
-placement et synchronisation des héros. Le rendu, la physique et la réplication se
+placement et synchronisation des héros, et le résultat strict de `Refresh` (échecs
+partiels compris). Le rendu, la physique et la réplication se
 valident dans Studio.
 
 En Studio, `ServerStorage.DebugData` (DebugService, Studio uniquement) permet depuis la

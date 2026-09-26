@@ -97,7 +97,9 @@ local function heroMarkers(kingdom: Model): { BasePart }
 	return markers
 end
 
-local function syncHeroes(player: Player, heroes: { [string]: PlayerDataTypes.Hero }, runtime: Folder, kingdom: Model)
+-- Renvoie false si au moins un héros possédé n'a pas pu être affiché (repère ou asset manquant).
+-- Les héros valides restent affichés dans tous les cas.
+local function syncHeroes(player: Player, heroes: { [string]: PlayerDataTypes.Hero }, runtime: Folder, kingdom: Model): boolean
 	local folder = runtime:FindFirstChild(HEROES_NAME)
 	if not folder then
 		folder = Instance.new("Folder")
@@ -113,7 +115,8 @@ local function syncHeroes(player: Player, heroes: { [string]: PlayerDataTypes.He
 	end
 	table.sort(ids)
 	local markers = heroMarkers(kingdom)
-	if #ids > #markers then
+	local complete = #ids <= #markers
+	if not complete then
 		Log.warn(SCOPE, `{#ids - #markers} héros de {player.Name} sans repère dans le royaume ({pathText(KingdomConfig.HeroMarkers)})`)
 	end
 	local wanted: { [string]: WantedHero } = {}
@@ -141,6 +144,7 @@ local function syncHeroes(player: Player, heroes: { [string]: PlayerDataTypes.He
 			local clone = if asset then asset:Clone() else nil
 			if not clone then
 				Log.warn(SCOPE, `Héros {want.heroId} de {player.Name} non affiché : {if asset then "asset non clonable" else problem}`)
+				complete = false
 				continue
 			end
 			clone:SetAttribute(HERO_INSTANCE_ATTRIBUTE, id)
@@ -150,6 +154,7 @@ local function syncHeroes(player: Player, heroes: { [string]: PlayerDataTypes.He
 		model:PivotTo(placement(want.marker))
 		model.Parent = folder
 	end
+	return complete
 end
 
 function KingdomService:Start()
@@ -161,7 +166,9 @@ end
 
 -- Reconstruit l'affichage du royaume et des héros à partir de PlayerData.
 -- À appeler après toute modification de Kingdom ou de Heroes (futur HeroService #10 compris).
--- Renvoie true si l'affichage correspond aux données. En cas d'échec, l'affichage existant est conservé.
+-- Renvoie true seulement si le royaume ET tous les héros possédés sont affichés conformément aux données.
+-- false : une partie n'a pas pu l'être (données, plot, asset ou repère manquant). Rien de valide n'est
+-- retiré pour autant : un royaume déjà affiché et les héros valides restent en place.
 function KingdomService:Refresh(player: Player): boolean
 	local plot = PlotService:GetPlot(player)
 	local runtime = PlotService:GetRuntime(player)
@@ -208,8 +215,7 @@ function KingdomService:Refresh(player: Player): boolean
 		Log.debug(SCOPE, `Royaume {state} affiché pour {player.Name}`)
 	end
 
-	syncHeroes(player, data.Heroes, runtime, kingdom)
-	return true
+	return syncHeroes(player, data.Heroes, runtime, kingdom)
 end
 
 -- Royaume affiché pour le joueur, ou nil sans attribution valide.
