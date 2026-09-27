@@ -86,27 +86,39 @@ return function(ArenaRules: any, stageConfig: any, arenaConfig: any)
 		assert(layout == nil and reason ~= nil)
 	end)
 
-	test("placement: up to 4 heroes, one of each class, click again removes", function()
+	test("assign: up to 4 heroes, one unit per class", function()
 		local f = {}
-		assert(ArenaRules.toggle(f, 1, "Archer", classes, 4))
-		assert(ArenaRules.toggle(f, 2, "Epeiste", classes, 4))
-		assert(ArenaRules.toggle(f, 5, "Barbare", classes, 4))
-		assert(ArenaRules.toggle(f, 9, "Paladin", classes, 4))
-		local ok, reason = ArenaRules.toggle(f, 3, "Magicien", classes, 4)
-		assert(ok == false and reason == "4 héros maximum" and f[3] == nil)
-		assert(ArenaRules.toggle(f, 9, "Magicien", classes, 4) and f[9] == nil, "click on occupied cell removes")
-		assert(ArenaRules.toggle(f, 3, "Magicien", classes, 4) and f[3] == "Magicien")
-		assert(ArenaRules.toggle(f, 7, "Archer", classes, 4), "same class moves instead of duplicating")
+		assert(ArenaRules.assign(f, 1, "Archer", classes, 4))
+		assert(ArenaRules.assign(f, 2, "Epeiste", classes, 4))
+		assert(ArenaRules.assign(f, 5, "Barbare", classes, 4))
+		assert(ArenaRules.assign(f, 9, "Paladin", classes, 4))
+		local ok, reason = ArenaRules.assign(f, 3, "Magicien", classes, 4)
+		assert(ok == false and reason == "4 héros maximum" and f[3] == nil, "5th hero refused on a free cell")
+		assert(ArenaRules.assign(f, 7, "Archer", classes, 4), "same class moves instead of duplicating")
 		assert(f[1] == nil and f[7] == "Archer" and ArenaRules.count(f) == 4)
+		assert(ArenaRules.assign(f, 7, "Archer", classes, 4) and f[7] == "Archer", "re-assigning in place is a no-op")
 	end)
 
-	test("placement refuses unknown classes and invalid cells", function()
-		local f = {}
+	test("assign on an occupied cell replaces its hero, even with a full field", function()
+		local f = { [1] = "Archer", [2] = "Epeiste", [5] = "Barbare", [9] = "Paladin" }
+		assert(ArenaRules.assign(f, 5, "Magicien", classes, 4), "replace allowed at 4/4")
+		assert(f[5] == "Magicien" and ArenaRules.count(f) == 4)
+		for _, placed in f do assert(placed ~= "Barbare", "replaced hero goes back to the collection") end
+		assert(ArenaRules.assign(f, 2, "Paladin", classes, 4), "moving a placed class onto an occupied cell")
+		assert(f[2] == "Paladin" and f[9] == nil and ArenaRules.count(f) == 3)
+	end)
+
+	test("clear empties a cell; invalid cells and unknown classes refused", function()
+		local f = { [4] = "Tireur" }
+		assert(ArenaRules.clear(f, 4) and f[4] == nil)
+		assert(ArenaRules.clear(f, 4), "clearing an empty cell is harmless")
 		for _, bad in { 0, 10, 1.5, "1", {} } :: { any } do
-			local ok, reason = ArenaRules.toggle(f, bad, "Archer", classes, 4)
+			local ok, reason = ArenaRules.assign(f, bad, "Archer", classes, 4)
+			assert(ok == false and reason == "case invalide")
+			ok, reason = ArenaRules.clear(f, bad)
 			assert(ok == false and reason == "case invalide")
 		end
-		local ok, reason = ArenaRules.toggle(f, 1, "Dragon", classes, 4)
+		local ok, reason = ArenaRules.assign(f, 1, "Dragon", classes, 4)
 		assert(ok == false and reason == "classe inconnue" and next(f) == nil)
 	end)
 
