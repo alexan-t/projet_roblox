@@ -105,6 +105,13 @@ Les quêtes sont décrites dans `src/server/Config/QuestConfig.lua` et suivies d
 `StageCompleted`) avec `QuestService:HandleGameplayEvent`. Voir le
 [format de la config, l'API et les contrats avec les autres services](docs/QUESTS.md).
 
+## Zones et stages (ZoneService)
+
+Les stages sont décrits dans `src/server/Config/StageConfig.lua`. Le joueur lance un stage
+depuis son plot via `ReplicatedStorage.Remotes.RequestStartStage` ; le serveur vérifie ses
+droits et crée une session, que le combat (#8) terminera. Voir les
+[règles d'accès, l'API et les contrats](docs/ZONES.md).
+
 ## Workflow Git
 
 - On part toujours de `develop` à jour, sur une branche `feature/<sujet>`.
