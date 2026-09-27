@@ -5,7 +5,9 @@
 --   • dessous, la formation du joueur (3x3, rang Avant côté ennemis) ;
 --   • à droite, la collection de héros.
 -- Au clic ou au toucher : choisir une case puis un héros (ou l'inverse) ; « Retirer » vide la case.
--- Le style reste provisoire (#11). Le client n'envoie que des demandes ; ArenaService décide tout.
+-- Pendant le combat : barre compacte (vague, x1/x2, héros avec PV/énergie et bouton Ultime),
+-- alimentée par les événements de CombatService (Remotes.CombatEvent).
+-- Le style reste provisoire (#11). Le client n'envoie que des demandes ; le serveur décide tout.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -35,6 +37,9 @@ for _, class in ArenaConfig.HeroClasses do
 end
 
 local action: RemoteFunction? = nil
+local combatAction: RemoteFunction? = nil
+-- Vue locale du combat, reconstruite à partir des événements du serveur (jamais une autorité).
+local combat: { [string]: any } = { units = {} }
 local state: { [string]: any } = { Phase = "Closed" }
 local selectedCell: number? = nil
 local selectedHero: string? = nil
@@ -208,7 +213,8 @@ render = function()
 	end
 	local phase = state.Phase
 	if phase == "Closed" then
-		screen.Enabled = false
+		screen.Enabled = ui.toast.Visible
+		ui.shade.Visible, ui.window.Visible, ui.bar.Visible = false, false, false
 		windowOpen = false
 		selectedCell, selectedHero = nil, nil
 		return
@@ -230,26 +236,69 @@ render = function()
 
 	ui.title.Text = `Stage {state.Zone}-{state.Stage} — {if placing then "Préparation" else "Combat"}`
 	ui.subtitle.Text = `Tu vas affronter : {enemyText}`
-	ui.barText.Text = if placing then `Préparation du Stage {state.Zone}-{state.Stage}` else `Combat en cours — ennemis révélés`
+	-- Barre de combat : vague, vitesse, héros.
+	local stageText = if combat.result == "Victory" then "Victoire !"
+		elseif combat.result == "Defeat" then "Défaite…"
+		elseif combat.miniBoss then "Mini-boss !"
+		else `Vague {combat.wave or 0}/{combat.waveCount or 0}`
+	ui.barText.Text = if placing then `Préparation du Stage {state.Zone}-{state.Stage}` else `Stage {state.Zone}-{state.Stage} — {stageText}`
+	ui.speed1.BackgroundColor3 = if combat.speed == 1 then COLORS.gold else COLORS.cell
+	ui.speed2.BackgroundColor3 = if combat.speed == 2 then COLORS.gold else COLORS.cell
+	local heroes = {}
+	for _, unit in combat.units do
+		if unit.Team == "Ally" then
+			table.insert(heroes, unit)
+		end
+	end
+	table.sort(heroes, function(a, b)
+		return a.UnitId < b.UnitId
+	end)
+	for index, chip in ui.chips do
+		local unit = heroes[index]
+		chip.frame.Visible = unit ~= nil and not placing
+		if unit then
+			local alive = unit.Alive ~= false
+			chip.name.Text = `{classNames[unit.TypeId] or unit.TypeId}{if alive then "" else " (KO)"}`
+			chip.health.Size = UDim2.fromScale(math.clamp(unit.Health / unit.MaxHealth, 0, 1), 1)
+			chip.energy.Size = UDim2.fromScale(if unit.MaxEnergy > 0 then math.clamp(unit.Energy / unit.MaxEnergy, 0, 1) else 0, 1)
+			local ready = alive and unit.MaxEnergy > 0 and unit.Energy >= unit.MaxEnergy and not combat.result
+			chip.ultimate.BackgroundColor3 = if ready then COLORS.gold else COLORS.disabled
+			chip.ultimate.TextColor3 = if ready then COLORS.panel else COLORS.muted
+			chip.unitId = unit.UnitId
+		end
+	end
 
-	-- Camp ennemi : inconnu pendant la préparation.
-	local revealed = {}
-	for _, entry in state.EnemyLayout or {} do
-		revealed[entry.Cell] = entry
+	-- Camp ennemi : inconnu pendant la préparation, unités réellement actives pendant le combat.
+	local enemyAt, heroAt = {}, {}
+	for _, unit in combat.units do
+		if unit.Alive ~= false then
+			if unit.Team == "Enemy" and unit.Cell then
+				enemyAt[unit.Cell] = unit
+			elseif unit.Team == "Ally" and unit.Slot then
+				heroAt[unit.Slot] = unit
+			end
+		end
 	end
 	for n, cell in ui.enemyCells do
-		local entry = revealed[n]
-		cell.Text = if entry then (if entry.MiniBoss then `★ {entry.EnemyId}` else entry.EnemyId) elseif placing then "?" else ""
-		cell.BackgroundColor3 = if entry then COLORS.enemy else COLORS.cell
-		cell.TextColor3 = if entry then COLORS.text else COLORS.muted
+		local unit = if placing then nil else enemyAt[n]
+		cell.Text = if unit then `{if unit.MiniBoss then "★ " else ""}{unit.TypeId}\n{math.ceil(unit.Health)}/{unit.MaxHealth}`
+			elseif placing then "?"
+			else ""
+		cell.BackgroundColor3 = if unit then COLORS.enemy else COLORS.cell
+		cell.TextColor3 = if unit then COLORS.text else COLORS.muted
 	end
 
 	-- Formation du joueur.
 	for n, cell in ui.heroCells do
 		local classId = placed[n]
-		cell.Text = if classId then classNames[classId] or classId elseif placing then "+" else ""
-		cell.BackgroundColor3 = if classId then COLORS.hero else COLORS.cell
-		cell.TextColor3 = if classId then COLORS.text else COLORS.muted
+		local unit = if placing then nil else heroAt[n]
+		cell.Text = if unit then `{classNames[unit.TypeId]}\n{math.ceil(unit.Health)}/{unit.MaxHealth}`
+			elseif classId and placing then classNames[classId] or classId
+			elseif placing then "+"
+			else ""
+		local filled = unit ~= nil or (placing and classId ~= nil)
+		cell.BackgroundColor3 = if filled then COLORS.hero else COLORS.cell
+		cell.TextColor3 = if filled then COLORS.text else COLORS.muted
 		cell.Selection.Thickness = if selectedCell == n then 3 else 0
 	end
 
@@ -267,7 +316,7 @@ render = function()
 	-- Indications et actions.
 	local hint
 	if not placing then
-		hint = "Les ennemis ont pris position au hasard. Le combat réel arrive avec #8."
+		hint = "Combat automatique : les héros ciblent, avancent et attaquent seuls."
 	elseif selectedCell then
 		hint = if placed[selectedCell]
 			then `Case {selectedCell} : choisis un autre héros pour le remplacer, ou retire-le.`
@@ -432,26 +481,92 @@ local function build(): ScreenGui
 	local bar = Instance.new("Frame")
 	bar.AnchorPoint = Vector2.new(0.5, 1)
 	bar.Position = UDim2.new(0.5, 0, 1, -16)
-	bar.Size = UDim2.fromOffset(520, 56)
+	bar.Size = UDim2.fromOffset(720, 150)
 	bar.BackgroundColor3 = COLORS.panel
 	bar.Parent = screen
 	corner(bar, 12)
 	stroke(bar, COLORS.gold, 1.5)
 	ui.bar = bar
-	ui.barText = text(bar, "", 15, true)
+	ui.barText = text(bar, "", 16, true)
 	ui.barText.Position = UDim2.fromOffset(14, 8)
-	ui.barText.Size = UDim2.new(1, -270, 1, -16)
-	ui.view = button(bar, "Voir le terrain", COLORS.cell, function()
+	ui.barText.Size = UDim2.new(1, -430, 0, 32)
+	local function barButton(label: string, x: number, width: number, color: Color3, onClick: () -> ()): TextButton
+		local b = button(bar, label, color, onClick)
+		b.Position = UDim2.new(1, x, 0, 8)
+		b.Size = UDim2.fromOffset(width, 32)
+		return b
+	end
+	local function speed(value: number)
+		local remote = combatAction
+		if remote then
+			remote:InvokeServer("SetSpeed", value)
+		end
+	end
+	ui.speed1 = barButton("x1", -410, 44, COLORS.cell, function()
+		speed(1)
+	end)
+	ui.speed2 = barButton("x2", -360, 44, COLORS.cell, function()
+		speed(2)
+	end)
+	ui.view = barButton("Voir le terrain", -306, 150, COLORS.cell, function()
 		windowOpen = not windowOpen
 		render()
 	end)
-	ui.view.Position = UDim2.new(1, -256, 0, 8)
-	ui.view.Size = UDim2.fromOffset(120, 40)
-	local barLeave = button(bar, "Quitter", COLORS.enemy, function()
+	barButton("Quitter", -148, 136, COLORS.enemy, function()
 		request("Leave")
 	end)
-	barLeave.Position = UDim2.new(1, -128, 0, 8)
-	barLeave.Size = UDim2.fromOffset(116, 40)
+	-- Une puce par héros : nom, PV, énergie, bouton Ultime (actif quand l'énergie est pleine).
+	ui.chips = {}
+	for index = 1, ArenaConfig.MaxHeroes do
+		local chip = Instance.new("Frame")
+		chip.BackgroundColor3 = COLORS.cell
+		chip.Position = UDim2.new((index - 1) / ArenaConfig.MaxHeroes, 10, 0, 48)
+		chip.Size = UDim2.new(1 / ArenaConfig.MaxHeroes, -14, 0, 92)
+		chip.Parent = bar
+		corner(chip, 8)
+		local name = text(chip, "", 14, true)
+		name.Position = UDim2.fromOffset(8, 2)
+		name.Size = UDim2.new(1, -16, 0, 22)
+		local function gauge(y: number, color: Color3): Frame
+			local back = Instance.new("Frame")
+			back.BackgroundColor3 = COLORS.shade
+			back.Position = UDim2.new(0, 8, 0, y)
+			back.Size = UDim2.new(1, -16, 0, 8)
+			back.Parent = chip
+			local fill = Instance.new("Frame")
+			fill.BackgroundColor3 = color
+			fill.BorderSizePixel = 0
+			fill.Size = UDim2.fromScale(1, 1)
+			fill.Parent = back
+			return fill
+		end
+		local entry: { [string]: any } = { frame = chip, name = name }
+		entry.health = gauge(28, Color3.fromRGB(90, 200, 90))
+		entry.energy = gauge(40, COLORS.gold)
+		entry.ultimate = button(chip, "Ultime", COLORS.disabled, function()
+			local remote = combatAction
+			if remote and entry.unitId then
+				local ok, reason = remote:InvokeServer("UseUltimate", entry.unitId)
+				if not ok and reason and ui.message then
+					ui.message.Text = reason
+				end
+			end
+		end)
+		entry.ultimate.Position = UDim2.new(0, 8, 0, 54)
+		entry.ultimate.Size = UDim2.new(1, -16, 0, 30)
+		ui.chips[index] = entry
+	end
+
+	-- Message de fin (victoire, défaite, arène occupée), visible après la fermeture de la préparation.
+	local toast = text(screen, "", 28, true)
+	toast.AnchorPoint = Vector2.new(0.5, 0)
+	toast.Position = UDim2.new(0.5, 0, 0, 80)
+	toast.Size = UDim2.fromOffset(700, 50)
+	toast.TextXAlignment = Enum.TextXAlignment.Center
+	toast.TextColor3 = COLORS.gold
+	toast.TextStrokeTransparency = 0.3
+	toast.Visible = false
+	ui.toast = toast
 
 	screen.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
 	return screen
@@ -475,8 +590,75 @@ local function applyState(newState: { [string]: any })
 		-- La fenêtre se ferme pour laisser voir l'arène ; « Voir le terrain » la rouvre.
 		windowOpen = false
 	end
+	local view = newState.Combat
+	if newState.Phase == "Combat" and view and combat.id ~= view.Id then
+		combat = { id = view.Id, wave = view.Wave, waveCount = view.WaveCount, speed = view.Speed, units = {} }
+		for _, unit in view.Units do
+			combat.units[unit.UnitId] = unit
+		end
+	end
+	if newState.Phase == "Closed" and newState.Message and newState.Message ~= "" then
+		local message = newState.Message
+		ui.toast.Text = message
+		ui.toast.Visible = true
+		task.delay(4, function()
+			if ui.toast.Text == message then
+				ui.toast.Visible = false
+				render()
+			end
+		end)
+	end
 	if ui.message then
 		ui.message.Text = newState.Message or ""
+	end
+	render()
+end
+
+-- Événements du serveur : met à jour la vue locale du combat (PV, énergie, vagues, résultat).
+local function onCombatEvents(combatId: number, events: { { [string]: any } })
+	if combat.id ~= combatId then
+		combat = { id = combatId, units = {}, speed = 1 }
+	end
+	for _, event in events do
+		local kind = event.Type
+		if kind == "UnitSpawned" then
+			combat.units[event.UnitId] = {
+				UnitId = event.UnitId,
+				Team = event.Team,
+				TypeId = event.TypeId,
+				Slot = event.Slot,
+				Cell = event.Cell,
+				MiniBoss = event.MiniBoss,
+				Health = event.Health,
+				MaxHealth = event.MaxHealth,
+				Energy = event.Energy,
+				MaxEnergy = event.MaxEnergy,
+				Alive = true,
+			}
+		elseif kind == "Damage" then
+			local unit = combat.units[event.TargetId]
+			if unit then
+				unit.Health = event.Health
+			end
+		elseif kind == "EnergyChanged" then
+			local unit = combat.units[event.UnitId]
+			if unit then
+				unit.Energy = event.Energy
+			end
+		elseif kind == "UnitDied" then
+			local unit = combat.units[event.UnitId]
+			if unit then
+				unit.Alive = false
+			end
+		elseif kind == "WaveStarted" then
+			combat.wave, combat.waveCount, combat.miniBoss = event.Wave, event.WaveCount, false
+		elseif kind == "MiniBossStarted" then
+			combat.miniBoss = true
+		elseif kind == "SpeedChanged" then
+			combat.speed = event.Speed
+		elseif kind == "CombatEnded" then
+			combat.result = event.Result
+		end
 	end
 	render()
 end
@@ -491,6 +673,12 @@ function ArenaPrepController:Start()
 	action = remote
 	build()
 	stateEvent.OnClientEvent:Connect(applyState)
+	local combatRemote = remotes:WaitForChild("CombatAction", 30)
+	local combatEvents = remotes:WaitForChild("CombatEvent", 30)
+	if combatRemote and combatRemote:IsA("RemoteFunction") and combatEvents and combatEvents:IsA("RemoteEvent") then
+		combatAction = combatRemote
+		combatEvents.OnClientEvent:Connect(onCombatEvents)
+	end
 end
 
 return ArenaPrepController

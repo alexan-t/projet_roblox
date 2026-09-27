@@ -1,9 +1,9 @@
 --!strict
 -- PROTOTYPE de préparation de combat sur l'arène de test (voir docs/ARENA_PROTOTYPE.md).
 -- Près de l'arène, le joueur lance le stage (ZoneService), pose jusqu'à 4 héros de sa collection
--- sur le 3x3 des cases "CaseHeros", puis lance le combat : les ennemis du stage apparaissent
--- alors au hasard sur le 3x3 de FrontEnnemi, nouveau tirage à chaque combat.
--- Aucun combat réel (dégâts, PV, IA, victoire) : c'est CombatService (#8).
+-- sur le 3x3 des cases "CaseHeros", puis lance le combat.
+-- ArenaService gère la préparation et la géométrie de l'arène (positions des cases, mannequins) ;
+-- le combat lui-même (vagues, dégâts, résultat) appartient à CombatService.
 -- Tout est décidé par le serveur ; le client n'envoie que "case" et "classe"
 -- (actions Assign, Clear, Fight, Leave de Remotes.ArenaAction).
 
@@ -15,6 +15,7 @@ local Workspace = game:GetService("Workspace")
 local Log = require(ReplicatedStorage.Shared.Utils.Log)
 local ArenaConfig = require(ReplicatedStorage.Shared.Config.ArenaConfig)
 local ArenaRules = require(script.Parent.Parent.Arena.ArenaRules)
+local CombatService = require(script.Parent.CombatService)
 local ZoneService = require(script.Parent.ZoneService)
 
 type Phase = "Placement" | "Combat"
@@ -26,7 +27,7 @@ type Prep = {
 	folder: Folder,
 	heroes: Folder,
 	enemies: Folder,
-	layout: { [number]: ArenaRules.Enemy }?,
+	combatId: number?,
 	loopWas: any,
 }
 
@@ -66,15 +67,6 @@ local function findFront(root: Instance): BasePart?
 		end
 	end
 	return nil
-end
-
-local function average(parts: { [number]: BasePart }): Vector3
-	local sum, n = Vector3.zero, 0
-	for _, part in parts do
-		sum += part.Position
-		n += 1
-	end
-	return if n > 0 then sum / n else Vector3.zero
 end
 
 -- Clone un mannequin du design tel quel, pieds sur `feet`, tourné vers `lookAt`.
@@ -151,20 +143,15 @@ local function stateOf(prep: Prep?, message: string?): { [string]: any }
 	for slot, classId in prep.formation do
 		table.insert(formation, { Slot = slot, ClassId = classId })
 	end
-	-- Positions ennemies révélées seulement une fois le combat lancé (elles sont alors visibles).
-	local enemyLayout = {}
-	if prep.phase == "Combat" and prep.layout then
-		for cell, enemy in prep.layout do
-			table.insert(enemyLayout, { Cell = cell, EnemyId = enemy.EnemyId, MiniBoss = enemy.MiniBoss })
-		end
-	end
+	-- Pendant le combat, seules les unités réellement actives (CombatService) sont décrites.
+	local combat = if prep.phase == "Combat" then CombatService:GetCombat(prep.player) else nil
 	return {
 		Phase = prep.phase,
 		Zone = ArenaConfig.Zone,
 		Stage = ArenaConfig.Stage,
 		Enemies = if session then ArenaRules.summarize(session.Config) else {},
 		Formation = formation,
-		EnemyLayout = enemyLayout,
+		Combat = combat,
 		MaxHeroes = ArenaConfig.MaxHeroes,
 		Message = message,
 	}
@@ -200,6 +187,7 @@ local function rebuildHeroes(prep: Prep)
 	end
 end
 
+-- Passe la formation et la géométrie de l'arène à CombatService, qui crée les unités.
 local function fight(prep: Prep): (boolean, string?)
 	if prep.phase ~= "Placement" then
 		return false, "combat déjà lancé"
@@ -207,29 +195,35 @@ local function fight(prep: Prep): (boolean, string?)
 	if ArenaRules.count(prep.formation) == 0 then
 		return false, "place au moins un héros"
 	end
-	local session = ZoneService:GetSession(prep.player)
 	local part = front
-	if not session or not part then
+	if not sessionAlive(prep) or not part then
 		return false, "session ou arène indisponible"
 	end
-	local layout, problem = ArenaRules.randomLayout(ArenaRules.expandEnemies(session.Config), ENEMY_CELLS, Random.new())
-	if not layout then
-		return false, problem
+	local heroPositions, enemyPositions = {}, {}
+	for slot, pose in poses do
+		heroPositions[slot] = heroFeet(pose)
 	end
-	local facing = average(poses)
-	for cell, enemy in layout do
-		local template = ArenaConfig.EnemyTemplates[enemy.EnemyId]
-		local model = if template then spawnModel(template, prep.enemies, enemyFeet(part, cell), facing, nil) else nil
-		if model then
-			model:SetAttribute("EnemyId", enemy.EnemyId)
-			model:SetAttribute("Case", cell)
-		else
-			Log.warn(SCOPE, `Aucun mannequin pour l'ennemi {enemy.EnemyId}`)
-		end
+	for cell = 1, ENEMY_CELLS do
+		enemyPositions[cell] = enemyFeet(part, cell)
 	end
-	prep.layout = layout
+	prep.heroes:ClearAllChildren() -- les mannequins de placement cèdent la place aux unités de combat
+	local combatId, reason = CombatService:StartCombat(prep.player, prep.sessionId, table.clone(prep.formation), {
+		HeroPositions = heroPositions,
+		EnemyPositions = enemyPositions,
+		SpawnUnit = function(unit, feet: Vector3, lookAt: Vector3): Model?
+			if unit.Team == "Ally" then
+				return spawnModel(ArenaConfig.HeroTemplate, prep.heroes, feet, lookAt, classNames[unit.TypeId])
+			end
+			local template = ArenaConfig.EnemyTemplates[unit.TypeId]
+			return if template then spawnModel(template, prep.enemies, feet, lookAt, nil) else nil
+		end,
+	})
+	if not combatId then
+		rebuildHeroes(prep)
+		return false, reason
+	end
+	prep.combatId = combatId
 	prep.phase = "Combat"
-	Log.info(SCOPE, `Combat de {prep.player.Name} : ennemis placés au hasard`)
 	return true, nil
 end
 
@@ -265,7 +259,7 @@ local function open(player: Player)
 		folder = folder,
 		heroes = heroes,
 		enemies = enemies,
-		layout = nil,
+		combatId = nil,
 		loopWas = arena:GetAttribute("IntroDemoBoucle"),
 	}
 	-- L'intro de démonstration en boucle réutilise les mêmes cases : on la suspend (runtime seulement).
@@ -308,6 +302,7 @@ local function onAction(player: Player, action: any, slot: any, classId: any): (
 		send(player, prep, reason)
 		return ok, reason
 	elseif action == "Leave" then
+		CombatService:CancelCombat(player)
 		ZoneService:CancelStage(player)
 		cleanup(prep, nil)
 		return true, nil
@@ -407,6 +402,14 @@ function ArenaService:Start()
 			watchPlayer(player)
 		end
 	end
+
+	-- Fin de combat : résultat affiché, arène rangée (ZoneService a déjà été prévenu).
+	CombatService:OnCombatEnded(function(player: Player, combatId: number, result: string)
+		local prep = current
+		if prep and prep.player == player and prep.combatId == combatId then
+			cleanup(prep, if result == "Victory" then "Victoire !" else "Défaite…")
+		end
+	end)
 
 	Players.PlayerRemoving:Connect(function(player: Player)
 		local prep = current

@@ -1,5 +1,5 @@
 --!strict
--- Règles pures de la préparation de combat (PROTOTYPE, voir docs/ARENA_PROTOTYPE.md).
+-- Règles pures de la préparation de combat (formation et roster annoncé) (PROTOTYPE, voir docs/ARENA_PROTOTYPE.md).
 -- Aucune API Roblox : testé par tools/test-arena.ps1.
 
 export type Enemy = { EnemyId: string, MiniBoss: boolean }
@@ -43,25 +43,6 @@ function ArenaRules.summarize(stage: any): { EnemySummary }
 		end
 	end
 	return summary
-end
-
--- Tire une case différente (1..cells) pour chaque ennemi. Nouveau tirage à chaque combat.
--- random : un Random Roblox (ou tout objet avec NextInteger(min, max) pour les tests).
-function ArenaRules.randomLayout(enemies: { Enemy }, cells: number, random: any): ({ [number]: Enemy }?, string?)
-	if #enemies > cells then
-		return nil, `{#enemies} ennemis pour {cells} cases`
-	end
-	local free: { number } = {}
-	for cell = 1, cells do
-		table.insert(free, cell)
-	end
-	local layout: { [number]: Enemy } = {}
-	for _, enemy in enemies do
-		local pick = random:NextInteger(1, #free)
-		layout[free[pick]] = enemy
-		table.remove(free, pick)
-	end
-	return layout, nil
 end
 
 local function count(formation: Formation): number
