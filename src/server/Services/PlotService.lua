@@ -8,11 +8,14 @@ local Workspace = game:GetService("Workspace")
 
 local Log = require(ReplicatedStorage.Shared.Utils.Log)
 local DataService = require(script.Parent.DataService)
+local PlotConfig = require(script.Parent.Parent.Config.PlotConfig)
 
 local SCOPE = "PlotService"
 local RUNTIME_NAME = "Runtime"
 local ROOT_TIMEOUT = 10
 local SPAWN_HEIGHT = 4
+local SPAWN_NAME = PlotConfig.SpawnName
+local FOLDER_PATH = table.concat(PlotConfig.PlotsFolder, ".")
 
 type Plot = { model: Model, id: number, spawn: BasePart }
 type Assignment = {
@@ -30,11 +33,20 @@ local assignments: { [Player]: Assignment } = {}
 local owners: { [Model]: Player } = {}
 local assigned = Instance.new("BindableEvent")
 
+-- Dossier des plots au chemin configuré, résolu à chaque appel.
+local function findPlotsFolder(): Instance?
+	local node: Instance? = Workspace
+	for _, name in PlotConfig.PlotsFolder do
+		node = if node then node:FindFirstChild(name) else nil
+	end
+	return node
+end
+
 local function isUsable(plot: Plot): boolean
 	local folder = plotsFolder
-	return folder ~= nil and folder.Parent == Workspace and folder.Name == "Plots"
+	return folder ~= nil and findPlotsFolder() == folder
 		and plot.model.Parent == folder and plot.model:GetAttribute("PlotId") == plot.id
-		and plot.spawn.Parent == plot.model and plot.spawn.Name == "Spawn" and plot.spawn.Anchored
+		and plot.spawn.Parent == plot.model and plot.spawn.Name == SPAWN_NAME and plot.spawn.Anchored
 end
 
 local function isReady(player: Player): boolean
@@ -153,9 +165,9 @@ local function assign(player: Player)
 end
 
 function PlotService:Init()
-	local folder = Workspace:FindFirstChild("Plots")
+	local folder = findPlotsFolder()
 	if not folder or not folder:IsA("Folder") then
-		Log.warn(SCOPE, "Workspace.Plots (Folder) introuvable ; préparer la map selon docs/PLOTS.md")
+		Log.warn(SCOPE, `Workspace.{FOLDER_PATH} (Folder) introuvable ; préparer la map selon docs/PLOTS.md`)
 		return
 	end
 	plotsFolder = folder
@@ -170,12 +182,12 @@ function PlotService:Init()
 	end
 	for _, child in folder:GetChildren() do
 		local id = child:GetAttribute("PlotId")
-		local spawn = child:FindFirstChild("Spawn")
+		local spawn = child:FindFirstChild(SPAWN_NAME)
 		if not child:IsA("Model") or typeof(id) ~= "number" or idCounts[id] ~= 1
 			or not spawn or not spawn:IsA("BasePart") or spawn:IsA("SpawnLocation") or not spawn.Anchored
 			or child:FindFirstChild(RUNTIME_NAME)
 		then
-			Log.warn(SCOPE, `Plot ignoré : {child:GetFullName()} (vérifier PlotId unique, Spawn ancré et absence de Runtime)`)
+			Log.warn(SCOPE, `Plot ignoré : {child:GetFullName()} (vérifier PlotId unique, {SPAWN_NAME} ancré et absence de Runtime)`)
 			continue
 		end
 		child:SetAttribute("OwnerUserId", nil)

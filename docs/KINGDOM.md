@@ -24,7 +24,7 @@ ServerStorage
       <nom libre> (Model, attribut texte HeroId = "Chevalier")
       ...
 
-Workspace.Plots.<plot> (voir docs/PLOTS.md)
+Workspace.Lobby.Plots.<plot> (dossier de PlotConfig, voir docs/PLOTS.md)
   Royaume
     EmplacementCentral (BasePart)   repère du royaume
 ```
