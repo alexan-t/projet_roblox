@@ -98,6 +98,13 @@ Le serveur clone sur le plot du joueur le modèle de royaume qui correspond à
 `Kingdom.VisualState`, puis un modèle par héros possédé. Les modèles et les
 repères restent dans Studio : voir le [contrat d'assets, l'API et les tests](docs/KINGDOM.md).
 
+## Quêtes (QuestService)
+
+Les quêtes sont décrites dans `src/server/Config/QuestConfig.lua` et suivies dans
+`PlayerData.Quests`. Les services de gameplay signalent les événements (par exemple
+`StageCompleted`) avec `QuestService:HandleGameplayEvent`. Voir le
+[format de la config, l'API et les contrats avec les autres services](docs/QUESTS.md).
+
 ## Workflow Git
 
 - On part toujours de `develop` à jour, sur une branche `feature/<sujet>`.
