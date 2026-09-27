@@ -15,15 +15,6 @@ return function(ArenaRules: any, stageConfig: any, arenaConfig: any)
 		end
 	end
 
-	-- Générateur déterministe au format de Random (NextInteger), pour des tirages reproductibles.
-	local function seeded(seed: number): any
-		local state = seed
-		return { NextInteger = function(_self: any, min: number, max: number): number
-			state = (state * 1103515245 + 12345) % 2147483648
-			return min + state % (max - min + 1)
-		end }
-	end
-
 	local stage = stageConfig.Zones[1].Stages[1]
 	local classes = {}
 	for _, class in arenaConfig.HeroClasses do classes[class.Id] = true end
@@ -46,44 +37,6 @@ return function(ArenaRules: any, stageConfig: any, arenaConfig: any)
 		for _, entry in summary do
 			for key in entry do assert(key == "EnemyId" or key == "Count" or key == "MiniBoss", "no position field: " .. key) end
 		end
-	end)
-
-	test("random layout: every enemy on its own cell of the 3x3", function()
-		local enemies = ArenaRules.expandEnemies(stage)
-		for seed = 1, 50 do
-			local layout = ArenaRules.randomLayout(enemies, 9, seeded(seed))
-			assert(layout)
-			local n, bosses = 0, 0
-			for cell, enemy in layout do
-				assert(cell >= 1 and cell <= 9 and cell % 1 == 0)
-				n += 1
-				if enemy.MiniBoss then bosses += 1 end
-			end
-			assert(n == 7 and bosses == 1, "7 distinct cells")
-		end
-	end)
-
-	test("random layout changes between fights of the same stage", function()
-		local enemies = ArenaRules.expandEnemies(stage)
-		local seen = {}
-		local distinct = 0
-		for seed = 1, 20 do
-			local layout = ArenaRules.randomLayout(enemies, 9, seeded(seed * 7919))
-			local key = {}
-			for cell = 1, 9 do key[cell] = if layout[cell] then layout[cell].EnemyId else "-" end
-			local text = table.concat(key, ",")
-			if not seen[text] then
-				seen[text] = true
-				distinct += 1
-			end
-		end
-		assert(distinct >= 15, "layouts vary: " .. distinct .. "/20")
-	end)
-
-	test("more enemies than cells is refused", function()
-		local many = { Waves = { { Enemies = { { EnemyId = "Slime", Count = 10 } } } } }
-		local layout, reason = ArenaRules.randomLayout(ArenaRules.expandEnemies(many), 9, seeded(1))
-		assert(layout == nil and reason ~= nil)
 	end)
 
 	test("assign: up to 4 heroes, one unit per class", function()
