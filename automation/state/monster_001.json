@@ -20,5 +20,5 @@
     "iteration_00_screenshots_done"
   ],
   "latest_review": "automation/reviews/monster_001_iteration_00_377a78d42f4ff1781de816627b446ff614e56045b45660623a8bd77466428ab7.json",
-  "notes": "Passe 00 terminée et poussée (commit 82640e9). En attente de automation/reviews/monster_001_iteration_00.json. Si FIX : n'appliquer que les required_changes sur Workspace.HandoffTest_Pilleur (ne pas régénérer le corps), puis captures iteration_01_*. Prérequis Studio signalé : une étape ChangeHistory est restée ouverte ; Ctrl+S puis relance de Studio recommandés avant la passe suivante."
+  "notes": "Passe 00 terminée et review Cloud FIX reçue dans latest_review. Corriger uniquement les required_changes sur Workspace.HandoffTest_Pilleur, sans régénérer le corps ; conserver la variante archivée. Avant la correction, sauvegarder et relancer Studio si l'étape ChangeHistory restée ouverte le nécessite. Incrémenter l'itération une seule fois au début de la passe 01, puis refaire les sept captures iteration_01_* et demander une nouvelle review."
 }
