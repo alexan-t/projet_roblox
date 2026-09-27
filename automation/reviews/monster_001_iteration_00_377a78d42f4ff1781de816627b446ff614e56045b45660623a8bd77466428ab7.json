@@ -1,0 +1,30 @@
+{
+  "task_id": "monster_001",
+  "iteration": 0,
+  "request_id": "377a78d42f4ff1781de816627b446ff614e56045b45660623a8bd77466428ab7",
+  "verdict": "FIX",
+  "summary": "L'idée principale (nasse de pêche en osier en guise de tête, yeux ambrés derrière les barreaux, gaffe de batelier) est originale, liée à la rivière sans cliché aquatique, et reconnaissable au contour. Mais le corps en forme d'œuf, aux épaules étroites, surmonté d'un grand cône lit comme un gnome à bonnet plutôt que comme une créature massive au haut du corps lourd. La peau change de teinte entre le haut des bras et les mains, et le point lumineux disparaît de loin. Sur la capture compare, à côté de Treant_Masque (#17), la présence et la finition sont sensiblement inférieures.",
+  "visible_issues": [
+    "[Proportions] Captures front et main : le point le plus large de la silhouette est le ventre rond, pas les épaules. Les épaules sont étroites et les bras sont fins par rapport au torse, ce qui contredit le haut du corps lourd et les épaules larges de ART_DIRECTION § 3.",
+    "[Proportions/Silhouette] Captures front et face : la nasse conique occupe environ un tiers de la hauteur visible et se dresse droite au-dessus du corps, sans être enfoncée dans les épaules. Avec le ventre rond, l'ensemble lit comme un bonnet pointu de gnome, pas comme une tête de créature voûtée et menaçante.",
+    "[Couleurs] Captures front, face et back : le haut des bras est d'une teinte saumon/rosée claire, les avant-bras et les mains sont gris-vert et le torse est brun. La peau n'a pas la même teinte d'un membre à l'autre (ART_DIRECTION § 8).",
+    "[Lisibilité] Capture far : les yeux ambrés, seul point lumineux, ne se distinguent plus derrière les barreaux de la nasse. Aucun point focal n'est lisible à distance de jeu.",
+    "[Niveau de qualité] Capture compare : à côté de Treant_Masque (#17), le Pilleur paraît plus terne et moins riche. Les matériaux se séparent mal (la pèlerine censée être un filet de pêche lit comme de la paille ou du chaume), le contraste de valeur est faible et la présence est nettement moindre."
+  ],
+  "required_changes": [
+    "Élargir le haut du corps : agrandir la pèlerine et les blocs de galets sur les épaules, et élargir le torse au niveau des épaules pour que la silhouette soit plus large aux épaules qu'au ventre (viser au moins le rapport largeur/hauteur de Treant_Masque, environ 0,75). Épaissir les bras jusqu'à ce qu'ils soient au moins aussi larges que les jambes.",
+    "Réduire la hauteur du cône de la nasse d'environ un quart et l'abaisser dans les épaules, légèrement projetée vers l'avant, avec un dos plus voûté. La tête doit passer d'environ 1/3 à environ 1/4 de la hauteur tout en gardant sa forme de nasse et ses anneaux d'osier.",
+    "Recolorer en HSV le haut des deux bras sur la teinte moyenne des avant-bras et des mains (ou l'inverse, mais une seule teinte de peau). Garder les taches de vase grises comme motifs peints, sans changer la couleur de base d'un segment à l'autre.",
+    "Agrandir les deux yeux Neon ambrés d'environ 50 % et écarter les barreaux de la nasse juste devant eux, ou ajouter une PointLight ambrée discrète (luminosité environ 0,8, portée environ 6) sous la nasse, pour que la lueur reste visible à 30-60 studs. Vérifier sur une nouvelle capture far prise de trois-quarts face.",
+    "Retexturer la pèlerine en vrai filet de pêche lisible : grosses mailles en losange de cordes claires (mailles d'au moins 0,5 stud) sur un fond plus sombre, avec 3 flotteurs en bois ou en liège accrochés au bord, pour séparer nettement filet, galets et peau.",
+    "Refaire la capture compare avec le Pilleur et au moins une référence principale à la même distance de la caméra (RoiOrc est actuellement beaucoup plus proche que les deux autres), puis refaire les 7 captures après correction."
+  ],
+  "references_checked": [
+    "Treant_Masque",
+    "RoiOrc",
+    "KingTreant",
+    "KingSlime"
+  ],
+  "confidence": "medium",
+  "human_attention": []
+}
