@@ -5,6 +5,9 @@
 local ArenaConfig = {
 	-- Arène de test, depuis Workspace (la seule arène complète de la DEV).
 	ArenaPath = table.freeze({ "PlotTravail", "Arene" }),
+	-- En Studio uniquement : chaque apparition du personnage est déplacée sur ce repère (depuis Workspace),
+	-- à côté de l'arène de test, après le placement de PlotService. nil = désactivé.
+	TestSpawn = table.freeze({ "PlotTravail", "PointApparition" }),
 	-- Stage lancé depuis l'arène de test.
 	Zone = 1,
 	Stage = 1,

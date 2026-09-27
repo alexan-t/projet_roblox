@@ -8,6 +8,7 @@
 -- (actions Assign, Clear, Fight, Leave de Remotes.ArenaAction).
 
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
@@ -31,6 +32,8 @@ type Prep = {
 
 local SCOPE = "ArenaService"
 local ENEMY_CELLS = 9
+-- Laisse PlotService poser le personnage sur son plot avant de le déplacer vers l'arène de test.
+local TEST_SPAWN_DELAY = 1
 
 local ArenaService = {}
 
@@ -380,6 +383,30 @@ function ArenaService:Start()
 	prompt.RequiresLineOfSight = false
 	prompt.Triggered:Connect(open)
 	prompt.Parent = marker
+
+	-- Prototype, Studio uniquement : apparaître directement à côté de l'arène de test.
+	local spawnPath = ArenaConfig.TestSpawn
+	local spawnMarker = if spawnPath and RunService:IsStudio() then resolve(Workspace, spawnPath) else nil
+	if spawnMarker and spawnMarker:IsA("BasePart") then
+		local marker: BasePart = spawnMarker
+		local function onCharacter(character: Model)
+			task.delay(TEST_SPAWN_DELAY, function()
+				if character.Parent and character:FindFirstChild("HumanoidRootPart") then
+					character:PivotTo(CFrame.new(marker.Position + Vector3.new(0, marker.Size.Y / 2 + 3, 0)))
+				end
+			end)
+		end
+		local function watchPlayer(player: Player)
+			player.CharacterAdded:Connect(onCharacter)
+			if player.Character then
+				onCharacter(player.Character)
+			end
+		end
+		Players.PlayerAdded:Connect(watchPlayer)
+		for _, player in Players:GetPlayers() do
+			watchPlayer(player)
+		end
+	end
 
 	Players.PlayerRemoving:Connect(function(player: Player)
 		local prep = current

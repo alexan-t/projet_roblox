@@ -42,6 +42,9 @@ l'UI finale (#11) : ces issues pourront reprendre les règles serveur et remplac
   La première ligne est côté héros, et les colonnes sont dans le même ordre que les cases héros.
 - **Mannequins** : ceux du design (`ReplicatedStorage.Assets.Combat`), clonés tels quels.
   Il n'existe qu'un `MannequinHeros` : les classes se distinguent par une étiquette provisoire.
+- **Apparition de test** (Studio uniquement) : à chaque apparition, le personnage est déplacé
+  sur `PlotTravail.PointApparition` (`ArenaConfig.TestSpawn`, `nil` pour désactiver), une seconde
+  après le placement de PlotService. Le plot attribué ne change pas.
 - **Intro de démonstration** : l'attribut `IntroDemoBoucle` de l'arène est coupé pendant la
   préparation (runtime seulement) puis restauré ; le client retire les restes `IntroCombat`.
 - Une seule préparation à la fois (arène de test unique). Départ, fin de session (debug) ou
