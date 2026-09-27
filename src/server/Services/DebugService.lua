@@ -9,12 +9,17 @@
 --   game.ServerStorage.DebugData:Invoke(player, "AddHero", "Chevalier")     -> identifiant de l'exemplaire ajouté
 --   game.ServerStorage.DebugData:Invoke(player, "RemoveHero", id)           -> résultat de KingdomService:Refresh
 --   game.ServerStorage.DebugData:Invoke(player, "RefreshKingdom")           -> résultat de KingdomService:Refresh
+--   game.ServerStorage.DebugData:Invoke(player, "GetActiveQuest")           -> QuestService:GetActiveQuest
+--   game.ServerStorage.DebugData:Invoke(player, "QuestEvent", "StageCompleted", { Zone = 1, Stage = 1 })
+--                                                                             -> QuestService:HandleGameplayEvent (simule ZoneService #7)
+--   game.ServerStorage.DebugData:Invoke(player, "ClaimQuest", "DefendDomain") -> succès, raison du refus
 
 local RunService = game:GetService("RunService")
 local ServerStorage = game:GetService("ServerStorage")
 
 local DataService = require(script.Parent.DataService)
 local KingdomService = require(script.Parent.KingdomService)
+local QuestService = require(script.Parent.QuestService)
 
 local debugHeroCount = 0
 
@@ -55,6 +60,15 @@ local function handle(player: Player, command: string, ...: any): any
 		return KingdomService:Refresh(player)
 	elseif command == "RefreshKingdom" then
 		return KingdomService:Refresh(player)
+	elseif command == "GetActiveQuest" then
+		return QuestService:GetActiveQuest(player)
+	elseif command == "QuestEvent" then
+		local eventName, payload = ...
+		return QuestService:HandleGameplayEvent(player, eventName, payload)
+	elseif command == "ClaimQuest" then
+		local questId = ...
+		local ok, reason = QuestService:ClaimQuest(player, questId)
+		return { Success = ok, Reason = reason }
 	end
 	return `Commande inconnue : {command}`
 end
