@@ -13,6 +13,10 @@
 --   game.ServerStorage.DebugData:Invoke(player, "QuestEvent", "StageCompleted", { Zone = 1, Stage = 1 })
 --                                                                             -> QuestService:HandleGameplayEvent (simule ZoneService #7)
 --   game.ServerStorage.DebugData:Invoke(player, "ClaimQuest", "DefendDomain") -> succès, raison du refus
+--   game.ServerStorage.DebugData:Invoke(player, "StartStage", 1, 1)         -> ZoneService:StartStage (session ou raison)
+--   game.ServerStorage.DebugData:Invoke(player, "GetStageSession")          -> ZoneService:GetSession
+--   game.ServerStorage.DebugData:Invoke(player, "CompleteStage", true)      -> fin de la session active (simule CombatService #8)
+--   game.ServerStorage.DebugData:Invoke(player, "CancelStage")              -> ZoneService:CancelStage
 
 local RunService = game:GetService("RunService")
 local ServerStorage = game:GetService("ServerStorage")
@@ -20,6 +24,7 @@ local ServerStorage = game:GetService("ServerStorage")
 local DataService = require(script.Parent.DataService)
 local KingdomService = require(script.Parent.KingdomService)
 local QuestService = require(script.Parent.QuestService)
+local ZoneService = require(script.Parent.ZoneService)
 
 local debugHeroCount = 0
 
@@ -69,6 +74,19 @@ local function handle(player: Player, command: string, ...: any): any
 		local questId = ...
 		local ok, reason = QuestService:ClaimQuest(player, questId)
 		return { Success = ok, Reason = reason }
+	elseif command == "StartStage" then
+		local zone, stage = ...
+		local session, reason = ZoneService:StartStage(player, zone, stage)
+		return { Success = session ~= nil, Reason = reason, SessionId = session and session.Id }
+	elseif command == "GetStageSession" then
+		local session = ZoneService:GetSession(player)
+		return session and { Id = session.Id, Zone = session.Zone, Stage = session.Stage, Status = session.Status }
+	elseif command == "CompleteStage" then
+		local victory = ...
+		local session = ZoneService:GetSession(player)
+		return session ~= nil and ZoneService:CompleteStage(player, session.Id, victory == true)
+	elseif command == "CancelStage" then
+		return ZoneService:CancelStage(player)
 	end
 	return `Commande inconnue : {command}`
 end
