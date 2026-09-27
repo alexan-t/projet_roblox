@@ -4,17 +4,18 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $testBuild = Join-Path $repoRoot 'build'
 New-Item -ItemType Directory -Force -Path $testBuild | Out-Null
+$configSource = Get-Content -LiteralPath (Join-Path $repoRoot 'src/server/Config/PlotConfig.lua') -Raw
 $serviceSource = Get-Content -LiteralPath (Join-Path $repoRoot 'src/server/Services/PlotService.lua') -Raw
 $testSource = Get-Content -LiteralPath (Join-Path $repoRoot 'src/server/Tests/PlotService.spec.lua') -Raw
 
 # Le vrai module est execute avec des doubles explicites des API moteur.
 # Aucun remplacement de logique du service, aucun acces a Studio ou DataStore.
-$runnerSource = @'
+$runnerSource = "local config = (function()`n" + $configSource + "`nend)()`n" + @'
 local function createService(env)
     local game, script, require = env.game, env.script, env.require
     local Instance, CFrame, Vector3, task = env.Instance, env.CFrame, env.Vector3, env.task
     local os = env.os
-'@ + "`n" + $serviceSource + "`nend`nlocal runTests = (function()`n" + $testSource + "`nend)()`nrunTests(createService)`n"
+'@ + "`n" + $serviceSource + "`nend`nlocal runTests = (function()`n" + $testSource + "`nend)()`nrunTests(createService, config)`n"
 $runnerPath = Join-Path $testBuild 'plot-service-tests.luau'
 [System.IO.File]::WriteAllText($runnerPath, $runnerSource, [System.Text.UTF8Encoding]::new($false))
 & $LuauPath $runnerPath

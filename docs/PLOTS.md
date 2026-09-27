@@ -6,23 +6,28 @@ script Studio n'est créé ou modifié dans ce lot.
 
 ## Préparation dans Studio
 
-Préparer cette structure dans la DEV commune, via Studio / Team Create :
+Le chemin du dossier et le nom du repère sont fixés dans `src/server/Config/PlotConfig.lua`,
+alignés sur la map de la DEV. Une seule convention est acceptée :
 
 ```text
 Workspace
-  Plots (Folder)
-    Plot_01 (Model, attribut numérique PlotId = 1)
-      Spawn (Part ancrée)
-      ... décor permanent, repères du royaume et de l'expédition
-    Plot_02 (Model, attribut numérique PlotId = 2)
-      Spawn (Part ancrée)
-    ... jusqu'à 8 à 12 plots
+  Lobby
+    Plots (Folder)                    PlotConfig.PlotsFolder = { "Lobby", "Plots" }
+      Plot_1 (Model, attribut numérique PlotId = 1)
+        PointApparition (Part ancrée) PlotConfig.SpawnName = "PointApparition"
+        Royaume
+          EmplacementCentral          repère du royaume (docs/KINGDOM.md)
+        ... décor permanent, arène, panneau
+      Plot_2 (Model, PlotId = 2)
+      ... jusqu'à 8 à 12 plots
 ```
 
-- Seuls les modèles enfants directs de `Workspace.Plots` sont enregistrés, au
+Un dossier `Workspace.Plots` ou un repère nommé `Spawn` (ancienne convention) ne sont plus lus.
+
+- Seuls les modèles enfants directs du dossier configuré sont enregistrés, au
   démarrage du serveur. Le nom du modèle est libre. `PlotId` doit être un entier
   positif, fini et unique. Tous les modèles partageant un ID sont ignorés.
-- `Spawn` est une `BasePart` ancrée, enfant direct du modèle, **pas une
+- `PointApparition` est une `BasePart` ancrée, enfant direct du modèle, **pas une
   `SpawnLocation`**. Recommandation : une petite Part invisible, non collisionnable,
   horizontale, orientée dans le sens d'arrivée souhaité. Le pivot du personnage
   est placé quatre studs au-dessus de ce repère. Vérifier le dégagement avec l'avatar.
@@ -35,7 +40,8 @@ Workspace
 - Redémarrer le test après une modification des emplacements. L'ajout, le retrait
   ou le remplacement de plots pendant une partie n'est pas pris en charge.
   Par sécurité, avant chaque attribution ou utilisation, le service revérifie
-  le parentage du plot, son ID enregistré et le repère Spawn (nom, parent, ancrage).
+  le chemin du dossier, le parentage du plot, son ID enregistré et le repère
+  `PointApparition` (nom, parent, ancrage).
   Un plot devenu invalide n'est plus exposé par l'API et ne reçoit plus de
   téléportation ni de notification. Une attribution existante reste réservée
   jusqu'au leave ou à la perte de DataLoaded ; aucune réattribution automatique
@@ -113,8 +119,8 @@ Ils ne remplacent pas les tests moteur suivants dans Studio :
    supplémentaire : message de serveur plein, sans déplacement des autres joueurs.
 5. Retarder/faire échouer le chargement des données puis quitter : aucun plot réservé
    avant les données prêtes, aucune attribution pour un joueur parti.
-6. Tester un ID en double, un Spawn absent/non ancré, un Runtime préexistant et
-   un dossier Plots absent : logs explicites, assets inchangés, autres services actifs.
+6. Tester un ID en double, un PointApparition absent/non ancré, un Runtime préexistant et
+   un dossier Lobby.Plots absent : logs explicites, assets inchangés, autres services actifs.
 7. Quitter/rejoindre avec une progression existante : données inchangées, plot
    attribué à nouveau. Vérifier aussi le placement avec les avatars autorisés et StreamingEnabled.
 8. Vérifier le spawn et les départs avec SignalBehavior Immediate et Deferred ;

@@ -2,7 +2,8 @@
 -- Hors du dossier Services : jamais exécuté par le bootstrap.
 -- Doubles limités au cycle de vie ; la physique doit être validée dans Studio.
 
-return function(createService: any)
+return function(createService: any, config: any)
+	local SPAWN = config.SpawnName
 	local function fixture(count: number): any
 		local env: any = { queue = {}, waiting = {}, instances = {}, ready = {}, callbacks = {}, warnings = {}, now = 0 }
 		local function defer(fn: any, ...: any)
@@ -146,7 +147,12 @@ return function(createService: any)
 		env.players = env.new("Players", "Players", nil)
 		env.players.PlayerRemoving = signal()
 		env.workspace = env.new("Workspace", "Workspace", nil)
-		env.folder = env.new("Folder", "Plots", env.workspace)
+		-- Dossier des plots au chemin de PlotConfig (Lobby.Plots dans la DEV).
+		local parent = env.workspace
+		for index, name in config.PlotsFolder do
+			parent = env.new(if index == #config.PlotsFolder then "Folder" else "Model", name, parent)
+		end
+		env.folder = parent
 		env.data = {}
 		function env.data:GetData(player: any): any return env.ready[player] end
 		function env.data:OnPlayerReady(callback: any)
@@ -160,12 +166,12 @@ return function(createService: any)
 		env.game = { GetService = function(_self: any, name: string): any
 			return ({ Players = env.players, Workspace = env.workspace, ReplicatedStorage = replicated })[name]
 		end }
-		env.script = { Parent = { DataService = env.data } }
+		env.script = { Parent = { DataService = env.data, Parent = { Config = { PlotConfig = config } } } }
 		env.require = function(module: any): any return module end
 		function env.plot(id: any): any
 			local plot = env.new("Model", "Plot_" .. tostring(id), env.folder)
 			plot:SetAttribute("PlotId", id)
-			local spawn = env.new("Part", "Spawn", plot)
+			local spawn = env.new("Part", SPAWN, plot)
 			spawn.CFrame = cf(if typeof(id) == "number" then id * 100 else 0, 0, 0)
 			return plot
 		end
@@ -352,12 +358,12 @@ return function(createService: any)
 		e.plot("2")
 		e.plot(false)
 		e.plot(nil)
-		e.plot(3):FindFirstChild("Spawn"):Destroy()
-		e.plot(4):FindFirstChild("Spawn").Anchored = false
+		e.plot(3):FindFirstChild(SPAWN):Destroy()
+		e.plot(4):FindFirstChild(SPAWN).Anchored = false
 		local authored = e.plot(5)
 		local runtime = e.new("Folder", "Runtime", authored)
-		e.plot(6):FindFirstChild("Spawn").ClassName = "SpawnLocation"
-		e.plot(8):FindFirstChild("Spawn").ClassName = "Folder"
+		e.plot(6):FindFirstChild(SPAWN).ClassName = "SpawnLocation"
+		e.plot(8):FindFirstChild(SPAWN).ClassName = "Folder"
 		e.new("Part", "NotAPlotModel", e.folder):SetAttribute("PlotId", 9)
 		local valid = e.plot(7)
 		local s = e.start()
@@ -507,11 +513,12 @@ return function(createService: any)
 	end)
 	local invalidations = {
 		{ name = "deleted model", mutate = function(_e: any, plot: any) plot:Destroy() end },
-		{ name = "deleted spawn", mutate = function(_e: any, plot: any) plot:FindFirstChild("Spawn"):Destroy() end },
-		{ name = "unanchored spawn", mutate = function(_e: any, plot: any) plot:FindFirstChild("Spawn").Anchored = false end },
-		{ name = "renamed spawn", mutate = function(_e: any, plot: any) plot:FindFirstChild("Spawn").Name = "OldSpawn" end },
+		{ name = "deleted spawn", mutate = function(_e: any, plot: any) plot:FindFirstChild(SPAWN):Destroy() end },
+		{ name = "unanchored spawn", mutate = function(_e: any, plot: any) plot:FindFirstChild(SPAWN).Anchored = false end },
+		{ name = "renamed spawn", mutate = function(_e: any, plot: any) plot:FindFirstChild(SPAWN).Name = "OldSpawn" end },
 		{ name = "moved model", mutate = function(e: any, plot: any) plot.Parent = e.workspace end },
 		{ name = "detached folder", mutate = function(e: any, _plot: any) e.folder.Parent = nil end },
+		{ name = "detached folder ancestor", mutate = function(e: any, _plot: any) e.folder.Parent.Parent = nil end },
 		{ name = "changed id", mutate = function(_e: any, plot: any) plot:SetAttribute("PlotId", 99) end },
 		{ name = "deleted runtime", mutate = function(_e: any, plot: any) plot:FindFirstChild("Runtime"):Destroy() end },
 	}
@@ -536,7 +543,7 @@ return function(createService: any)
 	test("free plot invalidated after Init is skipped", function()
 		local e = fixture(2)
 		local s = e.start()
-		e.folder:FindFirstChild("Plot_1"):FindFirstChild("Spawn").Anchored = false
+		e.folder:FindFirstChild("Plot_1"):FindFirstChild(SPAWN).Anchored = false
 		local p = e.player(1)
 		e.load(p)
 		e.flush()
@@ -582,7 +589,22 @@ return function(createService: any)
 		e.flush()
 		assert(not char.moves and s:GetPlot(nextPlayer))
 	end)
-	test("invalid Workspace.Plots class refuses allocation", function()
+	test("plots outside the configured folder or with an old Spawn marker are ignored", function()
+		local e = fixture(0)
+		local legacy = e.new("Folder", "Plots", e.workspace)
+		local old = e.new("Model", "Plot_1", legacy)
+		old:SetAttribute("PlotId", 1)
+		e.new("Part", "Spawn", old)
+		local inFolder = e.new("Model", "Plot_2", e.folder)
+		inFolder:SetAttribute("PlotId", 2)
+		e.new("Part", "Spawn", inFolder) -- ancien nom de repère : pas le repère configuré
+		local s = e.start()
+		local p = e.player(1)
+		e.load(p)
+		e.flush()
+		assert(p.kicked and not s:GetPlot(p))
+	end)
+	test("invalid plots folder class refuses allocation", function()
 		local e = fixture(1)
 		e.folder.ClassName = "Model"
 		local s = e.start()
