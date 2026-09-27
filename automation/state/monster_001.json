@@ -1,10 +1,10 @@
 {
   "task_id": "monster_001",
-  "status": "awaiting_review",
+  "status": "fix_required",
   "stage": "review",
   "iteration": 0,
-  "last_completed_step": "iteration_00_screenshots_done",
-  "next_step": "wait_for_review_monster_001_iteration_00",
+  "last_completed_step": "cloud_review_received",
+  "next_step": "apply_required_changes",
   "studio_target": "Monstres #16",
   "studio_model": "Workspace.HandoffTest_Pilleur",
   "studio_archive": "ServerStorage.Archive_HandoffTest",
@@ -19,6 +19,6 @@
     "model_finalized",
     "iteration_00_screenshots_done"
   ],
-  "latest_review": null,
+  "latest_review": "automation/reviews/monster_001_iteration_00_377a78d42f4ff1781de816627b446ff614e56045b45660623a8bd77466428ab7.json",
   "notes": "Passe 00 terminée et poussée (commit 82640e9). En attente de automation/reviews/monster_001_iteration_00.json. Si FIX : n'appliquer que les required_changes sur Workspace.HandoffTest_Pilleur (ne pas régénérer le corps), puis captures iteration_01_*. Prérequis Studio signalé : une étape ChangeHistory est restée ouverte ; Ctrl+S puis relance de Studio recommandés avant la passe suivante."
 }
