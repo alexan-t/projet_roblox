@@ -6,16 +6,22 @@ l'UI finale (#11) : ces issues pourront reprendre les règles serveur et remplac
 ## Ce qu'on peut faire
 
 1. S'approcher de l'étendard de l'arène `Workspace.PlotTravail.Arene` : un prompt
-   **« Préparer le combat »** (touche E) lance le **Stage 1-1** via ZoneService.
-2. Un panneau provisoire affiche **les ennemis à affronter** (Slime ×2, Gobelin ×4,
-   mini-boss Boss) mais **pas leurs positions**.
-3. Choisir une classe dans la collection (Archer, Épéiste, Barbare, Paladin, Magicien,
-   Tireur), puis **cliquer une case** du 3x3 (`CaseHeros`) : le héros y est posé. Reclic sur
-   une case occupée = retirer. **4 héros maximum, une unité par classe** (reposer une classe
-   la déplace).
-4. **Combattre** : les ennemis du stage apparaissent **au hasard** sur le 3x3 ennemi, avec
-   un nouveau tirage à chaque combat, même en rejouant 1-1.
-5. **Quitter** : annule la session et range l'arène. Aucun combat réel n'a lieu (#8).
+   **« Préparer le combat »** (touche E) lance le **Stage 1-1** via ZoneService et ouvre une
+   **grande fenêtre** :
+   - en haut, le **camp ennemi** (3x3) : des « ? » pendant la préparation. On connaît
+     **quels ennemis** on va affronter (Slime ×2, Gobelin ×4, mini-boss Boss), **pas leurs positions** ;
+   - dessous, la **formation** du joueur (3x3, rang Avant en haut, côté front) ;
+   - à droite, la **collection** : Archer, Épéiste, Barbare, Paladin, Magicien, Tireur.
+2. Au **clic ou au toucher** : choisir une case puis un héros, ou un héros puis une case.
+   - Une case occupée + un autre héros = **remplacement**.
+   - « **Retirer de la case** » vide la case sélectionnée.
+   - **4 héros maximum**, une unité par classe : reposer une classe la déplace.
+   - Les héros apparaissent aussi en 3D sur les cases de l'arène.
+3. **Combattre** : les ennemis apparaissent **au hasard** sur le 3x3 ennemi, avec un nouveau
+   tirage à chaque combat, même en rejouant 1-1. La fenêtre se referme pour laisser voir
+   l'arène ; une barre en bas permet de la rouvrir (« Voir le terrain »). Le camp ennemi y
+   est alors révélé et correspond aux modèles 3D.
+4. **Quitter** : annule la session et range l'arène. Aucun combat réel n'a lieu (#8).
 
 ## Découpage
 
@@ -24,12 +30,13 @@ l'UI finale (#11) : ces issues pourront reprendre les règles serveur et remplac
 | `src/shared/Config/ArenaConfig.lua` | arène de test, stage lancé, collection de 6 classes, max 4, mannequins par `EnemyId` |
 | `src/server/Arena/ArenaRules.lua` | règles pures : liste des ennemis, résumé sans positions, tirage aléatoire, placement |
 | `src/server/Services/ArenaService.lua` | prompt, phases Placement → Combat, mannequins, remotes |
-| `src/client/Controllers/ArenaPrepController.lua` | panneau provisoire et clic sur les cases |
+| `src/client/Controllers/ArenaPrepController.lua` | fenêtre de préparation (terrain 3x3, collection, barre de combat) |
 
-- **Serveur autoritaire** : `Remotes.ArenaAction` n'accepte que `"Toggle", case, classe`,
-  `"Fight"` et `"Leave"`. Le serveur valide la case (1..9), la classe, la limite et la phase,
-  et fait tous les tirages. Le client ne reçoit la liste des ennemis qu'agrégée, et ne peut
-  jamais déclarer une victoire.
+- **Serveur autoritaire** : `Remotes.ArenaAction` n'accepte que `"Assign", case, classe`,
+  `"Clear", case`, `"Fight"` et `"Leave"`. Le serveur valide la case (1..9), la classe, la limite et la phase,
+  et fait tous les tirages. Pendant la préparation, le client ne reçoit que la liste agrégée
+  des ennemis ; leurs cases ne lui sont envoyées qu'une fois le combat lancé. Il ne peut jamais
+  déclarer une victoire.
 - **3x3 héros** : les 9 `CaseHeros` de l'arène (attribut `Slot`, repère `PointDePose`).
 - **3x3 ennemi** : `Zones.<ZoneId = 1>.SourcesEnnemis.FrontEnnemi` découpé en 3 × 3.
   La première ligne est côté héros, et les colonnes sont dans le même ordre que les cases héros.
