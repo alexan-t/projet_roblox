@@ -4,7 +4,8 @@
 -- sur le 3x3 des cases "CaseHeros", puis lance le combat : les ennemis du stage apparaissent
 -- alors au hasard sur le 3x3 de FrontEnnemi, nouveau tirage à chaque combat.
 -- Aucun combat réel (dégâts, PV, IA, victoire) : c'est CombatService (#8).
--- Tout est décidé par le serveur ; le client n'envoie que "case" et "classe".
+-- Tout est décidé par le serveur ; le client n'envoie que "case" et "classe"
+-- (actions Assign, Clear, Fight, Leave de Remotes.ArenaAction).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -24,6 +25,7 @@ type Prep = {
 	folder: Folder,
 	heroes: Folder,
 	enemies: Folder,
+	layout: { [number]: ArenaRules.Enemy }?,
 	loopWas: any,
 }
 
@@ -146,12 +148,21 @@ local function stateOf(prep: Prep?, message: string?): { [string]: any }
 	for slot, classId in prep.formation do
 		table.insert(formation, { Slot = slot, ClassId = classId })
 	end
+	-- Positions ennemies révélées seulement une fois le combat lancé (elles sont alors visibles).
+	local enemyLayout = {}
+	if prep.phase == "Combat" and prep.layout then
+		for cell, enemy in prep.layout do
+			table.insert(enemyLayout, { Cell = cell, EnemyId = enemy.EnemyId, MiniBoss = enemy.MiniBoss })
+		end
+	end
 	return {
 		Phase = prep.phase,
 		Zone = ArenaConfig.Zone,
 		Stage = ArenaConfig.Stage,
 		Enemies = if session then ArenaRules.summarize(session.Config) else {},
 		Formation = formation,
+		EnemyLayout = enemyLayout,
+		MaxHeroes = ArenaConfig.MaxHeroes,
 		Message = message,
 	}
 end
@@ -213,6 +224,7 @@ local function fight(prep: Prep): (boolean, string?)
 			Log.warn(SCOPE, `Aucun mannequin pour l'ennemi {enemy.EnemyId}`)
 		end
 	end
+	prep.layout = layout
 	prep.phase = "Combat"
 	Log.info(SCOPE, `Combat de {prep.player.Name} : ennemis placés au hasard`)
 	return true, nil
@@ -250,6 +262,7 @@ local function open(player: Player)
 		folder = folder,
 		heroes = heroes,
 		enemies = enemies,
+		layout = nil,
 		loopWas = arena:GetAttribute("IntroDemoBoucle"),
 	}
 	-- L'intro de démonstration en boucle réutilise les mêmes cases : on la suspend (runtime seulement).
@@ -272,11 +285,16 @@ local function onAction(player: Player, action: any, slot: any, classId: any): (
 	if not prep or prep.player ~= player or not sessionAlive(prep) then
 		return false, "aucune préparation en cours"
 	end
-	if action == "Toggle" then
+	if action == "Assign" or action == "Clear" then
 		if prep.phase ~= "Placement" then
 			return false, "combat déjà lancé"
 		end
-		local ok, reason = ArenaRules.toggle(prep.formation, slot, classId, validClasses, ArenaConfig.MaxHeroes)
+		local ok, reason
+		if action == "Assign" then
+			ok, reason = ArenaRules.assign(prep.formation, slot, classId, validClasses, ArenaConfig.MaxHeroes)
+		else
+			ok, reason = ArenaRules.clear(prep.formation, slot)
+		end
 		if ok then
 			rebuildHeroes(prep)
 		end

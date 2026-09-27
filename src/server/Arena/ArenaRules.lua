@@ -72,30 +72,45 @@ local function count(formation: Formation): number
 	return n
 end
 
--- Clic sur une case : case occupée -> le héros est retiré ; case libre -> la classe y est posée
--- (déplacée si elle était déjà ailleurs : une seule unité par classe). Modifie formation.
-function ArenaRules.toggle(formation: Formation, slot: any, classId: any, validClasses: { [string]: boolean }, maxHeroes: number): (boolean, string?)
-	if typeof(slot) ~= "number" or slot < 1 or slot > ArenaRules.GRID_CELLS or slot % 1 ~= 0 then
+local function isSlot(slot: any): boolean
+	return typeof(slot) == "number" and slot >= 1 and slot <= ArenaRules.GRID_CELLS and slot % 1 == 0
+end
+
+-- Attribue une classe à une case. Une seule unité par classe : si la classe est déjà posée
+-- ailleurs, elle est déplacée ; si la case est occupée, son héros est remplacé.
+-- La limite ne compte que les nouveaux héros. Modifie formation.
+function ArenaRules.assign(formation: Formation, slot: any, classId: any, validClasses: { [string]: boolean }, maxHeroes: number): (boolean, string?)
+	if not isSlot(slot) then
 		return false, "case invalide"
-	end
-	if formation[slot] then
-		formation[slot] = nil
-		return true, nil
 	end
 	if typeof(classId) ~= "string" or not validClasses[classId] then
 		return false, "classe inconnue"
 	end
+	local previousSlot: number? = nil
 	for other, placed in formation do
 		if placed == classId then
-			formation[other] = nil
-			formation[slot] = classId
-			return true, nil
+			previousSlot = other
 		end
 	end
-	if count(formation) >= maxHeroes then
+	if previousSlot == slot then
+		return true, nil
+	end
+	if not previousSlot and not formation[slot] and count(formation) >= maxHeroes then
 		return false, `{maxHeroes} héros maximum`
 	end
+	if previousSlot then
+		formation[previousSlot] = nil
+	end
 	formation[slot] = classId
+	return true, nil
+end
+
+-- Vide une case (sans effet si elle est déjà vide).
+function ArenaRules.clear(formation: Formation, slot: any): (boolean, string?)
+	if not isSlot(slot) then
+		return false, "case invalide"
+	end
+	formation[slot] = nil
 	return true, nil
 end
 
