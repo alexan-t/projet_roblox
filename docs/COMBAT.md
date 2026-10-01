@@ -140,12 +140,23 @@ n'attend jamais une animation. Les modèles portent les attributs `UnitId`, `Tea
 
 ## Côté client
 
-- `ArenaPrepController` (prototype, #11 fera l'UI finale) : barre de combat avec vague,
-  x1/x2, une puce par héros (PV, énergie, bouton Ultime), « Voir le terrain » (unités
-  réellement actives et leurs PV) et message de fin.
-- `CombatViewController` : barre de PV provisoire au-dessus des unités ; animations
-  `Marche`, `Attaque`, `Touche`, `Mort` via `MonsterAnimationController.Play`, pour les
-  modèles qui portent l'attribut `JeuAnimations`.
+Règle d'interface : une information qui peut s'afficher dans le monde n'a pas de HUD séparé.
+
+- `ArenaPrepController` (#11 fera l'UI finale) : pendant le combat, seulement **x1 / x2 / X**
+  (quitter) en haut à droite, une annonce brève à chaque vague ou au mini-boss, et le
+  message de fin.
+- `CombatViewController` : tout le reste est **dans le monde**, au-dessus des unités.
+  - Petite barre de **PV** (rouge sous 30 %) et, pour les héros, barre de **mana**. Barre
+    plus large pour le mini-boss. Petite icône de classe (attribut `HeroClass`) au-dessus
+    des héros, sans nom.
+  - **Mana pleine** : la barre devient dorée et pulse, et le héros a un léger contour doré.
+  - **Ultime** : toucher ou cliquer un héros dont la mana est pleine (raycast sur son
+    corps, sinon le héros prêt le plus proche dans un rayon de 70 px). Le client envoie
+    seulement `CombatAction("UseUltimate", unitId)` ; le serveur vérifie tout.
+  - **Dégâts** : chiffres brefs au-dessus des ennemis (plus gros et dorés pour un ultime).
+  - **Mort** : les barres disparaissent, puis l'animation `Mort`.
+  - Animations `Marche`, `Attaque`, `Touche`, `Mort` via `MonsterAnimationController.Play`,
+    pour les modèles qui portent l'attribut `JeuAnimations`.
 - `CombatIntroController` (Cypher) : reste une **démo** d'entrée en combat (vague fixe,
   mannequins côté client, déclenchée par `IntroDemo` / `IntroDemoBoucle`). Il n'est pas
   branché sur le vrai combat ; ArenaService suspend sa boucle pendant une préparation.
@@ -162,8 +173,8 @@ n'attend jamais une animation. Les modèles portent les attributs `UnitId`, `Tea
 
 ## Limites
 
-- Mannequins temporaires (un seul `MannequinHeros`, classes distinguées par une étiquette),
-  sans animation. Une seule arène de test (`PlotTravail.Arene`), donc un combat physique à
+- Mannequins temporaires (un seul `MannequinHeros`, classes distinguées par une petite
+  icône provisoire ; vrais portraits et rareté avec #10), sans animation. Une seule arène de test (`PlotTravail.Arene`), donc un combat physique à
   la fois. Le moteur gère plusieurs sessions, ce que les tests prouvent.
 - Pas de collision entre unités (elles peuvent se superposer), pas de pathfinding.
 
