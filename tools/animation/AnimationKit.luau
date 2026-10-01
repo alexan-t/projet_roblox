@@ -179,11 +179,20 @@ function Kit.rig(model: Model, options: { Held: { [string]: string }? }?): ()
 		return Vector3.new((mn.X + mx.X) / 2, mn.Y + 0.4, (mn.Z + mx.Z) / 2)
 	end
 
+	-- Épaule : près du bord intérieur du bras (côté buste). Au milieu du bras, le haut du bras
+	-- sortait du buste dès qu'il s'écartait et laissait voir l'intérieur du mesh.
+	local function shoulder(part: BasePart, inset: number): Vector3
+		local mn, mx = bounds(part, basis)
+		local center = (mn.X + mx.X) / 2
+		local inner = if center > 0 then mn.X else mx.X
+		return Vector3.new(inner + (center - inner) * 0.4, mx.Y - inset, (mn.Z + mx.Z) / 2)
+	end
+
 	local armInset = math.clamp(leftArm.Size.Y * 0.15, 0.3, 0.8)
 	local legInset = math.clamp(parts.leftLeg.Size.Y * 0.1, 0.2, 0.5)
 	joint("Racine", root, torso, middle(torso))
-	joint("EpauleGauche", torso, leftArm, top(leftArm, armInset))
-	joint("EpauleDroite", torso, rightArm, top(rightArm, armInset))
+	joint("EpauleGauche", torso, leftArm, shoulder(leftArm, armInset))
+	joint("EpauleDroite", torso, rightArm, shoulder(rightArm, armInset))
 	joint("HancheGauche", torso, parts.leftLeg, top(parts.leftLeg, legInset))
 	joint("HancheDroite", torso, parts.rightLeg, top(parts.rightLeg, legInset))
 	local hmn, hmx = bounds(parts.head, basis)
@@ -228,6 +237,25 @@ function Kit.rig(model: Model, options: { Held: { [string]: string }? }?): ()
 	Instance.new("Animator").Parent = controller
 	table.sort(summary)
 	print(`[AnimationKit] {model.Name} : {table.concat(summary, " ; ")} (corriger avec Held si besoin)`)
+end
+
+-- Retire le squelette posé par Kit.rig (modèle en pose de repos, mode Edit) pour le reposer
+-- après une correction de l'outil. Les animations ne dépendent que des noms de pièces : elles restent valables.
+function Kit.unrig(model: Model): ()
+	for _, item in model:GetDescendants() do
+		if item:IsA("Motor6D") or item:IsA("AnimationController") then
+			item:Destroy()
+		end
+	end
+	local root = model:FindFirstChild("HumanoidRootPart")
+	if root then
+		root:Destroy()
+	end
+	for _, part in model:GetDescendants() do
+		if part:IsA("BasePart") then
+			part.Anchored = true
+		end
+	end
 end
 
 -- Arbre des articulations du modèle : partName -> { enfants }, depuis la racine.
@@ -304,6 +332,120 @@ function Kit.walk(model: Model, profile: any): KeyframeSequence
 	return sequence
 end
 
+-- Attaques de base : poses clés par rôle { rx, ry, rz, y } (degrés, studs), dans le repère racine
+-- (+rx = membre vers l'avant, +ry = buste vers la gauche, +rz = bras droit vers l'extérieur).
+-- Le combat lance l'animation, les dégâts et la réaction de la cible à la même image (événement
+-- Attack) : le coup doit donc tomber tôt. Impact = instant du coup, posé en KeyframeMarker « Impact ».
+-- Easing d'une clé = façon d'aller vers la clé suivante (In = accélère vers le coup).
+Kit.Attacks = {
+	-- Écuyer : coup d'épée en diagonale, bouclier gardé devant, petit pas en avant.
+	Epee = {
+		Length = 0.6, Impact = 0.2,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.12, Easing = "In", Poses = {
+				torso = { 4, -28, 0, 0.05 },
+				rightArm = { 75, -20, 30 }, leftArm = { 35, 0, -10 },
+				rightLeg = { -4, 28, 0 }, leftLeg = { 10, 28, 0 },
+				head = { -2, 22, 0 },
+			} },
+			{ Time = 0.2, Easing = "Out", Poses = {
+				torso = { -14, 30, 0, -0.18 },
+				rightArm = { 25, 0, -30 }, leftArm = { 25, 0, -6 },
+				rightLeg = { -6, -30, 0 }, leftLeg = { 30, -30, 0 },
+				head = { 8, -25, 0 },
+			} },
+			{ Time = 0.3, Easing = "InOut", Poses = {
+				torso = { -16, 36, 0, -0.2 },
+				rightArm = { 12, 0, -36 }, leftArm = { 22, 0, -6 },
+				rightLeg = { -6, -36, 0 }, leftLeg = { 32, -36, 0 },
+				head = { 9, -30, 0 },
+			} },
+			{ Time = 0.6, Easing = "InOut", Poses = {} },
+		},
+	},
+	-- Tréant : les deux bras levés puis abattus au sol, buste plié, rebond lourd.
+	Ecrasement = {
+		Length = 1.0, Impact = 0.32,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.22, Easing = "In", Poses = {
+				torso = { 14, 0, 0, 0.1 },
+				rightArm = { 125, 0, 22 }, leftArm = { 125, 0, -22 },
+				rightLeg = { -14, 0, 0 }, leftLeg = { -14, 0, 0 },
+				head = { -12, 0, 0 },
+			} },
+			{ Time = 0.32, Easing = "Out", Poses = {
+				torso = { -26, 0, 0, -0.4 },
+				rightArm = { 62, 0, 6 }, leftArm = { 62, 0, -6 },
+				rightLeg = { 26, 0, 0 }, leftLeg = { 26, 0, 0 },
+				head = { 12, 0, 0 },
+			} },
+			{ Time = 0.45, Easing = "InOut", Poses = {
+				torso = { -22, 0, 0, -0.32 },
+				rightArm = { 54, 0, 8 }, leftArm = { 54, 0, -8 },
+				rightLeg = { 22, 0, 0 }, leftLeg = { 22, 0, 0 },
+				head = { 9, 0, 0 },
+			} },
+			{ Time = 1.0, Easing = "InOut", Poses = {} },
+		},
+	},
+}
+
+local EASING_DIRECTIONS = {
+	In = Enum.PoseEasingDirection.In,
+	Out = Enum.PoseEasingDirection.Out,
+	InOut = Enum.PoseEasingDirection.InOut,
+}
+
+-- Crée une animation à poses clés (non bouclée, priorité Action) : style = nom de Kit.Attacks ou table.
+function Kit.keyed(model: Model, name: string, style: any): KeyframeSequence
+	local s = if typeof(style) == "string" then Kit.Attacks[style] else style
+	assert(s, `style inconnu : {style}`)
+	local rootName, children, roles = poseTree(model)
+	local byPart: { [string]: string } = {}
+	for role, partName in roles do
+		byPart[partName] = role
+	end
+	local sequence = Instance.new("KeyframeSequence")
+	sequence.Name = name
+	sequence.Loop = false
+	sequence.Priority = Enum.AnimationPriority.Action
+	sequence:SetAttribute("Impact", s.Impact)
+	for _, key in s.Keys do
+		local keyframe = Instance.new("Keyframe")
+		keyframe.Time = key.Time
+		local function add(parent: Instance, partName: string)
+			local pose = Instance.new("Pose")
+			pose.Name = partName
+			local role = byPart[partName]
+			local v = role and key.Poses[role]
+			if v then
+				pose.CFrame = CFrame.new(0, v[4] or 0, 0) * CFrame.Angles(math.rad(v[1]), math.rad(v[2]), math.rad(v[3]))
+			end
+			pose.EasingStyle = Enum.PoseEasingStyle.Cubic
+			pose.EasingDirection = EASING_DIRECTIONS[key.Easing] or Enum.PoseEasingDirection.InOut
+			pose.Parent = parent
+			for _, child in children[partName] or {} do
+				add(pose, child)
+			end
+		end
+		add(keyframe, rootName)
+		if math.abs(key.Time - s.Impact) < 1e-6 then
+			local marker = Instance.new("KeyframeMarker")
+			marker.Name = "Impact"
+			marker.Parent = keyframe
+		end
+		keyframe.Parent = sequence
+	end
+	return sequence
+end
+
+-- Attaque de base « Attaque » d'un modèle riggé.
+function Kit.attack(model: Model, style: any): KeyframeSequence
+	return Kit.keyed(model, "Attaque", style)
+end
+
 local function folder(parent: Instance, name: string, className: string?): Instance
 	local existing = parent:FindFirstChild(name)
 	if existing then
@@ -343,7 +485,9 @@ end
 
 -- Aperçu en boucle au Play : l'animation est copiée dans Assets.Animations.Apercu_<Set> sous le nom
 -- « Attente », que MonsterAnimationController joue sans jamais la couper.
-function Kit.preview(model: Model, set: string, animationName: string): ()
+-- rest (s) : pause en pose neutre ajoutée après une animation non bouclée (attaque...), pour la voir
+-- se répéter à un rythme lisible. Par défaut 0,8 s pour une animation non bouclée, 0 sinon.
+function Kit.preview(model: Model, set: string, animationName: string, rest: number?): ()
 	local animations = folder(folder(ReplicatedStorage, "Assets"), "Animations")
 	local source = animations:FindFirstChild(set) and (animations :: any)[set]:FindFirstChild(animationName)
 	assert(source, `animation {set}.{animationName} introuvable`)
@@ -351,8 +495,27 @@ function Kit.preview(model: Model, set: string, animationName: string): ()
 	preview:SetAttribute("Note", "Aperçu uniquement (AtelierAnimation) : l'animation étudiée joue en boucle sous le nom Attente. Ne pas utiliser en combat.")
 	preview:ClearAllChildren()
 	local loop = source:Clone()
+	local pause = rest or (if source.Loop then 0 else 0.8)
+	if pause > 0 then
+		local last: Keyframe? = nil
+		for _, keyframe in loop:GetKeyframes() do
+			if not last or keyframe.Time > last.Time then
+				last = keyframe
+			end
+		end
+		assert(last, `{set}.{animationName} n'a aucune clé`)
+		local hold = last:Clone()
+		hold.Time = last.Time + pause
+		for _, marker in hold:GetDescendants() do
+			if marker:IsA("KeyframeMarker") then
+				marker:Destroy()
+			end
+		end
+		hold.Parent = loop
+	end
 	loop.Name = "Attente"
 	loop.Loop = true
+	loop.Priority = Enum.AnimationPriority.Idle
 	loop.Parent = preview
 	model:SetAttribute("JeuAnimations", "Apercu_" .. set)
 	model:SetAttribute("JeuAnimationsCombat", set)
@@ -404,14 +567,18 @@ function Kit.arrange(): ()
 end
 
 -- Tout en un : copie, squelette, marche, rangement en jeu de combat, aperçu près du spawn.
---   options = { Source: Model, Set: string, Profile: string | table, Name: string?, Held: { [string]: string }? }
+--   options = { Source: Model, Set: string, Profile: string | table, Name: string?, Held: { [string]: string }?,
+--               Attack: string | table ? (style de Kit.Attacks), Preview: string? (animation montrée, "Marche" par défaut) }
 function Kit.prepare(options: { [string]: any }): Model
 	local recording = ChangeHistoryService:TryBeginRecording("AnimationKit : " .. options.Set)
 	local ok, result = pcall(function()
 		local model = Kit.copy(options.Source, options.Name)
 		Kit.rig(model, { Held = options.Held })
 		Kit.install(model, options.Set, Kit.walk(model, options.Profile))
-		Kit.preview(model, options.Set, "Marche")
+		if options.Attack then
+			Kit.install(model, options.Set, Kit.attack(model, options.Attack))
+		end
+		Kit.preview(model, options.Set, options.Preview or "Marche")
 		Kit.arrange()
 		return model
 	end)

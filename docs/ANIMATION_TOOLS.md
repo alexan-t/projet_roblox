@@ -95,6 +95,39 @@ penché), `Yaw`/`Roll`/`RollLag` (rotation et roulis du buste), `BobBase`/`Bob`/
 Les `Lag` sont des retards de phase en radians. Garder la vitesse de pas proche de `MoveSpeed`
 de `CombatConfig` pour limiter le glissement des pieds.
 
+## Attaque de base
+
+`Kit.attack(model, style)` crée la `KeyframeSequence` « Attaque » (non bouclée, priorité `Action`)
+à partir de poses clés. Sur un modèle déjà riggé dans l'atelier :
+
+```lua
+local Kit = _G.AnimationKit
+local m = workspace.AtelierAnimation.EcuyerDuRempart
+Kit.install(m, "EcuyerDuRempart", Kit.attack(m, "Epee"))
+Kit.preview(m, "EcuyerDuRempart", "Attaque") -- au Play : l'attaque, puis 0,8 s de pause, en boucle
+```
+
+Ou d'un coup à la préparation : `prepare({ ..., Attack = "Epee", Preview = "Attaque" })`.
+
+| Style | Pour | Durée | Impact | Mouvement |
+| --- | --- | --- | --- | --- |
+| `Epee` | arme à une main + bouclier (validé sur l'Écuyer) | 0,6 s | 0,2 s | armé de côté, coup en diagonale à travers le corps, petit pas en avant, bouclier gardé devant |
+| `Ecrasement` | gros monstre à mains nues (validé sur le Tréant) | 1,0 s | 0,32 s | deux bras levés, abattus au sol devant lui, buste plié, rebond lourd |
+
+**Synchronisation avec le combat** : `CombatViewController` joue « Attaque », affiche les dégâts et
+fait réagir la cible **à la même image** (événement `Attack`). Le coup doit donc tomber tôt :
+préparation courte, puis frappe. L'instant du coup est marqué par un `KeyframeMarker` « Impact »
+(et l'attribut `Impact` de la séquence) : le code de combat pourra s'en servir pour retarder les
+chiffres de dégâts et « Touche » jusqu'au coup (`AnimationTrack:GetMarkerReachedSignal("Impact")`).
+Garder la durée sous l'`AttackInterval` le plus court qui utilisera l'animation (`CombatConfig`).
+
+Un nouveau style se décrit comme une table `{ Length, Impact, Keys = { { Time, Easing, Poses } } }`
+(voir `Kit.Attacks`) : poses par rôle (`torso`, `head`, `leftArm`, `rightArm`, `leftLeg`,
+`rightLeg`) en `{ rx, ry, rz, y }`, dans le repère racine : +rx = membre vers l'avant, +ry = buste
+vers la gauche, +rz = bras droit vers l'extérieur (bras gauche : -rz). Les jambes étant attachées au
+buste, compenser sur les jambes une inclinaison ou une rotation du buste pour garder les pieds au sol.
+L'`Easing` d'une clé règle le trajet vers la clé suivante (`In` = accélère vers le coup).
+
 ## Aperçu au Play
 
 `MonsterAnimationController` anime en boucle tout modèle tagué `ApercuAnimation` (Attente, puis
@@ -113,6 +146,10 @@ Quand un personnage aura plusieurs animations (Attente, Attaque...), remettre so
   l'attribut `AssetId` de la séquence (lu par `MonsterAnimationController`).
 - Pas de genoux ni de pieds articulés : les modèles IA ont une seule pièce par jambe.
 - Les capes et tabards sont fixés au buste, sans mouvement secondaire.
-- Seule la marche est générée pour l'instant ; Attente, Attaque, Touche, Mort et Ultime restent à faire.
+- Marche et attaque de base sont générées ; Attente, Touche, Mort et Ultime restent à faire.
+- Les épaules des modèles IA sont des pièces creuses : un bras levé très haut ou très écarté laisse
+  voir le dessous sombre de l'épaulière. Garder les bras sous ~80° (rx) et ~30° (rz). Le pivot
+  d'épaule est placé près du bord intérieur du bras pour limiter l'effet ; `Kit.unrig` puis
+  `Kit.rig` reposent le squelette d'un modèle riggé avant cette correction.
 - `CombatViewController` lance « Marche » sur `MoveStarted` mais ne l'arrête pas ensuite, et ne
   tient pas compte de la vitesse x2 : à corriger avant de brancher ces modèles sur le combat.
