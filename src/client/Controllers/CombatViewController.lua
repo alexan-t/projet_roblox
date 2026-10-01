@@ -5,16 +5,17 @@
 --     large pour le mini-boss. Petite icône de classe au-dessus des héros, sans nom.
 --   • Dégâts : chiffres brefs au-dessus des ennemis (plus gros pour un ultime), qui s'effacent vite.
 --   • Mort : les barres disparaissent, puis l'animation de mort (MonsterAnimationController).
---   • Ultime : toucher / cliquer un héros dont la mana est pleine (le serveur vérifie tout).
+--   • Ultime : automatique côté serveur ; UltimateUsed déclenche seulement un éclat doré (le
+--     design pourra y brancher animation, VFX, SFX). Le joueur n'a rien à faire.
 -- Aucune règle de combat ici : PV, mana, morts et résultat viennent uniquement du serveur.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
-local ArenaConfig = require(ReplicatedStorage.Shared.Config.ArenaConfig)
+local HeroConfig = require(ReplicatedStorage.Shared.Config.HeroConfig)
+local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local MonsterAnimationController = require(script.Parent.MonsterAnimationController)
 
 local CombatViewController = {}
@@ -22,12 +23,11 @@ local CombatViewController = {}
 local RETRY_DELAY = 0.2
 local RETRIES = 10
 local LOW_HEALTH = 0.3
-local TAP_RADIUS = 70 -- pixels autour d'un héros pour lancer son ultime
-local HEALTH = Color3.fromRGB(90, 205, 90)
-local HEALTH_LOW = Color3.fromRGB(235, 60, 50)
-local ENEMY_HEALTH = Color3.fromRGB(220, 80, 70)
-local MANA = Color3.fromRGB(80, 150, 255)
-local MANA_FULL = Color3.fromRGB(255, 205, 80)
+local HEALTH = UITheme.Colors.Health
+local HEALTH_LOW = UITheme.Colors.HealthLow
+local ENEMY_HEALTH = UITheme.Colors.EnemyHealth
+local MANA = UITheme.Colors.Energy
+local MANA_FULL = UITheme.Colors.EnergyFull
 
 type View = {
 	team: string,
@@ -44,13 +44,11 @@ type View = {
 }
 
 local icons: { [string]: string } = {}
-for _, class in ArenaConfig.HeroClasses do
-	icons[class.Id] = class.Icon
+for heroId, info in HeroConfig.Heroes do
+	icons[heroId] = info.Icon
 end
 
 local views: { [number]: View } = {}
-local combatAction: RemoteFunction? = nil
-local active = false
 
 local function folder(): Instance?
 	return Workspace:FindFirstChild(`PreparationCombat_{Players.LocalPlayer.UserId}`)
@@ -204,6 +202,25 @@ local function popDamage(view: View, amount: number, big: boolean)
 	end)
 end
 
+-- Ultime automatique : bref éclat doré sur le héros (point d'accroche pour les VFX du design).
+local function flashUltimate(view: View?)
+	local model = if view then view.model else nil
+	if not model or not model.Parent then
+		return
+	end
+	local burst = Instance.new("Highlight")
+	burst.FillColor = MANA_FULL
+	burst.OutlineColor = MANA_FULL
+	burst.FillTransparency = 0.35
+	burst.OutlineTransparency = 0
+	burst.DepthMode = Enum.HighlightDepthMode.Occluded
+	burst.Parent = model
+	TweenService:Create(burst, TweenInfo.new(0.45), { FillTransparency = 1, OutlineTransparency = 1 }):Play()
+	task.delay(0.5, function()
+		burst:Destroy()
+	end)
+end
+
 local function animate(unitId: number?, name: string)
 	local view = if unitId then views[unitId] else nil
 	local model = if view then view.model else nil
@@ -218,7 +235,6 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 		local kind = event.Type
 		if kind == "CombatStarted" then
 			table.clear(views)
-			active = true
 		elseif kind == "UnitSpawned" then
 			views[event.UnitId] = {
 				team = event.Team,
@@ -232,6 +248,7 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 			for _, id in event.Hits do
 				ultimateHits[id] = true
 			end
+			flashUltimate(views[event.UnitId])
 		elseif kind == "Damage" then
 			local view = views[event.TargetId]
 			if view then
@@ -272,64 +289,7 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 			end
 			animate(event.UnitId, "Mort")
 			views[event.UnitId] = nil
-		elseif kind == "CombatEnded" then
-			active = false
 		end
-	end
-end
-
--- Toucher un héros dont la mana est pleine : demande d'ultime (validée par le serveur).
-local function onTap(input: InputObject, processed: boolean)
-	if not active or processed then
-		return
-	end
-	if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then
-		return
-	end
-	local camera = Workspace.CurrentCamera
-	local remote = combatAction
-	if not camera or not remote then
-		return
-	end
-	local tap = Vector2.new(input.Position.X, input.Position.Y)
-	local ready: { [Model]: number } = {}
-	local models: { Instance } = {}
-	for unitId, view in views do
-		local model = view.model
-		if view.team == "Ally" and model and model.Parent and view.maxEnergy > 0 and view.energy >= view.maxEnergy then
-			ready[model] = unitId
-			table.insert(models, model)
-		end
-	end
-	if #models == 0 then
-		return
-	end
-	-- D'abord le héros réellement touché (son corps), sinon le plus proche du doigt.
-	local best: number? = nil
-	local ray = camera:ScreenPointToRay(tap.X, tap.Y)
-	local params = RaycastParams.new()
-	params.FilterType = Enum.RaycastFilterType.Include
-	params.FilterDescendantsInstances = models
-	local hit = Workspace:Raycast(ray.Origin, ray.Direction * 500, params)
-	if hit then
-		local model = hit.Instance:FindFirstAncestorOfClass("Model")
-		while model and not ready[model] do
-			model = model:FindFirstAncestorOfClass("Model")
-		end
-		best = if model then ready[model] else nil
-	end
-	if not best then
-		local bestDistance = TAP_RADIUS
-		for model, unitId in ready do
-			local point, visible = camera:WorldToScreenPoint(model:GetPivot().Position)
-			local d = (Vector2.new(point.X, point.Y) - tap).Magnitude
-			if visible and d < bestDistance then
-				best, bestDistance = unitId, d
-			end
-		end
-	end
-	if best then
-		remote:InvokeServer("UseUltimate", best)
 	end
 end
 
@@ -357,14 +317,9 @@ function CombatViewController:Start()
 	if existing then
 		watchFolder(existing)
 	end
-	UserInputService.InputBegan:Connect(onTap)
 
 	local remotes = ReplicatedStorage:WaitForChild("Remotes")
 	local events = remotes:WaitForChild("CombatEvent", 30)
-	local actionRemote = remotes:WaitForChild("CombatAction", 30)
-	if actionRemote and actionRemote:IsA("RemoteFunction") then
-		combatAction = actionRemote
-	end
 	if events and events:IsA("RemoteEvent") then
 		events.OnClientEvent:Connect(onEvents)
 	end
