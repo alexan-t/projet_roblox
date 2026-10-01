@@ -35,6 +35,8 @@ local SCOPE = "ArenaService"
 local ENEMY_CELLS = 9
 -- Laisse PlotService poser le personnage sur son plot avant de le déplacer vers l'arène de test.
 local TEST_SPAWN_DELAY = 1
+-- Attente maximale de l'attribution du plot (chargement des données) avant le déplacement de test.
+local PLOT_WAIT_TIMEOUT = 20
 
 local ArenaService = {}
 
@@ -369,17 +371,26 @@ function ArenaService:Start()
 	local spawnMarker = if spawnPath and RunService:IsStudio() then resolve(Workspace, spawnPath) else nil
 	if spawnMarker and spawnMarker:IsA("BasePart") then
 		local spawnPart: BasePart = spawnMarker
-		local function onCharacter(character: Model)
-			task.delay(TEST_SPAWN_DELAY, function()
-				if character.Parent and character:FindFirstChild("HumanoidRootPart") then
+		local function onCharacter(player: Player, character: Model)
+			task.spawn(function()
+				-- PlotService pose le personnage sur son plot à l'attribution (après le chargement des
+				-- données, parfois plusieurs secondes) : attendre l'attribution, puis passer après lui.
+				local deadline = os.clock() + PLOT_WAIT_TIMEOUT
+				while player.Parent == Players and player:GetAttribute("PlotId") == nil and os.clock() < deadline do
+					task.wait(0.2)
+				end
+				task.wait(TEST_SPAWN_DELAY)
+				if player.Character == character and character.Parent and character:FindFirstChild("HumanoidRootPart") then
 					character:PivotTo(CFrame.new(spawnPart.Position + Vector3.new(0, spawnPart.Size.Y / 2 + 3, 0)))
 				end
 			end)
 		end
 		local function watchPlayer(player: Player)
-			player.CharacterAdded:Connect(onCharacter)
+			player.CharacterAdded:Connect(function(character: Model)
+				onCharacter(player, character)
+			end)
 			if player.Character then
-				onCharacter(player.Character)
+				onCharacter(player, player.Character)
 			end
 		end
 		Players.PlayerAdded:Connect(watchPlayer)
