@@ -140,6 +140,32 @@ celui du combat.
 Quand un personnage aura plusieurs animations (Attente, Attaque...), remettre son attribut
 `JeuAnimations` sur le vrai jeu pour voir l'enchaînement complet.
 
+## Attaque du Roi Orc (boss) et effet d'impact
+
+Préparé avec :
+
+```lua
+_G.AnimationKit.prepare({
+	Source = workspace.RoiOrc, Name = "RoiOrc", Set = "RoiOrc",
+	Profile = "Lourd", Attack = "Fendoir",
+	Parts = { head = "body_geom" },            -- sa tête s'appelle body_geom
+	Held = { Banniere = "torso", PicEpaule = "nearest", Crane_5 = "nearest", Crane_6 = "nearest" },
+})
+```
+
+- `Parts` désigne une pièce de rôle au nom inhabituel ; `Held` accepte `"nearest"` pour une pièce
+  portée par le bras le plus proche (pics et crânes d'épaule).
+- Les styles peuvent animer l'**arme elle-même** (`weaponRight`, `weaponLeft` : première pièce tenue
+  par chaque main, pivot dans la main). L'angle de la lame est la somme bras + arme.
+- `Fendoir` (1,4 s, impact 0,7 s) : armé lent, lance-hache levée au-dessus de la tête, court temps
+  suspendu, puis abattue devant lui ; la lame mord le sol.
+- **Effet d'impact** : poser l'attribut texte `EffetAttaque = "Seisme"` sur le modèle (asset). Au
+  coup de son « Attaque », `src/client/Controllers/AttackEffectController.lua` soulève un anneau de
+  terre irrégulier sous l'arme, projette des éclats, soulève de la poussière et secoue un peu la
+  caméra du joueur proche. Démonstration Studio : tag `ApercuAttaque` (attaque + effet en boucle).
+- Le combat retarde les chiffres de dégâts et la disparition de la cible jusqu'à l'impact de toute
+  attaque dont la séquence a un attribut `Impact` (héros 0,2 s, Roi Orc 0,7 s).
+
 ## Ultime du héros de départ
 
 `Kit.ultimate(model, "Rempart")` crée la séquence « Ultime » de l'Écuyer du Rempart (0,9 s, impact

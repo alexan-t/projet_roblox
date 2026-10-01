@@ -73,7 +73,7 @@ horizontal), `Alive`, `Slot` (héros) ou `Cell` (ennemi), `MiniBoss`.
   L'énergie repasse à 0, puis `UltimateDamage` touche la cible (ou l'ennemi le plus proche)
   et tous les ennemis à moins de `Radius` d'elle. Un double clic est refusé : il n'y a plus d'énergie.
 - **Mort** : `UnitDied` une seule fois ; l'unité ne cible, ne bouge et n'attaque plus ;
-  son modèle est retiré 1,4 s après (le temps de sa disparition côté client, même retardée par un ultime).
+  son modèle est retiré 1,7 s après (le temps de sa disparition côté client, même retardée jusqu'au coup visible).
 
 ## Vagues, mini-boss, fin
 
@@ -153,6 +153,10 @@ Règle d'interface : une information qui peut s'afficher dans le monde n'a pas d
   - **Ultime** : toucher ou cliquer un héros dont la mana est pleine (raycast sur son
     corps, sinon le héros prêt le plus proche dans un rayon de 70 px). Le client envoie
     seulement `CombatAction("UseUltimate", unitId)` ; le serveur vérifie tout.
+  - **Coup visible** : les chiffres de dégâts et la disparition de la cible attendent l'instant du
+    coup de l'animation « Attaque » de l'attaquant (attribut `Impact` de la séquence). Un modèle
+    avec l'attribut `EffetAttaque` joue aussi un effet d'impact (`AttackEffectController`, ex.
+    `"Seisme"` pour le Roi Orc).
   - **Effet de l'ultime** (« Charge du Rempart », `UltimateEffectController`) : le héros joue
     « Ultime » (lueur dorée, estoc), une lame dorée file de son arme vers la cible, puis un anneau
     doré éclate au sol au rayon des ennemis touchés. Les chiffres de dégâts et la disparition des

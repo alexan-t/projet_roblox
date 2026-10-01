@@ -5,8 +5,8 @@
 --   2. fait un petit sursaut (grossit un instant) en basculant légèrement en arrière ;
 --   3. se dissout de haut en bas : chaque pièce s'efface en se tassant, pendant que des bouffées
 --      de poussière (teinte de la créature) et quelques étincelles dorées s'élèvent.
--- Durée totale DURATION. CombatService retire le modèle 1,4 s après la mort (CORPSE_DELAY) : de quoi
--- jouer l'effet, même retardé jusqu'à l'impact d'un ultime.
+-- Durée totale DURATION. CombatService retire le modèle 1,7 s après la mort (CORPSE_DELAY) : de quoi
+-- jouer l'effet, même retardé jusqu'au coup visible (ultime, attaque lourde).
 -- API : DefeatEffectController.Play(model, delay?) -> fin de l'effet (s). delay : attente avant de
 -- commencer (ex. ultime : l'ennemi disparaît quand l'onde l'atteint). Ne touche à aucune donnée de jeu :
 -- tout est local (LocalTransparencyModifier, échelle et position vues par ce client).

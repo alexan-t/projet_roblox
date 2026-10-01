@@ -130,12 +130,18 @@ end
 
 -- Pose un squelette Motor6D sur un modèle de pièces séparées (format IA : <membre>_geom).
 -- Repère racine : X = droite du personnage (du bras gauche vers le bras droit), -Z = avant.
--- options.Held = { [nomDePièce] = "left" | "right" | "torso" } force le rattachement d'une pièce.
-function Kit.rig(model: Model, options: { Held: { [string]: string }? }?): ()
+-- options.Held = { [nomDePièce] = mode } force le rattachement d'une pièce (toutes celles de ce nom) :
+--   "left" / "right" : tenue en main (suit la main, animable comme arme : weaponLeft / weaponRight) ;
+--   "nearest"        : portée par le bras le plus proche (épaulière, pic, crâne d'épaule) ;
+--   "torso"          : fixée au buste.
+-- options.Parts = { [rôle] = nomDePièce } désigne une pièce de rôle au nom inhabituel
+--   (ex. { head = "body_geom" } pour le Roi Orc).
+function Kit.rig(model: Model, options: { Held: { [string]: string }?, Parts: { [string]: string }? }?): ()
 	assert(not model:FindFirstChild("HumanoidRootPart"), `{model.Name} a déjà un squelette`)
 	local parts: { [string]: BasePart } = {}
+	local named = if options and options.Parts then options.Parts else {}
 	for role, names in PART_NAMES do
-		local part = find(model, names)
+		local part = find(model, if named[role] then { named[role] } else names)
 		assert(part, `{model.Name} : pièce {role} introuvable ({table.concat(names, ", ")}) ; voir docs/ANIMATION_TOOLS.md`)
 		parts[role] = part
 	end
@@ -204,6 +210,8 @@ function Kit.rig(model: Model, options: { Held: { [string]: string }? }?): ()
 	end
 	local forced = if options and options.Held then options.Held else {}
 	local leftHand, rightHand = basis * hand(leftArm), basis * hand(rightArm)
+	local leftShoulder = basis * shoulder(leftArm, armInset)
+	local rightShoulder = basis * shoulder(rightArm, armInset)
 	local summary: { string } = {}
 	for _, part in model:GetDescendants() do
 		if part:IsA("BasePart") and part ~= root and not used[part] then
@@ -215,8 +223,15 @@ function Kit.rig(model: Model, options: { Held: { [string]: string }? }?): ()
 					mode = "torso"
 				end
 			end
-			table.insert(summary, `{part.Name} -> {if mode == "left" then "main gauche" elseif mode == "right" then "main droite" else "buste"}`)
-			if mode == "left" then
+			if mode == "nearest" then
+				mode = if (part.Position - leftShoulder).Magnitude < (part.Position - rightShoulder).Magnitude then "leftArm" else "rightArm"
+			end
+			local label = if mode == "left" then "main gauche" elseif mode == "right" then "main droite"
+				elseif mode == "leftArm" then "bras gauche" elseif mode == "rightArm" then "bras droit" else "buste"
+			table.insert(summary, `{part.Name} -> {label}`)
+			if mode == "leftArm" or mode == "rightArm" then
+				joint("Porte_" .. string.gsub(part.Name, "_geom$", ""), if mode == "leftArm" then leftArm else rightArm, part, middle(part))
+			elseif mode == "left" then
 				joint("Tenu_" .. string.gsub(part.Name, "_geom$", ""), leftArm, part, hand(leftArm))
 			elseif mode == "right" then
 				joint("Tenu_" .. string.gsub(part.Name, "_geom$", ""), rightArm, part, hand(rightArm))
@@ -269,6 +284,16 @@ local function poseTree(model: Model): (string, { [string]: { string } }, { [str
 			table.insert(children[parent], (motor.Part1 :: BasePart).Name)
 			local role = JOINT_ROLES[motor.Name]
 			if role then
+				roles[role] = (motor.Part1 :: BasePart).Name
+			end
+		end
+	end
+	-- Armes : première pièce tenue (articulation Tenu_*) par chaque main.
+	for _, motor in model:GetDescendants() do
+		if motor:IsA("Motor6D") and string.sub(motor.Name, 1, 5) == "Tenu_" and motor.Part0 and motor.Part1 then
+			local holder = (motor.Part0 :: BasePart).Name
+			local role = if holder == roles.rightArm then "weaponRight" elseif holder == roles.leftArm then "weaponLeft" else nil
+			if role and not roles[role] then
 				roles[role] = (motor.Part1 :: BasePart).Name
 			end
 		end
@@ -417,6 +442,46 @@ Kit.Attacks = {
 				head = { 11, -22, 0 },
 			} },
 			{ Time = 0.9, Easing = "InOut", Poses = {} },
+		},
+	},
+	-- Roi Orc « Fendoir du Roi » : armé lent, lance-hache levée au-dessus de l'épaule en se cambrant,
+	-- court temps suspendu, puis abattue devant lui en plongeant (la lame mord le sol), rebond lourd.
+	-- weaponRight = l'arme elle-même, pivot dans la main : +rx relève la pointe. L'angle de la lame
+	-- est la somme bras + arme : armé 70 + 60 (au-dessus de la tête), impact 45 - 45 (lame qui mord le sol devant).
+	-- À l'impact, AttackEffectController joue l'effet « Seisme » (attribut EffetAttaque du modèle).
+	Fendoir = {
+		Length = 1.4, Impact = 0.7,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.45, Easing = "Out", Poses = {
+				torso = { 14, -30, 0, 0.35 },
+				rightArm = { 70, 0, 20 }, weaponRight = { 60, 0, 0 },
+				leftArm = { 40, 0, -10 },
+				rightLeg = { -20, 30, 0 }, leftLeg = { 0, 30, 0 },
+				head = { -8, 20, 0 },
+			} },
+			{ Time = 0.55, Easing = "In", Poses = {
+				torso = { 16, -34, 0, 0.4 },
+				rightArm = { 80, 0, 22 }, weaponRight = { 65, 0, 0 },
+				leftArm = { 42, 0, -10 },
+				rightLeg = { -22, 34, 0 }, leftLeg = { -2, 34, 0 },
+				head = { -9, 22, 0 },
+			} },
+			{ Time = 0.7, Easing = "Out", Poses = {
+				torso = { -24, 20, 0, 0.2 },
+				rightArm = { 45, 0, -12 }, weaponRight = { -45, 0, 0 },
+				leftArm = { -10, 0, -30 },
+				rightLeg = { 10, -20, 0 }, leftLeg = { 40, -20, 0 },
+				head = { 12, -15, 0 },
+			} },
+			{ Time = 0.85, Easing = "InOut", Poses = {
+				torso = { -20, 18, 0, 0.2 },
+				rightArm = { 40, 0, -12 }, weaponRight = { -40, 0, 0 },
+				leftArm = { -8, 0, -28 },
+				rightLeg = { 8, -18, 0 }, leftLeg = { 36, -18, 0 },
+				head = { 10, -14, 0 },
+			} },
+			{ Time = 1.4, Easing = "InOut", Poses = {} },
 		},
 	},
 	-- Variante : les deux bras levés puis abattus au sol, buste plié, rebond lourd.
@@ -613,11 +678,21 @@ function Kit.arrange(): ()
 	table.sort(models, function(a: Model, b: Model): boolean
 		return a.Name < b.Name
 	end)
-	-- Alternance gauche/droite en laissant libre l'axe du spawn, où se tient le joueur.
-	local spacing = 12
+	-- Alternance gauche/droite en laissant libre l'axe du spawn, où se tient le joueur ; chaque
+	-- modèle prend la place de sa largeur (un boss est bien plus large qu'un héros).
+	local gap = 3
+	local leftEdge, rightEdge = spawnPosition.X - gap, spawnPosition.X + gap
 	for index, model in models do
-		local side = if index % 2 == 1 then -1 else 1
-		local x = spawnPosition.X + side * (spacing / 2 + spacing * ((index - 1) // 2))
+		local _, size = model:GetBoundingBox()
+		local width = math.max(size.X, size.Z)
+		local x
+		if index % 2 == 1 then
+			x = leftEdge - width / 2
+			leftEdge -= width + gap
+		else
+			x = rightEdge + width / 2
+			rightEdge += width + gap
+		end
 		local spot = Vector3.new(x, groundY, spawnPosition.Z - 14)
 		local root = model.PrimaryPart :: BasePart
 		local offset = root.CFrame:ToObjectSpace(model:GetPivot())
@@ -633,7 +708,7 @@ function Kit.prepare(options: { [string]: any }): Model
 	local recording = ChangeHistoryService:TryBeginRecording("AnimationKit : " .. options.Set)
 	local ok, result = pcall(function()
 		local model = Kit.copy(options.Source, options.Name)
-		Kit.rig(model, { Held = options.Held })
+		Kit.rig(model, { Held = options.Held, Parts = options.Parts })
 		Kit.install(model, options.Set, Kit.walk(model, options.Profile))
 		if options.Attack then
 			Kit.install(model, options.Set, Kit.attack(model, options.Attack))

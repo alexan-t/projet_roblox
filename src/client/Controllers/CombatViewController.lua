@@ -18,6 +18,7 @@ local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
 local ArenaConfig = require(ReplicatedStorage.Shared.Config.ArenaConfig)
+local AttackEffectController = require(script.Parent.AttackEffectController)
 local DefeatEffectController = require(script.Parent.DefeatEffectController)
 local MonsterAnimationController = require(script.Parent.MonsterAnimationController)
 local UltimateEffectController = require(script.Parent.UltimateEffectController)
@@ -219,6 +220,9 @@ end
 
 local function onEvents(_combatId: number, events: { { [string]: any } })
 	local ultimateHits: { [number]: boolean } = {}
+	-- Délai jusqu'au coup visible pour chaque cible frappée dans ce lot (ultime ou attaque dont
+	-- l'animation a un instant d'impact) : chiffres et disparition attendent le coup.
+	local hitDelay: { [number]: number } = {}
 	for _, event in events do
 		local kind = event.Type
 		if kind == "CombatStarted" then
@@ -236,6 +240,7 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 		elseif kind == "UltimateUsed" then
 			for _, id in event.Hits do
 				ultimateHits[id] = true
+				hitDelay[id] = UltimateEffectController.IMPACT_DELAY
 			end
 			-- Animation « Ultime » du héros et onde dorée jusqu'au centre de la zone touchée
 			-- (anneau au rayon des ennemis touchés, au moins celui d'une petite zone).
@@ -261,9 +266,10 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 				view.health = event.Health
 				refresh(view)
 				if view.team == "Enemy" then
-					if ultimateHits[event.TargetId] then
-						-- Le chiffre tombe avec l'anneau de l'ultime, pas avant.
-						task.delay(UltimateEffectController.IMPACT_DELAY, popDamage, view, event.Amount, true)
+					-- Le chiffre tombe avec le coup (anneau de l'ultime, impact de l'attaque), pas avant.
+					local delay = hitDelay[event.TargetId] or 0
+					if delay > 0 then
+						task.delay(delay, popDamage, view, event.Amount, ultimateHits[event.TargetId] == true)
 					else
 						popDamage(view, event.Amount, false)
 					end
@@ -277,6 +283,14 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 				refresh(view)
 			end
 		elseif kind == "Attack" then
+			local attacker = views[event.UnitId]
+			if attacker and attacker.model and event.TargetId then
+				-- Effet d'impact éventuel (attribut EffetAttaque) ; renvoie l'instant du coup.
+				local impact = AttackEffectController.Play(attacker.model)
+				if impact > 0 and not hitDelay[event.TargetId] then
+					hitDelay[event.TargetId] = impact
+				end
+			end
 			animate(event.UnitId, "Attaque")
 		elseif kind == "MoveStarted" then
 			animate(event.UnitId, "Marche")
@@ -298,8 +312,8 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 					icon:Destroy()
 				end
 				if view.model then
-					-- Touché par un ultime : disparaît quand l'onde l'atteint.
-					DefeatEffectController.Play(view.model, if ultimateHits[event.UnitId] then UltimateEffectController.IMPACT_DELAY else 0)
+					-- Disparaît quand le coup l'atteint (onde de l'ultime, impact de l'attaque).
+					DefeatEffectController.Play(view.model, hitDelay[event.UnitId] or 0)
 				end
 			end
 			animate(event.UnitId, "Mort")
