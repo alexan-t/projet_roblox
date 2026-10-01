@@ -329,6 +329,129 @@ return function(CombatEngine: any, combatConfig: any, stageConfig: any)
 		assert(result == "Defeat", "lone Magicien loses: " .. tostring(result))
 	end)
 
+	test("allies spawned in slot order whatever the formation order", function()
+		local s = engine({ Allies = {
+			{ TypeId = "H2", Slot = 9, Position = { x = 0, z = 18 } },
+			{ TypeId = "H", Slot = 2, Position = { x = 10, z = 0 } },
+		} })
+		local allies = unitsOf(s, "Ally")
+		assert(allies[1].Slot == 2 and allies[2].Slot == 9 and allies[1].UnitId < allies[2].UnitId)
+	end)
+
+	test("enemies of a wave occupy distinct cells", function()
+		for seed = 1, 20 do
+			local s = engine({ enemies = 9, random = seeded(seed) })
+			local seen = {}
+			for _, e in unitsOf(s, "Enemy") do
+				assert(e.Cell and not seen[e.Cell], `seed {seed}: cell {e.Cell} reused`)
+				seen[e.Cell] = true
+				local cell = cells()[e.Cell]
+				assert(e.Position.x == cell.x and e.Position.z == cell.z, "unit placed on its cell")
+			end
+		end
+	end)
+
+	test("Damage.Amount is the health really lost (overkill not counted)", function()
+		local s = engine({ hero = { AttackDamage = 250, AttackRange = 50 }, enemy = { MaxHealth = 60, MoveSpeed = 0, AttackRange = 1 } })
+		CombatEngine.drain(s)
+		CombatEngine.step(s, 1 / 20)
+		local damage = eventsOf(CombatEngine.drain(s), "Damage")
+		assert(#damage == 1 and damage[1].Amount == 60 and damage[1].Health == 0)
+	end)
+
+	test("immobile unit out of range neither moves nor attacks", function()
+		local s = engine({ hero = { MoveSpeed = 0, AttackRange = 5 }, enemy = { MoveSpeed = 0, AttackRange = 1 } })
+		local ally = unitsOf(s, "Ally")[1]
+		CombatEngine.drain(s)
+		run(s, 2)
+		local events, moved = CombatEngine.drain(s)
+		assert(ally.Position.x == 0 and ally.Position.z == 0 and next(moved) == nil)
+		assert(#eventsOf(events, "MoveStarted") == 0 and #eventsOf(events, "Attack") == 0)
+	end)
+
+	test("enemies never gain energy", function()
+		local s = engine({ enemy = { AttackRange = 50, EnergyPerAttack = 50, MaxEnergy = 100 }, hero = { MaxHealth = 100000 } })
+		local enemy = unitsOf(s, "Enemy")[1]
+		run(s, 5)
+		assert(enemy.Energy == 0 and enemy.MaxEnergy == 0)
+		for _, e in eventsOf(CombatEngine.drain(s), "EnergyChanged") do assert(e.UnitId ~= enemy.UnitId) end
+	end)
+
+	test("ultimate never hits allies, even inside the radius", function()
+		local s = engine({ hero = { EnergyPerAttack = 100, AttackRange = 50, AttackDamage = 1, UltimateDamage = 40 }, radius = 100,
+			enemy = { MoveSpeed = 0, AttackRange = 1, MaxHealth = 500 }, Allies = {
+				{ TypeId = "H", Slot = 1, Position = { x = 0, z = -26 } },
+				{ TypeId = "H2", Slot = 2, Position = { x = 2, z = -26 } },
+			} })
+		CombatEngine.step(s, 1 / 20)
+		local caster = unitsOf(s, "Ally")[1]
+		local other = unitsOf(s, "Ally")[2]
+		local before = other.Health
+		assert(CombatEngine.useUltimate(s, caster.UnitId) == true)
+		local used = eventsOf(CombatEngine.drain(s), "UltimateUsed")[1]
+		for _, id in used.Hits do assert(s.byId[id].Team == "Enemy") end
+		assert(other.Health == before)
+	end)
+
+	test("ultimate that kills the last enemy advances the stage at once", function()
+		local stage = { Waves = { { Enemies = { { EnemyId = "E", Count = 1 } } } }, MiniBoss = { EnemyId = "B" } }
+		local s = engine({ Stage = stage, hero = { EnergyPerAttack = 100, AttackRange = 50, AttackDamage = 1, UltimateDamage = 1000 },
+			enemy = { MoveSpeed = 0, AttackRange = 1 }, boss = { MoveSpeed = 0, AttackRange = 1 } })
+		local ally = unitsOf(s, "Ally")[1]
+		CombatEngine.step(s, 1 / 20)
+		CombatEngine.drain(s)
+		assert(CombatEngine.useUltimate(s, ally.UnitId) == true)
+		local events = CombatEngine.drain(s)
+		assert(#eventsOf(events, "UnitDied") == 1 and #eventsOf(events, "MiniBossStarted") == 1, "mini-boss right after the kill")
+		ally.Energy = 100
+		assert(CombatEngine.useUltimate(s, ally.UnitId) == true)
+		assert(s.result == "Victory" and #eventsOf(CombatEngine.drain(s), "CombatEnded") == 1)
+	end)
+
+	test("ultimate refused when no enemy is alive", function()
+		local s = engine({})
+		local ally = unitsOf(s, "Ally")[1]
+		ally.Energy = 100
+		for _, e in unitsOf(s, "Enemy") do e.Health, e.Alive = 0, false end
+		local ok, reason = CombatEngine.useUltimate(s, ally.UnitId)
+		assert(ok == false and reason == "aucune cible" and ally.Energy == 100, "energy kept when refused")
+	end)
+
+	test("stage without mini-boss: victory right after the last wave, mini-boss flag only on the boss", function()
+		local s = engine({ hero = { AttackDamage = 1000, AttackRange = 100 }, enemy = { MoveSpeed = 0, AttackRange = 1 } })
+		for _, e in eventsOf(CombatEngine.drain(s), "UnitSpawned") do assert(e.MiniBoss == false) end
+		run(s, 1)
+		local events = CombatEngine.drain(s)
+		assert(s.result == "Victory" and #eventsOf(events, "MiniBossStarted") == 0)
+		local withBoss = engine({ Stage = { Waves = { { Enemies = { { EnemyId = "E", Count = 1 } } } }, MiniBoss = { EnemyId = "B" } },
+			hero = { AttackDamage = 1000, AttackRange = 100 }, enemy = { MoveSpeed = 0, AttackRange = 1 }, boss = { MoveSpeed = 0, AttackRange = 1, MaxHealth = 100000 } })
+		run(withBoss, 1)
+		local boss = eventsOf(CombatEngine.drain(withBoss), "UnitSpawned")
+		assert(boss[#boss].TypeId == "B" and boss[#boss].MiniBoss == true)
+	end)
+
+	test("drain empties the queue; moved lists only units that moved", function()
+		local s = engine({ hero = { MoveSpeed = 10, AttackRange = 5 }, enemy = { MoveSpeed = 0, AttackRange = 1 } })
+		local ally = unitsOf(s, "Ally")[1]
+		local enemy = unitsOf(s, "Enemy")[1]
+		CombatEngine.drain(s)
+		CombatEngine.step(s, 1 / 20)
+		local _, moved = CombatEngine.drain(s)
+		assert(moved[ally.UnitId] and not moved[enemy.UnitId])
+		local events, moved2 = CombatEngine.drain(s)
+		assert(#events == 0 and next(moved2) == nil)
+	end)
+
+	test("small frames accumulate into fixed steps; nothing runs after the end", function()
+		local s = engine({ enemy = { MaxHealth = 100000, MoveSpeed = 0, AttackRange = 1 } })
+		assert(CombatEngine.advance(s, 0.03, 1) == 0, "0.03 s < one step")
+		assert(CombatEngine.advance(s, 0.03, 1) == 1, "0.06 s = one step")
+		s.result = "Defeat"
+		local time = s.time
+		CombatEngine.step(s, 1)
+		assert(s.time == time and CombatEngine.advance(s, 0.25, 2) == 0)
+	end)
+
 	print(`CombatEngine: {passed} passed, {failed} failed`)
 	if failed > 0 then
 		error(`{failed} CombatEngine test(s) failed`)

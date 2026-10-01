@@ -407,6 +407,215 @@ return function(createService: any, CombatEngine: any, combatConfig: any, stageC
 		assert(e.data[p].Currencies.SummonTickets == 0 and next(e.data[p].Progression.FirstClears) == nil)
 	end)
 
+	test("StartCombat refused when the profile is not loaded", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		e.data[p] = nil
+		assert(select(2, s:StartCombat(p, e.stages[p].Id, TEAM, e.context())) == "données non chargées")
+		assert(#e.spawned == 0)
+	end)
+
+	test("StartCombat refused when a stage enemy or mini-boss has no stats", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		e.stages[p].Config = { Waves = { { Enemies = { { EnemyId = "Dragon", Count = 1 } } } } }
+		assert(select(2, s:StartCombat(p, e.stages[p].Id, TEAM, e.context())) == "ennemi sans stats : Dragon")
+		e.stages[p].Config = { Waves = { { Enemies = { { EnemyId = "Slime", Count = 1 } } } }, MiniBoss = { EnemyId = "Hydre" } }
+		assert(select(2, s:StartCombat(p, e.stages[p].Id, TEAM, e.context())) == "ennemi sans stats : Hydre")
+		assert(s:GetCombat(p) == nil)
+	end)
+
+	test("StartCombat refused when a wave has more enemies than enemy cells", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		local context = e.context()
+		for cell = 6, 9 do context.EnemyPositions[cell] = nil end -- 5 cases pour 6 ennemis
+		assert(select(2, s:StartCombat(p, e.stages[p].Id, TEAM, context)) == "trop d'ennemis pour l'arène")
+	end)
+
+	test("StartCombat does not modify the formation it receives", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		local formation = table.clone(TEAM)
+		s:StartCombat(p, e.stages[p].Id, formation, e.context())
+		assert(deepEqual(formation, TEAM))
+	end)
+
+	test("combat ids are unique across players and combats", function()
+		local e = fixture()
+		local s = e.start()
+		local a, b = e.player("A"), e.player("B")
+		local ids = {}
+		for _, p in { a, b } do
+			local id = s:StartCombat(p, e.stages[p].Id, TEAM, e.context())
+			assert(id and not ids[id]); ids[id] = true
+			s:CancelCombat(p)
+			local again = s:StartCombat(p, e.stages[p].Id, TEAM, e.context())
+			assert(again and not ids[again]); ids[again] = true
+		end
+	end)
+
+	test("saved CombatSpeed 2 is used at start; an invalid saved value falls back to x1", function()
+		local e = fixture()
+		local s = e.start()
+		local a, b = e.player("A"), e.player("B")
+		e.data[a].Settings.CombatSpeed = 2
+		e.data[b].Settings.CombatSpeed = 5
+		s:StartCombat(a, e.stages[a].Id, TEAM, e.context())
+		s:StartCombat(b, e.stages[b].Id, TEAM, e.context())
+		assert(s:GetCombat(a).Speed == 2 and s:GetCombat(b).Speed == 1)
+		local first = e.events(a)
+		assert(first[1].Type == "CombatStarted" and first[2].Type == "SpeedChanged" and first[2].Speed == 2)
+	end)
+
+	test("SetSpeed without a combat only saves the setting; same speed sends nothing", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		assert(s:SetSpeed(p, 2) == true and e.data[p].Settings.CombatSpeed == 2 and #e.fired == 0)
+		s:StartCombat(p, e.stages[p].Id, TEAM, e.context())
+		local before = #e.events(p, "SpeedChanged")
+		assert(s:SetSpeed(p, 2) == true and #e.events(p, "SpeedChanged") == before, "no duplicate SpeedChanged")
+	end)
+
+	test("models carry UnitId, Team and CombatId and stand on their slot or cell", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		local context = e.context()
+		local combatId = s:StartCombat(p, e.stages[p].Id, TEAM, context)
+		local view = s:GetCombat(p)
+		local byId = {}
+		for _, u in view.Units do byId[u.UnitId] = u end
+		for _, m in e.spawned do
+			local unit = byId[m.attributes.UnitId]
+			assert(unit and m.attributes.Team == unit.Team and m.attributes.CombatId == combatId)
+			local anchor = if unit.Team == "Ally" then context.HeroPositions[unit.Slot] else context.EnemyPositions[unit.Cell]
+			assert(m.pivot.Position.X == anchor.X and m.pivot.Position.Z == anchor.Z, "spawned on its own position")
+		end
+	end)
+
+	test("moving units are pivoted on the ground plane, keeping their height", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		s:StartCombat(p, e.stages[p].Id, { [1] = "Epeiste" }, e.context())
+		local model = e.spawned[1]
+		local height = model.pivot.Position.Y
+		e.tick(1)
+		assert(model.moves > 0, "melee hero walked toward the enemies")
+		assert(model.pivot.Position.Y == height and model.pivot.Position.Z < 0)
+	end)
+
+	test("dead unit model: Alive = false, then destroyed after the delay", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		s:StartCombat(p, e.stages[p].Id, TEAM, e.context())
+		local deadModel: any
+		for _ = 1, 400 do
+			e.heartbeat:Fire(0.1)
+			for _, m in e.spawned do if m.attributes.Alive == false then deadModel = m end end
+			if deadModel then break end
+		end
+		assert(deadModel and not deadModel.destroyed, "kept for the death animation")
+		for _, fn in e.delayed do fn() end
+		assert(deadModel.destroyed)
+	end)
+
+	test("CancelCombat removes every model at once and fires no OnCombatEnded", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		local ended = 0
+		s:OnCombatEnded(function() ended += 1 end)
+		s:StartCombat(p, e.stages[p].Id, TEAM, e.context())
+		e.tick(1)
+		s:CancelCombat(p)
+		for _, m in e.spawned do assert(m.destroyed or m.attributes.Alive == false) end
+		e.tick(10)
+		assert(ended == 0 and #e.completions == 0)
+	end)
+
+	test("GetCombat returns a copy: editing it changes nothing", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		s:StartCombat(p, e.stages[p].Id, TEAM, e.context())
+		local view = s:GetCombat(p)
+		local hp = view.Units[1].Health
+		view.Units[1].Health = 0
+		view.Speed = 99
+		local again = s:GetCombat(p)
+		assert(again.Units[1].Health == hp and again.Speed == 1)
+	end)
+
+	test("GetCombat is nil without a combat and once the stage session changed", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		assert(s:GetCombat(p) == nil)
+		s:StartCombat(p, e.stages[p].Id, TEAM, e.context())
+		e.stages[p].Id += 1
+		assert(s:GetCombat(p) == nil)
+	end)
+
+	test("UseUltimate refused once the combat is over", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		s:StartCombat(p, e.stages[p].Id, { [5] = "Magicien" }, e.context())
+		e.runUntilEnd(s, p, 300)
+		assert(select(2, s:UseUltimate(p, 1)) == "aucun combat en cours")
+	end)
+
+	test("remotes created in ReplicatedStorage.Remotes with the right classes", function()
+		local e = fixture()
+		e.start()
+		local events, action = e.remote("CombatEvent"), e.remote("CombatAction")
+		assert(events.ClassName == "RemoteEvent" and action.ClassName == "RemoteFunction")
+		assert(events.Parent.Name == "Remotes" and action.Parent == events.Parent)
+		assert(type(action.OnServerInvoke) == "function")
+	end)
+
+	test("a lag spike does not finish the combat at once", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		s:StartCombat(p, e.stages[p].Id, TEAM, e.context())
+		e.heartbeat:Fire(60)
+		local view = s:GetCombat(p)
+		assert(view and #e.completions == 0, "still running after a 60 s frame")
+	end)
+
+	test("no event is sent once the player has left", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		s:StartCombat(p, e.stages[p].Id, TEAM, e.context())
+		local sent = #e.fired
+		p.Parent = nil
+		e.tick(5)
+		assert(#e.fired == sent and #e.completions == 0)
+	end)
+
+	test("OnCombatEnded runs after CompleteStage with the combat id and result", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		local seen: any = nil
+		s:OnCombatEnded(function(player: any, id: number, result: string)
+			seen = { player = player, id = id, result = result, completedBefore = #e.completions }
+		end)
+		local id = s:StartCombat(p, e.stages[p].Id, { [5] = "Magicien" }, e.context())
+		e.runUntilEnd(s, p, 300)
+		assert(seen and seen.player == p and seen.id == id and seen.result == "Defeat" and seen.completedBefore == 1)
+	end)
+
 	print(`CombatService: {passed} passed, {failed} failed`)
 	if failed > 0 then
 		error(`{failed} CombatService test(s) failed`)
