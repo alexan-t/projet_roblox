@@ -172,58 +172,115 @@ return function(CombatEngine: any, combatConfig: any, stageConfig: any)
 		assert(#changes >= 2)
 	end)
 
-	test("energy gained per attack, bounded at MaxEnergy", function()
+	test("energy gained per attack, capped at MaxEnergy (then spent by the automatic ultimate)", function()
 		local s = engine({ hero = { EnergyPerAttack = 40, MaxEnergy = 100, AttackRange = 50, AttackDamage = 1, AttackInterval = 0.1 }, enemy = { MaxHealth = 10000, MoveSpeed = 0, AttackRange = 1 } })
 		local ally = unitsOf(s, "Ally")[1]
 		CombatEngine.drain(s)
 		CombatEngine.step(s, 1 / 20)
 		assert(ally.Energy == 40)
-		run(s, 1)
-		assert(ally.Energy == 100, "capped at 100, got " .. ally.Energy)
-		local changes = eventsOf(CombatEngine.drain(s), "EnergyChanged")
-		assert(changes[#changes].Energy == 100 and #changes == 3, "no EnergyChanged once full")
+		run(s, 0.2)
+		local values = {}
+		for _, e in eventsOf(CombatEngine.drain(s), "EnergyChanged") do table.insert(values, e.Energy) end
+		assert(table.concat(values, ",") == "40,80,100,0", "capped at 100, never above: " .. table.concat(values, ","))
 	end)
 
-	test("ultimate: refused without energy, accepted when full, energy reset, burst damage", function()
-		local s = engine({ hero = { EnergyPerAttack = 100, AttackRange = 50, AttackDamage = 1, UltimateDamage = 40 }, radius = 12, enemies = 3,
+	test("17. energy not full: no ultimate", function()
+		local s = engine({ hero = { EnergyPerAttack = 30, AttackRange = 50, AttackDamage = 1, AttackInterval = 0.1 }, enemy = { MaxHealth = 10000, MoveSpeed = 0, AttackRange = 1 } })
+		run(s, 0.25) -- 3 attaques : 90/100
+		assert(unitsOf(s, "Ally")[1].Energy == 90)
+		assert(#eventsOf(CombatEngine.drain(s), "UltimateUsed") == 0)
+	end)
+
+	test("18-20. energy reaches max: automatic ultimate, energy back to 0, exactly one UltimateUsed, zone damage", function()
+		local s = engine({ hero = { EnergyPerAttack = 50, AttackRange = 50, AttackDamage = 1, AttackInterval = 0.5, UltimateDamage = 40 }, radius = 12, enemies = 3,
 			enemy = { MoveSpeed = 0, AttackRange = 1, MaxHealth = 500 } })
 		local ally = unitsOf(s, "Ally")[1]
-		local ok, reason = CombatEngine.useUltimate(s, ally.UnitId)
-		assert(ok == false and reason == "énergie insuffisante" and ally.Energy == 0)
-		CombatEngine.step(s, 1 / 20) -- une attaque : énergie pleine
-		assert(ally.Energy == 100)
 		CombatEngine.drain(s)
-		local before = {}
-		for _, e in unitsOf(s, "Enemy") do before[e.UnitId] = e.Health end
-		ok, reason = CombatEngine.useUltimate(s, ally.UnitId)
-		assert(ok == true and ally.Energy == 0)
+		CombatEngine.step(s, 1 / 20) -- attaque 1 : 50
+		assert(ally.Energy == 50 and #eventsOf(CombatEngine.drain(s), "UltimateUsed") == 0)
+		run(s, 0.5) -- attaque 2 : 100 -> ultime aussitôt
 		local events = CombatEngine.drain(s)
 		local used = eventsOf(events, "UltimateUsed")
-		assert(#used == 1 and used[1].UnitId == ally.UnitId)
+		assert(#used == 1 and used[1].UnitId == ally.UnitId and ally.Energy == 0)
+		-- Ordre : l'attaque remplit la jauge, puis l'ultime la vide.
+		local order = {}
+		for _, e in events do
+			if e.Type == "EnergyChanged" then table.insert(order, "E" .. e.Energy) elseif e.Type == "UltimateUsed" then table.insert(order, "U") end
+		end
+		assert(table.concat(order, ",") == "E100,E0,U", table.concat(order, ","))
 		-- Cible en case 1 (0, -30) ; case 2 à 10 studs (dans le rayon 12), case 3 à 20 (hors rayon).
 		local hit = {}
 		for _, id in used[1].Hits do hit[id] = true end
 		local e = unitsOf(s, "Enemy")
 		assert(hit[e[1].UnitId] and hit[e[2].UnitId] and not hit[e[3].UnitId])
-		assert(e[1].Health == before[e[1].UnitId] - 40 and e[3].Health == before[e[3].UnitId])
-		assert(select(1, CombatEngine.useUltimate(s, ally.UnitId)) == false, "no second cast without energy")
+		assert(e[1].Health == 500 - 2 - 40 and e[2].Health == 460 and e[3].Health == 500)
+		run(s, 0.45)
+		assert(#eventsOf(CombatEngine.drain(s), "UltimateUsed") == 0, "energy climbs again from 0")
 	end)
 
-	test("ultimate refused for enemies, unknown or dead units", function()
-		local s = engine({ enemies = 1 })
-		local enemy = unitsOf(s, "Enemy")[1]
+	test("21. never two ultimates in the same tick, even with energy beyond max", function()
+		local s = engine({ hero = { EnergyPerAttack = 250, AttackRange = 50, AttackDamage = 1, AttackInterval = 0.05 }, enemy = { MaxHealth = 100000, MoveSpeed = 0, AttackRange = 1 } })
 		local ally = unitsOf(s, "Ally")[1]
-		assert(select(2, CombatEngine.useUltimate(s, enemy.UnitId)) == "unité invalide")
-		assert(select(2, CombatEngine.useUltimate(s, 999)) == "unité invalide")
-		assert(select(2, CombatEngine.useUltimate(s, "1")) == "unité invalide")
+		for _ = 1, 40 do
+			CombatEngine.step(s, 1 / 20)
+			local used = eventsOf(CombatEngine.drain(s), "UltimateUsed")
+			assert(#used <= 1, "one ultimate per tick at most")
+			assert(ally.Energy <= ally.MaxEnergy)
+		end
+	end)
+
+	test("22. dead hero never casts, even with a full gauge", function()
+		local s = engine({ hero = { AttackRange = 50 }, enemy = { MoveSpeed = 0, AttackRange = 1 } })
+		local ally = unitsOf(s, "Ally")[1]
 		ally.Energy = 100
 		ally.Health, ally.Alive = 0, false
-		assert(select(2, CombatEngine.useUltimate(s, ally.UnitId)) == "unité morte")
+		run(s, 1)
+		assert(#eventsOf(CombatEngine.drain(s), "UltimateUsed") == 0 and ally.Energy == 100)
+	end)
+
+	test("23-24. no ultimate without a target: the gauge stays full", function()
+		local s = engine({ hero = { AttackRange = 50 } })
+		local ally = unitsOf(s, "Ally")[1]
+		for _, e in unitsOf(s, "Enemy") do e.Health = 0 end -- plus aucune cible valable (avant la mort officielle)
+		ally.Energy = 100
+		CombatEngine.drain(s)
+		CombatEngine.step(s, 1 / 20)
+		assert(#eventsOf(CombatEngine.drain(s), "UltimateUsed") == 0 and ally.Energy == 100, "not wasted in the void")
+	end)
+
+	test("25. gauge full when the last enemy of a wave dies: ultimate on the next wave (mini-boss)", function()
+		local stage = { Waves = { { Enemies = { { EnemyId = "E", Count = 1 } } } }, MiniBoss = { EnemyId = "B" } }
+		-- Le coup qui tue le dernier ennemi remplit la jauge : aucune cible, l'ultime attend le mini-boss.
+		local s = engine({ Stage = stage, hero = { EnergyPerAttack = 100, AttackRange = 100, AttackDamage = 1000, UltimateDamage = 7 },
+			enemy = { MoveSpeed = 0, AttackRange = 1 }, boss = { MoveSpeed = 0, AttackRange = 1, MaxHealth = 100000 } })
+		local ally = unitsOf(s, "Ally")[1]
+		CombatEngine.step(s, 1 / 20)
+		local events = CombatEngine.drain(s)
+		assert(#eventsOf(events, "MiniBossStarted") == 1 and #eventsOf(events, "UltimateUsed") == 0, "nothing cast between waves")
+		assert(ally.Energy == 100, "gauge kept full")
+		CombatEngine.step(s, 1 / 20)
+		local used = eventsOf(CombatEngine.drain(s), "UltimateUsed")
+		local boss = unitsOf(s, "Enemy")[2]
+		assert(#used == 1 and used[1].TargetId == boss.UnitId and boss.TypeId == "B" and ally.Energy == 0)
+		assert(boss.Health == 100000 - 7)
+	end)
+
+	test("26. enemies never cast an ultimate (no energy configured)", function()
+		local s = engine({ enemy = { AttackRange = 50, EnergyPerAttack = 100, MaxEnergy = 100, UltimateDamage = 999 }, hero = { MaxHealth = 100000, AttackRange = 1, MoveSpeed = 0 } })
+		run(s, 5)
+		for _, e in eventsOf(CombatEngine.drain(s), "UltimateUsed") do
+			assert(s.byId[e.UnitId].Team == "Ally", "only heroes cast")
+		end
+		assert(unitsOf(s, "Ally")[1].Health > 100000 - 999)
+	end)
+
+	test("no public ultimate API: the engine alone decides", function()
+		assert(CombatEngine.useUltimate == nil)
 	end)
 
 	test("x2 advances about twice the simulation for the same real time, same damage per hit", function()
 		local function play(speed: number): any
-			local s = engine({ hero = { AttackRange = 50, AttackInterval = 0.5, AttackDamage = 7 }, enemy = { MaxHealth = 100000, MoveSpeed = 0, AttackRange = 1 } })
+			local s = engine({ hero = { AttackRange = 50, AttackInterval = 0.5, AttackDamage = 7, EnergyPerAttack = 0 }, enemy = { MaxHealth = 100000, MoveSpeed = 0, AttackRange = 1 } })
 			CombatEngine.drain(s)
 			local steps = 0
 			for _ = 1, 60 do steps += CombatEngine.advance(s, 1 / 60, speed) end -- 1 s réelle
@@ -296,7 +353,6 @@ return function(CombatEngine: any, combatConfig: any, stageConfig: any)
 		assert(#ended == 1 and ended[1].Result == "Defeat")
 		run(s, 5)
 		assert(#eventsOf(CombatEngine.drain(s), "CombatEnded") == 0 and CombatEngine.advance(s, 1, 1) == 0)
-		assert(select(2, CombatEngine.useUltimate(s, 1)) == "combat terminé")
 	end)
 
 	test("real Stage 1-1 with the real config: 4 heroes win in a reasonable time, 1 Magicien loses", function()
@@ -377,44 +433,31 @@ return function(CombatEngine: any, combatConfig: any, stageConfig: any)
 		for _, e in eventsOf(CombatEngine.drain(s), "EnergyChanged") do assert(e.UnitId ~= enemy.UnitId) end
 	end)
 
-	test("ultimate never hits allies, even inside the radius", function()
+	test("automatic ultimate never hits allies, even inside the radius", function()
 		local s = engine({ hero = { EnergyPerAttack = 100, AttackRange = 50, AttackDamage = 1, UltimateDamage = 40 }, radius = 100,
+			hero2 = { EnergyPerAttack = 0, AttackRange = 50 },
 			enemy = { MoveSpeed = 0, AttackRange = 1, MaxHealth = 500 }, Allies = {
 				{ TypeId = "H", Slot = 1, Position = { x = 0, z = -26 } },
 				{ TypeId = "H2", Slot = 2, Position = { x = 2, z = -26 } },
 			} })
-		CombatEngine.step(s, 1 / 20)
-		local caster = unitsOf(s, "Ally")[1]
 		local other = unitsOf(s, "Ally")[2]
 		local before = other.Health
-		assert(CombatEngine.useUltimate(s, caster.UnitId) == true)
-		local used = eventsOf(CombatEngine.drain(s), "UltimateUsed")[1]
-		for _, id in used.Hits do assert(s.byId[id].Team == "Enemy") end
+		CombatEngine.step(s, 1 / 20)
+		local used = eventsOf(CombatEngine.drain(s), "UltimateUsed")
+		assert(#used == 1)
+		for _, id in used[1].Hits do assert(s.byId[id].Team == "Enemy") end
 		assert(other.Health == before)
 	end)
 
-	test("ultimate that kills the last enemy advances the stage at once", function()
+	test("automatic ultimate that kills the last enemy advances the stage", function()
 		local stage = { Waves = { { Enemies = { { EnemyId = "E", Count = 1 } } } }, MiniBoss = { EnemyId = "B" } }
-		local s = engine({ Stage = stage, hero = { EnergyPerAttack = 100, AttackRange = 50, AttackDamage = 1, UltimateDamage = 1000 },
+		local s = engine({ Stage = stage, hero = { EnergyPerAttack = 100, AttackRange = 50, AttackDamage = 1, UltimateDamage = 1000, AttackInterval = 0.05 },
 			enemy = { MoveSpeed = 0, AttackRange = 1 }, boss = { MoveSpeed = 0, AttackRange = 1 } })
-		local ally = unitsOf(s, "Ally")[1]
-		CombatEngine.step(s, 1 / 20)
-		CombatEngine.drain(s)
-		assert(CombatEngine.useUltimate(s, ally.UnitId) == true)
+		CombatEngine.step(s, 1 / 20) -- attaque + ultime : l'ennemi de la vague meurt
 		local events = CombatEngine.drain(s)
-		assert(#eventsOf(events, "UnitDied") == 1 and #eventsOf(events, "MiniBossStarted") == 1, "mini-boss right after the kill")
-		ally.Energy = 100
-		assert(CombatEngine.useUltimate(s, ally.UnitId) == true)
+		assert(#eventsOf(events, "UltimateUsed") == 1 and #eventsOf(events, "UnitDied") == 1 and #eventsOf(events, "MiniBossStarted") == 1)
+		CombatEngine.step(s, 1 / 20) -- même chose contre le mini-boss
 		assert(s.result == "Victory" and #eventsOf(CombatEngine.drain(s), "CombatEnded") == 1)
-	end)
-
-	test("ultimate refused when no enemy is alive", function()
-		local s = engine({})
-		local ally = unitsOf(s, "Ally")[1]
-		ally.Energy = 100
-		for _, e in unitsOf(s, "Enemy") do e.Health, e.Alive = 0, false end
-		local ok, reason = CombatEngine.useUltimate(s, ally.UnitId)
-		assert(ok == false and reason == "aucune cible" and ally.Energy == 100, "energy kept when refused")
 	end)
 
 	test("stage without mini-boss: victory right after the last wave, mini-boss flag only on the boss", function()
