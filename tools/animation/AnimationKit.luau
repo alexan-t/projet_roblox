@@ -391,6 +391,34 @@ Kit.Attacks = {
 			{ Time = 1.0, Easing = "InOut", Poses = {} },
 		},
 	},
+	-- Ultime « Charge du Rempart » (Écuyer) : ramassé derrière le bouclier, épée tirée en arrière,
+	-- puis grand estoc en se fendant. L'onde dorée (UltimateEffectController) part à l'impact :
+	-- garder Impact égal à ANIMATION_IMPACT de ce contrôleur.
+	Rempart = {
+		Length = 0.9, Impact = 0.3,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.15, Easing = "In", Poses = {
+				torso = { 10, -20, 0, -0.25 },
+				rightArm = { -30, 0, 25 }, leftArm = { 50, 0, -5 },
+				rightLeg = { -25, 20, 0 }, leftLeg = { 15, 20, 0 },
+				head = { -5, 15, 0 },
+			} },
+			{ Time = 0.3, Easing = "Out", Poses = {
+				torso = { -18, 25, 0, -0.1 },
+				rightArm = { 80, 0, -10 }, leftArm = { -15, 0, -25 },
+				rightLeg = { -10, -25, 0 }, leftLeg = { 38, -25, 0 },
+				head = { 10, -20, 0 },
+			} },
+			{ Time = 0.5, Easing = "InOut", Poses = {
+				torso = { -20, 28, 0, -0.12 },
+				rightArm = { 78, 0, -12 }, leftArm = { -18, 0, -25 },
+				rightLeg = { -10, -28, 0 }, leftLeg = { 40, -28, 0 },
+				head = { 11, -22, 0 },
+			} },
+			{ Time = 0.9, Easing = "InOut", Poses = {} },
+		},
+	},
 	-- Variante : les deux bras levés puis abattus au sol, buste plié, rebond lourd.
 	Ecrasement = {
 		Length = 1.0, Impact = 0.32,
@@ -471,6 +499,11 @@ end
 -- Attaque de base « Attaque » d'un modèle riggé.
 function Kit.attack(model: Model, style: any): KeyframeSequence
 	return Kit.keyed(model, "Attaque", style)
+end
+
+-- Ultime « Ultime » d'un héros riggé (même format de style que les attaques, ex. "Rempart").
+function Kit.ultimate(model: Model, style: any): KeyframeSequence
+	return Kit.keyed(model, "Ultime", style)
 end
 
 local function folder(parent: Instance, name: string, className: string?): Instance

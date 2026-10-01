@@ -5,8 +5,10 @@
 --   2. fait un petit sursaut (grossit un instant) en basculant légèrement en arrière ;
 --   3. se dissout de haut en bas : chaque pièce s'efface en se tassant, pendant que des bouffées
 --      de poussière (teinte de la créature) et quelques étincelles dorées s'élèvent.
--- Durée totale DURATION, inférieure au délai avant que CombatService retire le modèle (1 s).
--- API : DefeatEffectController.Play(model) -> durée (s). Ne touche à aucune donnée de jeu :
+-- Durée totale DURATION. CombatService retire le modèle 1,4 s après la mort (CORPSE_DELAY) : de quoi
+-- jouer l'effet, même retardé jusqu'à l'impact d'un ultime.
+-- API : DefeatEffectController.Play(model, delay?) -> fin de l'effet (s). delay : attente avant de
+-- commencer (ex. ultime : l'ennemi disparaît quand l'onde l'atteint). Ne touche à aucune donnée de jeu :
 -- tout est local (LocalTransparencyModifier, échelle et position vues par ce client).
 -- Tag "ApercuDisparition" (Model, Studio) : démonstration en boucle sur une copie figée du modèle,
 --   puis réapparition. Attribut optionnel ApercuPause (s entre deux disparitions).
@@ -123,12 +125,27 @@ local function particleHost(size: Vector3, color: Color3, height: number): (Base
 	return host, dust, sparks
 end
 
--- Lance la disparition de model. Renvoie la durée de l'effet (0 si rien à faire).
-function DefeatEffectController.Play(model: Model): number
+local run: (model: Model) -> ()
+
+-- Lance la disparition de model, après delay secondes. Renvoie l'instant de fin (0 si rien à faire).
+function DefeatEffectController.Play(model: Model, delay: number?): number
 	if model:GetAttribute("EnDisparition") == true or not model.Parent then
 		return 0
 	end
 	model:SetAttribute("EnDisparition", true)
+	local startDelay = delay or 0
+	if startDelay > 0 then
+		task.delay(startDelay, run, model)
+	else
+		run(model)
+	end
+	return startDelay + DURATION
+end
+
+run = function(model: Model)
+	if not model.Parent then
+		return
+	end
 
 	local parts: { BasePart } = {}
 	for _, item in model:GetDescendants() do
@@ -137,7 +154,7 @@ function DefeatEffectController.Play(model: Model): number
 		end
 	end
 	if #parts == 0 then
-		return 0
+		return
 	end
 
 	local box, size = model:GetBoundingBox()
@@ -231,7 +248,6 @@ function DefeatEffectController.Play(model: Model): number
 	task.delay(DURATION + 1.2, function()
 		host:Destroy()
 	end)
-	return DURATION
 end
 
 -- Copie figée (pose du moment, sans squelette ni animation) pour la démonstration.

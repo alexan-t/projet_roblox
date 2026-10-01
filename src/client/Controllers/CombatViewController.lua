@@ -6,7 +6,9 @@
 --   • Dégâts : chiffres brefs au-dessus des ennemis (plus gros pour un ultime), qui s'effacent vite.
 --   • Mort : les barres disparaissent, puis l'unité se dissout (DefeatEffectController) ; pas
 --     d'animation de douleur (« Touche ») ni de mort à jouer pour l'instant.
---   • Ultime : toucher / cliquer un héros dont la mana est pleine (le serveur vérifie tout).
+--   • Ultime : toucher / cliquer un héros dont la mana est pleine (le serveur vérifie tout). Le héros
+--     joue « Ultime » et une onde dorée file vers la zone touchée (UltimateEffectController) ; chiffres
+--     et disparitions des ennemis touchés attendent l'impact de l'onde.
 -- Aucune règle de combat ici : PV, mana, morts et résultat viennent uniquement du serveur.
 
 local Players = game:GetService("Players")
@@ -18,6 +20,7 @@ local Workspace = game:GetService("Workspace")
 local ArenaConfig = require(ReplicatedStorage.Shared.Config.ArenaConfig)
 local DefeatEffectController = require(script.Parent.DefeatEffectController)
 local MonsterAnimationController = require(script.Parent.MonsterAnimationController)
+local UltimateEffectController = require(script.Parent.UltimateEffectController)
 
 local CombatViewController = {}
 
@@ -234,13 +237,36 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 			for _, id in event.Hits do
 				ultimateHits[id] = true
 			end
+			-- Animation « Ultime » du héros et onde dorée jusqu'au centre de la zone touchée
+			-- (anneau au rayon des ennemis touchés, au moins celui d'une petite zone).
+			local caster = views[event.UnitId]
+			local target = views[event.TargetId]
+			if caster and caster.model and target and target.model then
+				local box, size = target.model:GetBoundingBox()
+				local center = Vector3.new(box.Position.X, box.Position.Y - size.Y / 2, box.Position.Z)
+				local radius = 4
+				for _, id in event.Hits do
+					local hit = views[id]
+					if hit and hit.model then
+						local p = hit.model:GetPivot().Position
+						radius = math.max(radius, Vector3.new(p.X - center.X, 0, p.Z - center.Z).Magnitude + 2)
+					end
+				end
+				UltimateEffectController.Play(caster.model, center, radius)
+			end
+			animate(event.UnitId, "Ultime")
 		elseif kind == "Damage" then
 			local view = views[event.TargetId]
 			if view then
 				view.health = event.Health
 				refresh(view)
 				if view.team == "Enemy" then
-					popDamage(view, event.Amount, ultimateHits[event.TargetId] == true)
+					if ultimateHits[event.TargetId] then
+						-- Le chiffre tombe avec l'anneau de l'ultime, pas avant.
+						task.delay(UltimateEffectController.IMPACT_DELAY, popDamage, view, event.Amount, true)
+					else
+						popDamage(view, event.Amount, false)
+					end
 				end
 			end
 			animate(event.TargetId, "Touche")
@@ -272,7 +298,8 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 					icon:Destroy()
 				end
 				if view.model then
-					DefeatEffectController.Play(view.model)
+					-- Touché par un ultime : disparaît quand l'onde l'atteint.
+					DefeatEffectController.Play(view.model, if ultimateHits[event.UnitId] then UltimateEffectController.IMPACT_DELAY else 0)
 				end
 			end
 			animate(event.UnitId, "Mort")

@@ -48,8 +48,9 @@ type Session = {
 type EndedCallback = (player: Player, combatId: number, result: string) -> ()
 
 local SCOPE = "CombatService"
--- Délai avant de retirer le modèle d'une unité morte (laisse jouer une animation de mort).
-local CORPSE_DELAY = 1
+-- Délai avant de retirer le modèle d'une unité morte : laisse jouer sa disparition côté client
+-- (DefeatEffectController, 0,85 s), y compris retardée jusqu'à l'impact d'un ultime (0,45 s).
+local CORPSE_DELAY = 1.4
 
 local CombatService = {}
 
