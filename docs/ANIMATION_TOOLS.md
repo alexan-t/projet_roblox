@@ -140,6 +140,23 @@ celui du combat.
 Quand un personnage aura plusieurs animations (Attente, Attaque...), remettre son attribut
 `JeuAnimations` sur le vrai jeu pour voir l'enchaînement complet.
 
+## Ultime du héros de départ
+
+`Kit.ultimate(model, "Rempart")` crée la séquence « Ultime » de l'Écuyer du Rempart (0,9 s, impact
+0,3 s) : ramassé derrière le bouclier, épée tirée en arrière, puis grand estoc.
+
+```lua
+local Kit = _G.AnimationKit
+local m = workspace.AtelierAnimation.EcuyerDuRempart
+Kit.install(m, "EcuyerDuRempart", Kit.ultimate(m, "Rempart"))
+```
+
+L'effet visuel (lueur, lame dorée, anneau au sol) est du code de jeu :
+`src/client/Controllers/UltimateEffectController.lua`, appelé par `CombatViewController` sur
+`UltimateUsed`. Garder `ANIMATION_IMPACT` de ce fichier égal à l'`Impact` du style. Pour le voir au
+Play, taguer le héros riggé `ApercuUltime` (Studio) : ultime en boucle vers un point à 10 studs
+devant lui.
+
 ## Disparition à la mort (pas de réaction aux dégâts)
 
 Le jeu est surtout en one-shot : pas d'animation de douleur (« Touche »). À la mort, l'unité se
@@ -158,7 +175,7 @@ copie figée du modèle se dissout, puis il réapparaît, en boucle (attribut `A
   l'attribut `AssetId` de la séquence (lu par `MonsterAnimationController`).
 - Pas de genoux ni de pieds articulés : les modèles IA ont une seule pièce par jambe.
 - Les capes et tabards sont fixés au buste, sans mouvement secondaire.
-- Marche et attaque de base sont générées ; Attente, Touche, Mort et Ultime restent à faire.
+- Marche, attaque de base et ultime (Écuyer) sont générés ; pas encore d'Attente (repos).
 - Les épaules des modèles IA sont des pièces creuses : un bras levé très haut ou très écarté laisse
   voir le dessous sombre de l'épaulière. Garder les bras sous ~80° (rx) et ~30° (rz). Le pivot
   d'épaule est placé près du bord intérieur du bras pour limiter l'effet ; `Kit.unrig` puis
