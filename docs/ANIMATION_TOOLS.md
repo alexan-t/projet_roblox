@@ -157,8 +157,8 @@ _G.AnimationKit.prepare({
   portée par le bras le plus proche (pics et crânes d'épaule).
 - Les styles peuvent animer l'**arme elle-même** (`weaponRight`, `weaponLeft` : première pièce tenue
   par chaque main, pivot dans la main). L'angle de la lame est la somme bras + arme.
-- `Fendoir` (1,4 s, impact 0,7 s) : armé lent, lance-hache levée au-dessus de la tête, court temps
-  suspendu, puis abattue devant lui ; la lame mord le sol.
+- `Fendoir` (1,4 s, impact 0,7 s) : armé lent, le bras lève la lance-hache au-dessus de la tête,
+  court temps suspendu, puis l'abat devant lui ; la lame mord le sol. Demande `Kit.closeArms`.
 - **Effet d'impact** : poser l'attribut texte `EffetAttaque = "Seisme"` sur le modèle (asset). Au
   coup de son « Attaque », `src/client/Controllers/AttackEffectController.lua` soulève un anneau de
   terre irrégulier sous l'arme, projette des éclats, soulève de la poussière et secoue un peu la
@@ -202,12 +202,14 @@ copie figée du modèle se dissout, puis il réapparaît, en boucle (attribut `A
 - Pas de genoux ni de pieds articulés : les modèles IA ont une seule pièce par jambe.
 - Les capes et tabards sont fixés au buste, sans mouvement secondaire.
 - Marche, attaque de base et ultime (Écuyer) sont générés ; pas encore d'Attente (repos).
-- **Cavité d'épaule** (Roi Orc) : le buste a une cavité à chaque épaule ; dès que le bras s'écarte
-  de plus de ~10°, on voit dedans (noir). Une sphère de remplissage ne marche pas (la cavité est trop
-  grande et irrégulière : soit la sphère dépasse au repos, soit elle ne bouche qu'un coin). Solution
-  retenue : **épaules quasi immobiles**, et le geste passe par le buste et par l'arme (`weaponRight`
-  avec glissement dans la main en 4e valeur, et roulis `rz` pour présenter les lames). Contrôler un
-  nouveau mouvement de bras en gros plan sur l'épaule, vue de face basse, avant de le valider.
+- **Bras en coque** (Roi Orc) : ses bras sont ouverts sur toute leur face intérieure (côté buste).
+  Au repos le buste cache l'ouverture ; dès que le bras s'écarte, on voit l'intérieur, noir.
+  `Kit.closeArms(model, couleurPeau)` ferme cette face avec un ellipsoïde couleur peau porté par le
+  bras, qui reste dans l'aisselle au repos. Roi Orc : `Color3.fromRGB(76, 111, 41)` (moyenne des pixels
+  de peau de la texture du bras, via `AssetService:CreateEditableImageAsync`). Pour un autre modèle,
+  régler d'abord en rouge vif : bras seul vu du buste (plus de noir), puis modèle entier au repos de
+  face, de dos et de dessus (rien ne dépasse), puis en gros plan aux instants clés de l'animation.
+  Erreur à ne pas refaire : une sphère centrée sur l'épaule (dépasse au repos sans boucher le trou).
 - Les épaules des modèles IA sont des pièces creuses : un bras levé très haut ou très écarté laisse
   voir le dessous sombre de l'épaulière. Garder les bras sous ~80° (rx) et ~30° (rz). Le pivot
   d'épaule est placé près du bord intérieur du bras pour limiter l'effet ; `Kit.unrig` puis

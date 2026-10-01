@@ -254,6 +254,58 @@ function Kit.rig(model: Model, options: { Held: { [string]: string }?, Parts: { 
 	print(`[AnimationKit] {model.Name} : {table.concat(summary, " ; ")} (corriger avec Held si besoin)`)
 end
 
+-- Couvercles de bras : certains modèles IA (Roi Orc) ont des bras en coque, ouverts sur toute leur
+-- face intérieure (côté buste). Au repos, le buste cache l'ouverture ; dès que le bras s'écarte, on
+-- voit l'intérieur, noir. Un ellipsoïde couleur peau, porté par le bras, ferme cette face. Il reste
+-- dans l'aisselle au repos (pris pour de la peau). Proportions par défaut relevées sur le Roi Orc,
+-- en fraction de la boîte du bras : à contrôler pour chaque modèle avec color = rouge vif (bras seul
+-- vu du buste : plus de noir ; modèle entier au repos, de face, de dos et de dessus : rien ne dépasse).
+--   options.Inset  : enfoncement depuis le bord intérieur du bras (studs, 0,75)
+--   options.Height : hauteur du centre, en fraction de la hauteur du bras depuis le bas (0,71)
+--   options.Size   : taille en fraction (épaisseur en studs, hauteur, profondeur) : (0,8 ; 0,5 ; 0,81)
+function Kit.closeArms(model: Model, color: Color3, options: { Inset: number?, Height: number?, Size: Vector3? }?): ()
+	local root = model.PrimaryPart
+	assert(root, `{model.Name} n'a pas de squelette (lancer Kit.rig)`)
+	local basis = root.CFrame
+	local inset = options and options.Inset or 0.75
+	local heightFraction = options and options.Height or 0.71
+	local size = options and options.Size or Vector3.new(0.8, 0.5, 0.81)
+	for _, motor in model:GetDescendants() do
+		if motor:IsA("Motor6D") and (motor.Name == "EpauleGauche" or motor.Name == "EpauleDroite") and motor.Part1 then
+			local arm = motor.Part1 :: BasePart
+			local name = "Couvercle_" .. motor.Name
+			local old = arm.Parent and arm.Parent:FindFirstChild(name)
+			if old then
+				old:Destroy()
+			end
+			local mn, mx = bounds(arm, basis)
+			local right = (mn.X + mx.X) / 2 > 0
+			local x = if right then mn.X + inset else mx.X - inset
+			local y = mn.Y + (mx.Y - mn.Y) * heightFraction
+			local z = (mn.Z + mx.Z) / 2
+			local cover = Instance.new("Part")
+			cover.Name = name
+			cover.Size = Vector3.new(size.X, (mx.Y - mn.Y) * size.Y, (mx.Z - mn.Z) * size.Z)
+			cover.Material = Enum.Material.SmoothPlastic
+			cover.Color = color
+			cover.CastShadow = false
+			cover.CanCollide, cover.CanTouch, cover.CanQuery = false, false, false
+			cover.Anchored = false
+			cover.CFrame = basis * CFrame.new(x, y, z)
+			local mesh = Instance.new("SpecialMesh")
+			mesh.MeshType = Enum.MeshType.Sphere
+			mesh.Parent = cover
+			cover.Parent = arm.Parent
+			local link = Instance.new("Motor6D")
+			link.Name = "Porte_" .. name
+			link.Part0, link.Part1 = arm, cover
+			link.C0 = arm.CFrame:ToObjectSpace(cover.CFrame)
+			link.C1 = CFrame.identity
+			link.Parent = arm
+		end
+	end
+end
+
 -- Retire le squelette posé par Kit.rig (modèle en pose de repos, mode Edit) pour le reposer
 -- après une correction de l'outil. Les animations ne dépendent que des noms de pièces : elles restent valables.
 function Kit.unrig(model: Model): ()
@@ -446,11 +498,10 @@ Kit.Attacks = {
 	},
 	-- Roi Orc « Fendoir du Roi » : armé lent, lance-hache levée au-dessus de l'épaule en se cambrant,
 	-- court temps suspendu, puis abattue devant lui en plongeant (la lame mord le sol), rebond lourd.
-	-- weaponRight = l'arme elle-même, pivot dans la main : +rx relève la pointe ; 4e valeur = glissement
-	-- de l'arme dans la main (studs). Épaules quasi immobiles (10° au plus) : le Roi Orc a une cavité à
-	-- chaque épaule du buste, visible dès que le bras s'écarte. Le geste passe par l'arme : dressée
-	-- (92-100°) et remontée de 3 studs dans la main à l'armé, la lame dépasse la tête ; puis abattue sur
-	-- plus de 100° jusqu'à -3°, buste plongé : la lame mord le sol devant lui.
+	-- C'est le BRAS qui lève et abat l'arme (75-85° à l'armé, 40° à l'impact) ; l'arme ne bascule
+	-- que de 50-55° dans la main pour rester dans l'axe de l'avant-bras (weaponRight : +rx relève la
+	-- pointe, rz présente les lames). Le bras du Roi Orc est une coque ouverte côté buste : poser
+	-- Kit.closeArms sur le modèle avant d'utiliser ce style, sinon l'intérieur noir se voit.
 	-- À l'impact, AttackEffectController joue l'effet « Seisme » (attribut EffetAttaque du modèle).
 	Fendoir = {
 		Length = 1.4, Impact = 0.7,
@@ -458,29 +509,29 @@ Kit.Attacks = {
 			{ Time = 0, Easing = "Out", Poses = {} },
 			{ Time = 0.45, Easing = "Out", Poses = {
 				torso = { 14, -15, 0, 0.35 },
-				rightArm = { 6, 0, 6 }, weaponRight = { 92, -25, 45, 3 },
-				leftArm = { 10, 0, -4 },
+				rightArm = { 75, 0, 15 }, weaponRight = { 50, -10, 30 },
+				leftArm = { 30, 0, -8 },
 				rightLeg = { -20, 15, 0 }, leftLeg = { 0, 15, 0 },
 				head = { -8, 20, 0 },
 			} },
 			{ Time = 0.55, Easing = "In", Poses = {
 				torso = { 16, -18, 0, 0.4 },
-				rightArm = { 8, 0, 8 }, weaponRight = { 100, -28, 45, 3.2 },
-				leftArm = { 10, 0, -4 },
+				rightArm = { 85, 0, 18 }, weaponRight = { 55, -12, 30 },
+				leftArm = { 32, 0, -8 },
 				rightLeg = { -22, 18, 0 }, leftLeg = { -2, 18, 0 },
 				head = { -9, 22, 0 },
 			} },
 			{ Time = 0.7, Easing = "Out", Poses = {
 				torso = { -24, 20, 0, 0.2 },
-				rightArm = { 10, 0, -4 }, weaponRight = { -3, 0, 0 },
-				leftArm = { -6, 0, -8 },
+				rightArm = { 40, 0, -10 }, weaponRight = { -40, 0, 0 },
+				leftArm = { -10, 0, -25 },
 				rightLeg = { 10, -20, 0 }, leftLeg = { 40, -20, 0 },
 				head = { 12, -15, 0 },
 			} },
 			{ Time = 0.85, Easing = "InOut", Poses = {
 				torso = { -20, 18, 0, 0.2 },
-				rightArm = { 8, 0, -4 }, weaponRight = { 0, 0, 0 },
-				leftArm = { -5, 0, -8 },
+				rightArm = { 35, 0, -10 }, weaponRight = { -35, 0, 0 },
+				leftArm = { -8, 0, -22 },
 				rightLeg = { 8, -18, 0 }, leftLeg = { 36, -18, 0 },
 				head = { 10, -14, 0 },
 			} },
@@ -706,12 +757,16 @@ end
 
 -- Tout en un : copie, squelette, marche, rangement en jeu de combat, aperçu près du spawn.
 --   options = { Source: Model, Set: string, Profile: string | table, Name: string?, Held: { [string]: string }?,
---               Attack: string | table ? (style de Kit.Attacks), Preview: string? (animation montrée, "Marche" par défaut) }
+--               Attack: string | table ? (style de Kit.Attacks), Preview: string? (animation montrée, "Marche" par défaut),
+--               CloseArms: Color3? (couvercles de bras couleur peau, voir Kit.closeArms) }
 function Kit.prepare(options: { [string]: any }): Model
 	local recording = ChangeHistoryService:TryBeginRecording("AnimationKit : " .. options.Set)
 	local ok, result = pcall(function()
 		local model = Kit.copy(options.Source, options.Name)
 		Kit.rig(model, { Held = options.Held, Parts = options.Parts })
+		if options.CloseArms then
+			Kit.closeArms(model, options.CloseArms)
+		end
 		Kit.install(model, options.Set, Kit.walk(model, options.Profile))
 		if options.Attack then
 			Kit.install(model, options.Set, Kit.attack(model, options.Attack))
