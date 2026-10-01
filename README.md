@@ -112,6 +112,14 @@ depuis son plot via `ReplicatedStorage.Remotes.RequestStartStage` ; le serveur v
 droits et crée une session, que le combat (#8) terminera. Voir les
 [règles d'accès, l'API et les contrats](docs/ZONES.md).
 
+## Combat (CombatService)
+
+Le serveur simule tout le combat par pas fixes (`src/server/Combat/CombatEngine.lua`),
+avec des stats temporaires dans `src/server/Config/CombatConfig.lua`. Il annonce la victoire ou
+la défaite à ZoneService, et le client ne peut que demander l'ultime ou la vitesse x1/x2. Voir
+[le moteur, les événements et la sécurité](docs/COMBAT.md) et le
+[prototype de préparation dans l'arène de test](docs/ARENA_PROTOTYPE.md).
+
 ## Workflow Git
 
 - On part toujours de `develop` à jour, sur une branche `feature/<sujet>`.
