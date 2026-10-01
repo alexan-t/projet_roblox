@@ -112,7 +112,8 @@ Ou d'un coup à la préparation : `prepare({ ..., Attack = "Epee", Preview = "At
 | Style | Pour | Durée | Impact | Mouvement |
 | --- | --- | --- | --- | --- |
 | `Epee` | arme à une main + bouclier (validé sur l'Écuyer) | 0,6 s | 0,2 s | armé de côté, coup en diagonale à travers le corps, petit pas en avant, bouclier gardé devant |
-| `Ecrasement` | gros monstre à mains nues (validé sur le Tréant) | 1,0 s | 0,32 s | deux bras levés, abattus au sol devant lui, buste plié, rebond lourd |
+| `Griffe` | gros monstre à mains nues (validé sur le Tréant) | 1,0 s | 0,35 s | gros revers de la main droite : bras armé en arrière, buste tourné, balayage à travers le corps, bras gauche en contrepoids |
+| `Ecrasement` | variante (non retenue pour le Tréant) | 1,0 s | 0,32 s | deux bras levés, abattus au sol devant lui, buste plié, rebond lourd |
 
 **Synchronisation avec le combat** : `CombatViewController` joue « Attaque », affiche les dégâts et
 fait réagir la cible **à la même image** (événement `Attack`). Le coup doit donc tomber tôt :

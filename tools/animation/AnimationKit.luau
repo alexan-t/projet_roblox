@@ -364,7 +364,34 @@ Kit.Attacks = {
 			{ Time = 0.6, Easing = "InOut", Poses = {} },
 		},
 	},
-	-- Tréant : les deux bras levés puis abattus au sol, buste plié, rebond lourd.
+	-- Tréant : gros revers de la main droite, armé en arrière avec le buste tourné, balayé devant
+	-- lui à travers le corps ; le bras gauche part en contrepoids, petit pas lourd.
+	Griffe = {
+		Length = 1.0, Impact = 0.35,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.25, Easing = "In", Poses = {
+				torso = { 6, -45, 4, 0.05 },
+				rightArm = { -45, 0, 50 }, leftArm = { 25, 0, -15 },
+				rightLeg = { -12, 45, 0 }, leftLeg = { 6, 45, 0 },
+				head = { -4, 32, 0 },
+			} },
+			{ Time = 0.35, Easing = "Out", Poses = {
+				torso = { -16, 30, -4, -0.2 },
+				rightArm = { 75, 0, -25 }, leftArm = { -20, 0, -20 },
+				rightLeg = { 4, -30, 0 }, leftLeg = { 30, -30, 0 },
+				head = { 8, -22, 0 },
+			} },
+			{ Time = 0.5, Easing = "InOut", Poses = {
+				torso = { -18, 38, -5, -0.22 },
+				rightArm = { 70, 0, -30 }, leftArm = { -22, 0, -20 },
+				rightLeg = { 4, -38, 0 }, leftLeg = { 30, -38, 0 },
+				head = { 9, -28, 0 },
+			} },
+			{ Time = 1.0, Easing = "InOut", Poses = {} },
+		},
+	},
+	-- Variante : les deux bras levés puis abattus au sol, buste plié, rebond lourd.
 	Ecrasement = {
 		Length = 1.0, Impact = 0.32,
 		Keys = {
