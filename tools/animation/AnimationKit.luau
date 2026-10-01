@@ -254,41 +254,6 @@ function Kit.rig(model: Model, options: { Held: { [string]: string }?, Parts: { 
 	print(`[AnimationKit] {model.Name} : {table.concat(summary, " ; ")} (corriger avec Held si besoin)`)
 end
 
--- Rotules d'épaule : certains modèles IA ont le haut des bras ouvert (creux). Dès que le bras
--- s'écarte du buste, on voit l'intérieur, noir. Une sphère couleur peau, cachée dans l'épaule et
--- portée par le bras, bouche l'ouverture. color : teinte de la peau (relevée sur le modèle).
-function Kit.capShoulders(model: Model, color: Color3): ()
-	for _, motor in model:GetDescendants() do
-		if motor:IsA("Motor6D") and (motor.Name == "EpauleGauche" or motor.Name == "EpauleDroite") and motor.Part0 and motor.Part1 then
-			local arm = motor.Part1 :: BasePart
-			local name = "Rotule_" .. motor.Name
-			local old = arm.Parent and arm.Parent:FindFirstChild(name)
-			if old then
-				old:Destroy()
-			end
-			local pivot = (motor.Part0 :: BasePart).CFrame * motor.C0
-			local diameter = math.min(arm.Size.X, arm.Size.Z) * 0.8
-			local cap = Instance.new("Part")
-			cap.Name = name
-			cap.Shape = Enum.PartType.Ball
-			cap.Size = Vector3.one * diameter
-			cap.Material = Enum.Material.SmoothPlastic
-			cap.Color = color
-			cap.CastShadow = false
-			cap.CanCollide, cap.CanTouch, cap.CanQuery = false, false, false
-			cap.Anchored = false
-			cap.CFrame = pivot
-			cap.Parent = arm.Parent
-			local link = Instance.new("Motor6D")
-			link.Name = "Porte_" .. name
-			link.Part0, link.Part1 = arm, cap
-			link.C0 = arm.CFrame:ToObjectSpace(pivot)
-			link.C1 = CFrame.identity
-			link.Parent = arm
-		end
-	end
-end
-
 -- Retire le squelette posé par Kit.rig (modèle en pose de repos, mode Edit) pour le reposer
 -- après une correction de l'outil. Les animations ne dépendent que des noms de pièces : elles restent valables.
 function Kit.unrig(model: Model): ()
@@ -481,39 +446,41 @@ Kit.Attacks = {
 	},
 	-- Roi Orc « Fendoir du Roi » : armé lent, lance-hache levée au-dessus de l'épaule en se cambrant,
 	-- court temps suspendu, puis abattue devant lui en plongeant (la lame mord le sol), rebond lourd.
-	-- weaponRight = l'arme elle-même, pivot dans la main : +rx relève la pointe. L'angle de la lame
-	-- est la somme bras + arme : armé 30 + 100 (au-dessus de la tête), impact 45 - 45 (lame qui mord le sol
-	-- devant). Le bras reste bas à l'armé : levé à plus de ~40°, l'ouverture creuse du haut du bras se voit.
+	-- weaponRight = l'arme elle-même, pivot dans la main : +rx relève la pointe ; 4e valeur = glissement
+	-- de l'arme dans la main (studs). Épaules quasi immobiles (10° au plus) : le Roi Orc a une cavité à
+	-- chaque épaule du buste, visible dès que le bras s'écarte. Le geste passe par l'arme : dressée
+	-- (92-100°) et remontée de 3 studs dans la main à l'armé, la lame dépasse la tête ; puis abattue sur
+	-- plus de 100° jusqu'à -3°, buste plongé : la lame mord le sol devant lui.
 	-- À l'impact, AttackEffectController joue l'effet « Seisme » (attribut EffetAttaque du modèle).
 	Fendoir = {
 		Length = 1.4, Impact = 0.7,
 		Keys = {
 			{ Time = 0, Easing = "Out", Poses = {} },
 			{ Time = 0.45, Easing = "Out", Poses = {
-				torso = { 14, -30, 0, 0.35 },
-				rightArm = { 30, 0, 12 }, weaponRight = { 100, 0, 0 },
-				leftArm = { 40, 0, -10 },
-				rightLeg = { -20, 30, 0 }, leftLeg = { 0, 30, 0 },
+				torso = { 14, -15, 0, 0.35 },
+				rightArm = { 6, 0, 6 }, weaponRight = { 92, -25, 45, 3 },
+				leftArm = { 10, 0, -4 },
+				rightLeg = { -20, 15, 0 }, leftLeg = { 0, 15, 0 },
 				head = { -8, 20, 0 },
 			} },
 			{ Time = 0.55, Easing = "In", Poses = {
-				torso = { 16, -34, 0, 0.4 },
-				rightArm = { 35, 0, 14 }, weaponRight = { 110, 0, 0 },
-				leftArm = { 42, 0, -10 },
-				rightLeg = { -22, 34, 0 }, leftLeg = { -2, 34, 0 },
+				torso = { 16, -18, 0, 0.4 },
+				rightArm = { 8, 0, 8 }, weaponRight = { 100, -28, 45, 3.2 },
+				leftArm = { 10, 0, -4 },
+				rightLeg = { -22, 18, 0 }, leftLeg = { -2, 18, 0 },
 				head = { -9, 22, 0 },
 			} },
 			{ Time = 0.7, Easing = "Out", Poses = {
 				torso = { -24, 20, 0, 0.2 },
-				rightArm = { 45, 0, -12 }, weaponRight = { -45, 0, 0 },
-				leftArm = { -10, 0, -30 },
+				rightArm = { 10, 0, -4 }, weaponRight = { -3, 0, 0 },
+				leftArm = { -6, 0, -8 },
 				rightLeg = { 10, -20, 0 }, leftLeg = { 40, -20, 0 },
 				head = { 12, -15, 0 },
 			} },
 			{ Time = 0.85, Easing = "InOut", Poses = {
 				torso = { -20, 18, 0, 0.2 },
-				rightArm = { 40, 0, -12 }, weaponRight = { -40, 0, 0 },
-				leftArm = { -8, 0, -28 },
+				rightArm = { 8, 0, -4 }, weaponRight = { 0, 0, 0 },
+				leftArm = { -5, 0, -8 },
 				rightLeg = { 8, -18, 0 }, leftLeg = { 36, -18, 0 },
 				head = { 10, -14, 0 },
 			} },
@@ -739,16 +706,12 @@ end
 
 -- Tout en un : copie, squelette, marche, rangement en jeu de combat, aperçu près du spawn.
 --   options = { Source: Model, Set: string, Profile: string | table, Name: string?, Held: { [string]: string }?,
---               Attack: string | table ? (style de Kit.Attacks), Preview: string? (animation montrée, "Marche" par défaut),
---               ShoulderCaps: Color3? (rotules d'épaule couleur peau, voir Kit.capShoulders) }
+--               Attack: string | table ? (style de Kit.Attacks), Preview: string? (animation montrée, "Marche" par défaut) }
 function Kit.prepare(options: { [string]: any }): Model
 	local recording = ChangeHistoryService:TryBeginRecording("AnimationKit : " .. options.Set)
 	local ok, result = pcall(function()
 		local model = Kit.copy(options.Source, options.Name)
 		Kit.rig(model, { Held = options.Held, Parts = options.Parts })
-		if options.ShoulderCaps then
-			Kit.capShoulders(model, options.ShoulderCaps)
-		end
 		Kit.install(model, options.Set, Kit.walk(model, options.Profile))
 		if options.Attack then
 			Kit.install(model, options.Set, Kit.attack(model, options.Attack))
