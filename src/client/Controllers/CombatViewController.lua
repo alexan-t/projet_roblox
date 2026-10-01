@@ -4,7 +4,8 @@
 --     (dorée et pulsante quand l'ultime est prêt, avec un léger contour sur le héros). Barre plus
 --     large pour le mini-boss. Petite icône de classe au-dessus des héros, sans nom.
 --   • Dégâts : chiffres brefs au-dessus des ennemis (plus gros pour un ultime), qui s'effacent vite.
---   • Mort : les barres disparaissent, puis l'animation de mort (MonsterAnimationController).
+--   • Mort : les barres disparaissent, puis l'unité se dissout (DefeatEffectController) ; pas
+--     d'animation de douleur (« Touche ») ni de mort à jouer pour l'instant.
 --   • Ultime : toucher / cliquer un héros dont la mana est pleine (le serveur vérifie tout).
 -- Aucune règle de combat ici : PV, mana, morts et résultat viennent uniquement du serveur.
 
@@ -15,6 +16,7 @@ local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
 local ArenaConfig = require(ReplicatedStorage.Shared.Config.ArenaConfig)
+local DefeatEffectController = require(script.Parent.DefeatEffectController)
 local MonsterAnimationController = require(script.Parent.MonsterAnimationController)
 
 local CombatViewController = {}
@@ -268,6 +270,9 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 				local icon = view.model and view.model:FindFirstChild("IconeClasse")
 				if icon then
 					icon:Destroy()
+				end
+				if view.model then
+					DefeatEffectController.Play(view.model)
 				end
 			end
 			animate(event.UnitId, "Mort")

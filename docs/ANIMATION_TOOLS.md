@@ -140,6 +140,17 @@ celui du combat.
 Quand un personnage aura plusieurs animations (Attente, Attaque...), remettre son attribut
 `JeuAnimations` sur le vrai jeu pour voir l'enchaînement complet.
 
+## Disparition à la mort (pas de réaction aux dégâts)
+
+Le jeu est surtout en one-shot : pas d'animation de douleur (« Touche »). À la mort, l'unité se
+dissout : c'est du code de jeu, `src/client/Controllers/DefeatEffectController.lua`, appelé par
+`CombatViewController` sur `UnitDied` (voir `docs/COMBAT.md`). Il marche sur tout modèle, riggé ou
+non, sans réglage.
+
+Pour le voir au Play, taguer un modèle de l'atelier `ApercuDisparition` (Studio uniquement) : une
+copie figée du modèle se dissout, puis il réapparaît, en boucle (attribut `ApercuPause`). Les réglages
+(durée, sursaut, bascule, poussière, étincelles) sont les constantes en tête du fichier.
+
 ## Limites
 
 - Les animations sont enregistrées à la volée, **uniquement en Studio**. Pour le jeu publié :

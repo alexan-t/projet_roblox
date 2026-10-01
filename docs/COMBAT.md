@@ -154,7 +154,10 @@ Règle d'interface : une information qui peut s'afficher dans le monde n'a pas d
     corps, sinon le héros prêt le plus proche dans un rayon de 70 px). Le client envoie
     seulement `CombatAction("UseUltimate", unitId)` ; le serveur vérifie tout.
   - **Dégâts** : chiffres brefs au-dessus des ennemis (plus gros et dorés pour un ultime).
-  - **Mort** : les barres disparaissent, puis l'animation `Mort`.
+  - **Mort** : les barres disparaissent, puis l'unité **se dissout** (`DefeatEffectController`,
+    0,85 s, avant le retrait du modèle par le serveur à 1 s) : flash clair, petit sursaut, effacement
+    de haut en bas avec poussière et étincelles dorées. Pas d'animation de douleur : le jeu est
+    surtout en one-shot. Démonstration en Studio : tag `ApercuDisparition` sur un modèle.
   - Animations `Marche`, `Attaque`, `Touche`, `Mort` via `MonsterAnimationController.Play`,
     pour les modèles qui portent l'attribut `JeuAnimations`.
 - `CombatIntroController` (Cypher) : reste une **démo** d'entrée en combat (vague fixe,
