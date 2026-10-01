@@ -4,7 +4,7 @@
 
 export type Enemy = { EnemyId: string, MiniBoss: boolean }
 export type EnemySummary = { EnemyId: string, Count: number, MiniBoss: boolean }
--- Formation des héros : case (1..9) -> classe.
+-- Formation des héros : case (1..9) -> identifiant d'exemplaire (PlayerData.Heroes).
 export type Formation = { [number]: string }
 
 local ArenaRules = {}
@@ -56,23 +56,29 @@ end
 local function isSlot(slot: any): boolean
 	return typeof(slot) == "number" and slot >= 1 and slot <= ArenaRules.GRID_CELLS and slot % 1 == 0
 end
+ArenaRules.isSlot = isSlot
 
--- Attribue une classe à une case. Une seule unité par classe : si la classe est déjà posée
--- ailleurs, elle est déplacée ; si la case est occupée, son héros est remplacé.
+-- Case où un exemplaire est posé, ou nil.
+function ArenaRules.slotOf(formation: Formation, instanceId: string): number?
+	for slot, placed in formation do
+		if placed == instanceId then
+			return slot
+		end
+	end
+	return nil
+end
+
+-- Pose un exemplaire (déjà vérifié par l'appelant) sur une case. Un exemplaire n'est posé qu'une
+-- fois : s'il l'est déjà ailleurs, il est déplacé ; si la case est occupée, son héros est remplacé.
 -- La limite ne compte que les nouveaux héros. Modifie formation.
-function ArenaRules.assign(formation: Formation, slot: any, classId: any, validClasses: { [string]: boolean }, maxHeroes: number): (boolean, string?)
+function ArenaRules.assign(formation: Formation, slot: any, instanceId: any, maxHeroes: number): (boolean, string?)
 	if not isSlot(slot) then
 		return false, "case invalide"
 	end
-	if typeof(classId) ~= "string" or not validClasses[classId] then
-		return false, "classe inconnue"
+	if typeof(instanceId) ~= "string" or instanceId == "" then
+		return false, "héros inconnu"
 	end
-	local previousSlot: number? = nil
-	for other, placed in formation do
-		if placed == classId then
-			previousSlot = other
-		end
-	end
+	local previousSlot = ArenaRules.slotOf(formation, instanceId)
 	if previousSlot == slot then
 		return true, nil
 	end
@@ -82,7 +88,7 @@ function ArenaRules.assign(formation: Formation, slot: any, classId: any, validC
 	if previousSlot then
 		formation[previousSlot] = nil
 	end
-	formation[slot] = classId
+	formation[slot] = instanceId
 	return true, nil
 end
 
