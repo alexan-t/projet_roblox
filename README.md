@@ -120,6 +120,12 @@ la défaite à ZoneService, et le client ne peut que demander l'ultime ou la vit
 [le moteur, les événements et la sécurité](docs/COMBAT.md) et le
 [prototype de préparation dans l'arène de test](docs/ARENA_PROTOTYPE.md).
 
+## Animations (AnimationKit)
+
+`tools/animation/AnimationKit.luau` est un outil Studio (non synchronisé par Rojo) qui pose un
+squelette sur un héros ou un monstre généré par l'IA, génère sa marche et la montre en boucle à
+côté du spawn au Play. Voir [l'utilisation, le format de modèle et les profils](docs/ANIMATION_TOOLS.md).
+
 ## Workflow Git
 
 - On part toujours de `develop` à jour, sur une branche `feature/<sujet>`.

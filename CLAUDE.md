@@ -16,6 +16,10 @@ Règles permanentes pour tous les agents. Le détail est dans `docs/`.
 1. Lire le brief, `docs/ART_DIRECTION.md`, puis le workflow : `docs/MONSTER_PRODUCTION.md` (monstre/boss) ou `docs/CHARACTER_ART_DIRECTION.md` (personnage).
 2. Inspecter réellement dans Roblox Studio (MCP) les créations validées les plus proches du brief. Ne pas supposer ce que Studio peut dire.
 
+## Animations
+
+- Animer un héros ou un monstre : `docs/ANIMATION_TOOLS.md` (`tools/animation/AnimationKit.luau`). Toujours travailler sur une copie dans `Workspace.AtelierAnimation`, jamais sur le modèle du Bestiaire.
+
 ## Avant de déclarer terminé
 
 - Capture d'écran réelle, puis contrôle avec `docs/VISUAL_QA.md`. Seuls résultats possibles : **PASS** ou **FIX**. Pas de PASS sans capture.

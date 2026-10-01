@@ -1,0 +1,431 @@
+--!strict
+-- AnimationKit : outil d'atelier Studio (mode Edit) pour animer un héros ou un monstre (voir docs/ANIMATION_TOOLS.md).
+-- Ce n'est PAS du code de jeu : il n'est pas synchronisé par Rojo et ne tourne jamais en partie.
+-- Il modifie des assets Studio (modèles, KeyframeSequence), comme le ferait un artiste à la main.
+--
+-- Utilisation (barre de commande de Studio, ou execute_luau via le MCP) :
+--   1. coller ce fichier en entier puis Entrée : il définit _G.AnimationKit ;
+--   2. lancer par exemple :
+--      _G.AnimationKit.prepare({
+--        Source = workspace.Bestiaire.Heros.Socle_01.EcuyerDuRempart,
+--        Set = "EcuyerDuRempart",          -- dossier ReplicatedStorage.Assets.Animations.<Set>
+--        Profile = "Leger",                -- "Leger" (héros, petit monstre) ou "Lourd" (tréant, colosse)
+--      })
+--   Le modèle source n'est jamais modifié : une copie est animée dans Workspace.AtelierAnimation,
+--   posée à côté du SpawnLocation et animée en boucle au prochain Play (MonsterAnimationController).
+
+local ChangeHistoryService = game:GetService("ChangeHistoryService")
+local CollectionService = game:GetService("CollectionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
+
+local Kit = {}
+
+local ATELIER = "AtelierAnimation"
+local PREVIEW_TAG = "ApercuAnimation"
+local KEYS_PER_CYCLE = 16
+
+-- Pièces repérées par leur nom : format des modèles générés par l'IA de Studio.
+local PART_NAMES = {
+	torso = { "torso_geom", "body_geom", "chest_geom" },
+	head = { "head_geom", "mask_head_geom", "skull_geom" },
+	leftArm = { "left_arm_geom" },
+	rightArm = { "right_arm_geom" },
+	leftLeg = { "left_leg_geom" },
+	rightLeg = { "right_leg_geom" },
+}
+-- Une pièce dont le nom contient l'un de ces mots est tenue par la main la plus proche ;
+-- toute autre pièce restante est fixée au buste (ceinture, cor, cristal, cape...).
+-- Noms relevés sur les héros du Bestiaire (weapon_geom, buckler_geom, coutelas_geom, etendard_geom...).
+local HELD_WORDS = {
+	"weapon", "arme", "sword", "epee", "blade", "lame", "grip", "guard", "pommel", "garde", "pommeau", "poignee",
+	"axe", "hache", "spear", "lance", "staff", "baton", "wand", "bow", "arc", "shield", "bouclier", "buckler",
+	"dagger", "dague", "knife", "couteau", "coutelas", "hammer", "marteau", "mace", "masse", "club", "gourdin",
+	"scythe", "faux", "torch", "torche", "lantern", "lanterne", "book", "livre", "banner", "banniere", "etendard",
+	"cloche", "battant",
+}
+-- Toujours fixées au buste, même si leur nom contient un mot ci-dessus (shoulder_guard, ceinture...).
+local WORN_WORDS = { "shoulder", "epaul", "cape", "tabard", "apron", "tablier", "quiver", "carquois", "belt", "ceinture", "helm", "heaume" }
+
+-- Profils de marche : chiffres en degrés (rotations), studs (hauteurs) et secondes (Cycle).
+-- Les « Lag » retardent un mouvement (en radians de phase) pour éviter que tout bouge en même temps.
+Kit.Profiles = {
+	-- Écuyer du Rempart : pas militaire, buste penché, arme tenue basse.
+	Leger = {
+		Cycle = 0.6, Stride = 28, Lean = 6, LeanPulse = 1.2,
+		Yaw = 5, Roll = -2.5, RollLag = 0, BobBase = 0.03, Bob = 0.09, BobLag = 0.3,
+		ArmForward = 0, ArmSwingRight = 12, ArmSwingLeft = 7, ArmLag = 0.35, ArmSpread = 0, ArmSpreadPulse = 0, ArmSpreadLag = 0,
+		HeadNod = 3, HeadNodPulse = 1.5, HeadNodLag = 0.6, HeadYaw = 4, HeadRoll = 1.5, HeadLag = 0.4,
+	},
+	-- Tréant masqué : démarche lourde, rebond retardé, longs bras qui traînent.
+	Lourd = {
+		Cycle = 1.2, Stride = 22, Lean = 8, LeanPulse = 2,
+		Yaw = 7, Roll = 5, RollLag = 0.3, BobBase = -0.05, Bob = 0.16, BobLag = 0.4,
+		ArmForward = 6, ArmSwingRight = 18, ArmSwingLeft = 18, ArmLag = 0.6, ArmSpread = 5, ArmSpreadPulse = 2, ArmSpreadLag = 0.8,
+		HeadNod = 7, HeadNodPulse = 2, HeadNodLag = 0.9, HeadYaw = 6, HeadRoll = -3, HeadLag = 0.5,
+	},
+}
+
+-- Rôle d'une pièce animée, déduit du nom de son articulation.
+local JOINT_ROLES = {
+	Racine = "torso", Cou = "head",
+	EpauleGauche = "leftArm", EpauleDroite = "rightArm",
+	HancheGauche = "leftLeg", HancheDroite = "rightLeg",
+}
+
+local function find(model: Model, names: { string }): BasePart?
+	for _, name in names do
+		local part = model:FindFirstChild(name, true)
+		if part and part:IsA("BasePart") then
+			return part
+		end
+	end
+	return nil
+end
+
+-- Boîte d'une pièce exprimée dans un repère (min, max).
+local function bounds(part: BasePart, frame: CFrame): (Vector3, Vector3)
+	local mn, mx = Vector3.one * math.huge, -Vector3.one * math.huge
+	for _, sx in { -1, 1 } do
+		for _, sy in { -1, 1 } do
+			for _, sz in { -1, 1 } do
+				local p = frame:PointToObjectSpace(part.CFrame:PointToWorldSpace(Vector3.new(sx, sy, sz) * part.Size / 2))
+				mn, mx = mn:Min(p), mx:Max(p)
+			end
+		end
+	end
+	return mn, mx
+end
+
+local function lowestPoint(model: Model): number
+	local y = math.huge
+	for _, part in model:GetDescendants() do
+		if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+			local mn = bounds(part, CFrame.identity)
+			y = math.min(y, mn.Y)
+		end
+	end
+	return y
+end
+
+local function isHeld(part: BasePart): boolean
+	local name = string.lower(part.Name)
+	for _, word in WORN_WORDS do
+		if string.find(name, word, 1, true) then
+			return false
+		end
+	end
+	for _, word in HELD_WORDS do
+		if string.find(name, word, 1, true) then
+			return true
+		end
+	end
+	return false
+end
+
+local function jointName(part: BasePart): string
+	local base = string.gsub(part.Name, "_geom$", "")
+	return "Fixe_" .. base
+end
+
+-- Pose un squelette Motor6D sur un modèle de pièces séparées (format IA : <membre>_geom).
+-- Repère racine : X = droite du personnage (du bras gauche vers le bras droit), -Z = avant.
+-- options.Held = { [nomDePièce] = "left" | "right" | "torso" } force le rattachement d'une pièce.
+function Kit.rig(model: Model, options: { Held: { [string]: string }? }?): ()
+	assert(not model:FindFirstChild("HumanoidRootPart"), `{model.Name} a déjà un squelette`)
+	local parts: { [string]: BasePart } = {}
+	for role, names in PART_NAMES do
+		local part = find(model, names)
+		assert(part, `{model.Name} : pièce {role} introuvable ({table.concat(names, ", ")}) ; voir docs/ANIMATION_TOOLS.md`)
+		parts[role] = part
+	end
+	local torso, leftArm, rightArm = parts.torso, parts.leftArm, parts.rightArm
+	local right = ((rightArm.Position - leftArm.Position) * Vector3.new(1, 0, 1)).Unit
+	local look = Vector3.yAxis:Cross(right)
+	local center = model:GetBoundingBox().Position
+	local origin = Vector3.new(center.X, torso.Position.Y, center.Z)
+	local basis = CFrame.lookAt(origin, origin + look)
+
+	local root = Instance.new("Part")
+	root.Name = "HumanoidRootPart"
+	root.Size = Vector3.new(2, 2, 1)
+	root.CFrame = basis
+	root.Transparency = 1
+	root.CanCollide, root.CanTouch, root.CanQuery = false, false, false
+	root.Anchored = true
+	root.Parent = model
+	model.PrimaryPart = root
+
+	local function joint(name: string, part0: BasePart, part1: BasePart, point: Vector3)
+		local world = basis * CFrame.new(point)
+		local motor = Instance.new("Motor6D")
+		motor.Name = name
+		motor.Part0, motor.Part1 = part0, part1
+		motor.C0 = part0.CFrame:ToObjectSpace(world)
+		motor.C1 = part1.CFrame:ToObjectSpace(world)
+		motor.Parent = part0
+	end
+	local function middle(part: BasePart): Vector3
+		local mn, mx = bounds(part, basis)
+		return (mn + mx) / 2
+	end
+	-- Pivot d'un membre : en haut de la pièce, au centre ; inset = descente sous le haut (studs).
+	local function top(part: BasePart, inset: number): Vector3
+		local mn, mx = bounds(part, basis)
+		return Vector3.new((mn.X + mx.X) / 2, mx.Y - inset, (mn.Z + mx.Z) / 2)
+	end
+	local function hand(part: BasePart): Vector3
+		local mn, mx = bounds(part, basis)
+		return Vector3.new((mn.X + mx.X) / 2, mn.Y + 0.4, (mn.Z + mx.Z) / 2)
+	end
+
+	local armInset = math.clamp(leftArm.Size.Y * 0.15, 0.3, 0.8)
+	local legInset = math.clamp(parts.leftLeg.Size.Y * 0.1, 0.2, 0.5)
+	joint("Racine", root, torso, middle(torso))
+	joint("EpauleGauche", torso, leftArm, top(leftArm, armInset))
+	joint("EpauleDroite", torso, rightArm, top(rightArm, armInset))
+	joint("HancheGauche", torso, parts.leftLeg, top(parts.leftLeg, legInset))
+	joint("HancheDroite", torso, parts.rightLeg, top(parts.rightLeg, legInset))
+	local hmn, hmx = bounds(parts.head, basis)
+	joint("Cou", torso, parts.head, Vector3.new((hmn.X + hmx.X) / 2, hmn.Y + 0.2, (hmn.Z + hmx.Z) / 2))
+
+	local used: { [BasePart]: boolean } = {}
+	for _, part in parts do
+		used[part] = true
+	end
+	local forced = if options and options.Held then options.Held else {}
+	local leftHand, rightHand = basis * hand(leftArm), basis * hand(rightArm)
+	local summary: { string } = {}
+	for _, part in model:GetDescendants() do
+		if part:IsA("BasePart") and part ~= root and not used[part] then
+			local mode = forced[part.Name]
+			if not mode then
+				if isHeld(part) then
+					mode = if (part.Position - leftHand).Magnitude < (part.Position - rightHand).Magnitude then "left" else "right"
+				else
+					mode = "torso"
+				end
+			end
+			table.insert(summary, `{part.Name} -> {if mode == "left" then "main gauche" elseif mode == "right" then "main droite" else "buste"}`)
+			if mode == "left" then
+				joint("Tenu_" .. string.gsub(part.Name, "_geom$", ""), leftArm, part, hand(leftArm))
+			elseif mode == "right" then
+				joint("Tenu_" .. string.gsub(part.Name, "_geom$", ""), rightArm, part, hand(rightArm))
+			else
+				joint(jointName(part), torso, part, middle(part))
+			end
+		end
+	end
+
+	for _, part in model:GetDescendants() do
+		if part:IsA("BasePart") and part ~= root then
+			part.Anchored = false
+			part.CanCollide = false
+		end
+	end
+	local controller = Instance.new("AnimationController")
+	controller.Parent = model
+	Instance.new("Animator").Parent = controller
+	table.sort(summary)
+	print(`[AnimationKit] {model.Name} : {table.concat(summary, " ; ")} (corriger avec Held si besoin)`)
+end
+
+-- Arbre des articulations du modèle : partName -> { enfants }, depuis la racine.
+local function poseTree(model: Model): (string, { [string]: { string } }, { [string]: string })
+	local children: { [string]: { string } } = {}
+	local roles: { [string]: string } = {}
+	for _, motor in model:GetDescendants() do
+		if motor:IsA("Motor6D") and motor.Part0 and motor.Part1 then
+			local parent = (motor.Part0 :: BasePart).Name
+			children[parent] = children[parent] or {}
+			table.insert(children[parent], (motor.Part1 :: BasePart).Name)
+			local role = JOINT_ROLES[motor.Name]
+			if role then
+				roles[role] = (motor.Part1 :: BasePart).Name
+			end
+		end
+	end
+	local root = model.PrimaryPart
+	assert(root, `{model.Name} n'a pas de squelette (lancer Kit.rig)`)
+	return root.Name, children, roles
+end
+
+-- Valeurs de la marche à la phase phi (0..2π) : { [rôle] = { rx, ry, rz, y } }.
+-- Courbes continues (sinus) : pas d'arrêt aux clés, contrairement à un easing Cubic InOut.
+function Kit.walkPose(profile: { [string]: number }, phi: number): { [string]: { number } }
+	local p = profile
+	local s, sin, cos = math.sin(phi), math.sin, math.cos
+	local arm = sin(phi - p.ArmLag)
+	local spread = p.ArmSpread + p.ArmSpreadPulse * cos(2 * phi - p.ArmSpreadLag)
+	return {
+		torso = { -p.Lean - p.LeanPulse * cos(2 * phi), p.Yaw * s, p.Roll * sin(phi - p.RollLag), p.BobBase + p.Bob * cos(2 * phi - p.BobLag) },
+		rightLeg = { p.Lean + p.Stride * s, 0, 0 },
+		leftLeg = { p.Lean - p.Stride * s, 0, 0 },
+		rightArm = { p.ArmForward - p.ArmSwingRight * arm, 0, spread },
+		leftArm = { p.ArmForward + p.ArmSwingLeft * arm, 0, -spread },
+		head = { p.HeadNod + p.HeadNodPulse * cos(2 * phi - p.HeadNodLag), -p.HeadYaw * sin(phi - p.HeadLag), p.HeadRoll * sin(phi - p.HeadLag) },
+	}
+end
+
+-- Crée la KeyframeSequence « Marche » d'un modèle riggé. profile : nom de Kit.Profiles ou table complète.
+function Kit.walk(model: Model, profile: any): KeyframeSequence
+	local p = if typeof(profile) == "string" then Kit.Profiles[profile] else profile
+	assert(p, `profil de marche inconnu : {profile}`)
+	local rootName, children, roles = poseTree(model)
+	local byPart: { [string]: string } = {}
+	for role, partName in roles do
+		byPart[partName] = role
+	end
+	local sequence = Instance.new("KeyframeSequence")
+	sequence.Name = "Marche"
+	sequence.Loop = true
+	sequence.Priority = Enum.AnimationPriority.Movement
+	for i = 0, KEYS_PER_CYCLE do
+		local values = Kit.walkPose(p, 2 * math.pi * i / KEYS_PER_CYCLE)
+		local keyframe = Instance.new("Keyframe")
+		keyframe.Time = p.Cycle * i / KEYS_PER_CYCLE
+		local function add(parent: Instance, partName: string)
+			local pose = Instance.new("Pose")
+			pose.Name = partName
+			local role = byPart[partName]
+			local v = role and values[role]
+			if v then
+				pose.CFrame = CFrame.new(0, v[4] or 0, 0) * CFrame.Angles(math.rad(v[1]), math.rad(v[2]), math.rad(v[3]))
+			end
+			pose.EasingStyle = Enum.PoseEasingStyle.Linear
+			pose.Parent = parent
+			for _, child in children[partName] or {} do
+				add(pose, child)
+			end
+		end
+		add(keyframe, rootName)
+		keyframe.Parent = sequence
+	end
+	return sequence
+end
+
+local function folder(parent: Instance, name: string, className: string?): Instance
+	local existing = parent:FindFirstChild(name)
+	if existing then
+		return existing
+	end
+	local created = Instance.new(className or "Folder")
+	created.Name = name
+	created.Parent = parent
+	return created
+end
+
+-- Range une animation dans le jeu de combat (ReplicatedStorage.Assets.Animations.<Set>) et en copie
+-- pour l'Animation Editor (ServerStorage.RBX_ANIMSAVES.<modèle>). Remplace une version précédente.
+function Kit.install(model: Model, set: string, sequence: KeyframeSequence): ()
+	local assets = folder(ReplicatedStorage, "Assets")
+	local target = folder(folder(assets, "Animations"), set)
+	local old = target:FindFirstChild(sequence.Name)
+	if old then
+		old:Destroy()
+	end
+	sequence.Parent = target
+	local saves = folder(folder(ServerStorage, "RBX_ANIMSAVES"), model.Name, "Model")
+	local oldSave = saves:FindFirstChild(sequence.Name)
+	if oldSave then
+		oldSave:Destroy()
+	end
+	sequence:Clone().Parent = saves
+	local link = model:FindFirstChild("AnimSaves") or Instance.new("ObjectValue")
+	link.Name = "AnimSaves"
+	;(link :: ObjectValue).Value = saves
+	link.Parent = model
+	model:SetAttribute("JeuAnimationsCombat", set)
+	if model:GetAttribute("JeuAnimations") == nil then
+		model:SetAttribute("JeuAnimations", set)
+	end
+end
+
+-- Aperçu en boucle au Play : l'animation est copiée dans Assets.Animations.Apercu_<Set> sous le nom
+-- « Attente », que MonsterAnimationController joue sans jamais la couper.
+function Kit.preview(model: Model, set: string, animationName: string): ()
+	local animations = folder(folder(ReplicatedStorage, "Assets"), "Animations")
+	local source = animations:FindFirstChild(set) and (animations :: any)[set]:FindFirstChild(animationName)
+	assert(source, `animation {set}.{animationName} introuvable`)
+	local preview = folder(animations, "Apercu_" .. set)
+	preview:SetAttribute("Note", "Aperçu uniquement (AtelierAnimation) : l'animation étudiée joue en boucle sous le nom Attente. Ne pas utiliser en combat.")
+	preview:ClearAllChildren()
+	local loop = source:Clone()
+	loop.Name = "Attente"
+	loop.Loop = true
+	loop.Parent = preview
+	model:SetAttribute("JeuAnimations", "Apercu_" .. set)
+	model:SetAttribute("JeuAnimationsCombat", set)
+	model:SetAttribute("ApercuPause", 0.1)
+	CollectionService:AddTag(model, PREVIEW_TAG)
+end
+
+-- Copie un modèle source (jamais modifié) dans Workspace.AtelierAnimation.
+function Kit.copy(source: Model, name: string?): Model
+	local atelier = folder(workspace, ATELIER)
+	local copyName = name or source.Name
+	assert(not atelier:FindFirstChild(copyName), `{ATELIER}.{copyName} existe déjà`)
+	local model = source:Clone()
+	model.Name = copyName
+	for _, tag in CollectionService:GetTags(model) do
+		CollectionService:RemoveTag(model, tag)
+	end
+	model.Parent = atelier
+	return model
+end
+
+-- Range tous les modèles de l'atelier en ligne devant le SpawnLocation, tournés vers lui, pieds au sol.
+function Kit.arrange(): ()
+	local atelier = workspace:FindFirstChild(ATELIER)
+	local spawn = workspace:FindFirstChildWhichIsA("SpawnLocation", true)
+	assert(atelier and spawn, "AtelierAnimation ou SpawnLocation introuvable")
+	local spawnPosition = (spawn :: BasePart).Position
+	local groundY = spawnPosition.Y - (spawn :: BasePart).Size.Y / 2
+	local models = {}
+	for _, child in atelier:GetChildren() do
+		if child:IsA("Model") and child.PrimaryPart then
+			table.insert(models, child)
+		end
+	end
+	table.sort(models, function(a: Model, b: Model): boolean
+		return a.Name < b.Name
+	end)
+	-- Alternance gauche/droite en laissant libre l'axe du spawn, où se tient le joueur.
+	local spacing = 12
+	for index, model in models do
+		local side = if index % 2 == 1 then -1 else 1
+		local x = spawnPosition.X + side * (spacing / 2 + spacing * ((index - 1) // 2))
+		local spot = Vector3.new(x, groundY, spawnPosition.Z - 14)
+		local root = model.PrimaryPart :: BasePart
+		local offset = root.CFrame:ToObjectSpace(model:GetPivot())
+		model:PivotTo(CFrame.lookAt(spot, Vector3.new(spawnPosition.X, groundY, spawnPosition.Z)) * offset)
+		model:PivotTo(model:GetPivot() + Vector3.new(0, groundY - lowestPoint(model), 0))
+	end
+end
+
+-- Tout en un : copie, squelette, marche, rangement en jeu de combat, aperçu près du spawn.
+--   options = { Source: Model, Set: string, Profile: string | table, Name: string?, Held: { [string]: string }? }
+function Kit.prepare(options: { [string]: any }): Model
+	local recording = ChangeHistoryService:TryBeginRecording("AnimationKit : " .. options.Set)
+	local ok, result = pcall(function()
+		local model = Kit.copy(options.Source, options.Name)
+		Kit.rig(model, { Held = options.Held })
+		Kit.install(model, options.Set, Kit.walk(model, options.Profile))
+		Kit.preview(model, options.Set, "Marche")
+		Kit.arrange()
+		return model
+	end)
+	if recording then
+		ChangeHistoryService:FinishRecording(recording, if ok then Enum.FinishRecordingOperation.Commit else Enum.FinishRecordingOperation.Cancel)
+	else
+		ChangeHistoryService:SetWaypoint("AnimationKit : " .. options.Set)
+	end
+	if not ok then
+		error(result, 0)
+	end
+	print(`[AnimationKit] {result:GetFullName()} prêt : lancer Play pour voir la marche ({options.Profile}).`)
+	return result
+end
+
+_G.AnimationKit = Kit
+return Kit
