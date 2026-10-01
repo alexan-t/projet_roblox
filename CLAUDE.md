@@ -9,6 +9,7 @@ Règles permanentes pour tous les agents. Le détail est dans `docs/`.
 - Les **personnages existants** (ex. `Heros_Base` du Bestiaire, mannequins R15, modèles en blocs de couleur unie) **ne sont pas une référence artistique**. Ne pas s'en inspirer.
 - Les futurs personnages jouables suivent **exactement** la même DA que les monstres et boss (`docs/CHARACTER_ART_DIRECTION.md`).
 - Les monstres n'ont **aucune rareté**. N'en inventer aucune.
+- **Interfaces** (HUD, fenêtres, panneaux du monde) : suivre `docs/UI_DESIGN_SYSTEM.md`. Les valeurs de style viennent uniquement de `src/shared/Config/UITheme.lua`.
 
 ## Avant de créer
 
