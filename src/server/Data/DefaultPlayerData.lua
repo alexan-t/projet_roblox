@@ -22,6 +22,8 @@ local DefaultPlayerData: PlayerDataTypes.PlayerData = {
 	},
 	Heroes = {},
 	Team = {},
+	-- 10 raccourcis vides (HeroConfig.HotbarSize) ; HeroService les remplit.
+	Hotbar = { "", "", "", "", "", "", "", "", "", "" },
 	Kingdom = {
 		Level = 1,
 		VisualState = 1,
