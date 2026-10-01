@@ -44,7 +44,6 @@ local front: BasePart? = nil
 local current: Prep? = nil
 local stateEvent: RemoteEvent? = nil
 local validClasses: { [string]: boolean } = {}
-local classNames: { [string]: string } = {}
 
 local function resolve(root: Instance, path: { string }): Instance?
 	local node: Instance? = root
@@ -70,7 +69,7 @@ local function findFront(root: Instance): BasePart?
 end
 
 -- Clone un mannequin du design tel quel, pieds sur `feet`, tourné vers `lookAt`.
-local function spawnModel(templateName: string, parent: Instance, feet: Vector3, lookAt: Vector3, label: string?): Model?
+local function spawnModel(templateName: string, parent: Instance, feet: Vector3, lookAt: Vector3, heroClass: string?): Model?
 	local assets = ReplicatedStorage:FindFirstChild("Assets")
 	local folder = assets and assets:FindFirstChild("Combat")
 	local template = folder and folder:FindFirstChild(templateName)
@@ -96,21 +95,9 @@ local function spawnModel(templateName: string, parent: Instance, feet: Vector3,
 		target = position + Vector3.new(0, 0, -1)
 	end
 	model:PivotTo(CFrame.lookAt(position, target))
-	if label then
-		-- Étiquette provisoire : les vrais modèles de héros distingueront les classes.
-		local _, size = model:GetBoundingBox()
-		local gui = Instance.new("BillboardGui")
-		gui.Name = "Etiquette"
-		gui.Size = UDim2.fromOffset(110, 26)
-		gui.StudsOffsetWorldSpace = Vector3.new(0, size.Y / 2 + 1, 0)
-		gui.AlwaysOnTop = true
-		local text = Instance.new("TextLabel")
-		text.Size = UDim2.fromScale(1, 1)
-		text.BackgroundTransparency = 0.35
-		text.TextScaled = true
-		text.Text = label
-		text.Parent = gui
-		gui.Parent = model
+	if heroClass then
+		-- Classe du héros, pour l'icône discrète que le client affiche au-dessus du mannequin.
+		model:SetAttribute("HeroClass", heroClass)
 	end
 	model.Parent = parent
 	return model
@@ -182,7 +169,7 @@ local function rebuildHeroes(prep: Prep)
 	for slot, classId in prep.formation do
 		local pose = poses[slot]
 		if pose then
-			spawnModel(ArenaConfig.HeroTemplate, prep.heroes, heroFeet(pose), facing, classNames[classId])
+			spawnModel(ArenaConfig.HeroTemplate, prep.heroes, heroFeet(pose), facing, classId)
 		end
 	end
 end
@@ -212,7 +199,7 @@ local function fight(prep: Prep): (boolean, string?)
 		EnemyPositions = enemyPositions,
 		SpawnUnit = function(unit, feet: Vector3, lookAt: Vector3): Model?
 			if unit.Team == "Ally" then
-				return spawnModel(ArenaConfig.HeroTemplate, prep.heroes, feet, lookAt, classNames[unit.TypeId])
+				return spawnModel(ArenaConfig.HeroTemplate, prep.heroes, feet, lookAt, unit.TypeId)
 			end
 			local template = ArenaConfig.EnemyTemplates[unit.TypeId]
 			return if template then spawnModel(template, prep.enemies, feet, lookAt, nil) else nil
@@ -313,7 +300,6 @@ end
 function ArenaService:Init()
 	for _, class in ArenaConfig.HeroClasses do
 		validClasses[class.Id] = true
-		classNames[class.Id] = class.Name
 	end
 	local found = resolve(Workspace, ArenaConfig.ArenaPath)
 	if not found then
