@@ -28,7 +28,7 @@ local S = UITheme.Spacing
 local ArenaPlacementController = {}
 
 local TAG_CASE = "CaseHeros"
-local GRID_HIDDEN = 0.85 -- transparence locale des cases hors placement (presque invisibles)
+local GRID_HIDDEN = UITheme.World.GridHidden -- cases hors placement presque invisibles
 local ABOVE_HOTBAR = 112 -- hauteur réservée à la hotbar (px)
 
 type CaseState = "Empty" | "Hover" | "ValidTarget" | "Occupied" | "Selected" | "Invalid"
@@ -127,13 +127,8 @@ local function setGrid(modifier: number)
 	end
 end
 
-local CASE_STYLE: { [string]: { fill: Color3, fillT: number, outline: Color3, outlineT: number }? } = {
-	Hover = { fill = C.Cream, fillT = 0.55, outline = C.Cream, outlineT = 0 },
-	ValidTarget = { fill = C.Cream, fillT = 0.85, outline = C.Cream, outlineT = 0.55 },
-	Occupied = { fill = C.WoodLight, fillT = 0.8, outline = C.WoodLight, outlineT = 0.4 },
-	Selected = { fill = C.Selected, fillT = 0.65, outline = C.Selected, outlineT = 0 },
-	Invalid = { fill = C.Error, fillT = 0.75, outline = C.Error, outlineT = 0.2 },
-}
+-- Styles des états de case : UITheme.World.Case (Vide = aucune surbrillance).
+local CASE_STYLE: { [string]: { Fill: Color3, FillT: number, Outline: Color3, OutlineT: number }? } = UITheme.World.Case :: any
 
 local function caseState(slot: number, formation: { [number]: string }, full: boolean): CaseState
 	local held = ArenaStore.placement.held
@@ -169,10 +164,10 @@ local function renderCases()
 		local style = CASE_STYLE[caseState(slot, formation, full)]
 		highlight.Enabled = style ~= nil and phase ~= "Combat"
 		if style then
-			highlight.FillColor = style.fill
-			highlight.FillTransparency = style.fillT
-			highlight.OutlineColor = style.outline
-			highlight.OutlineTransparency = style.outlineT
+			highlight.FillColor = style.Fill
+			highlight.FillTransparency = style.FillT
+			highlight.OutlineColor = style.Outline
+			highlight.OutlineTransparency = style.OutlineT
 		end
 	end
 end
@@ -258,7 +253,7 @@ local function build()
 	ghost.Size = UDim2.fromOffset(52, 52)
 	ghost.Visible = false
 	ghost.ZIndex = 10
-	ui.ghostIcon = UIKit.text(ghost, "", 28)
+	ui.ghostIcon = UIKit.text(ghost, "", UITheme.Typography.Size.Icon)
 	ui.ghost = ghost
 
 	-- Combat : vague, x1 / x2, quitter. Léger, la map reste visible.
@@ -351,7 +346,7 @@ local function render()
 			else `{name} en main · choisis une case   {count}/{max}`
 		ui.remove.holder.Visible = held.fromSlot ~= nil
 		ui.status.Visible = true
-		ui.ghostIcon.Text = if info then info.Icon else "?"
+		ui.ghostIcon.Text = if info then info.PlaceholderIcon else "?"
 	elseif phase == "Placement" then
 		ui.statusText.Text = `{count}/{max} héros · E près de l'étendard pour combattre`
 		ui.remove.holder.Visible = false

@@ -1,5 +1,7 @@
 --!strict
--- Hotbar (10 raccourcis, touches 1..9 puis 0) et sacoche (collection de héros), côté client.
+-- Hotbar (10 raccourcis, touches 1..9 puis 0) et sacoche (onglets Héros, Équipement, Ressources ;
+-- seuls les héros ont déjà des données), côté client. L'ordre de la hotbar vient du serveur et
+-- n'est jamais retrié ici.
 -- Choisir un héros (raccourci, ou sacoche > Placer) le met « en main » : le joueur le pose
 -- ensuite lui-même sur une case de l'arène (ArenaPlacementController). Pendant un combat, la
 -- hotbar reste visible mais ne modifie plus la formation.
@@ -30,6 +32,14 @@ local KEYS = {
 
 type SlotUI = { frame: TextButton, stroke: UIStroke, icon: TextLabel, placed: Frame, offset: number }
 type CardUI = { frame: TextButton, stroke: UIStroke, placed: Frame }
+
+-- Onglets de la sacoche. Équipement et Ressources n'ont pas encore de données.
+local TABS = {
+	{ Id = "Heroes", Label = "Héros" },
+	{ Id = "Equipment", Label = "Équipement", Soon = "Les équipements arriveront dans une prochaine version." },
+	{ Id = "Resources", Label = "Ressources", Soon = "Les ressources arriveront dans une prochaine version." },
+}
+local currentTab = "Heroes"
 
 local slots: { SlotUI } = {}
 local cards: { [string]: CardUI } = {}
@@ -85,7 +95,7 @@ local function buildHotbar(screen: ScreenGui)
 		frame.Parent = bar
 		UIKit.corner(frame, UITheme.Radius.Medium)
 		local stroke = UIKit.stroke(frame, UITheme.Stroke.Regular)
-		local icon = UIKit.text(frame, "", 30)
+		local icon = UIKit.text(frame, "", UITheme.Typography.Size.Icon)
 		local key = UIKit.text(frame, tostring(index % 10), UITheme.Typography.Size.Caption)
 		key.Position = UDim2.fromOffset(5, 2)
 		key.Size = UDim2.fromOffset(14, 16)
@@ -114,8 +124,8 @@ local function renderHotbar()
 		local id = ArenaStore.hotbar[index]
 		local _, info = ArenaStore.heroInfo(if id ~= "" then id else nil)
 		local selected = id ~= "" and id == held
-		slot.icon.Text = if info then info.Icon else ""
-		slot.frame.BackgroundTransparency = if info then T.PanelStrong + 0.2 else 0.85
+		slot.icon.Text = if info then info.PlaceholderIcon else ""
+		slot.frame.BackgroundTransparency = if info then T.Slot else T.Empty
 		slot.frame.BackgroundColor3 = if info then C.Cream else C.WoodDeep
 		slot.icon.TextTransparency = if locked then T.Disabled else 0
 		slot.stroke.Color = if selected then C.Selected else UITheme.Stroke.Color
@@ -135,14 +145,14 @@ local function setBag(open: boolean)
 end
 
 local function buildBag(screen: ScreenGui)
-	-- Bouton sacoche, à gauche de la hotbar.
-	local toggle = UIKit.button(screen, "🎒", "Secondary", UDim2.fromOffset(SLOT, SLOT + UITheme.Shadow.ButtonLip), function()
+	-- Bouton sacoche, à gauche de la hotbar (libellé texte en attendant l'icône dessinée).
+	local toggle = UIKit.button(screen, "Sac", "Secondary", UDim2.fromOffset(SLOT, SLOT + UITheme.Shadow.ButtonLip), function()
 		setBag(not ui.bag.Visible)
 	end)
 	toggle.holder.Name = "BoutonSacoche"
 	toggle.holder.AnchorPoint = Vector2.new(1, 1)
 	toggle.holder.Position = UDim2.new(0.5, -(ui.bar.Size.X.Offset / 2) - S.M, 1, -S.ScreenMargin - S.M)
-	toggle.label.TextSize = 30
+	toggle.label.TextSize = UITheme.Typography.Size.Label
 
 	-- Panneau à gauche, transparent : la map reste visible.
 	local bag = UIKit.panel(screen, T.Panel)
@@ -169,17 +179,52 @@ local function buildBag(screen: ScreenGui)
 	close.holder.AnchorPoint = Vector2.new(0.5, 0.5)
 	close.holder.Position = UDim2.new(1, -6, 0, 0)
 
-	local tab = UIKit.button(bag, "Héros", "Tab", UDim2.fromOffset(110, 40 + UITheme.Shadow.ButtonLip), function() end)
-	tab.holder.Position = UDim2.fromOffset(S.L, 36)
-	tab.setSelected(true)
-	tab.label.TextSize = UITheme.Typography.Size.Label
+	-- Onglets. Seul Héros a des données ; Équipement et Ressources sont des emplacements prévus.
+	ui.tabs = {}
+	local tabWidth = (bag.Size.X.Offset - 2 * S.L - 2 * S.S) / #TABS
+	for index, tabInfo in TABS do
+		local tab = UIKit.button(bag, tabInfo.Label, "Tab", UDim2.fromOffset(tabWidth, 40 + UITheme.Shadow.ButtonLip), function()
+			currentTab = tabInfo.Id
+			ArenaStore.notify()
+		end)
+		tab.holder.Name = `Onglet{tabInfo.Id}`
+		tab.holder.Position = UDim2.fromOffset(S.L + (index - 1) * (tabWidth + S.S), 36)
+		tab.label.TextSize = UITheme.Typography.Size.Label
+		ui.tabs[tabInfo.Id] = tab
+	end
+
+	-- Contenu provisoire des onglets sans données (texte long : sur un sous-panneau renforcé).
+	local soon = Instance.new("Frame")
+	soon.Name = "BientotDisponible"
+	soon.BackgroundColor3 = C.WoodDeep
+	soon.BackgroundTransparency = T.PanelStrong
+	soon.Position = UDim2.fromOffset(S.L, 100)
+	soon.Size = UDim2.new(1, -2 * S.L, 0, 120)
+	soon.Visible = false
+	soon.Parent = bag
+	UIKit.corner(soon, UITheme.Radius.Medium)
+	UIKit.stroke(soon, UITheme.Stroke.Regular)
+	local soonTitle = UIKit.text(soon, "Bientôt disponible", UITheme.Typography.Size.Heading)
+	soonTitle.Position = UDim2.fromOffset(0, S.M)
+	soonTitle.Size = UDim2.new(1, 0, 0, 32)
+	local soonText = Instance.new("TextLabel")
+	soonText.BackgroundTransparency = 1
+	soonText.FontFace = UITheme.Typography.Body
+	soonText.TextSize = UITheme.Typography.Size.Body
+	soonText.TextColor3 = C.TextMuted
+	soonText.TextWrapped = true
+	soonText.Position = UDim2.fromOffset(S.L, 52)
+	soonText.Size = UDim2.new(1, -2 * S.L, 0, 56)
+	soonText.Parent = soon
+	ui.soon = soon
+	ui.soonText = soonText
 
 	local list = Instance.new("ScrollingFrame")
 	list.BackgroundTransparency = 1
 	list.BorderSizePixel = 0
 	list.Position = UDim2.fromOffset(S.L, 92)
 	list.Size = UDim2.new(1, -2 * S.L, 1, -92 - 84)
-	list.ScrollBarThickness = 6
+	list.ScrollBarThickness = UITheme.Stroke.ScrollBar
 	list.ScrollBarImageColor3 = C.Cream
 	list.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	list.CanvasSize = UDim2.new()
@@ -226,12 +271,12 @@ local function card(hero: ArenaStore.HeroView): CardUI
 	local stroke = UIKit.stroke(frame, UITheme.Stroke.Regular)
 	local art = Instance.new("Frame")
 	art.BackgroundColor3 = C.Sand
-	art.BackgroundTransparency = 0.35
+	art.BackgroundTransparency = T.Art
 	art.Position = UDim2.fromOffset(8, 8)
 	art.Size = UDim2.new(1, -16, 0, 66)
 	art.Parent = frame
 	UIKit.corner(art, UITheme.Radius.Small)
-	UIKit.text(art, if info then info.Icon else "?", 40)
+	UIKit.text(art, if info then info.PlaceholderIcon else "?", UITheme.Typography.Size.IconLarge)
 	local name = UIKit.text(frame, if info then info.Name else hero.HeroId, UITheme.Typography.Size.Label)
 	name.Position = UDim2.fromOffset(0, 78)
 	name.Size = UDim2.new(1, 0, 0, 30)
@@ -269,6 +314,18 @@ local function renderBag()
 		entry.placed.Visible = placed[id] == true
 	end
 	ui.place.setEnabled(chosen ~= nil and not ArenaStore.inCombat())
+	local heroes = currentTab == "Heroes"
+	for id, tab in ui.tabs do
+		tab.setSelected(id == currentTab)
+	end
+	ui.list.Visible = heroes
+	ui.place.holder.Visible = heroes
+	ui.soon.Visible = not heroes
+	for _, tabInfo in TABS do
+		if tabInfo.Id == currentTab and tabInfo.Soon then
+			ui.soonText.Text = tabInfo.Soon
+		end
+	end
 end
 
 ------------------------------------------------------------------ démarrage

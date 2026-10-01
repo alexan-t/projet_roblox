@@ -17,6 +17,7 @@ local Workspace = game:GetService("Workspace")
 local HeroConfig = require(ReplicatedStorage.Shared.Config.HeroConfig)
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local MonsterAnimationController = require(script.Parent.MonsterAnimationController)
+local UIKit = require(script.Parent.Parent.UI.UIKit)
 
 local CombatViewController = {}
 
@@ -45,7 +46,7 @@ type View = {
 
 local icons: { [string]: string } = {}
 for heroId, info in HeroConfig.Heroes do
-	icons[heroId] = info.Icon
+	icons[heroId] = info.PlaceholderIcon
 end
 
 local views: { [number]: View } = {}
@@ -105,7 +106,7 @@ local function refresh(view: View)
 		manaFill.Size = UDim2.fromScale(math.clamp(view.energy / view.maxEnergy, 0, 1), 1)
 		manaFill.BackgroundColor3 = if full then MANA_FULL else MANA
 		if full and not view.pulse then
-			view.pulse = TweenService:Create(manaFill, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { BackgroundTransparency = 0.45 })
+			view.pulse = TweenService:Create(manaFill, UITheme.Animation.Pulse, { BackgroundTransparency = UITheme.Transparency.Pulse })
 			view.pulse:Play()
 		elseif not full and view.pulse then
 			view.pulse:Cancel()
@@ -121,8 +122,8 @@ end
 
 local function bar(parent: Instance, y: number, height: number, color: Color3): Frame
 	local back = Instance.new("Frame")
-	back.BackgroundColor3 = Color3.new(0, 0, 0)
-	back.BackgroundTransparency = 0.35
+	back.BackgroundColor3 = UITheme.Colors.BarTrack
+	back.BackgroundTransparency = UITheme.Transparency.Track
 	back.BorderSizePixel = 0
 	back.Position = UDim2.fromOffset(0, y)
 	back.Size = UDim2.new(1, 0, 0, height)
@@ -163,7 +164,7 @@ local function attachBars(unitId: number, miniBoss: boolean, attempt: number)
 		local glow = Instance.new("Highlight")
 		glow.FillTransparency = 1
 		glow.OutlineColor = MANA_FULL
-		glow.OutlineTransparency = 0.35
+		glow.OutlineTransparency = UITheme.World.Glow
 		glow.DepthMode = Enum.HighlightDepthMode.Occluded
 		glow.Enabled = false
 		glow.Parent = model
@@ -185,18 +186,16 @@ local function popDamage(view: View, amount: number, big: boolean)
 	gui.Size = UDim2.fromOffset(60, 24)
 	gui.StudsOffsetWorldSpace = Vector3.new(math.random(-8, 8) / 10, top(model) + 1.2, 0)
 	gui.AlwaysOnTop = true
-	local text = Instance.new("TextLabel")
-	text.BackgroundTransparency = 1
-	text.Size = UDim2.fromScale(1, 1)
-	text.Font = Enum.Font.GothamBold
-	text.TextSize = if big then 22 else 14
-	text.TextColor3 = if big then MANA_FULL else Color3.new(1, 1, 1)
-	text.TextStrokeTransparency = 0.4
-	text.Text = tostring(math.floor(amount + 0.5))
-	text.Parent = gui
+	-- Fredoka One contouré (design system) ; plus gros et doré pour un ultime.
+	local size = if big then UITheme.Typography.Size.Button else UITheme.Typography.Size.Caption
+	local text = UIKit.text(gui, tostring(math.floor(amount + 0.5)), size, if big then MANA_FULL else UITheme.Colors.TextLight)
+	local outline = text:FindFirstChildOfClass("UIStroke")
 	gui.Parent = model
-	TweenService:Create(gui, TweenInfo.new(0.6), { StudsOffsetWorldSpace = gui.StudsOffsetWorldSpace + Vector3.new(0, 1.2, 0) }):Play()
-	TweenService:Create(text, TweenInfo.new(0.6), { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+	TweenService:Create(gui, UITheme.Animation.Damage, { StudsOffsetWorldSpace = gui.StudsOffsetWorldSpace + Vector3.new(0, 1.2, 0) }):Play()
+	TweenService:Create(text, UITheme.Animation.Damage, { TextTransparency = 1 }):Play()
+	if outline then
+		TweenService:Create(outline, UITheme.Animation.Damage, { Transparency = 1 }):Play()
+	end
 	task.delay(0.65, function()
 		gui:Destroy()
 	end)
@@ -211,11 +210,11 @@ local function flashUltimate(view: View?)
 	local burst = Instance.new("Highlight")
 	burst.FillColor = MANA_FULL
 	burst.OutlineColor = MANA_FULL
-	burst.FillTransparency = 0.35
+	burst.FillTransparency = UITheme.World.Glow
 	burst.OutlineTransparency = 0
 	burst.DepthMode = Enum.HighlightDepthMode.Occluded
 	burst.Parent = model
-	TweenService:Create(burst, TweenInfo.new(0.45), { FillTransparency = 1, OutlineTransparency = 1 }):Play()
+	TweenService:Create(burst, UITheme.Animation.Burst, { FillTransparency = 1, OutlineTransparency = 1 }):Play()
 	task.delay(0.5, function()
 		burst:Destroy()
 	end)
