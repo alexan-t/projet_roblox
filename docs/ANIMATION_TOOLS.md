@@ -202,6 +202,11 @@ copie figée du modèle se dissout, puis il réapparaît, en boucle (attribut `A
 - Pas de genoux ni de pieds articulés : les modèles IA ont une seule pièce par jambe.
 - Les capes et tabards sont fixés au buste, sans mouvement secondaire.
 - Marche, attaque de base et ultime (Écuyer) sont générés ; pas encore d'Attente (repos).
+- **Haut des bras ouvert** (Roi Orc) : dès que le bras s'écarte, on voit l'intérieur du bras, noir.
+  `Kit.capShoulders(model, couleurPeau)` (ou `ShoulderCaps` dans `prepare`) ajoute une rotule
+  sphérique couleur peau, portée par le bras, cachée dans l'épaule. Relever la couleur sur la texture
+  du bras (moyenne des pixels de peau, via `AssetService:CreateEditableImageAsync`) : Roi Orc
+  `Color3.fromRGB(76, 111, 41)`. Garder aussi le bras sous ~40° à l'armé et faire travailler l'arme.
 - Les épaules des modèles IA sont des pièces creuses : un bras levé très haut ou très écarté laisse
   voir le dessous sombre de l'épaulière. Garder les bras sous ~80° (rx) et ~30° (rz). Le pivot
   d'épaule est placé près du bord intérieur du bras pour limiter l'effet ; `Kit.unrig` puis
