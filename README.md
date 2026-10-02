@@ -98,6 +98,12 @@ Le serveur clone sur le plot du joueur le modèle de royaume qui correspond à
 `Kingdom.VisualState`, puis un modèle par héros possédé. Les modèles et les
 repères restent dans Studio : voir le [contrat d'assets, l'API et les tests](docs/KINGDOM.md).
 
+## Audio (SFX et ambiance)
+
+`AudioController` (client) joue les sons décrits dans `src/shared/Config/AudioConfig.lua`, à l'instant
+des effets visuels, avec des garde-fous contre le spam. Voir [la liste des sons, leur provenance et
+les déclencheurs](docs/AUDIO.md).
+
 ## Invocation (effet d'apparition)
 
 Au portail d'invocation, `SummonEffectController` (client) joue la charge du vortex, l'éclat et la

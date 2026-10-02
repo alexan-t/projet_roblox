@@ -20,6 +20,8 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
+local AudioController = require(script.Parent.AudioController)
+
 local TAG_APERCU = "ApercuUltime"
 -- Instant du coup dans l'animation « Ultime » (style Rempart de tools/animation/AnimationKit.luau).
 local ANIMATION_IMPACT = 0.3
@@ -215,6 +217,9 @@ function UltimateEffectController.Play(caster: Model, center: Vector3, radius: n
 	end
 	local box, size = caster:GetBoundingBox()
 	aura(caster, box, size, scale)
+	-- sons (#18) : lancement, puis l'anneau qui éclate
+	AudioController.Play("UltimeLancement")
+	AudioController.Play("UltimeImpact", { Delay = UltimateEffectController.ImpactDelay(scale) })
 	task.delay(ANIMATION_IMPACT / scale, function()
 		if not caster.Parent then
 			return

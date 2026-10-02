@@ -30,6 +30,7 @@ local DamageFeedbackController = require(script.Parent.DamageFeedbackController)
 local DefeatEffectController = require(script.Parent.DefeatEffectController)
 local MonsterAnimationController = require(script.Parent.MonsterAnimationController)
 local UltimateEffectController = require(script.Parent.UltimateEffectController)
+local AudioController = require(script.Parent.AudioController)
 local Icons = require(script.Parent.Parent.UI.Icons)
 local UIKit = require(script.Parent.Parent.UI.UIKit)
 
@@ -327,6 +328,7 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 				refresh(view)
 			end
 		elseif kind == "Attack" then
+			AudioController.Play("Attaque") -- élan de l'arme (#18)
 			local attacker = views[event.UnitId]
 			if attacker and attacker.model and event.TargetId then
 				-- Effet d'impact éventuel (attribut EffetAttaque) ; renvoie l'instant du coup.

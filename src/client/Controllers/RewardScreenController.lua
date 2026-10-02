@@ -23,6 +23,7 @@ local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
+local AudioController = require(script.Parent.AudioController)
 
 local Colors = UITheme.Colors
 local Typography = UITheme.Typography
@@ -225,6 +226,7 @@ local function card(parent: Instance, reward: Reward, index: number, start: numb
 
 	local appear = start + (index - 1) * CASCADE
 	popIn(frame, appear)
+	AudioController.Play("Recompense", { Delay = appear, Pitch = 1 + 0.06 * (index - 1) }) -- carte qui apparaît (#18)
 	-- la quantité défile (Count, 0,4 s) une fois la carte posée, puis l'icône fait un pop
 	task.delay(appear + Animation.Toast.Time, function()
 		if not amount.Parent then
@@ -406,6 +408,7 @@ function RewardScreenController.Show(data: ScreenData, onContinue: (() -> ())?)
 	RewardScreenController.Hide()
 	local player = Players.LocalPlayer
 	local victory = data.Result == "Victory"
+	AudioController.Play(if victory then "Victoire" else "Defaite") -- (#18)
 	local rewards = data.Rewards or {}
 
 	local gui = Instance.new("ScreenGui")

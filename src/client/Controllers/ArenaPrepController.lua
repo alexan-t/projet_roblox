@@ -24,6 +24,7 @@ local Workspace = game:GetService("Workspace")
 local ArenaConfig = require(ReplicatedStorage.Shared.Config.ArenaConfig)
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local Icons = require(script.Parent.Parent.UI.Icons)
+local AudioController = require(script.Parent.AudioController)
 local RewardScreenController = require(script.Parent.RewardScreenController)
 local UIKit = require(script.Parent.Parent.UI.UIKit)
 
@@ -569,6 +570,7 @@ local function onCombatEvents(_combatId: number, events: { { [string]: any } })
 			announce(waveText, nil, 1.6)
 		elseif event.Type == "MiniBossStarted" then
 			ui.wave.Text = "Mini-boss"
+			AudioController.Play("MiniBoss")
 			announce(`Mini-boss : {event.EnemyId}`, Colors.Torch, 2)
 		elseif event.Type == "SpeedChanged" then
 			ui.speed.Select(if event.Speed == 2 then 2 else 1)

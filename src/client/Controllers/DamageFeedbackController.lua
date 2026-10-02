@@ -20,6 +20,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
+local AudioController = require(script.Parent.AudioController)
 
 local TAG_APERCU = "ApercuDegats"
 local FLASH_TIME = 0.15
@@ -141,6 +142,10 @@ function DamageFeedbackController.Hit(model: Model, options: HitOptions)
 	local speed = if options.Speed and options.Speed > 0 then options.Speed else 1
 	local ally = options.Ally == true
 	local ultimate = options.Ultimate == true
+	-- son du coup (#18) ; l'ultime a son propre son d'impact (UltimateEffectController)
+	if not ultimate then
+		AudioController.Play("Impact")
+	end
 	if not options.Lethal then
 		flash(model, ally, speed)
 		if options.From then

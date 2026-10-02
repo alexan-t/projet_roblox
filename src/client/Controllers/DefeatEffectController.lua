@@ -17,6 +17,8 @@ local CollectionService = game:GetService("CollectionService")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
+local AudioController = require(script.Parent.AudioController)
+
 local TAG_APERCU = "ApercuDisparition"
 local DURATION = 0.85
 local FLASH_TIME = 0.2 -- durée du flash
@@ -135,6 +137,7 @@ function DefeatEffectController.Play(model: Model, delay: number?, speed: number
 	end
 	model:SetAttribute("EnDisparition", true)
 	local startDelay = delay or 0
+	AudioController.Play("MortEnnemi", { Delay = startDelay }) -- son de la dissolution (#18)
 	local scale = if speed and speed > 0 then speed else 1
 	if startDelay > 0 then
 		task.delay(startDelay, run, model, scale)

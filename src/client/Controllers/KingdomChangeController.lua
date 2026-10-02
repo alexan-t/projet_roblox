@@ -21,6 +21,7 @@ local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
+local AudioController = require(script.Parent.AudioController)
 
 local TAG_APERCU = "ApercuRoyaume"
 local KINGDOM_NAME = "Kingdom"
@@ -241,6 +242,7 @@ function KingdomChangeController.Play(kingdom: Model, level: number?, previous: 
 	end)
 
 	-- 2. le nouveau royaume sort du sol, léger dépassement (Back) puis se pose
+	AudioController.Play("Royaume", { Delay = RISE_START }) -- (#18)
 	task.delay(RISE_START, function()
 		if not kingdom.Parent then
 			return

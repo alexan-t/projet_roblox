@@ -19,6 +19,8 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
+local AudioController = require(script.Parent.AudioController)
+
 local TAG_APERCU = "ApercuAttaque"
 local DUST_TEXTURE = "rbxasset://textures/particles/smoke_main.dds"
 
@@ -234,6 +236,7 @@ function AttackEffectController.Play(model: Model, speed: number?): number
 		task.delay(impact, function()
 			if model.Parent then
 				effect(model)
+				AudioController.Play(kind :: string) -- son de l'effet (#18), même nom que l'effet
 			end
 		end)
 	end

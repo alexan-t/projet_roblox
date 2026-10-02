@@ -18,6 +18,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local Icons = require(script.Parent.Parent.Icons)
 local UIKit = require(script.Parent.Parent.UIKit)
+local AudioController = require(script.Parent.Parent.Parent.Controllers.AudioController)
 
 local Colors = UITheme.Colors
 local Typography = UITheme.Typography
@@ -121,6 +122,7 @@ function SummonView.Reveal(hero: Hero, options: RevealOptions?)
 	root.Parent = screen
 	current = { screen = screen, panel = root, veil = veil }
 	UIKit.open(root, veil)
+	AudioController.Play("Revelation", { Delay = FLIP / 2 }) -- la face apparaît (#18)
 
 	local center = UDim2.new(0.5, 0, 0, REVEAL_CARD.Y / 2 + Spacing.L)
 	local rays = UIKit.rays(root, REVEAL_CARD.Y * 0.85)

@@ -24,6 +24,7 @@ local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
+local AudioController = require(script.Parent.AudioController)
 
 local TAG_APERCU = "ApercuInvocation"
 local CHARGE = 1.2 -- montée en puissance avant l'éclat
@@ -258,6 +259,7 @@ function SummonEffectController.Play(portal: Model, heroTemplate: Model, options
 		Rate = 70,
 	})
 	inward.Enabled = true
+	AudioController.Play("InvocationCharge") -- (#18)
 	local light = Instance.new("PointLight")
 	light.Color = Colors.GoldLight
 	light.Range = 22
@@ -306,6 +308,7 @@ function SummonEffectController.Play(portal: Model, heroTemplate: Model, options
 	-- 2. éclat, 3. sortie du voile
 	task.delay(CHARGE, function()
 		inward.Enabled = false
+		AudioController.Play("InvocationEclat")
 		light.Brightness = 6
 		tween(light, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Brightness = 0 })
 		tween(glow, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { FillTransparency = 1, OutlineTransparency = 1 })
