@@ -98,6 +98,12 @@ Le serveur clone sur le plot du joueur le modèle de royaume qui correspond à
 `Kingdom.VisualState`, puis un modèle par héros possédé. Les modèles et les
 repères restent dans Studio : voir le [contrat d'assets, l'API et les tests](docs/KINGDOM.md).
 
+## Invocation (effet d'apparition)
+
+Au portail d'invocation, `SummonEffectController` (client) joue la charge du vortex, l'éclat et la
+sortie du héros obtenu, avec son nom et le badge « Nouveau ». Voir [le déroulé, l'API et la
+démonstration Studio](docs/SUMMON.md).
+
 ## Quêtes (QuestService)
 
 Les quêtes sont décrites dans `src/server/Config/QuestConfig.lua` et suivies dans
