@@ -1,10 +1,14 @@
 --!strict
--- Icônes de classe des héros (docs/UI_DESIGN_SYSTEM.md § 7) — issue #19.
--- Une icône est un petit objet du monde, pas un pictogramme ni un emoji : arc, épée, hache, bouclier,
--- bâton, cible, en formes chunky aux couleurs de la palette, silhouette Ink derrière (contour « cuit »),
--- rendus en 3D dans un ViewportFrame éclairé d'en haut à gauche.
--- API : ClassIcons.viewport(parent, classId) -> ViewportFrame ; ClassIcons.model(classId) -> Model.
--- Classe inconnue : petite étoile dorée neutre.
+-- Icônes de l'interface (docs/UI_DESIGN_SYSTEM.md § 7) — issue #19.
+-- Une icône est un petit objet du monde, pas un pictogramme ni un emoji : formes chunky aux couleurs de
+-- la palette, silhouette Ink derrière (contour « cuit »), rendues en 3D dans un ViewportFrame éclairé
+-- d'en haut à gauche.
+--   Classes de héros : Archer (arc), Epeiste (épée), Barbare (hache), Paladin (bouclier),
+--   Magicien (bâton), Tireur (cible).
+--   Objets : Parchemin (quête), Or (pièce), Gemmes, Ticket (invocation), Combat (épées croisées),
+--   Cadenas (verrouillé).
+-- API : Icons.viewport(parent, id) -> ViewportFrame ; Icons.model(id) -> Model.
+-- Identifiant inconnu : petit losange doré neutre.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -12,7 +16,7 @@ local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 
 local Colors = UITheme.Colors
 
-local ClassIcons = {}
+local Icons = {}
 
 type Props = { [string]: any }
 
@@ -89,6 +93,52 @@ local SHAPES: { [string]: (part: (Props) -> Part) -> () } = {
 			part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.2 + i * 0.05, ring[1], ring[1]), Color = ring[2], CFrame = FACE })
 		end
 	end,
+	-- parchemin : feuille crème entre deux rouleaux de bois, lignes dorées, ruban rouge
+	Parchemin = function(part)
+		part({ Size = Vector3.new(1.7, 1.9, 0.12), Color = Colors.Cream })
+		for _, y in { 1.0, -1.0 } do
+			part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(2.1, 0.42, 0.42), Color = Colors.WoodLight, CFrame = CFrame.new(0, y, 0) })
+		end
+		part({ Size = Vector3.new(1.1, 0.12, 0.16), Color = Colors.SandGold, CFrame = CFrame.new(0, 0.35, -0.02) })
+		part({ Size = Vector3.new(0.8, 0.12, 0.16), Color = Colors.SandGold, CFrame = CFrame.new(-0.15, 0, -0.02) })
+		part({ Size = Vector3.new(0.3, 0.7, 0.18), Color = Colors.RoyalRed, CFrame = CFrame.new(0.55, -0.45, -0.05) })
+	end,
+	-- pièce d'or : disque doré, liseré foncé, centre clair
+	Or = function(part)
+		part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.35, 2.2, 2.2), Color = Colors.GoldDeep, CFrame = FACE })
+		part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.42, 1.8, 1.8), Color = Colors.Gold, CFrame = FACE })
+		part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.46, 1.1, 1.1), Color = Colors.GoldLight, CFrame = FACE })
+	end,
+	-- gemme : cube posé sur la pointe, facette haute plus claire
+	Gemmes = function(part)
+		local tilt = CFrame.Angles(math.rad(45), 0, math.rad(45))
+		part({ Size = Vector3.new(1.5, 1.5, 1.5), Color = Colors.CurrencyGems, CFrame = tilt })
+		part({ Size = Vector3.new(0.8, 0.8, 0.8), Color = Colors.Foam, CFrame = CFrame.new(-0.25, 0.35, -0.3) * tilt })
+	end,
+	-- ticket d'invocation : toile rouge sur cadre doré, sceau crème
+	Ticket = function(part)
+		local tilt = CFrame.Angles(0, 0, math.rad(-12))
+		part({ Size = Vector3.new(2.6, 1.6, 0.2), Color = Colors.Gold, CFrame = tilt })
+		part({ Size = Vector3.new(2.3, 1.3, 0.26), Color = Colors.RoyalRed, CFrame = tilt })
+		part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.3, 0.7, 0.7), Color = Colors.Cream, CFrame = tilt * FACE })
+	end,
+	-- combat : deux épées croisées
+	Combat = function(part)
+		for _, angle in { -40, 40 } do
+			local base = CFrame.Angles(0, 0, math.rad(angle))
+			part({ Size = Vector3.new(0.34, 1.9, 0.16), Color = Colors.Foam, CFrame = base * CFrame.new(0, 0.35, 0) })
+			part({ Size = Vector3.new(0.9, 0.22, 0.26), Color = Colors.Gold, CFrame = base * CFrame.new(0, -0.65, 0) })
+			part({ Size = Vector3.new(0.22, 0.5, 0.22), Color = Colors.WoodDark, CFrame = base * CFrame.new(0, -1.0, 0) })
+		end
+	end,
+	-- cadenas : corps doré, anse pierre, serrure bois
+	Cadenas = function(part)
+		part({ Size = Vector3.new(1.6, 1.3, 0.5), Color = Colors.Gold, CFrame = CFrame.new(0, -0.35, 0) })
+		part({ Size = Vector3.new(0.28, 0.8, 0.3), Color = Colors.StoneGrey, CFrame = CFrame.new(-0.5, 0.65, 0) })
+		part({ Size = Vector3.new(0.28, 0.8, 0.3), Color = Colors.StoneGrey, CFrame = CFrame.new(0.5, 0.65, 0) })
+		part({ Size = Vector3.new(1.28, 0.28, 0.3), Color = Colors.StoneGrey, CFrame = CFrame.new(0, 1.0, 0) })
+		part({ Size = Vector3.new(0.26, 0.42, 0.56), Color = Colors.WoodDeep, CFrame = CFrame.new(0, -0.35, 0) })
+	end,
 }
 
 local function fallback(part: (Props) -> Part)
@@ -96,10 +146,10 @@ local function fallback(part: (Props) -> Part)
 	part({ Size = Vector3.new(0.6, 0.6, 0.34), Color = Colors.GoldLight, CFrame = CFrame.Angles(0, 0, math.rad(45)) })
 end
 
-function ClassIcons.model(classId: string): Model
+function Icons.model(id: string): Model
 	local model = Instance.new("Model")
-	model.Name = "Icone_" .. classId
-	local shape = SHAPES[classId] or fallback
+	model.Name = "Icone_" .. id
+	local shape = SHAPES[id] or fallback
 	shape(builder(model))
 	-- silhouette Ink derrière (contour cuit, environ 6 % de la taille)
 	for _, p in model:GetChildren() do
@@ -114,16 +164,16 @@ function ClassIcons.model(classId: string): Model
 	return model
 end
 
-function ClassIcons.viewport(parent: Instance, classId: string): ViewportFrame
+function Icons.viewport(parent: Instance, id: string): ViewportFrame
 	local viewport = Instance.new("ViewportFrame")
-	viewport.Name = "IconeClasse"
+	viewport.Name = "Icone"
 	viewport.BackgroundTransparency = 1
 	viewport.Size = UDim2.fromScale(1, 1)
 	viewport.Ambient = Colors.Cream
 	viewport.LightColor = Color3.new(1, 1, 1)
 	viewport.LightDirection = Vector3.new(1, -1, 1) -- lumière chaude d'en haut à gauche
 	viewport.Parent = parent
-	ClassIcons.model(classId).Parent = viewport
+	Icons.model(id).Parent = viewport
 	local camera = Instance.new("Camera")
 	camera.FieldOfView = 30
 	camera.CFrame = CFrame.lookAt(Vector3.new(0, 0.3, -6.4), Vector3.zero)
@@ -132,4 +182,4 @@ function ClassIcons.viewport(parent: Instance, classId: string): ViewportFrame
 	return viewport
 end
 
-return ClassIcons
+return Icons

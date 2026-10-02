@@ -11,7 +11,7 @@
 --     joue « Ultime » et une onde dorée file vers la zone touchée (UltimateEffectController) ; chiffres
 --     et disparitions des ennemis touchés attendent l'impact de l'onde. Un bouton « Ultime » doré apparaît
 --     aussi au-dessus du héros prêt (zone tactile ≥ 44 px), pour qui ne pense pas à toucher le héros.
--- Présentation (issue #19) : barres, icônes de classe 3D (ClassIcons) et bouton au design system, valeurs
+-- Présentation (issue #19) : barres, icônes de classe 3D (Icons) et bouton au design system, valeurs
 -- de UITheme. Démonstration Studio : tag "ApercuBarres" sur un modèle (attributs Equipe = "Allie" ou
 -- "Ennemi", Classe = id de classe) : barres, mana qui se remplit, bouton Ultime cliquable.
 -- Aucune règle de combat ici : PV, mana, morts et résultat viennent uniquement du serveur.
@@ -30,7 +30,7 @@ local DamageFeedbackController = require(script.Parent.DamageFeedbackController)
 local DefeatEffectController = require(script.Parent.DefeatEffectController)
 local MonsterAnimationController = require(script.Parent.MonsterAnimationController)
 local UltimateEffectController = require(script.Parent.UltimateEffectController)
-local ClassIcons = require(script.Parent.Parent.UI.ClassIcons)
+local Icons = require(script.Parent.Parent.UI.Icons)
 local UIKit = require(script.Parent.Parent.UI.UIKit)
 
 local CombatViewController = {}
@@ -93,7 +93,7 @@ local function top(model: Model): number
 end
 
 -- Petite icône de classe au-dessus d'un héros (placement comme combat) : objet 3D dans une pastille
--- crème contourée Ink (ClassIcons), pas d'emoji.
+-- crème contourée Ink (Icons), pas d'emoji.
 local function attachIcon(model: Model, classId: string?)
 	local class = classId or model:GetAttribute("HeroClass")
 	if typeof(class) ~= "string" or model:FindFirstChild("IconeClasse") then
@@ -111,7 +111,7 @@ local function attachIcon(model: Model, classId: string?)
 	chip.Parent = gui
 	UIKit.corner(chip, UITheme.Radius.Pill)
 	UIKit.stroke(chip, UITheme.Stroke.Thin)
-	ClassIcons.viewport(chip, class)
+	Icons.viewport(chip, class)
 	gui.Parent = model
 end
 

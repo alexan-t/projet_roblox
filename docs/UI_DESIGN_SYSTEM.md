@@ -313,13 +313,42 @@ Les composants de ce document existent en code, côté client : `src/client/UI/U
 | `UIKit.tabs(parent, { Items, Selected, OnSelect })` | onglets, actif doré |
 | `UIKit.card(parent, { Name, Model, Badge, Selected, Locked, Empty })` | carte standard avec portrait 3D |
 | `UIKit.portrait(parent, model)` | portrait 3D trois quarts (ViewportFrame) |
-| `UIKit.overlay`, `UIKit.open`, `UIKit.close`, `UIKit.popIn`, `UIKit.announce` | voile, ouverture / fermeture, pop, annonce (§ 8) |
+| `UIKit.overlay`, `UIKit.open`, `UIKit.close`, `UIKit.popIn`, `UIKit.bump`, `UIKit.announce` | voile, ouverture / fermeture, apparition, pop de gain, annonce (§ 8) |
+| `UIKit.rays(parent, length)` | rayons dorés tournants (victoire, héros obtenu) |
+| `UIKit.curtain(title?, onMiddle?)` | transition entre deux scènes (voile Ink + titre) |
 
-Icônes de classe (§ 7) : `src/client/UI/ClassIcons.lua`, petits objets 3D (arc, épée, hache,
-bouclier, bâton, cible) avec silhouette Ink, dans un ViewportFrame — plus d'emoji.
+Une seule `UIScale` par élément : ouverture, pop et survol partagent la même (Roblox n'en
+applique qu'une).
 
-Écrans déjà passés au design system : préparation et HUD de combat (`ArenaPrepController`),
+Icônes (§ 7) : `src/client/UI/Icons.lua`, petits objets 3D avec silhouette Ink, dans un
+ViewportFrame — plus d'emoji. Classes (arc, épée, hache, bouclier, bâton, cible) et objets
+(`Parchemin`, `Or`, `Gemmes`, `Ticket`, `Combat`, `Cadenas`).
+
+### Écrans
+
+Écrans branchés sur des états réels : préparation et HUD de combat (`ArenaPrepController`),
 barres et bouton « Ultime » au-dessus des héros (`CombatViewController`), écran Victoire /
 Défaite et récompenses (`RewardScreenController`), branché sur `CombatEnded`.
-Démonstrations Studio sans serveur : `Workspace.ApercuHudCombat = true` (préparation → combat
-simulé → victoire), tag `ApercuBarres` sur un modèle (barres, mana, bouton Ultime).
+
+Vues prêtes à brancher par les contrôleurs de #11 (`src/client/UI/Views`, présentation seule,
+aucune règle de jeu) :
+
+| Vue | API | Données attendues |
+| --- | --- | --- |
+| `QuestView` | `Show(quest, { OnClaim })`, `Hide()` | `QuestService:GetActiveQuest` : `{ Title, Progress, Target, Completed }` |
+| `CurrencyView` | `Set(currencies, animate?)`, `Hide()` | `PlayerData.Currencies` : `{ Gold, Gems, SummonTickets }` |
+| `ExpeditionView` | `Show(data, { OnLaunch, OnClose })`, `Hide()` | `{ Zone, Stages = { { Stage, Unlocked, Cleared, Waves, Enemies } } }` ; `OnLaunch` → `RequestStartStage` |
+| `SummonView` | `Show({ Tickets, Cost }, { OnSummon, OnClose })`, `Reveal(hero, { OnContinue })`, `Hide()` | tirage de HeroService (#10) ; `Reveal` après l'effet 3D du portail (`SummonEffectController`) |
+| `CollectionView` | `Show(heroes, { OnClose, OnSelect })`, `Hide()` | `{ { Name, Model, ClassId, Count, New, Equipped } }` depuis `Heroes` / `Team` |
+
+Placement : quête en haut à gauche, monnaies en haut au centre (la liste des joueurs de Roblox
+occupe le haut à droite), fenêtres centrées avec voile.
+
+### Démonstrations Studio (sans serveur)
+
+- `Workspace.ApercuHudCombat = true` : préparation → combat simulé → victoire.
+- Tag `ApercuBarres` sur un modèle (attributs `Equipe`, `Classe`) : barres, mana, bouton Ultime.
+- `Workspace.ApercuUI` = `Quete`, `Monnaies`, `Expedition`, `Invocation`, `Collection`,
+  `Transition` ou `Tout` (`UIPreviewController`) ; modifiable en cours de Play. Les héros de
+  démonstration sont les copies de `ReplicatedStorage.AtelierInvocation` (attributs `NomAffiche`,
+  `Classe`).

@@ -9,7 +9,7 @@
 --     (CombatViewController). Une annonce brève signale les vagues et le mini-boss.
 --   • Fin : écran Victoire / Défaite (RewardScreenController), puis retour au plot.
 -- Présentation : design system (docs/UI_DESIGN_SYSTEM.md § 10), composants UIKit, icônes de classe en 3D
--- (ClassIcons) ; aucune valeur de style en dur — issue #19.
+-- (Icons) ; aucune valeur de style en dur — issue #19.
 -- Le client n'envoie que des demandes ; ArenaService et CombatService décident tout.
 -- Démonstration Studio sans serveur : attribut Workspace.ApercuHudCombat = true (états factices ;
 -- « Combattre » joue un combat simulé puis l'écran de victoire).
@@ -23,7 +23,7 @@ local Workspace = game:GetService("Workspace")
 
 local ArenaConfig = require(ReplicatedStorage.Shared.Config.ArenaConfig)
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
-local ClassIcons = require(script.Parent.Parent.UI.ClassIcons)
+local Icons = require(script.Parent.Parent.UI.Icons)
 local RewardScreenController = require(script.Parent.RewardScreenController)
 local UIKit = require(script.Parent.Parent.UI.UIKit)
 
@@ -234,7 +234,7 @@ local function iconChip(parent: Instance, classId: string, size: number): Frame
 	chip.Parent = parent
 	UIKit.corner(chip, UITheme.Radius.Pill)
 	UIKit.stroke(chip, UITheme.Stroke.Thin)
-	ClassIcons.viewport(chip, classId)
+	Icons.viewport(chip, classId)
 	return chip
 end
 

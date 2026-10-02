@@ -15,8 +15,11 @@
 --   UIKit.portrait(parent, model)               portrait 3D d'un modèle (ViewportFrame)
 --   UIKit.overlay(screen)                       voile Ink derrière une fenêtre modale
 --   UIKit.open(object, overlay?) / UIKit.close(object, overlay?, destroy?)  transitions de fenêtre
---   UIKit.popIn(object, delay?, peak?)          pop 0 → peak → 1
+--   UIKit.popIn(object, delay?, peak?)          pop 0 → peak → 1 (apparition)
+--   UIKit.bump(object, peak?)                   pop 1 → peak → 1 (gain sur un élément affiché)
 --   UIKit.announce(screen, text, options?)      annonce (vague, mini-boss, quête) : pop, tenue, fondu
+--   UIKit.rays(parent, length, count?)          rayons dorés tournants (victoire, héros obtenu)
+--   UIKit.curtain(title?, onMiddle?, hold?)     transition entre deux scènes (bloquante)
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -581,13 +584,14 @@ function UIKit.overlay(screen: Instance): TextButton
 	return veil
 end
 
+-- Une seule UIScale par élément (Roblox n'en applique qu'une) : ouverture, pop et survol la partagent.
 local function scaleOf(object: GuiObject): UIScale
-	local scale = object:FindFirstChild("EchelleTransition")
-	if scale and scale:IsA("UIScale") then
+	local scale = object:FindFirstChildOfClass("UIScale")
+	if scale then
 		return scale
 	end
 	local created = Instance.new("UIScale")
-	created.Name = "EchelleTransition"
+	created.Name = "Echelle"
 	created.Parent = object
 	return created
 end
@@ -646,10 +650,8 @@ end
 
 -- Pop 0 → peak → 1 (gain, badge « Nouveau », carte).
 function UIKit.popIn(object: GuiObject, delay: number?, peak: number?)
-	local scale = Instance.new("UIScale")
-	scale.Name = "EchellePop"
+	local scale = scaleOf(object)
 	scale.Scale = 0
-	scale.Parent = object
 	task.delay(delay or 0, function()
 		if not scale.Parent then
 			return
@@ -659,6 +661,15 @@ function UIKit.popIn(object: GuiObject, delay: number?, peak: number?)
 		if scale.Parent then
 			tween(scale, TweenInfo.new(Animation.Toast.Time * 0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1 })
 		end
+	end)
+end
+
+-- Pop d'un élément déjà affiché : 1 → peak → 1 (gain, compteur qui avance).
+function UIKit.bump(object: GuiObject, peak: number?)
+	local s = scaleOf(object)
+	local up = tween(s, TweenInfo.new(Animation.Toast.Time * 0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = peak or Animation.Scale.Pop })
+	up.Completed:Connect(function()
+		tween(s, TweenInfo.new(Animation.Toast.Time * 0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1 })
 	end)
 end
 
@@ -692,6 +703,93 @@ function UIKit.announce(screen: Instance, text: string, options: AnnounceOptions
 		end)
 	end)
 	return label
+end
+
+-- Rayons dorés lents derrière un titre ou une carte (victoire, héros obtenu). Un GuiObject tourne
+-- autour de son propre centre : chaque rayon est un carré transparent centré qui porte un faisceau
+-- partant du centre vers le haut. Renvoie le support (à positionner) ; il tourne jusqu'à sa destruction.
+function UIKit.rays(parent: Instance, length: number, count: number?): Frame
+	local holder = Instance.new("Frame")
+	holder.Name = "Rayons"
+	holder.AnchorPoint = Vector2.new(0.5, 0.5)
+	holder.Size = UDim2.fromOffset(length * 2, length * 2)
+	holder.BackgroundTransparency = 1
+	holder.Parent = parent
+	local n = count or 12
+	for i = 1, n do
+		local arm = Instance.new("Frame")
+		arm.Size = UDim2.fromScale(1, 1)
+		arm.BackgroundTransparency = 1
+		arm.Rotation = (i - 1) * 360 / n
+		arm.Parent = holder
+		local beam = Instance.new("Frame")
+		beam.AnchorPoint = Vector2.new(0.5, 0)
+		beam.Position = UDim2.fromScale(0.5, 0)
+		beam.Size = UDim2.new(0, if i % 2 == 0 then length * 0.1 else length * 0.15, 0.5, 0)
+		beam.BackgroundColor3 = Colors.GoldLight
+		beam.BorderSizePixel = 0
+		beam.Parent = arm
+		-- plein près du centre, effacé vers l'extérieur ; pas de reflet glossy
+		local fade = Instance.new("UIGradient")
+		fade.Rotation = 90
+		fade.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 1),
+			NumberSequenceKeypoint.new(0.75, 0.7),
+			NumberSequenceKeypoint.new(1, 0.55),
+		})
+		fade.Parent = beam
+	end
+	local spin = tween(holder, TweenInfo.new(14, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { Rotation = 360 })
+	holder.Destroying:Connect(function()
+		spin:Cancel()
+	end)
+	return holder
+end
+
+-- Transition entre deux scènes (plot → arène, combat → plot) : voile Ink qui monte en fondu avec un
+-- titre contouré, onMiddle() est appelé une fois couvert (téléportation, changement de décor), puis le
+-- voile redescend. Le monde reste deviné derrière (voile à Overlay renforcé, jamais noir plein).
+function UIKit.curtain(title: string?, onMiddle: (() -> ())?, hold: number?)
+	local screen = UIKit.screen("Transition", 50)
+	local veil = Instance.new("Frame")
+	veil.Name = "Voile"
+	veil.Size = UDim2.fromScale(1, 1)
+	veil.BackgroundColor3 = Colors.Ink
+	veil.BackgroundTransparency = 1
+	veil.Parent = screen
+	local label: TextLabel? = nil
+	if title then
+		local l = UIKit.text(screen, title, Typography.Size.Title)
+		l.AnchorPoint = Vector2.new(0.5, 0.5)
+		l.Position = UDim2.fromScale(0.5, 0.5)
+		l.Size = UDim2.fromOffset(800, 60)
+		l.TextTransparency = 1
+		local s = l:FindFirstChildOfClass("UIStroke")
+		if s then
+			s.Transparency = 1
+		end
+		label = l
+	end
+	local covered = UITheme.Transparency.Overlay * 0.3 -- monde encore deviné
+	local function fadeText(target: number)
+		local l = label
+		if l then
+			tween(l, Animation.Fade, { TextTransparency = target })
+			local s = l:FindFirstChildOfClass("UIStroke")
+			if s then
+				tween(s, Animation.Fade, { Transparency = target })
+			end
+		end
+	end
+	tween(veil, Animation.Fade, { BackgroundTransparency = covered }).Completed:Wait()
+	fadeText(0)
+	if onMiddle then
+		onMiddle()
+	end
+	task.wait(hold or 0.6)
+	fadeText(1)
+	tween(veil, Animation.Fade, { BackgroundTransparency = 1 }).Completed:Wait()
+	screen:Destroy()
 end
 
 return UIKit
