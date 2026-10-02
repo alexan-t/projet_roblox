@@ -99,6 +99,12 @@ Stage 1-1 : Slime ×2 + Gobelin ×4, puis Boss.
 temps simulé par seconde réelle (mouvements, cadence, progression), jamais les dégâts par
 coup ; aucun événement n'est dupliqué.
 
+Côté client, `CombatViewController` suit `SpeedChanged` : toutes les animations jouent à la vitesse
+du combat (`MonsterAnimationController.SetTimeScale`), et les instants d'impact (chiffres de dégâts,
+disparition, onde de l'ultime, séisme) sont divisés par la vitesse. La marche s'arrête quand l'unité
+attaque ou meurt. Durées tenues en x2 : attaque du Roi Orc 0,7 s pour un intervalle de 0,75 s,
+épée de l'Écuyer 0,3 s pour 0,45 s (Épéiste).
+
 ## API serveur
 
 | Méthode | Résultat |

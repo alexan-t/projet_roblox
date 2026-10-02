@@ -8,7 +8,8 @@
 --      des étincelles et une bouffée de poussière dorée.
 -- Le serveur a déjà appliqué les dégâts : CombatViewController retarde de IMPACT_DELAY les chiffres
 -- de dégâts et la disparition des ennemis touchés pour qu'ils tombent avec l'anneau.
--- API : UltimateEffectController.Play(caster, center, radius) ; IMPACT_DELAY.
+-- API : UltimateEffectController.Play(caster, center, radius, speed?) ; ImpactDelay(speed?) : instant
+-- réel où l'anneau éclate (IMPACT_DELAY à x1, divisé par la vitesse du combat).
 -- Tag "ApercuUltime" (Model riggé, Studio) : démonstration en boucle, cible à 10 studs devant lui.
 --   Attribut optionnel ApercuPause (s entre deux ultimes).
 
@@ -37,6 +38,10 @@ local DUST_TEXTURE = "rbxasset://textures/particles/smoke_main.dds"
 local UltimateEffectController = {}
 
 UltimateEffectController.IMPACT_DELAY = ANIMATION_IMPACT + TRAVEL_TIME
+
+function UltimateEffectController.ImpactDelay(speed: number?): number
+	return UltimateEffectController.IMPACT_DELAY / (speed or 1)
+end
 
 local function effectPart(props: { [string]: any }): Part
 	local part = Instance.new("Part")
@@ -90,7 +95,7 @@ local function weaponPosition(caster: Model, fallback: Vector3): Vector3
 end
 
 -- 1. Lueur sur le héros pendant qu'il se ramasse.
-local function aura(caster: Model, box: CFrame, size: Vector3)
+local function aura(caster: Model, box: CFrame, size: Vector3, speed: number)
 	local glow = Instance.new("Highlight")
 	glow.Name = "UltimeLueur"
 	glow.Adornee = caster
@@ -100,9 +105,9 @@ local function aura(caster: Model, box: CFrame, size: Vector3)
 	glow.OutlineTransparency = 0.1
 	glow.DepthMode = Enum.HighlightDepthMode.Occluded
 	glow.Parent = caster
-	local fade = TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, ANIMATION_IMPACT * 0.6)
+	local fade = TweenInfo.new(0.55 / speed, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, ANIMATION_IMPACT * 0.6 / speed)
 	TweenService:Create(glow, fade, { FillTransparency = 1, OutlineTransparency = 1 }):Play()
-	task.delay(ANIMATION_IMPACT + 0.7, function()
+	task.delay((ANIMATION_IMPACT + 0.7) / speed, function()
 		glow:Destroy()
 	end)
 	local host = effectPart({ Transparency = 1, Size = Vector3.new(size.X, 0.2, size.Z), CFrame = box * CFrame.new(0, -size.Y / 2, 0) })
@@ -113,7 +118,8 @@ local function aura(caster: Model, box: CFrame, size: Vector3)
 end
 
 -- 2 et 3. Lame qui file de l'épée vers le centre, puis anneau au sol.
-local function wave(from: Vector3, center: Vector3, radius: number)
+local function wave(from: Vector3, center: Vector3, radius: number, speed: number)
+	local travel = TRAVEL_TIME / speed
 	local direction = center - from
 	local flat = Vector3.new(direction.X, 0, direction.Z)
 	local look = if flat.Magnitude > 1e-3 then flat.Unit else Vector3.zAxis
@@ -127,11 +133,11 @@ local function wave(from: Vector3, center: Vector3, radius: number)
 	local trail = sparkEmitter(blade, 0.35, NumberRange.new(0.5, 1.5))
 	trail.Rate = 120
 	trail.Enabled = true
-	TweenService:Create(blade, TweenInfo.new(TRAVEL_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+	TweenService:Create(blade, TweenInfo.new(travel, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
 		CFrame = CFrame.lookAt(center + Vector3.new(0, 0.6, 0), center + Vector3.new(0, 0.6, 0) + look),
 		Size = Vector3.new(3.2, 0.25, 1.6),
 	}):Play()
-	task.delay(TRAVEL_TIME, function()
+	task.delay(travel, function()
 		trail.Enabled = false
 		blade.Transparency = 1
 		task.delay(0.8, function()
@@ -202,19 +208,20 @@ end
 
 -- Lance l'effet. caster : modèle du héros ; center : point AU SOL au centre de la zone touchée ;
 -- radius : rayon de l'anneau (studs). Renvoie IMPACT_DELAY (instant où l'anneau éclate).
-function UltimateEffectController.Play(caster: Model, center: Vector3, radius: number?): number
+function UltimateEffectController.Play(caster: Model, center: Vector3, radius: number?, speed: number?): number
+	local scale = speed or 1
 	if not caster.Parent then
 		return 0
 	end
 	local box, size = caster:GetBoundingBox()
-	aura(caster, box, size)
-	task.delay(ANIMATION_IMPACT, function()
+	aura(caster, box, size, scale)
+	task.delay(ANIMATION_IMPACT / scale, function()
 		if not caster.Parent then
 			return
 		end
-		wave(weaponPosition(caster, box.Position), center, radius or DEFAULT_RADIUS)
+		wave(weaponPosition(caster, box.Position), center, radius or DEFAULT_RADIUS, scale)
 	end)
-	return UltimateEffectController.IMPACT_DELAY
+	return UltimateEffectController.ImpactDelay(scale)
 end
 
 -- Démonstration Studio : l'animation « Ultime » du jeu de combat du modèle (attribut
@@ -252,12 +259,15 @@ local function runDemo(model: Model)
 		if not root then
 			continue
 		end
+		local speed = model:GetAttribute("ApercuVitesse") or (model.Parent and model.Parent:GetAttribute("ApercuVitesse"))
+		speed = if typeof(speed) == "number" and speed > 0 then speed else 1
 		if track then
 			track:Play(0.1)
+			track:AdjustSpeed(speed)
 		end
 		local box, size = model:GetBoundingBox()
 		local feet = Vector3.new(box.Position.X, box.Position.Y - size.Y / 2, box.Position.Z)
-		UltimateEffectController.Play(model, feet + root.CFrame.LookVector * 10, DEFAULT_RADIUS)
+		UltimateEffectController.Play(model, feet + root.CFrame.LookVector * 10, DEFAULT_RADIUS, speed)
 		task.wait(1)
 	end
 end

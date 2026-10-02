@@ -194,6 +194,13 @@ Pour le voir au Play, taguer un modèle de l'atelier `ApercuDisparition` (Studio
 copie figée du modèle se dissout, puis il réapparaît, en boucle (attribut `ApercuPause`). Les réglages
 (durée, sursaut, bascule, poussière, étincelles) sont les constantes en tête du fichier.
 
+## Voir le rendu en x2
+
+Attribut numérique `ApercuVitesse` sur `Workspace.AtelierAnimation` (ou sur un modèle) : toutes les
+démonstrations (marche, attaque, ultime, effets) jouent à cette vitesse. `2` = rendu du combat en x2,
+supprimer l'attribut pour revenir en x1. En combat, la vitesse vient de `SpeedChanged` (voir
+`docs/COMBAT.md`).
+
 ## Limites
 
 - Les animations sont enregistrées à la volée, **uniquement en Studio**. Pour le jeu publié :
@@ -214,5 +221,3 @@ copie figée du modèle se dissout, puis il réapparaît, en boucle (attribut `A
   voir le dessous sombre de l'épaulière. Garder les bras sous ~80° (rx) et ~30° (rz). Le pivot
   d'épaule est placé près du bord intérieur du bras pour limiter l'effet ; `Kit.unrig` puis
   `Kit.rig` reposent le squelette d'un modèle riggé avant cette correction.
-- `CombatViewController` lance « Marche » sur `MoveStarted` mais ne l'arrête pas ensuite, et ne
-  tient pas compte de la vitesse x2 : à corriger avant de brancher ces modèles sur le combat.

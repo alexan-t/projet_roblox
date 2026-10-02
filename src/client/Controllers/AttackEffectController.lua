@@ -5,9 +5,11 @@
 -- KeyframeSequence, voir tools/animation/AnimationKit.luau).
 --   • "Seisme" (Roi Orc) : là où l'arme touche le sol, onde de choc, éclats de roche projetés,
 --     poussière, et une courte secousse de caméra pour le joueur proche.
--- API : AttackEffectController.ImpactOf(model) -> instant du coup (s, 0 si inconnu) ;
---       AttackEffectController.Play(model) -> instant du coup (lance l'effet du modèle s'il en a un).
--- Tag "ApercuAttaque" (Model riggé, Studio) : attaque + effet en boucle. Attribut optionnel ApercuPause.
+-- API : AttackEffectController.ImpactOf(model) -> instant du coup à x1 (s, 0 si inconnu) ;
+--       AttackEffectController.Play(model, speed?) -> instant réel du coup (impact / vitesse du combat),
+--       et lance l'effet du modèle s'il en a un à cet instant.
+-- Tag "ApercuAttaque" (Model riggé, Studio) : attaque + effet en boucle. Attributs optionnels ApercuPause,
+--   ApercuVitesse (sur le modèle ou son dossier, ex. 2 pour voir le rendu en x2).
 
 local CollectionService = game:GetService("CollectionService")
 local KeyframeSequenceProvider = game:GetService("KeyframeSequenceProvider")
@@ -224,8 +226,8 @@ local EFFECTS: { [string]: (Model) -> () } = {
 	Seisme = seisme,
 }
 
-function AttackEffectController.Play(model: Model): number
-	local impact = AttackEffectController.ImpactOf(model)
+function AttackEffectController.Play(model: Model, speed: number?): number
+	local impact = AttackEffectController.ImpactOf(model) / (speed or 1)
 	local kind = model:GetAttribute("EffetAttaque")
 	local effect = if typeof(kind) == "string" then EFFECTS[kind] else nil
 	if effect then
@@ -258,10 +260,13 @@ local function runDemo(model: Model)
 	track.Priority = Enum.AnimationPriority.Action
 	while model.Parent and CollectionService:HasTag(model, TAG_APERCU) do
 		local pause = model:GetAttribute("ApercuPause")
+		local speed = model:GetAttribute("ApercuVitesse") or (model.Parent and model.Parent:GetAttribute("ApercuVitesse"))
+		speed = if typeof(speed) == "number" and speed > 0 then speed else 1
 		task.wait(if typeof(pause) == "number" then math.max(pause, 1) else 1.5)
 		track:Play(0.1)
-		AttackEffectController.Play(model)
-		task.wait(track.Length > 0 and track.Length or 1.4)
+		track:AdjustSpeed(speed)
+		AttackEffectController.Play(model, speed)
+		task.wait((if track.Length > 0 then track.Length else 1.4) / speed)
 	end
 end
 

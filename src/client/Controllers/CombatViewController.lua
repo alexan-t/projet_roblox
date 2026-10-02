@@ -57,6 +57,9 @@ end
 local views: { [number]: View } = {}
 local combatAction: RemoteFunction? = nil
 local active = false
+-- Vitesse du combat (SpeedChanged : 1 ou 2). x2 accélère la simulation : les animations, les
+-- instants d'impact et les effets suivent, sinon tout serait en retard sur le coup.
+local speed = 1
 
 local function folder(): Instance?
 	return Workspace:FindFirstChild(`PreparationCombat_{Players.LocalPlayer.UserId}`)
@@ -225,7 +228,10 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 	local hitDelay: { [number]: number } = {}
 	for _, event in events do
 		local kind = event.Type
-		if kind == "CombatStarted" then
+		if kind == "SpeedChanged" then
+			speed = if event.Speed == 2 then 2 else 1
+			MonsterAnimationController.SetTimeScale(speed)
+		elseif kind == "CombatStarted" then
 			table.clear(views)
 			active = true
 		elseif kind == "UnitSpawned" then
@@ -240,7 +246,7 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 		elseif kind == "UltimateUsed" then
 			for _, id in event.Hits do
 				ultimateHits[id] = true
-				hitDelay[id] = UltimateEffectController.IMPACT_DELAY
+				hitDelay[id] = UltimateEffectController.ImpactDelay(speed)
 			end
 			-- Animation « Ultime » du héros et onde dorée jusqu'au centre de la zone touchée
 			-- (anneau au rayon des ennemis touchés, au moins celui d'une petite zone).
@@ -257,7 +263,7 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 						radius = math.max(radius, Vector3.new(p.X - center.X, 0, p.Z - center.Z).Magnitude + 2)
 					end
 				end
-				UltimateEffectController.Play(caster.model, center, radius)
+				UltimateEffectController.Play(caster.model, center, radius, speed)
 			end
 			animate(event.UnitId, "Ultime")
 		elseif kind == "Damage" then
@@ -286,10 +292,15 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 			local attacker = views[event.UnitId]
 			if attacker and attacker.model and event.TargetId then
 				-- Effet d'impact éventuel (attribut EffetAttaque) ; renvoie l'instant du coup.
-				local impact = AttackEffectController.Play(attacker.model)
+				local impact = AttackEffectController.Play(attacker.model, speed)
 				if impact > 0 and not hitDelay[event.TargetId] then
 					hitDelay[event.TargetId] = impact
 				end
+			end
+			-- À portée, l'unité ne bouge plus : la marche (bouclée) s'arrête.
+			local walker = views[event.UnitId]
+			if walker and walker.model then
+				MonsterAnimationController.Stop(walker.model, "Marche")
 			end
 			animate(event.UnitId, "Attaque")
 		elseif kind == "MoveStarted" then
@@ -312,6 +323,7 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 					icon:Destroy()
 				end
 				if view.model then
+					MonsterAnimationController.Stop(view.model, "Marche")
 					-- Disparaît quand le coup l'atteint (onde de l'ultime, impact de l'attaque).
 					DefeatEffectController.Play(view.model, hitDelay[event.UnitId] or 0)
 				end
