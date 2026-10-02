@@ -254,13 +254,14 @@ local function runDemo(model: Model)
 	local track = demoTrack(model)
 	while model.Parent and CollectionService:HasTag(model, TAG_APERCU) do
 		local pause = model:GetAttribute("ApercuPause")
-		task.wait(if typeof(pause) == "number" then math.max(pause, 1.5) else 2)
+		local speed = model:GetAttribute("ApercuVitesse") or (model.Parent and model.Parent:GetAttribute("ApercuVitesse"))
+		speed = if typeof(speed) == "number" and speed > 0 then speed else 1
+		-- tout le cycle (pause comprise) suit la vitesse, comme la cadence du combat en x2
+		task.wait((if typeof(pause) == "number" then math.max(pause, 1.5) else 2) / speed)
 		local root = model.PrimaryPart
 		if not root then
 			continue
 		end
-		local speed = model:GetAttribute("ApercuVitesse") or (model.Parent and model.Parent:GetAttribute("ApercuVitesse"))
-		speed = if typeof(speed) == "number" and speed > 0 then speed else 1
 		if track then
 			track:Play(0.1)
 			track:AdjustSpeed(speed)
@@ -268,7 +269,7 @@ local function runDemo(model: Model)
 		local box, size = model:GetBoundingBox()
 		local feet = Vector3.new(box.Position.X, box.Position.Y - size.Y / 2, box.Position.Z)
 		UltimateEffectController.Play(model, feet + root.CFrame.LookVector * 10, DEFAULT_RADIUS, speed)
-		task.wait(1)
+		task.wait(1 / speed)
 	end
 end
 

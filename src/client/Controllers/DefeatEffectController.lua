@@ -125,24 +125,26 @@ local function particleHost(size: Vector3, color: Color3, height: number): (Base
 	return host, dust, sparks
 end
 
-local run: (model: Model) -> ()
+local run: (model: Model, speed: number) -> ()
 
--- Lance la disparition de model, après delay secondes. Renvoie l'instant de fin (0 si rien à faire).
-function DefeatEffectController.Play(model: Model, delay: number?): number
+-- Lance la disparition de model, après delay secondes, à la vitesse du combat (x2 : deux fois plus
+-- rapide). Renvoie l'instant de fin (0 si rien à faire).
+function DefeatEffectController.Play(model: Model, delay: number?, speed: number?): number
 	if model:GetAttribute("EnDisparition") == true or not model.Parent then
 		return 0
 	end
 	model:SetAttribute("EnDisparition", true)
 	local startDelay = delay or 0
+	local scale = if speed and speed > 0 then speed else 1
 	if startDelay > 0 then
-		task.delay(startDelay, run, model)
+		task.delay(startDelay, run, model, scale)
 	else
-		run(model)
+		run(model, scale)
 	end
-	return startDelay + DURATION
+	return startDelay + DURATION / scale
 end
 
-run = function(model: Model)
+run = function(model: Model, speed: number)
 	if not model.Parent then
 		return
 	end
@@ -202,7 +204,7 @@ run = function(model: Model)
 	local startTime = os.clock()
 	local connection: RBXScriptConnection
 	connection = RunService.RenderStepped:Connect(function()
-		local t = os.clock() - startTime
+		local t = (os.clock() - startTime) * speed
 		if not model.Parent then
 			connection:Disconnect()
 			return
@@ -245,7 +247,7 @@ run = function(model: Model)
 			flash:Destroy()
 		end
 	end)
-	task.delay(DURATION + 1.2, function()
+	task.delay(DURATION / speed + 1.2, function()
 		host:Destroy()
 	end)
 end
@@ -282,13 +284,15 @@ end
 local function runDemo(model: Model)
 	while model.Parent and CollectionService:HasTag(model, TAG_APERCU) do
 		local pause = model:GetAttribute("ApercuPause")
-		task.wait(if typeof(pause) == "number" then pause else 1.6)
+		local speed = model:GetAttribute("ApercuVitesse") or (model.Parent and model.Parent:GetAttribute("ApercuVitesse"))
+		speed = if typeof(speed) == "number" and speed > 0 then speed else 1
+		task.wait((if typeof(pause) == "number" then pause else 1.6) / speed)
 		if not model.Parent then
 			break
 		end
 		local copy = frozenCopy(model)
 		setHidden(model, true)
-		task.wait(DefeatEffectController.Play(copy) + 0.6)
+		task.wait(DefeatEffectController.Play(copy, 0, speed) + 0.6 / speed)
 		copy:Destroy()
 		setHidden(model, false)
 	end

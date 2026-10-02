@@ -133,8 +133,8 @@ local function runDemo(model: Model)
 	local index = 0
 	while model.Parent and CollectionService:HasTag(model, TAG_APERCU) do
 		local pause = model:GetAttribute("ApercuPause")
-		task.wait(if typeof(pause) == "number" then pause else 2.5)
 		local speed = demoSpeed(model)
+		task.wait((if typeof(pause) == "number" then pause else 2.5) / speed)
 		if idle then
 			idle:AdjustSpeed(speed) -- suit un changement d'ApercuVitesse pendant la démonstration
 		end
@@ -145,13 +145,13 @@ local function runDemo(model: Model)
 			track:Play(0.15)
 			track:AdjustSpeed(speed)
 			if name == "Marche" then
-				task.wait(2.4)
+				task.wait(2.4 / speed)
 				track:Stop(0.3)
 			elseif name == "Mort" then
 				-- rester au sol un moment, puis se relever
 				task.wait(track.Length / speed - 0.05)
 				track:AdjustSpeed(0)
-				task.wait(1.5)
+				task.wait(1.5 / speed)
 				track:Stop(0.5)
 			else
 				task.wait(track.Length / speed)

@@ -262,7 +262,8 @@ local function runDemo(model: Model)
 		local pause = model:GetAttribute("ApercuPause")
 		local speed = model:GetAttribute("ApercuVitesse") or (model.Parent and model.Parent:GetAttribute("ApercuVitesse"))
 		speed = if typeof(speed) == "number" and speed > 0 then speed else 1
-		task.wait(if typeof(pause) == "number" then math.max(pause, 1) else 1.5)
+		-- tout le cycle (pause comprise) suit la vitesse, comme la cadence du combat en x2
+		task.wait((if typeof(pause) == "number" then math.max(pause, 1) else 1.5) / speed)
 		track:Play(0.1)
 		track:AdjustSpeed(speed)
 		AttackEffectController.Play(model, speed)

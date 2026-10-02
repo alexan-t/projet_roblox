@@ -325,7 +325,7 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 				if view.model then
 					MonsterAnimationController.Stop(view.model, "Marche")
 					-- Disparaît quand le coup l'atteint (onde de l'ultime, impact de l'attaque).
-					DefeatEffectController.Play(view.model, hitDelay[event.UnitId] or 0)
+					DefeatEffectController.Play(view.model, hitDelay[event.UnitId] or 0, speed)
 				end
 			end
 			animate(event.UnitId, "Mort")
