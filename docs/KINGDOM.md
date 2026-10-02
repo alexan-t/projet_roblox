@@ -50,6 +50,35 @@ d'état 2, les modèles de héros, les repères de héros dans le royaume, et
 `Royaume.EmplacementCentral` dans les plots de `Workspace.Plots`. Sans eux, le
 service journalise la raison et n'affiche pas l'élément manquant.
 
+### Assets préparés dans Test 3 (issue #35)
+
+Préparés et vérifiés dans la place Studio « test 3 », à copier dans la DEV commune :
+
+- `ServerStorage.Assets.RoyaumeEtats` :
+  - `Royaume_Etat1` (`VisualState = 1`) : le royaume niveau 1 validé (celui de `PlotTravail`) ;
+  - `Royaume_Etat2` (`VisualState = 2`) : le niveau 2 de la vitrine, aligné sur le niveau 1 comme
+    dans `Workspace.AtelierRoyaume` (montée de niveau validée).
+  - Pivot = placement de KingdomService sur `EmplacementCentral` : posé sur `PlotTravail`, l'état 1
+    retombe exactement sur le royaume d'origine (écart mesuré 0,0000 stud).
+  - Chacun contient son modèle `Fumee` tagué `FumeeCheminee`, sans script, tout ancré.
+  - `Emplacements.Heros.Heros_1..6` : au sol, en arc de rayon 20 studs devant le socle, du côté
+    d'où arrive le joueur (`PointApparition`), tournés vers lui. `Heros_1` au centre, puis
+    alternance droite / gauche. Repères invisibles, sans collision ni requête.
+- `ServerStorage.Assets.Heros` : les 22 héros du Bestiaire, un `Model` par `HeroId` (reprend
+  l'attribut `HerosId` du Bestiaire, attribut `Rarete` conservé). Pivot aux pieds, face avant
+  déduite des bras (ou, à défaut, du sens dans lequel les héros font face au Bestiaire).
+  - **Héros de départ proposé** : `ecuyer_du_rempart` (celui des animations #16).
+  - Tout `HeroId` de la liste peut sortir d'une invocation : `alchimiste_aux_masques`,
+    `apprenti_pyromancien`, `barde_de_fer`, `brise_pierre`, `briseur_de_cloche`,
+    `cartomancienne_d_ambre`, `chevalier_du_lierre`, `chevalier_du_soleil_creux`,
+    `dame_aux_mille_bannieres`, `duelliste_du_croissant`, `ecuyer_du_rempart`, `fauconnier_gris`,
+    `forgeron_runique`, `gardien_des_ronces`, `guetteuse_des_pins`, `lancier_des_champs`,
+    `lanciere_des_sources`, `mage_des_lanternes`, `moine_du_vent_bas`, `pretresse_aux_lucioles`,
+    `tireuse_des_faubourgs`, `veneur_de_givre`.
+- `Workspace.Lobby.Plots.Plot_1..8` : `PlotId`, `PointApparition` ancré, `Royaume.EmplacementCentral`,
+  **sans** royaume posé (les anciens royaumes posés sont rangés dans
+  `ServerStorage.Archive_Plots.Lobby_RoyaumesPosesAvant35`).
+
 ## Runtime
 
 ```text
