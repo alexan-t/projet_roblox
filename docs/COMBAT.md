@@ -188,6 +188,11 @@ Règle d'interface : une information qui peut s'afficher dans le monde n'a pas d
 ## Intégrations futures
 
 - **#9 RewardService** : sera appelé par ZoneService à la victoire (même point que QuestService).
+  L'écran de fin est prêt côté client : `RewardScreenController.Show({ Result, FirstClear, Rewards },
+  onContinue)` (« Victoire ! » avec rayons dorés et étincelles, cartes de récompense en cascade avec
+  objet 3D et montant qui défile, badge « Nouveau », bouton « Continuer » ; « Défaite… » sobre). Il
+  ne décide d'aucune récompense : #9 / #11 l'appellent avec les récompenses réellement attribuées.
+  Démonstration Studio : attribut `Workspace.ApercuEcranRecompenses = true`.
 - **#10 HeroService** : la formation vient aujourd'hui de la collection fixe du prototype
   (6 classes) ; elle viendra de `PlayerData.Heroes`. **Dette assumée.**
 - **#11 UI** : remplacera les panneaux et barres provisoires en consommant les mêmes événements.
