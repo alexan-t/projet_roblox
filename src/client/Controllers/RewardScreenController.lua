@@ -514,7 +514,8 @@ function RewardScreenController.Show(data: ScreenData, onContinue: (() -> ())?)
 			task.delay(Animation.Close.Time, onContinue)
 		end
 	end)
-	button.Position = UDim2.fromOffset(380, titleY + 95 + CARD_SIZE.Y + 50)
+	-- sans récompense (défaite, ou avant RewardService #9), le bouton remonte sous le titre
+	button.Position = UDim2.fromOffset(380, titleY + 95 + (if #rewards > 0 then CARD_SIZE.Y + 50 else 20))
 	popIn(button, if #rewards > 0 then buttonDelay else 0.45, 1.06)
 
 	gui.Parent = player:WaitForChild("PlayerGui")

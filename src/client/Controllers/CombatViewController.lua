@@ -9,21 +9,29 @@
 --     d'animation de douleur (« Touche ») ni de mort à jouer pour l'instant.
 --   • Ultime : toucher / cliquer un héros dont la mana est pleine (le serveur vérifie tout). Le héros
 --     joue « Ultime » et une onde dorée file vers la zone touchée (UltimateEffectController) ; chiffres
---     et disparitions des ennemis touchés attendent l'impact de l'onde.
+--     et disparitions des ennemis touchés attendent l'impact de l'onde. Un bouton « Ultime » doré apparaît
+--     aussi au-dessus du héros prêt (zone tactile ≥ 44 px), pour qui ne pense pas à toucher le héros.
+-- Présentation (issue #19) : barres, icônes de classe 3D (ClassIcons) et bouton au design system, valeurs
+-- de UITheme. Démonstration Studio : tag "ApercuBarres" sur un modèle (attributs Equipe = "Allie" ou
+-- "Ennemi", Classe = id de classe) : barres, mana qui se remplit, bouton Ultime cliquable.
 -- Aucune règle de combat ici : PV, mana, morts et résultat viennent uniquement du serveur.
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
-local ArenaConfig = require(ReplicatedStorage.Shared.Config.ArenaConfig)
+local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local AttackEffectController = require(script.Parent.AttackEffectController)
 local DamageFeedbackController = require(script.Parent.DamageFeedbackController)
 local DefeatEffectController = require(script.Parent.DefeatEffectController)
 local MonsterAnimationController = require(script.Parent.MonsterAnimationController)
 local UltimateEffectController = require(script.Parent.UltimateEffectController)
+local ClassIcons = require(script.Parent.Parent.UI.ClassIcons)
+local UIKit = require(script.Parent.Parent.UI.UIKit)
 
 local CombatViewController = {}
 
@@ -31,13 +39,16 @@ local RETRY_DELAY = 0.2
 local RETRIES = 10
 local LOW_HEALTH = 0.3
 local TAP_RADIUS = 70 -- pixels autour d'un héros pour lancer son ultime
-local HEALTH = Color3.fromRGB(90, 205, 90)
-local HEALTH_LOW = Color3.fromRGB(235, 60, 50)
-local ENEMY_HEALTH = Color3.fromRGB(220, 80, 70)
-local MANA = Color3.fromRGB(80, 150, 255)
-local MANA_FULL = Color3.fromRGB(255, 205, 80)
+local TAG_APERCU = "ApercuBarres"
+local Colors = UITheme.Colors
+local HEALTH = Colors.Health
+local HEALTH_LOW = Colors.HealthLow
+local ENEMY_HEALTH = Colors.EnemyHealth
+local MANA = Colors.Energy
+local MANA_FULL = Colors.EnergyFull
 
 type View = {
+	id: number,
 	team: string,
 	health: number,
 	maxHealth: number,
@@ -49,12 +60,8 @@ type View = {
 	manaFill: Frame?,
 	glow: Highlight?,
 	pulse: Tween?,
+	ultimate: BillboardGui?,
 }
-
-local icons: { [string]: string } = {}
-for _, class in ArenaConfig.HeroClasses do
-	icons[class.Id] = class.Icon
-end
 
 local views: { [number]: View } = {}
 local combatAction: RemoteFunction? = nil
@@ -85,25 +92,69 @@ local function top(model: Model): number
 	return size.Y / 2
 end
 
--- Petite icône de classe au-dessus d'un héros (placement comme combat).
-local function attachIcon(model: Model)
-	local classId = model:GetAttribute("HeroClass")
-	if typeof(classId) ~= "string" or model:FindFirstChild("IconeClasse") then
+-- Petite icône de classe au-dessus d'un héros (placement comme combat) : objet 3D dans une pastille
+-- crème contourée Ink (ClassIcons), pas d'emoji.
+local function attachIcon(model: Model, classId: string?)
+	local class = classId or model:GetAttribute("HeroClass")
+	if typeof(class) ~= "string" or model:FindFirstChild("IconeClasse") then
 		return
 	end
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "IconeClasse"
-	gui.Size = UDim2.fromOffset(18, 18)
-	gui.StudsOffsetWorldSpace = Vector3.new(0, top(model) + 1.6, 0)
+	gui.Size = UDim2.fromOffset(26, 26)
+	gui.StudsOffsetWorldSpace = Vector3.new(0, top(model) + 1.7, 0)
 	gui.AlwaysOnTop = true
 	gui.MaxDistance = 150
-	local text = Instance.new("TextLabel")
-	text.BackgroundTransparency = 1
-	text.Size = UDim2.fromScale(1, 1)
-	text.TextScaled = true
-	text.Text = icons[classId] or ""
-	text.Parent = gui
+	local chip = Instance.new("Frame")
+	chip.Size = UDim2.fromScale(1, 1)
+	chip.BackgroundColor3 = Colors.Cream
+	chip.Parent = gui
+	UIKit.corner(chip, UITheme.Radius.Pill)
+	UIKit.stroke(chip, UITheme.Stroke.Thin)
+	ClassIcons.viewport(chip, class)
 	gui.Parent = model
+end
+
+-- Bouton « Ultime » au-dessus d'un héros prêt : bouton doré chunky qui pulse doucement. Placé dans
+-- PlayerGui (un BillboardGui du Workspace ne reçoit pas les clics), attaché au modèle par Adornee.
+local useUltimate: (unitId: number) -> ()
+
+local function setUltimateButton(view: View, ready: boolean)
+	local model = view.model
+	if ready and not view.ultimate and model and model.Parent then
+		local gui = Instance.new("BillboardGui")
+		gui.Name = "BoutonUltime"
+		gui.Adornee = model
+		gui.Size = UDim2.fromOffset(104, 52)
+		gui.StudsOffsetWorldSpace = Vector3.new(0, top(model) + 3.4, 0)
+		gui.AlwaysOnTop = true
+		gui.Active = true
+		gui.MaxDistance = 150
+		gui.ResetOnSpawn = false
+		local button = UIKit.button(gui, {
+			Text = "Ultime",
+			Style = "Primary",
+			Size = Vector2.new(100, 44),
+			OnClick = function()
+				useUltimate(view.id)
+			end,
+		})
+		button.Holder.AnchorPoint = Vector2.new(0.5, 0)
+		button.Holder.Position = UDim2.fromScale(0.5, 0)
+		UIKit.popIn(button.Holder)
+		local pulse = Instance.new("UIScale")
+		pulse.Parent = button.Face
+		local tween = TweenService:Create(pulse, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Scale = UITheme.Animation.Scale.Hover })
+		tween:Play()
+		gui.Destroying:Connect(function()
+			tween:Cancel()
+		end)
+		gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+		view.ultimate = gui
+	elseif not ready and view.ultimate then
+		view.ultimate:Destroy()
+		view.ultimate = nil
+	end
 end
 
 local function refresh(view: View)
@@ -129,23 +180,15 @@ local function refresh(view: View)
 		if glow then
 			glow.Enabled = full
 		end
+		setUltimateButton(view, full and view.team == "Ally" and view.health > 0)
 	end
 end
 
+-- Barre du design system : fond BarTrack à Track, contour Thin, rayon Pill, remplissage opaque.
 local function bar(parent: Instance, y: number, height: number, color: Color3): Frame
-	local back = Instance.new("Frame")
-	back.BackgroundColor3 = Color3.new(0, 0, 0)
-	back.BackgroundTransparency = 0.35
-	back.BorderSizePixel = 0
-	back.Position = UDim2.fromOffset(0, y)
-	back.Size = UDim2.new(1, 0, 0, height)
-	back.Parent = parent
-	local fill = Instance.new("Frame")
-	fill.BackgroundColor3 = color
-	fill.BorderSizePixel = 0
-	fill.Size = UDim2.fromScale(1, 1)
-	fill.Parent = back
-	return fill
+	local b = UIKit.bar(parent, { Color = color, Size = UDim2.new(1, -4, 0, height) })
+	b.Frame.Position = UDim2.fromOffset(2, y + 2)
+	return b.Fill
 end
 
 local function attachBars(unitId: number, miniBoss: boolean, attempt: number)
@@ -162,17 +205,17 @@ local function attachBars(unitId: number, miniBoss: boolean, attempt: number)
 	end
 	view.model = model
 	local hero = view.team == "Ally"
-	local width = if miniBoss then 110 else 54
-	local healthHeight = if miniBoss then 8 else 5
+	local width = if miniBoss then 120 else 64
+	local healthHeight = if miniBoss then 10 else 7
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "BarresCombat"
-	gui.Size = UDim2.fromOffset(width, healthHeight + (if hero then 5 else 0))
+	gui.Size = UDim2.fromOffset(width, healthHeight + (if hero then 7 else 0) + 4)
 	gui.StudsOffsetWorldSpace = Vector3.new(0, top(model) + 0.5, 0)
 	gui.AlwaysOnTop = true
 	gui.MaxDistance = 150
 	view.healthFill = bar(gui, 0, healthHeight, if hero then HEALTH else ENEMY_HEALTH)
 	if hero and view.maxEnergy > 0 then
-		view.manaFill = bar(gui, healthHeight + 1, 4, MANA)
+		view.manaFill = bar(gui, healthHeight + 2, 5, MANA)
 		local glow = Instance.new("Highlight")
 		glow.FillTransparency = 1
 		glow.OutlineColor = MANA_FULL
@@ -211,6 +254,7 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 			active = true
 		elseif kind == "UnitSpawned" then
 			views[event.UnitId] = {
+				id = event.UnitId,
 				team = event.Team,
 				health = event.Health,
 				maxHealth = event.MaxHealth,
@@ -312,6 +356,7 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 				if view.glow then
 					view.glow:Destroy()
 				end
+				setUltimateButton(view, false)
 				local icon = view.model and view.model:FindFirstChild("IconeClasse")
 				if icon then
 					icon:Destroy()
@@ -326,7 +371,25 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 			views[event.UnitId] = nil
 		elseif kind == "CombatEnded" then
 			active = false
+			for _, view in views do
+				setUltimateButton(view, false)
+			end
 		end
+	end
+end
+
+-- Démonstration Studio : unités factices (identifiants négatifs) ; l'ultime y est simulé.
+local demoUse: { [number]: () -> () } = {}
+
+useUltimate = function(unitId: number)
+	local simulated = demoUse[unitId]
+	if simulated then
+		simulated()
+		return
+	end
+	local remote = combatAction
+	if remote then
+		remote:InvokeServer("UseUltimate", unitId)
 	end
 end
 
@@ -381,7 +444,7 @@ local function onTap(input: InputObject, processed: boolean)
 		end
 	end
 	if best then
-		remote:InvokeServer("UseUltimate", best)
+		useUltimate(best)
 	end
 end
 
@@ -398,7 +461,78 @@ local function watchFolder(root: Instance)
 	end)
 end
 
+local demoCount = 0
+
+local function runDemo(model: Instance)
+	if not model:IsA("Model") then
+		return
+	end
+	demoCount += 1
+	local id = -demoCount
+	local hero = model:GetAttribute("Equipe") ~= "Ennemi"
+	local view: View = { id = id, team = if hero then "Ally" else "Enemy", health = 100, maxHealth = 100, energy = 0, maxEnergy = if hero then 100 else 0, model = model }
+	views[id] = view
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "BarresCombat"
+	gui.Size = UDim2.fromOffset(64, 7 + (if hero then 7 else 0) + 4)
+	gui.StudsOffsetWorldSpace = Vector3.new(0, top(model) + 0.5, 0)
+	gui.AlwaysOnTop = true
+	gui.MaxDistance = 150
+	view.healthFill = bar(gui, 0, 7, if hero then HEALTH else ENEMY_HEALTH)
+	if hero then
+		view.manaFill = bar(gui, 9, 5, MANA)
+		local glow = Instance.new("Highlight")
+		glow.FillTransparency = 1
+		glow.OutlineColor = MANA_FULL
+		glow.OutlineTransparency = 0.35
+		glow.DepthMode = Enum.HighlightDepthMode.Occluded
+		glow.Enabled = false
+		glow.Parent = model
+		view.glow = glow
+		local class = model:GetAttribute("Classe")
+		attachIcon(model, if typeof(class) == "string" then class else "Paladin")
+	end
+	gui.Parent = model
+	view.gui = gui
+	local used = false
+	demoUse[id] = function()
+		used = true
+	end
+	refresh(view)
+	while model.Parent and CollectionService:HasTag(model, TAG_APERCU) do
+		task.wait(0.7)
+		if hero then
+			if view.energy < view.maxEnergy then
+				view.energy = math.min(view.maxEnergy, view.energy + 25)
+				refresh(view)
+			elseif used then
+				used = false
+				view.energy = 0
+				refresh(view)
+				animate(id, "Ultime")
+			end
+		end
+		if math.random() < 0.4 then
+			local before = view.health / view.maxHealth
+			view.health = if view.health <= 25 then 100 else view.health - math.random(8, 20)
+			refresh(view)
+			local fill = view.healthFill
+			if fill and view.health / view.maxHealth < before then
+				DamageFeedbackController.Chip(fill, before, view.health / view.maxHealth, 1)
+			end
+		end
+	end
+end
+
 function CombatViewController:Start()
+	if RunService:IsStudio() then
+		for _, model in CollectionService:GetTagged(TAG_APERCU) do
+			task.spawn(runDemo, model)
+		end
+		CollectionService:GetInstanceAddedSignal(TAG_APERCU):Connect(function(model)
+			task.spawn(runDemo, model)
+		end)
+	end
 	local name = `PreparationCombat_{Players.LocalPlayer.UserId}`
 	Workspace.ChildAdded:Connect(function(child: Instance)
 		if child.Name == name then

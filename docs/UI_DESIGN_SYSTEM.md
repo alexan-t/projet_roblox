@@ -294,3 +294,32 @@ module et par ce document.
 5. Un seul bouton principal visible ; zones tactiles ≥ 44 px.
 6. Aucune valeur de style en dur dans le Controller : tout vient de `UITheme`.
 7. Pas d'emoji ni d'icône générique dans une version livrée.
+
+## 12. Implémentation : UIKit (issue #19)
+
+Les composants de ce document existent en code, côté client : `src/client/UI/UIKit.lua`
+(`StarterPlayerScripts.Client.UI.UIKit`). Un écran se construit avec eux plutôt qu'à la main :
+
+| Fonction | Composant (§) |
+| --- | --- |
+| `UIKit.screen(name, order?)` | ScreenGui + `UIScale` global (écran de référence 1080 px, entre 0,7 et 1,25) |
+| `UIKit.text(parent, text, size, { Color, Stroke, Align })` | texte Fredoka contouré Ink, épaisseur selon la taille (§ 4) |
+| `UIKit.button(parent, { Text, Style, Size, OnClick })` | bouton chunky `Primary` / `Secondary` / `Danger` / `Disabled`, états survol, appui, sélection (§ 6) |
+| `UIKit.roundButton(parent, { Text = "X", ... })` | bouton rond (fermer) |
+| `UIKit.panel(parent, { Size, Title, OnClose })` | fenêtre : fond `WoodDeep`, ombre, bandeau de titre en bois, fermer |
+| `UIKit.subPanel`, `UIKit.pill` | sous-panneau `PanelStrong`, pastille `HUD` |
+| `UIKit.badge(parent, text, color)` | badge d'état à cheval sur le bord haut |
+| `UIKit.bar(parent, { Color })` | barre PV / énergie / progression (`Set(ratio, animate?)`) |
+| `UIKit.tabs(parent, { Items, Selected, OnSelect })` | onglets, actif doré |
+| `UIKit.card(parent, { Name, Model, Badge, Selected, Locked, Empty })` | carte standard avec portrait 3D |
+| `UIKit.portrait(parent, model)` | portrait 3D trois quarts (ViewportFrame) |
+| `UIKit.overlay`, `UIKit.open`, `UIKit.close`, `UIKit.popIn`, `UIKit.announce` | voile, ouverture / fermeture, pop, annonce (§ 8) |
+
+Icônes de classe (§ 7) : `src/client/UI/ClassIcons.lua`, petits objets 3D (arc, épée, hache,
+bouclier, bâton, cible) avec silhouette Ink, dans un ViewportFrame — plus d'emoji.
+
+Écrans déjà passés au design system : préparation et HUD de combat (`ArenaPrepController`),
+barres et bouton « Ultime » au-dessus des héros (`CombatViewController`), écran Victoire /
+Défaite et récompenses (`RewardScreenController`), branché sur `CombatEnded`.
+Démonstrations Studio sans serveur : `Workspace.ApercuHudCombat = true` (préparation → combat
+simulé → victoire), tag `ApercuBarres` sur un modèle (barres, mana, bouton Ultime).
