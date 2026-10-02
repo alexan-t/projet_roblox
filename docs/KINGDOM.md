@@ -65,6 +65,20 @@ permanent du plot n'est jamais modifié. Les autres futurs systèmes peuvent
 ajouter leurs propres dossiers dans `Runtime` : KingdomService ne touche qu'à
 `Kingdom` et `Heroes`.
 
+## Montée de niveau visible (client)
+
+`src/client/Controllers/KingdomChangeController.lua` (issue #17) transforme le remplacement du
+modèle `Kingdom` en montée de niveau lisible, sans rien changer côté serveur : quand un `Kingdom`
+d'un **autre** `VisualState` remplace le précédent dans un `Runtime`, un nuage de poussière et des
+étincelles jaillissent du sol, le nouveau royaume sort du sol (léger dépassement), une onde dorée
+court au sol et « Royaume niveau N ! » s'affiche au-dessus (design system). Le premier affichage
+(arrivée du joueur, streaming) ne déclenche rien. Seul le pivot bouge : aucune animation pièce par
+pièce sur ces modèles de plusieurs centaines de pièces.
+
+Le modèle d'état doit donc porter l'attribut `VisualState` (déjà requis ci-dessus). Démonstration
+Studio : tag `ApercuRoyaume` sur un dossier de modèles portant `VisualState` ou `Niveau`, posés au
+même endroit (dans Test 3 : `Workspace.AtelierRoyaume`, copies des niveaux 1 à 3 de la vitrine).
+
 ## Cycle de vie
 
 1. `PlotService:OnPlotAssigned` (y compris les attributions déjà faites) appelle `Refresh`.
