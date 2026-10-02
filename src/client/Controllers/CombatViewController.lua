@@ -3,7 +3,8 @@
 --   • Au-dessus de chaque unité : barre de PV (rouge sous 30 %), barre de mana pour les héros
 --     (dorée et pulsante quand l'ultime est prêt, avec un léger contour sur le héros). Barre plus
 --     large pour le mini-boss. Petite icône de classe au-dessus des héros, sans nom.
---   • Dégâts : chiffres brefs au-dessus des ennemis (plus gros pour un ultime), qui s'effacent vite.
+--   • Dégâts (DamageFeedbackController), à l'instant du coup : flash et petit recul de la cible, chiffre
+--     au design system (clair sur un ennemi, doré pour un ultime, rouge sur un héros), traînée sur la barre.
 --   • Mort : les barres disparaissent, puis l'unité se dissout (DefeatEffectController) ; pas
 --     d'animation de douleur (« Touche ») ni de mort à jouer pour l'instant.
 --   • Ultime : toucher / cliquer un héros dont la mana est pleine (le serveur vérifie tout). Le héros
@@ -19,6 +20,7 @@ local Workspace = game:GetService("Workspace")
 
 local ArenaConfig = require(ReplicatedStorage.Shared.Config.ArenaConfig)
 local AttackEffectController = require(script.Parent.AttackEffectController)
+local DamageFeedbackController = require(script.Parent.DamageFeedbackController)
 local DefeatEffectController = require(script.Parent.DefeatEffectController)
 local MonsterAnimationController = require(script.Parent.MonsterAnimationController)
 local UltimateEffectController = require(script.Parent.UltimateEffectController)
@@ -186,33 +188,6 @@ local function attachBars(unitId: number, miniBoss: boolean, attempt: number)
 	refresh(view)
 end
 
--- Chiffre de dégâts bref au-dessus d'un ennemi.
-local function popDamage(view: View, amount: number, big: boolean)
-	local model = view.model
-	if not model or amount <= 0 then
-		return
-	end
-	local gui = Instance.new("BillboardGui")
-	gui.Size = UDim2.fromOffset(60, 24)
-	gui.StudsOffsetWorldSpace = Vector3.new(math.random(-8, 8) / 10, top(model) + 1.2, 0)
-	gui.AlwaysOnTop = true
-	local text = Instance.new("TextLabel")
-	text.BackgroundTransparency = 1
-	text.Size = UDim2.fromScale(1, 1)
-	text.Font = Enum.Font.GothamBold
-	text.TextSize = if big then 22 else 14
-	text.TextColor3 = if big then MANA_FULL else Color3.new(1, 1, 1)
-	text.TextStrokeTransparency = 0.4
-	text.Text = tostring(math.floor(amount + 0.5))
-	text.Parent = gui
-	gui.Parent = model
-	TweenService:Create(gui, TweenInfo.new(0.6), { StudsOffsetWorldSpace = gui.StudsOffsetWorldSpace + Vector3.new(0, 1.2, 0) }):Play()
-	TweenService:Create(text, TweenInfo.new(0.6), { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
-	task.delay(0.65, function()
-		gui:Destroy()
-	end)
-end
-
 local function animate(unitId: number?, name: string)
 	local view = if unitId then views[unitId] else nil
 	local model = if view then view.model else nil
@@ -269,16 +244,35 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 		elseif kind == "Damage" then
 			local view = views[event.TargetId]
 			if view then
-				view.health = event.Health
-				refresh(view)
-				if view.team == "Enemy" then
-					-- Le chiffre tombe avec le coup (anneau de l'ultime, impact de l'attaque), pas avant.
-					local delay = hitDelay[event.TargetId] or 0
-					if delay > 0 then
-						task.delay(delay, popDamage, view, event.Amount, ultimateHits[event.TargetId] == true)
-					else
-						popDamage(view, event.Amount, false)
+				-- Tout tombe avec le coup visible (impact de l'attaque, anneau de l'ultime), pas avant :
+				-- barre de vie (avec traînée), flash, recul et chiffre (DamageFeedbackController).
+				local delay = hitDelay[event.TargetId] or 0
+				local source = views[event.SourceId]
+				local from = if source and source.model then source.model:GetPivot().Position else nil
+				local ultimate = ultimateHits[event.TargetId] == true
+				local health, amount = event.Health, event.Amount
+				local function land()
+					local before = math.clamp(view.health / view.maxHealth, 0, 1)
+					view.health = health
+					refresh(view)
+					if view.healthFill then
+						DamageFeedbackController.Chip(view.healthFill, before, math.clamp(health / view.maxHealth, 0, 1), speed)
 					end
+					if view.model then
+						DamageFeedbackController.Hit(view.model, {
+							Amount = amount,
+							Ally = view.team == "Ally",
+							Ultimate = ultimate,
+							Lethal = health <= 0,
+							From = from,
+							Speed = speed,
+						})
+					end
+				end
+				if delay > 0 then
+					task.delay(delay, land)
+				else
+					land()
 				end
 			end
 			animate(event.TargetId, "Touche")

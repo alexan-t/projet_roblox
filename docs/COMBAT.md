@@ -167,7 +167,11 @@ Règle d'interface : une information qui peut s'afficher dans le monde n'a pas d
     « Ultime » (lueur dorée, estoc), une lame dorée file de son arme vers la cible, puis un anneau
     doré éclate au sol au rayon des ennemis touchés. Les chiffres de dégâts et la disparition des
     ennemis touchés attendent l'impact de l'onde (`IMPACT_DELAY`, 0,45 s).
-  - **Dégâts** : chiffres brefs au-dessus des ennemis (plus gros et dorés pour un ultime).
+  - **Dégâts** (`DamageFeedbackController`), à l'instant du coup visible : flash bref de la cible
+    (clair sur un ennemi, rouge sur un héros), petit recul à l'opposé de l'attaquant, chiffre au
+    design system (Fredoka contourée : clair, doré pour un ultime, rouge sur un héros) et traînée
+    claire sur la barre de vie qui se résorbe. Pas d'animation de douleur ; un coup fatal laisse la
+    place à la disparition. Démonstration Studio : tag `ApercuDegats` (`ApercuAllie` pour un héros).
   - **Mort** : les barres disparaissent, puis l'unité **se dissout** (`DefeatEffectController`,
     0,85 s, avant le retrait du modèle par le serveur à 1 s) : flash clair, petit sursaut, effacement
     de haut en bas avec poussière et étincelles dorées. Pas d'animation de douleur : le jeu est
