@@ -17,6 +17,43 @@ return function(HeroRules: any, heroConfig: any, combatConfig: any)
 	end
 
 	local SIZE = heroConfig.HotbarSize
+	test("manual shortcuts: replace, move, swap, clear preserve collection and persisted order", function()
+		local d = { Heroes = { A = { HeroId = "Archer" }, B = { HeroId = "Paladin" } }, Hotbar = table.create(10, "") }
+		assert(HeroRules.hotbarAction(d, SIZE, "Assign", "A", 4))
+		assert(d.Hotbar[4] == "A")
+		assert(HeroRules.hotbarAction(d, SIZE, "Assign", "B", 4))
+		assert(d.Hotbar[4] == "B" and d.Heroes.A)
+		assert(HeroRules.hotbarAction(d, SIZE, "Assign", "A", 2))
+		assert(HeroRules.hotbarAction(d, SIZE, "Swap", 2, 4))
+		assert(d.Hotbar[2] == "B" and d.Hotbar[4] == "A")
+		assert(HeroRules.hotbarAction(d, SIZE, "Assign", "A", 10))
+		assert(d.Hotbar[4] == "" and d.Hotbar[10] == "A")
+		assert(HeroRules.hotbarAction(d, SIZE, "Swap", 10, 8))
+		assert(d.Hotbar[10] == "" and d.Hotbar[8] == "A")
+		assert(HeroRules.hotbarAction(d, SIZE, "Clear", 2))
+		assert(d.Hotbar[2] == "" and d.Heroes.B)
+		local persisted = table.clone(d.Hotbar)
+		HeroRules.normalizeHotbar(d, SIZE)
+		for i = 1, SIZE do assert(d.Hotbar[i] == persisted[i]) end
+		assert(#d.Hotbar == 10)
+	end)
+	test("hotbar invalid input never mutates data; full bar moves without duplicates", function()
+		local d = { Heroes = {}, Hotbar = {} }
+		for i = 1, 10 do d.Heroes[`H{i}`] = { HeroId = "Archer" }; d.Hotbar[i] = `H{i}` end
+		local before = table.concat(d.Hotbar, "|")
+		for _, value in { 0, 11, 1.5, "1", {}, math.huge, 0/0 } do
+			assert(not HeroRules.hotbarAction(d, SIZE, "Assign", "H1", value))
+			assert(not HeroRules.hotbarAction(d, SIZE, "Clear", value))
+			assert(not HeroRules.hotbarAction(d, SIZE, "Swap", 1, value))
+		end
+		assert(not HeroRules.hotbarAction(d, SIZE, "Assign", "ForeignHero", 1))
+		assert(not HeroRules.hotbarAction(d, SIZE, "Delete", 1))
+		assert(table.concat(d.Hotbar, "|") == before)
+		assert(HeroRules.hotbarAction(d, SIZE, "Assign", "H1", 10))
+		assert(d.Hotbar[1] == "" and d.Hotbar[10] == "H1" and d.Heroes.H10)
+		local seen = {}
+		for _, id in d.Hotbar do if id ~= "" then assert(not seen[id]); seen[id] = true end end
+	end)
 	local function data(): any
 		local hotbar = {}
 		for i = 1, SIZE do hotbar[i] = "" end

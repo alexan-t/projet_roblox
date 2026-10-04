@@ -1,115 +1,88 @@
 --!strict
--- Placement des héros directement sur l'arène, côté client (voir docs/ARENA_PROTOTYPE.md).
---   • Héros en main (hotbar ou sacoche) : la grille 3x3 apparaît, la case survolée s'éclaire,
---     un clic/toucher sur une case demande au serveur de poser le héros (ArenaAction "Place").
---   • Clic sur un héros posé : il est repris en main pour le déplacer, ou le retirer (bouton Retirer).
---   • E près de l'étendard (prompt serveur « Combattre ») démarre le combat aussitôt.
---   • Combat : seulement une pastille légère (vague, x1/x2, X) ; PV et énergie sont dans le monde
+-- Préparation de combat dans l'arène du plot du joueur, côté client (voir docs/ARENA_PROTOTYPE.md).
+--   • E = interaction avec le monde : un seul ProximityPrompt local, sur la dalle valide la plus
+--     proche du personnage. Héros en main → « Placer » / « Remplacer » ; main vide près d'un héros
+--     posé → « Reprendre » (il revient dans les mains). Mobile : toucher le prompt.
+--   • Panneau Arène (léger, à droite) : stage courant, ennemis agrégés (sans position), équipe x/4,
+--     bouton Arène (met les dalles en évidence) et bouton Prêt (lance le combat, 1 à 4 héros).
+--   • Combat : pastille légère (vague, x1/x2, X) ; PV et énergie sont dans le monde
 --     (CombatViewController). Les ultimes sont automatiques.
--- États des cases : vide, survolée, cible valide, occupée, sélectionnée (UITheme).
--- Le client ne fait que détecter et demander ; ArenaService valide tout.
+-- Le client n'envoie que des intentions (Place / Remove / Ready) ; ArenaService valide tout.
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local Workspace = game:GetService("Workspace")
 
 local ArenaConfig = require(ReplicatedStorage.Shared.Config.ArenaConfig)
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local ArenaStore = require(script.Parent.Parent.Arena.ArenaStore)
 local PlacementState = require(script.Parent.Parent.Arena.PlacementState)
+local PlotView = require(script.Parent.Parent.Arena.PlotView)
 local UIKit = require(script.Parent.Parent.UI.UIKit)
 
 local C = UITheme.Colors
 local T = UITheme.Transparency
 local S = UITheme.Spacing
+local SIZE = UITheme.Typography.Size
 
 local ArenaPlacementController = {}
 
 local TAG_CASE = "CaseHeros"
-local GRID_HIDDEN = UITheme.World.GridHidden -- cases hors placement presque invisibles
+local GRID_HIDDEN = UITheme.World.GridHidden -- dalles hors préparation presque invisibles
 local ABOVE_HOTBAR = 112 -- hauteur réservée à la hotbar (px)
+local PROMPT_REFRESH = 0.1 -- secondes entre deux recherches de la dalle la plus proche
+local PANEL_WIDTH = 264
 
 type CaseState = "Empty" | "Hover" | "ValidTarget" | "Occupied" | "Selected" | "Invalid"
 
 local caseModels: { [number]: Instance } = {}
+local casePoses: { [number]: BasePart } = {}
 local caseHighlights: { [number]: Highlight } = {}
-local hovered: number? = nil
 local gridModifier: number? = nil
 local ui: { [string]: any } = {}
 local speedRemote: RemoteFunction? = nil
 local arenaRoot: Instance? = nil
+local prompt: ProximityPrompt? = nil
+local promptInfo: PlacementState.Prompt? = nil
+local prepMode = false -- bouton Arène : dalles mises en évidence
 
------------------------------------------------------------------- arène
-
-local function resolveArena(): Instance?
-	local node: Instance? = Workspace
-	for _, name in ArenaConfig.ArenaPath do
-		node = if node then node:FindFirstChild(name) else nil
-	end
-	return node
-end
+------------------------------------------------------------------ arène du plot
 
 local function refreshCases()
+	local root = PlotView.arena()
+	if root == arenaRoot and next(caseModels) then
+		return
+	end
+	for _, highlight in caseHighlights do
+		highlight:Destroy()
+	end
+	table.clear(caseHighlights)
 	table.clear(caseModels)
-	local root = resolveArena()
+	table.clear(casePoses)
+	gridModifier = nil
 	arenaRoot = root
 	if not root then
 		return
 	end
 	for _, case in CollectionService:GetTagged(TAG_CASE) do
 		local slot = case:GetAttribute("Slot")
-		if case:IsDescendantOf(root) and typeof(slot) == "number" then
+		local pose = case:FindFirstChild("PointDePose", true)
+		if case:IsDescendantOf(root) and typeof(slot) == "number" and pose and pose:IsA("BasePart") then
 			caseModels[slot] = case
+			casePoses[slot] = pose
+			if ui.screen then
+				local highlight = Instance.new("Highlight")
+				highlight.Name = `Case{slot}`
+				highlight.Adornee = case
+				highlight.DepthMode = Enum.HighlightDepthMode.Occluded
+				highlight.Enabled = false
+				highlight.Parent = ui.screen
+				caseHighlights[slot] = highlight
+			end
 		end
 	end
-end
-
--- L'arène est prise par un autre joueur ?
-local function occupiedByOther(): boolean
-	local root = arenaRoot
-	local occupant = if root then root:GetAttribute("Occupant") else nil
-	return occupant ~= nil and occupant ~= Players.LocalPlayer.UserId
-end
-
--- Héros posés (mannequins de placement), pour les reprendre en main d'un clic.
-local function placedModels(): { Instance }
-	local list = {}
-	local folder = Workspace:FindFirstChild(`PreparationCombat_{Players.LocalPlayer.UserId}`)
-	local heroes = folder and folder:FindFirstChild("Heros")
-	if heroes and ArenaStore.arena.Phase == "Placement" then
-		for _, model in heroes:GetChildren() do
-			table.insert(list, model)
-		end
-	end
-	return list
-end
-
--- Case visée (la case elle-même ou le héros posé dessus).
-local function caseAt(position: Vector2): number?
-	local camera = Workspace.CurrentCamera
-	if not camera then
-		return nil
-	end
-	local targets = placedModels()
-	for _, case in caseModels do
-		table.insert(targets, case)
-	end
-	local params = RaycastParams.new()
-	params.FilterType = Enum.RaycastFilterType.Include
-	params.FilterDescendantsInstances = targets
-	local ray = camera:ScreenPointToRay(position.X, position.Y)
-	local hit = Workspace:Raycast(ray.Origin, ray.Direction * 500, params)
-	local node: Instance? = hit and hit.Instance
-	while node do
-		local slot = node:GetAttribute("Slot")
-		if typeof(slot) == "number" then
-			return slot
-		end
-		node = node.Parent
-	end
-	return nil
 end
 
 -- Transparence locale uniquement (le modèle du design n'est jamais modifié).
@@ -127,19 +100,59 @@ local function setGrid(modifier: number)
 	end
 end
 
--- Styles des états de case : UITheme.World.Case (Vide = aucune surbrillance).
+-- Styles des états de dalle : UITheme.World.Case (Vide = aucune surbrillance).
 local CASE_STYLE: { [string]: { Fill: Color3, FillT: number, Outline: Color3, OutlineT: number }? } = UITheme.World.Case :: any
+
+-- Le personnage est-il dans SON arène ? (cercle autour des dalles + marge, indépendant de la rotation)
+local arenaCenter: Vector3? = nil
+local arenaRadius = 0
+local inArena = false
+
+local function measureArena()
+	local sum, count = Vector3.zero, 0
+	for _, pose in casePoses do
+		sum += pose.Position
+		count += 1
+	end
+	if count == 0 then
+		arenaCenter = nil
+		return
+	end
+	local center = sum / count
+	local radius = 0
+	for _, pose in casePoses do
+		radius = math.max(radius, ((pose.Position - center) * Vector3.new(1, 0, 1)).Magnitude)
+	end
+	arenaCenter, arenaRadius = center, radius + ArenaConfig.PromptDistance
+end
+
+local function playerInArena(): boolean
+	local center = arenaCenter
+	local character = Players.LocalPlayer.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not center or not root or not root:IsA("BasePart") then
+		return false
+	end
+	return ((root.Position - center) * Vector3.new(1, 0, 1)).Magnitude <= arenaRadius
+end
+
+-- Lumière de placement : héros en main + joueur dans son arène + préparation (jamais en combat).
+local function placementLit(): boolean
+	return ArenaStore.placement.held ~= nil and inArena and not ArenaStore.inCombat() and ArenaStore.arena.Available ~= false
+end
 
 local function caseState(slot: number, formation: { [number]: string }, full: boolean): CaseState
 	local held = ArenaStore.placement.held
-	if not held then
-		return if hovered == slot and formation[slot] and ArenaStore.arena.Phase == "Placement" then "Hover" else "Empty"
+	local active = promptInfo ~= nil and promptInfo.Slot == slot
+	if not held or not placementLit() then
+		-- Aucune lumière de placement ; seul le bouton Arène peut montrer les dalles volontairement.
+		return if prepMode and not held then (if formation[slot] then "Occupied" else "ValidTarget") else "Empty"
 	end
-	if held.fromSlot == slot then
+	if formation[slot] == held.instanceId then
 		return "Selected"
 	end
-	local valid = not occupiedByOther() and (formation[slot] ~= nil or held.fromSlot ~= nil or not full)
-	if hovered == slot then
+	local valid = formation[slot] ~= nil or not full
+	if active then
 		return if valid then "Hover" else "Invalid"
 	end
 	if not valid then
@@ -149,15 +162,9 @@ local function caseState(slot: number, formation: { [number]: string }, full: bo
 end
 
 local function renderCases()
-	local held = ArenaStore.placement.held
 	local phase = ArenaStore.arena.Phase
-	if held then
-		setGrid(0)
-	elseif phase == "Placement" or phase == "Combat" then
-		setGrid(GRID_HIDDEN)
-	else
-		setGrid(0)
-	end
+	-- Dalles à leur apparence normale hors combat ; discrètes pendant le combat.
+	setGrid(if phase == "Combat" then GRID_HIDDEN else 0)
 	local formation = ArenaStore.formation()
 	local full = ArenaStore.placedCount() >= (ArenaStore.arena.MaxHeroes or ArenaConfig.MaxHeroes)
 	for slot, highlight in caseHighlights do
@@ -170,6 +177,81 @@ local function renderCases()
 			highlight.OutlineTransparency = style.OutlineT
 		end
 	end
+end
+
+------------------------------------------------------------------ prompt E (une seule dalle active)
+
+local function heroName(instanceId: string): string
+	local _, info = ArenaStore.heroInfo(instanceId)
+	return if info then info.Name else "héros"
+end
+
+local function hidePrompt()
+	promptInfo = nil
+	if prompt then
+		prompt.Enabled = false
+		prompt.Parent = nil
+	end
+end
+
+-- Dalle valide la plus proche du personnage, dans la portée du prompt.
+local function updatePrompt()
+	local p = prompt
+	if not p then
+		return
+	end
+	local character = Players.LocalPlayer.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	-- Entrée / sortie de l'arène : les lumières de placement s'allument / s'éteignent.
+	local nowInArena = playerInArena()
+	if nowInArena ~= inArena then
+		inArena = nowInArena
+		renderCases()
+	end
+	if not root or not root:IsA("BasePart") or ArenaStore.inCombat() or ArenaStore.arena.Available == false then
+		hidePrompt()
+		return
+	end
+	local formation = ArenaStore.formation()
+	local best: PlacementState.Prompt? = nil
+	local bestDistance = ArenaConfig.PromptDistance
+	for slot, pose in casePoses do
+		local d = ((pose.Position - root.Position) * Vector3.new(1, 0, 1)).Magnitude
+		if d <= bestDistance then
+			local candidate = PlacementState.promptFor(ArenaStore.placement, slot, formation)
+			if candidate then
+				best, bestDistance = candidate, d
+			end
+		end
+	end
+	local previous = promptInfo
+	promptInfo = best
+	if not best then
+		hidePrompt()
+	else
+		p.ActionText = `{best.Label} {heroName(best.HeroInstanceId)}`
+		p.ObjectText = `Dalle {best.Slot}`
+		p.Enabled = not ArenaStore.busy
+		p.Parent = casePoses[best.Slot]
+	end
+	if (previous and previous.Slot) ~= (best and best.Slot) or (previous and previous.Label) ~= (best and best.Label) then
+		renderCases()
+	end
+end
+
+local function onPromptTriggered()
+	local info = promptInfo
+	if not info or ArenaStore.busy then
+		return
+	end
+	if info.Action == "Place" then
+		-- Le héros reste dans les mains tant que le serveur n'a pas accepté (refus : il y reste).
+		ArenaStore.request("Place", info.Slot, info.HeroInstanceId)
+	elseif ArenaStore.request("Remove", info.Slot) then
+		PlacementState.takeBack(ArenaStore.placement, info.HeroInstanceId) -- « Reprendre » : retour dans les mains
+		ArenaStore.notify()
+	end
+	updatePrompt()
 end
 
 ------------------------------------------------------------------ interface
@@ -207,61 +289,100 @@ local function showToast(text: string)
 	flash(ui.toast, 2.5)
 end
 
+local function line(parent: Instance, text: string, size: number, y: number, height: number): TextLabel
+	local label = UIKit.text(parent, text, size)
+	label.Position = UDim2.fromOffset(S.L, y)
+	label.Size = UDim2.new(1, -2 * S.L, 0, height)
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	return label
+end
+
+-- Panneau Arène : semi-transparent, la map et l'arène restent visibles.
+local function buildPanel(screen: ScreenGui)
+	local panel = UIKit.panel(screen, T.Panel)
+	panel.Name = "PanneauArene"
+	panel.AnchorPoint = Vector2.new(1, 0.5)
+	panel.Position = UDim2.new(1, -S.ScreenMargin, 0.5, -40)
+	panel.Size = UDim2.fromOffset(PANEL_WIDTH, 300)
+	ui.panel = panel
+	ui.stage = line(panel, "", SIZE.Title, S.M, 36)
+	line(panel, "Ennemis", SIZE.Label, 56, 22).TextColor3 = C.TextMuted
+	local enemies = Instance.new("Frame")
+	enemies.BackgroundTransparency = 1
+	enemies.Position = UDim2.fromOffset(0, 80)
+	enemies.Size = UDim2.new(1, 0, 0, 90)
+	enemies.Parent = panel
+	ui.enemies = enemies
+	line(panel, "Équipe", SIZE.Label, 176, 22).TextColor3 = C.TextMuted
+	ui.team = line(panel, "", SIZE.Heading, 198, 30)
+
+	local buttonWidth = (PANEL_WIDTH - 2 * S.L - S.S) / 2
+	local buttonSize = UDim2.fromOffset(buttonWidth, S.TouchTarget + UITheme.Shadow.ButtonLip)
+	local arena = UIKit.button(panel, "Arène", "Secondary", buttonSize, function()
+		prepMode = not prepMode
+		if prepMode then
+			showToast("Prends un héros (1 à 0), approche-toi d'une dalle : E")
+		end
+		ArenaStore.notify()
+	end)
+	arena.holder.AnchorPoint = Vector2.new(0, 1)
+	arena.holder.Position = UDim2.new(0, S.L, 1, -S.L)
+	ui.arena = arena
+	local ready = UIKit.button(panel, "Prêt", "Primary", buttonSize, function()
+		PlacementState.cancel(ArenaStore.placement) -- plus rien en main : la formation se verrouille
+		prepMode = false
+		ArenaStore.request("Ready")
+	end)
+	ready.holder.AnchorPoint = Vector2.new(1, 1)
+	ready.holder.Position = UDim2.new(1, -S.L, 1, -S.L)
+	ui.ready = ready
+end
+
+local function renderEnemies()
+	local frame: Frame = ui.enemies
+	frame:ClearAllChildren()
+	local y = 0
+	for _, enemy in ArenaStore.arena.Enemies or {} do
+		local text = if enemy.MiniBoss then `Mini-boss : {enemy.EnemyId}` else `{enemy.EnemyId} ×{enemy.Count}`
+		local label = line(frame, text, SIZE.Label, y, 24)
+		label.TextColor3 = if enemy.MiniBoss then C.Gold else C.TextLight
+		y += 28
+	end
+end
+
 local function build()
 	local screen = Instance.new("ScreenGui")
 	screen.Name = "PlacementArene"
 	screen.ResetOnSpawn = false
-	screen.IgnoreGuiInset = false -- mêmes coordonnées que les entrées (souris, toucher)
+	screen.IgnoreGuiInset = false
 	screen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	ui.screen = screen
 
-	-- Statut du placement, juste au-dessus de la hotbar.
+	-- Statut du héros en main, juste au-dessus de la hotbar.
 	local status = pill(screen, T.HUD)
-	status.Size = UDim2.fromOffset(520, 52)
+	status.Size = UDim2.fromOffset(560, 52)
 	ui.status = status
-	local statusText = UIKit.text(status, "", UITheme.Typography.Size.Label)
+	local statusText = UIKit.text(status, "", SIZE.Label)
 	statusText.Position = UDim2.fromOffset(S.L, 0)
-	statusText.Size = UDim2.new(1, -2 * S.L, 1, 0)
+	statusText.Size = UDim2.new(1, -2 * S.L - 112, 1, 0)
 	statusText.TextXAlignment = Enum.TextXAlignment.Left
 	ui.statusText = statusText
-	local actions = Instance.new("Frame")
-	actions.BackgroundTransparency = 1
-	actions.AnchorPoint = Vector2.new(1, 0.5)
-	actions.Position = UDim2.new(1, -S.S, 0.5, 0)
-	actions.Size = UDim2.fromOffset(220, 40)
-	actions.Parent = status
-	ui.actions = actions
-	local remove = UIKit.button(actions, "Retirer", "Secondary", UDim2.fromOffset(104, 40), function()
-		local request = PlacementState.removeHeld(ArenaStore.placement)
-		if request then
-			ArenaStore.request("Remove", request.Slot)
-		end
-		ArenaStore.notify()
-	end)
-	remove.label.TextSize = UITheme.Typography.Size.Label
-	ui.remove = remove
-	local cancel = UIKit.button(actions, "Annuler", "Secondary", UDim2.fromOffset(104, 40), function()
+	local cancel = UIKit.button(status, "Annuler", "Secondary", UDim2.fromOffset(104, 40), function()
 		PlacementState.cancel(ArenaStore.placement)
 		ArenaStore.notify()
 	end)
-	cancel.holder.Position = UDim2.fromOffset(112, 0)
-	cancel.label.TextSize = UITheme.Typography.Size.Label
+	cancel.holder.AnchorPoint = Vector2.new(1, 0.5)
+	cancel.holder.Position = UDim2.new(1, -S.S, 0.5, 0)
+	cancel.label.TextSize = SIZE.Label
 
-	-- Héros en main qui suit le curseur (souris uniquement).
-	local ghost = UIKit.panel(screen, T.PanelStrong, UITheme.Radius.Pill, UITheme.Stroke.Regular)
-	ghost.AnchorPoint = Vector2.new(0, 1)
-	ghost.Size = UDim2.fromOffset(52, 52)
-	ghost.Visible = false
-	ghost.ZIndex = 10
-	ui.ghostIcon = UIKit.text(ghost, "", UITheme.Typography.Size.Icon)
-	ui.ghost = ghost
+	buildPanel(screen)
 
-	-- Combat : vague, x1 / x2, quitter. Léger, la map reste visible.
+	-- Combat : vague, x1 / x2, quitter.
 	local combat = pill(screen, T.HUD)
 	combat.Size = UDim2.fromOffset(340, 56)
 	combat.Visible = false
 	ui.combat = combat
-	local wave = UIKit.text(combat, "Vague", UITheme.Typography.Size.Label)
+	local wave = UIKit.text(combat, "Vague", SIZE.Label)
 	wave.Position = UDim2.fromOffset(S.XL, 0)
 	wave.Size = UDim2.fromOffset(110, 56)
 	wave.TextXAlignment = Enum.TextXAlignment.Left
@@ -276,27 +397,27 @@ local function build()
 		speed(1)
 	end)
 	x1.holder.Position = UDim2.fromOffset(140, 4)
-	x1.label.TextSize = UITheme.Typography.Size.Label
+	x1.label.TextSize = SIZE.Label
 	local x2 = UIKit.button(combat, "x2", "Tab", UDim2.fromOffset(56, 40 + UITheme.Shadow.ButtonLip), function()
 		speed(2)
 	end)
 	x2.holder.Position = UDim2.fromOffset(202, 4)
-	x2.label.TextSize = UITheme.Typography.Size.Label
+	x2.label.TextSize = SIZE.Label
 	ui.x1, ui.x2 = x1, x2
 	local quit = UIKit.button(combat, "X", "Danger", UDim2.fromOffset(44, 40 + UITheme.Shadow.ButtonLip), function()
 		ArenaStore.request("Leave")
 	end)
 	quit.holder.Position = UDim2.fromOffset(282, 4)
 
-	-- Annonce de vague / mini-boss, et résultat.
-	local banner = UIKit.text(screen, "", UITheme.Typography.Size.Title)
+	-- Annonce de vague / mini-boss, résultat, messages brefs.
+	local banner = UIKit.text(screen, "", SIZE.Title)
 	banner.AnchorPoint = Vector2.new(0.5, 0)
 	banner.Position = UDim2.new(0.5, 0, 0, 70)
 	banner.Size = UDim2.fromOffset(500, 44)
 	banner.TextColor3 = C.Gold
 	banner.Visible = false
 	ui.banner = banner
-	local result = UIKit.text(screen, "", UITheme.Typography.Size.Hero)
+	local result = UIKit.text(screen, "", SIZE.Hero)
 	result.AnchorPoint = Vector2.new(0.5, 0.5)
 	result.Position = UDim2.fromScale(0.5, 0.32)
 	result.Size = UDim2.fromOffset(600, 80)
@@ -306,105 +427,50 @@ local function build()
 	toast.BackgroundColor3 = C.Cream
 	toast.AnchorPoint = Vector2.new(0.5, 0)
 	toast.Position = UDim2.new(0.5, 0, 0, 24)
-	toast.Size = UDim2.fromOffset(420, 46)
+	toast.Size = UDim2.fromOffset(520, 46)
 	toast.Visible = false
 	ui.toast = toast
 	local toastText = Instance.new("TextLabel")
 	toastText.BackgroundTransparency = 1
 	toastText.FontFace = UITheme.Typography.Display
-	toastText.TextSize = UITheme.Typography.Size.Label
+	toastText.TextSize = SIZE.Label
 	toastText.TextColor3 = C.InkSoft
 	toastText.Size = UDim2.fromScale(1, 1)
 	toastText.Parent = toast
 	ui.toastText = toastText
-
-	-- Une surbrillance discrète par case (aucun néon), pilotée par l'état de la case.
-	for slot, case in caseModels do
-		local highlight = Instance.new("Highlight")
-		highlight.Name = `Case{slot}`
-		highlight.Adornee = case
-		highlight.DepthMode = Enum.HighlightDepthMode.Occluded
-		highlight.Enabled = false
-		highlight.Parent = screen
-		caseHighlights[slot] = highlight
-	end
 
 	screen.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
 end
 
 local function render()
 	local held = ArenaStore.placement.held
-	local phase = ArenaStore.arena.Phase
+	local state = ArenaStore.arena
+	local phase = state.Phase
 	local count = ArenaStore.placedCount()
-	local max = ArenaStore.arena.MaxHeroes or ArenaConfig.MaxHeroes
-	ui.combat.Visible = phase == "Combat"
-	if held then
-		local _, info = ArenaStore.heroInfo(held.instanceId)
-		local name = if info then info.Name else "Héros"
-		ui.statusText.Text = if occupiedByOther()
-			then "Arène occupée par un autre joueur"
-			else `{name} en main · choisis une case   {count}/{max}`
-		ui.remove.holder.Visible = held.fromSlot ~= nil
-		ui.status.Visible = true
-		ui.ghostIcon.Text = if info then info.PlaceholderIcon else "?"
-	elseif phase == "Placement" then
-		ui.statusText.Text = `{count}/{max} héros · E près de l'étendard pour combattre`
-		ui.remove.holder.Visible = false
+	local max = state.MaxHeroes or ArenaConfig.MaxHeroes
+	local inCombat = phase == "Combat"
+	ui.combat.Visible = inCombat
+	ui.panel.Visible = not inCombat and state.Available ~= false
+	ui.stage.Text = `Stage {state.Zone or "?"}-{state.Stage or "?"}`
+	ui.team.Text = `{count} / {max}`
+	renderEnemies()
+	ui.ready.setEnabled(phase == "Placement" and count >= 1 and count <= max and not ArenaStore.busy)
+	ui.arena.setSelected(prepMode)
+	if held and not inCombat then
+		ui.statusText.Text = `{heroName(held.instanceId)} en main · approche-toi d'une dalle : E`
 		ui.status.Visible = true
 	else
 		ui.status.Visible = false
 	end
-	-- Les boutons Retirer / Annuler n'ont de sens qu'avec un héros en main ; le texte leur laisse la place.
-	ui.actions.Visible = held ~= nil
-	local reserved = if held then ui.actions.Size.X.Offset + S.S else 0
-	ui.status.Size = UDim2.fromOffset(440 + reserved, 52)
-	ui.statusText.Size = UDim2.new(1, -2 * S.L - reserved, 1, 0)
-	ui.ghost.Visible = held ~= nil and UserInputService.MouseEnabled and not UserInputService.TouchEnabled
 	renderCases()
 end
 
------------------------------------------------------------------- entrées
+------------------------------------------------------------------ entrées et événements
 
 local function onInputBegan(input: InputObject, processed: boolean)
-	if processed then
-		return
-	end
-	if input.KeyCode == Enum.KeyCode.Escape and ArenaStore.placement.held then
+	if not processed and input.KeyCode == Enum.KeyCode.Escape and ArenaStore.placement.held then
 		PlacementState.cancel(ArenaStore.placement)
 		ArenaStore.notify()
-		return
-	end
-	if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then
-		return
-	end
-	if ArenaStore.inCombat() then
-		return
-	end
-	local slot = caseAt(Vector2.new(input.Position.X, input.Position.Y))
-	if not slot then
-		return -- clic ailleurs dans le monde : le héros reste en main
-	end
-	local request = PlacementState.clickCase(ArenaStore.placement, slot, ArenaStore.formation())
-	hovered = nil
-	if request then
-		-- Réponse du serveur d'abord : l'état affiché passe directement à la formation validée.
-		ArenaStore.request(request.Action, request.Slot, request.HeroInstanceId)
-	end
-	ArenaStore.notify()
-end
-
-local function onInputChanged(input: InputObject)
-	if input.UserInputType ~= Enum.UserInputType.MouseMovement then
-		return
-	end
-	local position = Vector2.new(input.Position.X, input.Position.Y)
-	if ArenaStore.placement.held then
-		ui.ghost.Position = UDim2.fromOffset(position.X + 14, position.Y - 6)
-	end
-	local slot = if ArenaStore.inCombat() then nil else caseAt(position)
-	if slot ~= hovered then
-		hovered = slot
-		renderCases()
 	end
 end
 
@@ -426,57 +492,49 @@ local function onCombatEvents(_combatId: number, events: { { [string]: any } })
 	end
 end
 
--- L'intro de démonstration (CombatIntroController) occupe les mêmes cases.
--- Pendant une préparation ou un combat, le serveur la suspend lui-même (IntroDemoBoucle = false).
--- Avant le premier héros posé (héros en main, arène libre), ce client la suspend localement
--- (attribut local, non répliqué) ; si la main est vidée sans poser, il la rétablit. Dès qu'une
--- préparation existe, la valeur du serveur reprend la main.
-local demoPaused = false
-local demoWas: any = nil
-local function removeDemoLeftovers()
-	for _, child in Workspace:GetChildren() do
-		if child.Name == "IntroCombat" then
-			child:Destroy()
-		end
-	end
-end
-local function updateDemo()
-	local root = arenaRoot
-	if not root then
-		return
-	end
-	local phase = ArenaStore.arena.Phase
-	local pause = ArenaStore.placement.held ~= nil and phase == "Closed" and not occupiedByOther()
-	if pause and not demoPaused then
-		demoPaused = true
-		demoWas = root:GetAttribute("IntroDemoBoucle")
-		root:SetAttribute("IntroDemoBoucle", false)
-		removeDemoLeftovers()
-	elseif not pause and demoPaused then
-		demoPaused = false
-		if phase == "Closed" then
-			root:SetAttribute("IntroDemoBoucle", demoWas) -- main vidée sans poser : la démo reprend
-		end
-	end
-	if phase ~= "Closed" then
-		removeDemoLeftovers()
-	end
-end
-
 function ArenaPlacementController:Start()
-	refreshCases()
 	build()
+	refreshCases()
+	measureArena()
+	local p = Instance.new("ProximityPrompt")
+	p.Name = "PlacementHeros"
+	p.KeyboardKeyCode = Enum.KeyCode.E
+	p.HoldDuration = 0
+	p.MaxActivationDistance = ArenaConfig.PromptDistance + 2
+	p.RequiresLineOfSight = false
+	p.Enabled = false
+	p.Triggered:Connect(onPromptTriggered)
+	prompt = p
+
 	ArenaStore.changed.Event:Connect(function()
-		updateDemo()
+		if ArenaStore.inCombat() then
+			prepMode = false
+		end
 		render()
+		updatePrompt()
 	end)
 	ArenaStore.toast.Event:Connect(showToast)
-	local root = arenaRoot
-	if root then
-		root:GetAttributeChangedSignal("Occupant"):Connect(render)
-	end
 	UserInputService.InputBegan:Connect(onInputBegan)
-	UserInputService.InputChanged:Connect(onInputChanged)
+	local elapsed = 0
+	RunService.Heartbeat:Connect(function(dt: number)
+		elapsed += dt
+		if elapsed >= PROMPT_REFRESH then
+			elapsed = 0
+			updatePrompt()
+		end
+	end)
+	-- Le plot peut être attribué après le démarrage (chargement des données).
+	task.spawn(function()
+		while true do
+			task.wait(1)
+			local before = arenaRoot
+			refreshCases()
+			if arenaRoot ~= before then
+				measureArena()
+				render()
+			end
+		end
+	end)
 	render()
 	ArenaStore.start()
 

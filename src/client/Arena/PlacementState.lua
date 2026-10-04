@@ -1,7 +1,7 @@
 --!strict
 -- État « héros en main » côté client, sans API Roblox : testé par tools/test-arena.ps1.
 -- Prendre un héros (hotbar, collection ou héros déjà posé) le met en main ; toucher une case
--- produit une demande au serveur, qui décide. Aucun Tool Roblox : c'est un simple état.
+-- produit une demande au serveur, qui décide. HeldHeroController présente cet état en 3D.
 
 export type Held = { instanceId: string, fromSlot: number? }
 export type State = { held: Held?, locked: boolean }
@@ -64,8 +64,8 @@ function PlacementState.clickCase(state: State, slot: number, formation: Formati
 	end
 	local held = state.held
 	if held then
-		state.held = nil
 		if held.fromSlot == slot then
+			state.held = nil
 			return nil -- reposé à sa place
 		end
 		return { Action = "Place", Slot = slot, HeroInstanceId = held.instanceId }
@@ -77,10 +77,14 @@ function PlacementState.clickCase(state: State, slot: number, formation: Formati
 	return nil
 end
 
+-- Une réponse ancienne ne doit jamais vider une nouvelle sélection.
+function PlacementState.accept(state: State, held: Held?, accepted: boolean)
+	if accepted and state.held == held then state.held = nil end
+end
+
 -- Retirer le héros tenu de l'arène (il reste dans la hotbar et la collection).
 function PlacementState.removeHeld(state: State): Request?
 	local held = state.held
-	state.held = nil
 	if state.locked or not held or not held.fromSlot then
 		return nil
 	end
@@ -96,6 +100,39 @@ function PlacementState.setLocked(state: State, locked: boolean)
 	state.locked = locked
 	if locked then
 		state.held = nil
+	end
+end
+
+-- Prompt E sur une dalle : ce que la touche fera, ou nil (aucun prompt).
+--   héros en main + dalle libre      → Place  (« Placer »)
+--   héros en main + dalle occupée    → Place  (« Remplacer », autorisé même à 4/4)
+--   héros en main + sa propre dalle  → nil    (déjà posé là)
+--   main vide + héros posé           → Take   (« Reprendre » : Remove, puis le héros revient en main)
+--   main vide + dalle libre, combat  → nil
+-- Le serveur revalide tout (distance, possession, phase, limite).
+export type Prompt = { Action: "Place" | "Take", Label: string, Slot: number, HeroInstanceId: string }
+
+function PlacementState.promptFor(state: State, slot: number, formation: Formation): Prompt?
+	if state.locked then
+		return nil
+	end
+	local held, placed = state.held, formation[slot]
+	if held then
+		if placed == held.instanceId then
+			return nil
+		end
+		return { Action = "Place", Label = if placed then "Remplacer" else "Placer", Slot = slot, HeroInstanceId = held.instanceId }
+	end
+	if placed then
+		return { Action = "Take", Label = "Reprendre", Slot = slot, HeroInstanceId = placed }
+	end
+	return nil
+end
+
+-- « Reprendre » accepté par le serveur : le héros quitte la dalle et revient dans les mains.
+function PlacementState.takeBack(state: State, instanceId: string)
+	if not state.locked then
+		state.held = { instanceId = instanceId, fromSlot = nil }
 	end
 end
 

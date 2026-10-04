@@ -18,6 +18,7 @@ local ArenaStore = require(script.Parent.Parent.Arena.ArenaStore)
 local PlacementState = require(script.Parent.Parent.Arena.PlacementState)
 local UIKit = require(script.Parent.Parent.UI.UIKit)
 
+local Drag = require(script.Parent.Parent.UI.HeroDrag)
 local C = UITheme.Colors
 local T = UITheme.Transparency
 local S = UITheme.Spacing
@@ -31,7 +32,7 @@ local KEYS = {
 }
 
 type SlotUI = { frame: TextButton, stroke: UIStroke, icon: TextLabel, placed: Frame, offset: number }
-type CardUI = { frame: TextButton, stroke: UIStroke, placed: Frame }
+type CardUI = { frame: TextButton, stroke: UIStroke, placed: Frame, shortcut: TextLabel }
 
 -- Onglets de la sacoche. Équipement et Ressources n'ont pas encore de données.
 local TABS = {
@@ -62,7 +63,7 @@ end
 ------------------------------------------------------------------ hotbar
 
 local function selectSlot(index: number)
-	if ArenaStore.inCombat() then
+	if ArenaStore.inCombat() or ArenaStore.busy then
 		return
 	end
 	PlacementState.selectHotbar(ArenaStore.placement, index, ArenaStore.hotbar, ArenaStore.formation())
@@ -110,8 +111,9 @@ local function buildHotbar(screen: ScreenGui)
 		UIKit.corner(placed, UITheme.Radius.Pill)
 		UIKit.stroke(placed, UITheme.Stroke.Thin)
 		frame.Activated:Connect(function()
-			selectSlot(index)
+			if not Drag.suppressed() then selectSlot(index) end
 		end)
+		Drag.bind(frame, function() return { slot = index, id = ArenaStore.hotbar[index] } end)
 		slots[index] = { frame = frame, stroke = stroke, icon = icon, placed = placed, offset = x }
 	end
 end
@@ -159,9 +161,16 @@ local function buildBag(screen: ScreenGui)
 	bag.Name = "Sacoche"
 	bag.AnchorPoint = Vector2.new(0, 0.5)
 	bag.Position = UDim2.new(0, S.ScreenMargin, 0.5, -40)
-	bag.Size = UDim2.fromOffset(372, 470)
+	bag.Size = UDim2.fromOffset(372, 620)
 	bag.Visible = false
 	ui.bag = bag
+	local scale = Instance.new("UIScale")
+	scale.Parent = bag
+	local function resize()
+		scale.Scale = math.min(1, math.max(0.5, (screen.AbsoluteSize.Y - 130) / 620))
+	end
+	screen:GetPropertyChangedSignal("AbsoluteSize"):Connect(resize)
+	task.defer(resize)
 
 	local title = Instance.new("Frame")
 	title.BackgroundColor3 = C.Wood
@@ -223,7 +232,7 @@ local function buildBag(screen: ScreenGui)
 	list.BackgroundTransparency = 1
 	list.BorderSizePixel = 0
 	list.Position = UDim2.fromOffset(S.L, 92)
-	list.Size = UDim2.new(1, -2 * S.L, 1, -92 - 84)
+	list.Size = UDim2.new(1, -2 * S.L, 1, -92 - 232)
 	list.ScrollBarThickness = UITheme.Stroke.ScrollBar
 	list.ScrollBarImageColor3 = C.Cream
 	list.AutomaticCanvasSize = Enum.AutomaticSize.Y
@@ -249,8 +258,48 @@ local function buildBag(screen: ScreenGui)
 		end
 	end)
 	place.holder.AnchorPoint = Vector2.new(0, 1)
-	place.holder.Position = UDim2.new(0, S.L, 1, -S.L)
+	place.holder.Position = UDim2.new(0, S.L, 1, -168)
 	ui.place = place
+	local chooser = UIKit.panel(bag, T.PanelStrong)
+	chooser.Name = "ChoixRaccourci"
+	chooser.Position = UDim2.new(0, S.L, 1, -76)
+	chooser.Size = UDim2.new(1, -2 * S.L, 0, 60)
+	chooser.Visible = false
+	ui.chooser = chooser
+	ui.chooseMode = "Assign"
+	for index = 1, 10 do
+		local pick = UIKit.button(chooser, tostring(index % 10), "Tab", UDim2.fromOffset(30, 44), function()
+			if not chosen then return end
+			local origin = table.find(ArenaStore.hotbar, chosen)
+			if ui.chooseMode == "Swap" and origin then ArenaStore.hotbarAction("Swap", origin, index)
+			else ArenaStore.hotbarAction("Assign", chosen, index) end
+			chooser.Visible = false
+		end)
+		pick.holder.Name = `Choisir{index}`
+		pick.holder.Position = UDim2.fromOffset(5 + (index - 1) * 32, 8)
+		pick.label.TextSize = 16
+	end
+	local assign = UIKit.button(bag, "Placer dans le raccourci", "Secondary", UDim2.new(1, -2 * S.L, 0, 44), function()
+		ui.chooseMode = "Assign"
+		chooser.Visible = not chooser.Visible
+	end)
+	assign.holder.Name, assign.holder.Position = "AssignerRaccourci", UDim2.new(0, S.L, 1, -160)
+	assign.label.TextSize = 18
+	ui.assign = assign
+	local clear = UIKit.button(bag, "Retirer du raccourci", "Secondary", UDim2.fromOffset(218, 44), function()
+		local slot = chosen and table.find(ArenaStore.hotbar, chosen)
+		if slot then ArenaStore.hotbarAction("Clear", slot) end
+	end)
+	clear.holder.Name, clear.holder.Position = "RetirerRaccourci", UDim2.new(0, S.L, 1, -112)
+	clear.label.TextSize = 16
+	ui.clear = clear
+	local swap = UIKit.button(bag, "Échanger", "Secondary", UDim2.fromOffset(108, 44), function()
+		ui.chooseMode = "Swap"
+		chooser.Visible = not chooser.Visible
+	end)
+	swap.holder.Position = UDim2.new(0, S.L + 226, 1, -112)
+	swap.label.TextSize = 16
+	ui.swap = swap
 end
 
 local function card(hero: ArenaStore.HeroView): CardUI
@@ -284,10 +333,15 @@ local function card(hero: ArenaStore.HeroView): CardUI
 	placed.AnchorPoint = Vector2.new(0.5, 0.5)
 	placed.Position = UDim2.fromScale(0.5, 0)
 	frame.Activated:Connect(function()
+		if Drag.suppressed() then return end
 		chosen = hero.Id
 		ArenaStore.notify()
 	end)
-	local entry = { frame = frame, stroke = stroke, placed = placed }
+	local shortcut = UIKit.text(frame, "", 13)
+	shortcut.Position = UDim2.new(0, 0, 1, -18)
+	shortcut.Size = UDim2.new(1, 0, 0, 18)
+	Drag.bind(frame, function() return { id = hero.Id } end)
+	local entry = { frame = frame, stroke = stroke, placed = placed, shortcut = shortcut }
 	cards[hero.Id] = entry
 	return entry
 end
@@ -312,9 +366,17 @@ local function renderBag()
 		entry.stroke.Color = if selected then C.Selected else UITheme.Stroke.Color
 		entry.stroke.Thickness = if selected then UITheme.Stroke.Thick else UITheme.Stroke.Regular
 		entry.placed.Visible = placed[id] == true
+		local slot = table.find(ArenaStore.hotbar, id)
+		entry.shortcut.Text = if slot then `Raccourci {slot % 10}` else "Collection"
 	end
 	ui.place.setEnabled(chosen ~= nil and not ArenaStore.inCombat())
 	local heroes = currentTab == "Heroes"
+	ui.assign.setEnabled(chosen ~= nil and not ArenaStore.busy)
+	local assigned = chosen ~= nil and table.find(ArenaStore.hotbar, chosen) ~= nil
+	ui.clear.setEnabled(assigned and not ArenaStore.busy)
+	ui.swap.setEnabled(assigned and not ArenaStore.busy)
+	ui.assign.holder.Visible, ui.clear.holder.Visible, ui.swap.holder.Visible = heroes, heroes, heroes
+	if not heroes or not chosen then ui.chooser.Visible = false end
 	for id, tab in ui.tabs do
 		tab.setSelected(id == currentTab)
 	end
@@ -348,6 +410,9 @@ function HeroBarController:Start()
 	buildHotbar(screen)
 	buildBag(screen)
 	screen.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+	local frames = {}
+	for index, slot in slots do frames[index] = slot.frame end
+	Drag.start(screen, frames)
 
 	UserInputService.InputBegan:Connect(function(input: InputObject, processed: boolean)
 		if processed then

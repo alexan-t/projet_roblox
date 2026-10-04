@@ -8,15 +8,15 @@ export type HeroInfo = { Name: string, PlaceholderIcon: string, Order: number }
 local HeroConfig = {
 	-- Nombre de raccourcis de la hotbar (touches 1 à 9 puis 0).
 	HotbarSize = 10,
-	-- Affichage des héros connus. PlaceholderIcon : emoji PROVISOIRE, pas une solution finale ;
+	-- Affichage des héros connus. PlaceholderIcon : monogramme PROVISOIRE, pas une solution finale ;
 	-- à remplacer par les icônes dessinées du design system (docs/UI_DESIGN_SYSTEM.md § 7).
 	Heroes = table.freeze({
-		Archer = table.freeze({ Name = "Archer", PlaceholderIcon = "🏹", Order = 1 }),
-		Epeiste = table.freeze({ Name = "Épéiste", PlaceholderIcon = "⚔️", Order = 2 }),
-		Barbare = table.freeze({ Name = "Barbare", PlaceholderIcon = "🪓", Order = 3 }),
-		Paladin = table.freeze({ Name = "Paladin", PlaceholderIcon = "🛡️", Order = 4 }),
-		Magicien = table.freeze({ Name = "Magicien", PlaceholderIcon = "🧙", Order = 5 }),
-		Tireur = table.freeze({ Name = "Tireur", PlaceholderIcon = "🎯", Order = 6 }),
+		Archer = table.freeze({ Name = "Archer", PlaceholderIcon = "AR", Order = 1 }),
+		Epeiste = table.freeze({ Name = "Épéiste", PlaceholderIcon = "EP", Order = 2 }),
+		Barbare = table.freeze({ Name = "Barbare", PlaceholderIcon = "BA", Order = 3 }),
+		Paladin = table.freeze({ Name = "Paladin", PlaceholderIcon = "PA", Order = 4 }),
+		Magicien = table.freeze({ Name = "Magicien", PlaceholderIcon = "MA", Order = 5 }),
+		Tireur = table.freeze({ Name = "Tireur", PlaceholderIcon = "TI", Order = 6 }),
 	}) :: { [string]: HeroInfo },
 	-- Kit de départ : donné une fois à un joueur qui ne possède encore aucun héros.
 	StarterHeroes = table.freeze({ "Archer", "Epeiste", "Barbare", "Paladin", "Magicien", "Tireur" }),

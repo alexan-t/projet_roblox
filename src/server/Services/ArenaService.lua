@@ -1,425 +1,251 @@
 --!strict
--- Arène de test (voir docs/ARENA_PROTOTYPE.md) : préparation directement dans le monde.
--- Le joueur prend un héros en main (hotbar ou collection, côté client) et le pose sur une case
--- "CaseHeros" : Remotes.ArenaAction("Place", case, HeroInstanceId). Il peut le déplacer (Place sur
--- une autre case) ou le retirer ("Remove", case). Jusqu'à 4 héros. Près de l'étendard, E
--- ("Combattre") démarre le combat aussitôt. Quitter pendant le combat : ArenaAction("Leave").
--- Les règles sont dans ArenaPrep (pur, testé) ; ce service gère le monde : modèles, prompt,
--- remotes, géométrie passée à CombatService. Le client ne décide jamais d'un placement.
-
+-- Une préparation et un monde par propriétaire. Aucun chemin vers la sandbox.
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
-
-local Log = require(ReplicatedStorage.Shared.Utils.Log)
-local ArenaConfig = require(ReplicatedStorage.Shared.Config.ArenaConfig)
+local Config = require(ReplicatedStorage.Shared.Config.ArenaConfig)
 local ArenaRules = require(script.Parent.Parent.Arena.ArenaRules)
 local ArenaPrep = require(script.Parent.Parent.Arena.ArenaPrep)
-local CombatService = require(script.Parent.CombatService)
+local PlotService = require(script.Parent.PlotService)
 local HeroService = require(script.Parent.HeroService)
 local ZoneService = require(script.Parent.ZoneService)
-
--- Objets du monde d'une préparation (dossier répliqué, mannequins).
-type World = {
-	prep: ArenaPrep.Prep,
-	folder: Folder,
-	heroes: Folder,
-	enemies: Folder,
-	loopWas: any,
-	shownPhase: ArenaPrep.Phase?,
-	shownFormation: string,
-}
-
-local SCOPE = "ArenaService"
-local ENEMY_CELLS = 9
--- Laisse PlotService poser le personnage sur son plot avant de le déplacer vers l'arène de test.
-local TEST_SPAWN_DELAY = 1
--- Attente maximale de l'attribution du plot (chargement des données) avant le déplacement de test.
-local PLOT_WAIT_TIMEOUT = 20
-
+local CombatService = require(script.Parent.CombatService)
+local StageConfig = require(script.Parent.Parent.Config.StageConfig)
 local ArenaService = {}
-
-local arena: Instance? = nil
-local poses: { [number]: BasePart } = {}
-local front: BasePart? = nil
-local stateEvent: RemoteEvent? = nil
 local manager: ArenaPrep.Manager
-local world: World? = nil
+local contexts: { [Player]: any } = {}
+local worlds: { [Player]: any } = {}
+local stateEvent: RemoteEvent
+local lastAction: { [Player]: number } = {}
+local stateVersion: { [Player]: number } = {}
 
-local function resolve(root: Instance, path: { string }): Instance?
-	local node: Instance? = root
-	for _, name in path do
-		node = if node then node:FindFirstChild(name) else nil
-	end
-	return node
-end
-
-local function findFront(root: Instance): BasePart?
-	local zones = root:FindFirstChild("Zones")
-	if not zones then
-		return nil
-	end
-	for _, zone in zones:GetChildren() do
-		if zone:GetAttribute("ZoneId") == ArenaConfig.Zone then
-			local sources = zone:FindFirstChild("SourcesEnnemis")
-			local part = sources and sources:FindFirstChild("FrontEnnemi")
-			return if part and part:IsA("BasePart") then part else nil
-		end
-	end
+local function context(player: Player): any
+	local c = contexts[player]
+	if c and PlotService:GetPlot(player) == c.plot and PlotService:GetOwner(c.plot) == player
+		and PlotService:GetRuntime(player) == c.runtime and c.arena.Parent == c.plot then return c end
 	return nil
 end
 
--- Clone un mannequin du design tel quel, pieds sur `feet`, tourné vers `lookAt`.
-local function spawnModel(templateName: string, parent: Instance, feet: Vector3, lookAt: Vector3, attributes: { [string]: any }?): Model?
+local function nearby(player: Player, part: BasePart): boolean
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	return root ~= nil and root:IsA("BasePart") and humanoid ~= nil and humanoid.Health > 0
+		and (root.Position - part.Position).Magnitude <= Config.InteractionDistance
+end
+
+local function spawnModel(templateName: string, parent: Instance, feet: Vector3, lookAt: Vector3, attributes: any): Model?
 	local assets = ReplicatedStorage:FindFirstChild("Assets")
-	local folder = assets and assets:FindFirstChild("Combat")
-	local template = folder and folder:FindFirstChild(templateName)
-	if not template or not template:IsA("Model") then
-		Log.warn(SCOPE, `Modèle introuvable : ReplicatedStorage.Assets.Combat.{templateName}`)
-		return nil
-	end
+	local templates = assets and assets:FindFirstChild("Combat")
+	local template = templates and templates:FindFirstChild(templateName)
+	if not template or not template:IsA("Model") then return nil end
 	local model = template:Clone()
-	local minY = math.huge
-	for _, part in model:GetDescendants() do
-		if part:IsA("BasePart") then
-			part.Anchored = true
-			part.CanCollide = false
-			part.CanTouch = false
-			minY = math.min(minY, part.Position.Y - part.Size.Y / 2)
+	for _, child in model:GetDescendants() do
+		if child:IsA("BaseScript") then child:Destroy()
+		elseif child:IsA("BasePart") then
+			child.Anchored, child.CanCollide, child.CanTouch = true, false, false
 		end
 	end
+	local box, size = model:GetBoundingBox()
 	local pivot = model:GetPivot()
-	local position = feet + Vector3.new(0, pivot.Position.Y - minY, 0)
-	local target = Vector3.new(lookAt.X, position.Y, lookAt.Z)
-	if (target - position).Magnitude < 1e-3 then
-		target = position + Vector3.new(0, 0, -1)
-	end
-	model:PivotTo(CFrame.lookAt(position, target))
-	-- HeroClass (icône discrète côté client), HeroInstanceId et Slot (sélection d'un héros posé).
-	for key, value in attributes or {} do
-		model:SetAttribute(key, value)
-	end
+	local position = feet + Vector3.new(0, pivot.Position.Y - box.Position.Y + size.Y / 2, 0)
+	model:PivotTo(CFrame.lookAt(position, Vector3.new(lookAt.X, position.Y, lookAt.Z)))
+	for key, value in attributes or {} do model:SetAttribute(key, value) end
 	model.Parent = parent
 	return model
 end
 
-local function heroFeet(pose: BasePart): Vector3
-	return Vector3.new(pose.Position.X, pose.Position.Y - pose.Size.Y / 2 + 0.1, pose.Position.Z)
+local function feet(pose: BasePart): Vector3
+	return pose.Position - Vector3.new(0, pose.Size.Y / 2 - 0.1, 0)
 end
 
--- Case 1..9 du 3x3 ennemi, découpé dans FrontEnnemi. Ligne 1 = côté héros, colonnes comme les cases héros.
-local function enemyFeet(part: BasePart, cell: number): Vector3
-	local column = (cell - 1) % 3
-	local row = (cell - 1) // 3
-	local offset = Vector3.new((column - 1) * part.Size.X / 3, 0, (1 - row) * part.Size.Z / 3)
-	local p = (part.CFrame * CFrame.new(offset)).Position
-	return Vector3.new(p.X, part.Position.Y - part.Size.Y / 2 + 0.1, p.Z)
+local function heroTemplate(heroId: string): string
+	return `Heros_{heroId}` -- modèles provisoires par classe, communs au preview
 end
 
-local function heroIdOf(player: Player, instanceId: string): string?
-	return (HeroService:GetCombatHero(player, instanceId))
+local function stageConfigOf(zone: number, stage: number): any
+	local zones = StageConfig.Zones
+	local entry = zones and zones[zone]
+	return entry and entry.Stages and entry.Stages[stage] or nil
 end
 
-local function stateOf(player: Player, message: string?): { [string]: any }
-	local prep = manager.current
-	if not prep or prep.player ~= player then
-		return { Phase = "Closed", MaxHeroes = ArenaConfig.MaxHeroes, Message = message }
-	end
-	local session = ZoneService:GetSession(player)
+local function stateOf(player: Player, message: string?): any
+	local prep = manager.preps[player]
 	local formation = {}
-	for slot, instanceId in prep.formation do
-		table.insert(formation, { Slot = slot, HeroInstanceId = instanceId, HeroId = heroIdOf(player, instanceId) })
+	if prep then
+		for slot, instanceId in prep.formation do
+			table.insert(formation, { Slot = slot, HeroInstanceId = instanceId, HeroId = HeroService:GetCombatHero(player, instanceId) })
+		end
 	end
-	return {
-		Phase = prep.phase,
-		Zone = ArenaConfig.Zone,
-		Stage = ArenaConfig.Stage,
-		Enemies = if session then ArenaRules.summarize(session.Config) else {},
-		Formation = formation,
-		MaxHeroes = ArenaConfig.MaxHeroes,
-		Message = message,
-	}
+	-- Stage réellement courant (session) ou stage que l'arène lancera ; ennemis agrégés, sans position.
+	local session = if prep then ZoneService:GetSession(player) else nil
+	local zone = if session then session.Zone else Config.Zone
+	local stageNumber = if session then session.Stage else Config.Stage
+	local stage = if session then session.Config else stageConfigOf(zone, stageNumber)
+	-- Numéro croissant par joueur : le client ignore un état plus ancien que celui qu'il a déjà
+	-- (la lecture initiale GetArenaState peut arriver après un ArenaState plus récent).
+	stateVersion[player] = (stateVersion[player] or 0) + 1
+	return { Version = stateVersion[player], Phase = if prep then prep.phase else "Closed", Formation = formation,
+		MaxHeroes = Config.MaxHeroes, Zone = zone, Stage = stageNumber,
+		Enemies = if stage then ArenaRules.summarize(stage) else {},
+		Available = context(player) ~= nil, Message = message }
 end
 
 local function send(player: Player, message: string?)
-	local event = stateEvent
-	if event and player.Parent == Players then
-		event:FireClient(player, stateOf(player, message))
-	end
+	if player.Parent == Players then stateEvent:FireClient(player, stateOf(player, message)) end
 end
 
-local function formationKey(prep: ArenaPrep.Prep): string
-	local parts = {}
-	for slot = 1, ArenaRules.GRID_CELLS do
-		table.insert(parts, prep.formation[slot] or "")
-	end
-	return table.concat(parts, "|")
-end
-
-local function rebuildHeroes(w: World)
+local function rebuild(player: Player, w: any, c: any)
 	w.heroes:ClearAllChildren()
-	local facing = if front then front.Position else Vector3.zero
-	for slot, instanceId in w.prep.formation do
-		local pose = poses[slot]
-		if pose then
-			spawnModel(ArenaConfig.HeroTemplate, w.heroes, heroFeet(pose), facing, {
-				HeroClass = heroIdOf(w.prep.player, instanceId),
-				HeroInstanceId = instanceId,
-				Slot = slot,
-			})
-		end
+	for slot, id in w.prep.formation do
+		local heroId = HeroService:GetCombatHero(player, id)
+		if heroId then spawnModel(heroTemplate(heroId), w.heroes, feet(c.poses[slot]), c.front.Position,
+			{ HeroClass = heroId, HeroInstanceId = id, Slot = slot, OwnerUserId = player.UserId }) end
 	end
 end
 
--- Aligne le monde sur la préparation courante (création, mannequins, rangement).
-local function sync()
-	local prep = manager.current
-	local w = world
-	local root = arena
-	if w and w.prep ~= prep then
-		world = nil
+local function sync(player: Player)
+	local prep, c, w = manager.preps[player], context(player), worlds[player]
+	if w and (w.prep ~= prep or not c or w.folder.Parent ~= c.runtime) then
 		w.folder:Destroy()
-		if root then
-			root:SetAttribute("IntroDemoBoucle", w.loopWas)
-		end
-		w = nil
+		worlds[player], w = nil, nil
 	end
-	if prep and not w and root then
+	if prep and c and not w then
 		local folder = Instance.new("Folder")
-		folder.Name = `PreparationCombat_{prep.player.UserId}`
-		local heroes = Instance.new("Folder")
-		heroes.Name = "Heros"
-		heroes.Parent = folder
-		local enemies = Instance.new("Folder")
-		enemies.Name = "Ennemis"
-		enemies.Parent = folder
-		folder.Parent = Workspace
-		w = { prep = prep, folder = folder, heroes = heroes, enemies = enemies, loopWas = root:GetAttribute("IntroDemoBoucle"), shownPhase = nil, shownFormation = "" }
-		-- L'intro de démonstration en boucle réutilise les mêmes cases : suspendue (runtime seulement).
-		root:SetAttribute("IntroDemoBoucle", false)
-		world = w
+		folder.Name = "PreparationCombat"
+		folder:SetAttribute("OwnerUserId", player.UserId)
+		local heroes, enemies = Instance.new("Folder"), Instance.new("Folder")
+		heroes.Name, enemies.Name = "Heros", "Ennemis"
+		heroes.Parent, enemies.Parent = folder, folder
+		folder.Parent = c.runtime
+		w = { prep = prep, folder = folder, heroes = heroes, enemies = enemies }
+		worlds[player] = w
 	end
-	if w and w.prep.phase == "Placement" then
-		local key = formationKey(w.prep)
-		if w.shownPhase ~= "Placement" or w.shownFormation ~= key then
-			rebuildHeroes(w)
-			w.shownFormation = key
-		end
-	end
-	if w then
-		w.shownPhase = w.prep.phase
-	end
-	if root then
-		-- Visible par tous les clients : grise les cases quand l'arène est prise par un autre joueur.
-		root:SetAttribute("Occupant", if prep then prep.player.UserId else nil)
-	end
+	if w and prep.phase == "Placement" then rebuild(player, w, c) end
 end
 
--- Passe la formation et la géométrie de l'arène à CombatService, qui crée les unités.
 local function startCombat(player: Player, sessionId: number, classes: { [number]: string }): (number?, string?)
-	local part = front
-	local w = world
-	if not part or not w then
-		return nil, "arène indisponible"
-	end
+	local c, w = context(player), worlds[player]
+	if not c or not w then return nil, "arène indisponible" end
 	local heroPositions, enemyPositions = {}, {}
-	for slot, pose in poses do
-		heroPositions[slot] = heroFeet(pose)
-	end
-	for cell = 1, ENEMY_CELLS do
-		enemyPositions[cell] = enemyFeet(part, cell)
+	for slot, pose in c.poses do heroPositions[slot] = feet(pose) end
+	for cell = 1, 9 do
+		local offset = Vector3.new(((cell - 1) % 3 - 1) * c.front.Size.X / 3, -c.front.Size.Y / 2 + 0.1, (1 - (cell - 1) // 3) * c.front.Size.Z / 3)
+		enemyPositions[cell] = c.front.CFrame:PointToWorldSpace(offset)
 	end
 	local formation = table.clone(w.prep.formation)
-	w.heroes:ClearAllChildren() -- les mannequins de placement cèdent la place aux unités de combat
-	local combatId, reason = CombatService:StartCombat(player, sessionId, classes, {
-		HeroPositions = heroPositions,
-		EnemyPositions = enemyPositions,
-		SpawnUnit = function(unit, feet: Vector3, lookAt: Vector3): Model?
-			if unit.Team == "Ally" then
-				return spawnModel(ArenaConfig.HeroTemplate, w.heroes, feet, lookAt, {
-					HeroClass = unit.TypeId,
-					HeroInstanceId = if unit.Slot then formation[unit.Slot] else nil,
-				})
-			end
-			local template = ArenaConfig.EnemyTemplates[unit.TypeId]
-			return if template then spawnModel(template, w.enemies, feet, lookAt, nil) else nil
+	w.heroes:ClearAllChildren()
+	return CombatService:StartCombat(player, sessionId, classes, {
+		HeroPositions = heroPositions, EnemyPositions = enemyPositions,
+		SpawnUnit = function(unit, position: Vector3, lookAt: Vector3): Model?
+			if context(player) ~= c or worlds[player] ~= w then return nil end
+			local ally = unit.Team == "Ally"
+			local template = if ally then heroTemplate(unit.TypeId) else Config.EnemyTemplates[unit.TypeId]
+			return if template then spawnModel(template, if ally then w.heroes else w.enemies, position, lookAt,
+				{ OwnerUserId = player.UserId, HeroClass = if ally then unit.TypeId else nil,
+					HeroInstanceId = if ally and unit.Slot then formation[unit.Slot] else nil }) else nil
 		end,
 	})
-	if not combatId then
-		w.shownPhase = nil -- les mannequins de placement seront reposés
-	end
-	return combatId, reason
 end
 
-local function onAction(player: Player, action: any, slot: any, instanceId: any): (boolean, string?)
-	local ok, reason
-	if action == "Place" then
-		ok, reason = manager:place(player, slot, instanceId)
-	elseif action == "Remove" then
-		ok, reason = manager:remove(player, slot)
-	elseif action == "Leave" then
-		ok = manager:leave(player)
-		reason = if ok then nil else "aucun combat en cours"
-	else
-		return false, "action inconnue"
-	end
-	sync()
-	send(player, reason)
-	return ok, reason
+local function cleanup(player: Player)
+	manager:leave(player)
+	sync(player)
+	contexts[player] = nil
 end
 
-local function onPrompt(player: Player)
-	local ok, reason = manager:fight(player)
-	sync()
-	send(player, if ok then nil else reason)
+local function setup(player: Player, plot: Model)
+	cleanup(player)
+	local runtime = PlotService:GetRuntime(player)
+	local arena = plot:FindFirstChild(Config.ArenaName)
+	local emplacements = arena and arena:FindFirstChild("Emplacements")
+	local heroes = emplacements and emplacements:FindFirstChild("Heros")
+	local marker = emplacements and emplacements:FindFirstChild("PointEtendard")
+	local front = arena and arena:FindFirstChild("FrontEnnemi", true)
+	if not runtime or not heroes or not marker or not marker:IsA("BasePart") or not front or not front:IsA("BasePart") then
+		warn(`ArenaService : repères manquants dans {plot:GetFullName()}`)
+		return
+	end
+	local poses = {}
+	for _, case in heroes:GetChildren() do
+		local slot, pose = case:GetAttribute("Slot"), case:FindFirstChild("PointDePose")
+		if ArenaRules.isSlot(slot) and pose and pose:IsA("BasePart") then poses[slot] = pose end
+	end
+	for slot = 1, 9 do if not poses[slot] then warn(`ArenaService : case {slot} absente`); return end end
+	-- Plus de prompt « Combattre » : E sert au placement (prompt local du client sur la dalle la
+	-- plus proche) et le combat démarre par le bouton Prêt (ArenaAction "Ready").
+	contexts[player] = { plot = plot, runtime = runtime, arena = arena, poses = poses, front = front }
+	send(player)
 end
 
 function ArenaService:Init()
-	manager = ArenaPrep.new({
-		maxHeroes = ArenaConfig.MaxHeroes,
-		name = function(player: Player): string
-			return player.Name
-		end,
-		startStage = function(player: Player): (number?, string?)
-			local session, reason = ZoneService:StartStage(player, ArenaConfig.Zone, ArenaConfig.Stage)
+	manager = ArenaPrep.new({ maxHeroes = Config.MaxHeroes, name = function(p) return p.Name end,
+		startStage = function(player)
+			local session, reason = ZoneService:StartStage(player, Config.Zone, Config.Stage)
 			return if session then session.Id else nil, reason
 		end,
-		sessionAlive = function(player: Player, sessionId: number): boolean
+		sessionAlive = function(player, id)
 			local session = ZoneService:GetSession(player)
-			return session ~= nil and session.Id == sessionId
+			return context(player) ~= nil and session ~= nil and session.Id == id
 		end,
-		cancelStage = function(player: Player)
-			ZoneService:CancelStage(player)
-		end,
-		heroOf = function(player: Player, instanceId: any): (string?, string?)
-			return HeroService:GetCombatHero(player, instanceId)
-		end,
-		startCombat = startCombat,
-		cancelCombat = function(player: Player)
-			CombatService:CancelCombat(player)
-		end,
+		cancelStage = function(player) ZoneService:CancelStage(player) end,
+		heroOf = function(player, id) return HeroService:GetCombatHero(player, id) end,
+		startCombat = startCombat, cancelCombat = function(player) CombatService:CancelCombat(player) end,
 	})
-
-	local found = resolve(Workspace, ArenaConfig.ArenaPath)
-	if not found then
-		Log.warn(SCOPE, `Arène de test Workspace.{table.concat(ArenaConfig.ArenaPath, ".")} introuvable ; prototype désactivé`)
-		return
-	end
-	local cases = found:FindFirstChild("Emplacements")
-	cases = cases and cases:FindFirstChild("Heros")
-	if cases then
-		for _, case in cases:GetChildren() do
-			local slot = case:GetAttribute("Slot")
-			local pose = case:FindFirstChild("PointDePose")
-			if typeof(slot) == "number" and pose and pose:IsA("BasePart") then
-				poses[slot] = pose
-			end
-		end
-	end
-	front = findFront(found)
-	local slots = 0
-	for slot = 1, ArenaRules.GRID_CELLS do
-		if poses[slot] then
-			slots += 1
-		end
-	end
-	if slots ~= ArenaRules.GRID_CELLS or not front then
-		Log.warn(SCOPE, `Arène de test incomplète ({slots}/9 cases héros, FrontEnnemi {if front then "ok" else "absent"}) ; prototype désactivé`)
-		table.clear(poses)
-		front = nil
-		return
-	end
-	arena = found
 end
 
 function ArenaService:Start()
-	local root = arena
-	local marker = if root then resolve(root, { "Emplacements", "PointEtendard" }) else nil
-	if not root or not marker then
-		return
-	end
-	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-	if not remotes then
-		remotes = Instance.new("Folder")
-		remotes.Name = "Remotes"
-		remotes.Parent = ReplicatedStorage
-	end
-	assert(remotes)
-	local event = Instance.new("RemoteEvent")
-	event.Name = "ArenaState"
-	event.Parent = remotes
-	stateEvent = event
+	local remotes = ReplicatedStorage:WaitForChild("Remotes")
+	stateEvent = Instance.new("RemoteEvent")
+	stateEvent.Name, stateEvent.Parent = "ArenaState", remotes
+	local get = Instance.new("RemoteFunction")
+	get.Name = "GetArenaState"
+	get.OnServerInvoke = function(player) return stateOf(player) end
+	get.Parent = remotes
 	local action = Instance.new("RemoteFunction")
 	action.Name = "ArenaAction"
-	action.OnServerInvoke = onAction
-	action.Parent = remotes
-
-	-- E près de l'étendard : combat immédiat avec les héros posés.
-	local prompt = Instance.new("ProximityPrompt")
-	prompt.Name = "Combattre"
-	prompt.ActionText = "Combattre"
-	prompt.ObjectText = `Stage {ArenaConfig.Zone}-{ArenaConfig.Stage}`
-	prompt.HoldDuration = 0
-	prompt.MaxActivationDistance = 45
-	prompt.RequiresLineOfSight = false
-	prompt.Triggered:Connect(onPrompt)
-	prompt.Parent = marker
-
-	-- Prototype, Studio uniquement : apparaître directement à côté de l'arène de test.
-	local spawnPath = ArenaConfig.TestSpawn
-	local spawnMarker = if spawnPath and RunService:IsStudio() then resolve(Workspace, spawnPath) else nil
-	if spawnMarker and spawnMarker:IsA("BasePart") then
-		local spawnPart: BasePart = spawnMarker
-		local function onCharacter(player: Player, character: Model)
-			task.spawn(function()
-				-- PlotService pose le personnage sur son plot à l'attribution (après le chargement des
-				-- données, parfois plusieurs secondes) : attendre l'attribution, puis passer après lui.
-				local deadline = os.clock() + PLOT_WAIT_TIMEOUT
-				while player.Parent == Players and player:GetAttribute("PlotId") == nil and os.clock() < deadline do
-					task.wait(0.2)
-				end
-				task.wait(TEST_SPAWN_DELAY)
-				if player.Character == character and character.Parent and character:FindFirstChild("HumanoidRootPart") then
-					character:PivotTo(CFrame.new(spawnPart.Position + Vector3.new(0, spawnPart.Size.Y / 2 + 3, 0)))
-				end
-			end)
-		end
-		local function watchPlayer(player: Player)
-			player.CharacterAdded:Connect(function(character: Model)
-				onCharacter(player, character)
-			end)
-			if player.Character then
-				onCharacter(player, player.Character)
-			end
-		end
-		Players.PlayerAdded:Connect(watchPlayer)
-		for _, player in Players:GetPlayers() do
-			watchPlayer(player)
-		end
+	action.OnServerInvoke = function(player, verb, slot, instanceId)
+		local now = os.clock()
+		if now - (lastAction[player] or -math.huge) < 0.12 then return false, "Patiente un instant" end
+		lastAction[player] = now
+		local c = context(player)
+		if not c then return false, "Ton arène est indisponible" end
+		local ok, reason
+		if verb == "Leave" then ok = manager:leave(player)
+		elseif verb == "Ready" then ok, reason = manager:ready(player)
+		elseif verb == "Place" or verb == "Remove" then
+			if not ArenaRules.isSlot(slot) then return false, "case invalide" end
+			if not nearby(player, c.poses[slot]) then return false, "Approche-toi de ton arène" end
+			if verb == "Place" then ok, reason = manager:place(player, slot, instanceId)
+			else ok, reason = manager:remove(player, slot) end
+		else return false, "action inconnue" end
+		sync(player)
+		send(player)
+		return ok, reason, stateOf(player)
 	end
-
-	-- Fin de combat : résultat affiché, arène rangée (ZoneService a déjà été prévenu).
-	CombatService:OnCombatEnded(function(player: Player, combatId: number, result: string)
-		manager:combatEnded(player, combatId)
-		sync()
-		send(player, if result == "Victory" then "Victoire !" else "Défaite…")
-	end)
-
-	Players.PlayerRemoving:Connect(function(player: Player)
-		if manager:release(player) then
-			sync()
+	action.Parent = remotes
+	PlotService:OnPlotAssigned(setup)
+	CombatService:OnCombatEnded(function(player, id, result)
+		if manager:combatEnded(player, id) then
+			sync(player)
+			send(player, if result == "Victory" then "Victoire !" else "Défaite…")
 		end
 	end)
-
-	-- Session de stage terminée ailleurs (debug, perte de profil) : l'arène est rangée.
+	local function watch(player: Player)
+		player.CharacterRemoving:Connect(function()
+			manager:leave(player); sync(player); send(player)
+		end)
+	end
+	Players.PlayerAdded:Connect(watch)
+	for _, player in Players:GetPlayers() do watch(player) end
+	Players.PlayerRemoving:Connect(function(player) cleanup(player); lastAction[player] = nil; stateVersion[player] = nil end)
 	task.spawn(function()
 		while true do
 			task.wait(1)
-			local prep = manager.current
-			if prep and manager:check() then
-				sync()
-				send(prep.player, "Stage terminé")
+			for player in contexts do
+				if not context(player) then cleanup(player); send(player, "Plot indisponible")
+				elseif manager:check(player) then
+					CombatService:CancelCombat(player); sync(player); send(player, "Stage terminé")
+				end
 			end
 		end
 	end)

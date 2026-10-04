@@ -22,6 +22,8 @@ ArenaStore.changed = Instance.new("BindableEvent")
 ArenaStore.toast = Instance.new("BindableEvent")
 
 local actionRemote: RemoteFunction? = nil
+local hotbarRemote: RemoteFunction? = nil
+ArenaStore.busy = false
 local started = false
 
 function ArenaStore.notify()
@@ -51,11 +53,20 @@ function ArenaStore.heroInfo(instanceId: string?): (HeroView?, HeroConfig.HeroIn
 end
 
 -- Envoie une demande à ArenaService. Sa réponse (état + refus éventuel) arrive par ArenaState.
-function ArenaStore.request(action: string, ...: any)
+function ArenaStore.request(action: string, ...: any): boolean
 	local remote = actionRemote
-	if remote then
-		remote:InvokeServer(action, ...)
+	if not remote or ArenaStore.busy then return false end
+	ArenaStore.busy = true
+	local held = ArenaStore.placement.held
+	local success, accepted, reason = pcall(remote.InvokeServer, remote, action, ...)
+	ArenaStore.busy = false
+	if success and accepted then
+		PlacementState.accept(ArenaStore.placement, held, true)
+	else
+		ArenaStore.toast:Fire(if success then reason or "Action refusée" else "Connexion interrompue, réessaie")
 	end
+	ArenaStore.notify()
+	return success and accepted == true
 end
 
 local function applyHeroes(view: any)
@@ -70,7 +81,26 @@ local function applyHeroes(view: any)
 	ArenaStore.notify()
 end
 
+function ArenaStore.hotbarAction(action: string, first: any, second: any): boolean
+	local remote = hotbarRemote
+	if not remote or ArenaStore.busy then return false end
+	ArenaStore.busy = true
+	local success, accepted, reason, view = pcall(remote.InvokeServer, remote, action, first, second)
+	ArenaStore.busy = false
+	if success and view then applyHeroes(view) end
+	if not success or not accepted then
+		ArenaStore.toast:Fire(if success then reason or "Action refusée" else "Connexion interrompue, réessaie")
+	end
+	ArenaStore.notify()
+	return success and accepted == true
+end
+
 local function applyArena(state: { [string]: any })
+	-- Un état plus ancien (réponse initiale arrivée en retard) ne remplace jamais un état plus récent.
+	local current = ArenaStore.arena.Version
+	if typeof(state) ~= "table" or (typeof(current) == "number" and typeof(state.Version) == "number" and state.Version < current) then
+		return
+	end
 	ArenaStore.arena = state
 	PlacementState.setLocked(ArenaStore.placement, state.Phase == "Combat")
 	PlacementState.syncFormation(ArenaStore.placement, ArenaStore.formation())
@@ -98,6 +128,8 @@ function ArenaStore.start()
 		end)
 	end
 	local action = remotes:WaitForChild("ArenaAction", 30)
+	local edit = remotes:WaitForChild("HotbarAction", 30)
+	if edit and edit:IsA("RemoteFunction") then hotbarRemote = edit end
 	local state = remotes:WaitForChild("ArenaState", 30)
 	if action and action:IsA("RemoteFunction") then
 		actionRemote = action
@@ -105,6 +137,8 @@ function ArenaStore.start()
 	if state and state:IsA("RemoteEvent") then
 		state.OnClientEvent:Connect(applyArena)
 	end
+	local getState = remotes:WaitForChild("GetArenaState", 30)
+	if getState and getState:IsA("RemoteFunction") then applyArena(getState:InvokeServer()) end
 end
 
 return ArenaStore

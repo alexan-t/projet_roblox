@@ -6,6 +6,32 @@ local HeroRules = {}
 
 HeroRules.EMPTY = ""
 
+local function validSlot(slot: any, size: number): boolean
+	return typeof(slot) == "number" and slot >= 1 and slot <= size and slot % 1 == 0
+end
+
+-- Assign depuis la collection = remplacement ; Swap depuis la hotbar = échange.
+-- Ne modifie jamais Heroes, uniquement ses raccourcis persistés.
+function HeroRules.hotbarAction(data: any, size: number, action: any, first: any, second: any): (boolean, string?)
+	if action == "Assign" then
+		if not validSlot(second, size) then return false, "raccourci invalide" end
+		if typeof(first) ~= "string" or not data.Heroes[first] then return false, "héros non possédé" end
+		for slot = 1, size do
+			if data.Hotbar[slot] == first then data.Hotbar[slot] = HeroRules.EMPTY end
+		end
+		data.Hotbar[second] = first
+	elseif action == "Clear" then
+		if not validSlot(first, size) then return false, "raccourci invalide" end
+		data.Hotbar[first] = HeroRules.EMPTY
+	elseif action == "Swap" then
+		if not validSlot(first, size) or not validSlot(second, size) then return false, "raccourci invalide" end
+		data.Hotbar[first], data.Hotbar[second] = data.Hotbar[second], data.Hotbar[first]
+	else
+		return false, "action inconnue"
+	end
+	return true, nil
+end
+
 -- Hotbar valide : exactement `size` cases, chacune "" ou un exemplaire possédé, sans doublon.
 -- Renvoie true si la hotbar a dû être corrigée.
 function HeroRules.normalizeHotbar(data: any, size: number): boolean

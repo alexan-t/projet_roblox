@@ -1,7 +1,7 @@
 --!strict
 -- Héros possédés et hotbar (voir docs/HEROES.md). Partie Alpha de HeroService (#10) :
 -- kit de départ, ajout automatique à la hotbar, vérification de possession pour l'arène.
--- Pas encore d'invocation, de niveaux ni d'édition manuelle de la hotbar.
+-- Édition manuelle autoritaire de la hotbar ; invocation et niveaux hors scope.
 -- Le client lit sa collection (Remotes.GetHeroes) et reçoit les changements (Remotes.HeroesChanged).
 
 local HttpService = game:GetService("HttpService")
@@ -20,6 +20,15 @@ local SCOPE = "HeroService"
 local HeroService = {}
 
 local changedEvent: RemoteEvent? = nil
+local lastAction: { [Player]: number } = {}
+
+function HeroService:HotbarAction(player: Player, action: any, first: any, second: any): (boolean, string?)
+	local data = DataService:GetData(player)
+	if player.Parent ~= Players or not data or player:GetAttribute("DataLoaded") ~= true then
+		return false, "données non chargées"
+	end
+	return HeroRules.hotbarAction(data, HeroConfig.HotbarSize, action, first, second)
+end
 
 local function newId(): string
 	return "H_" .. HttpService:GenerateGUID(false)
@@ -84,6 +93,19 @@ function HeroService:Start()
 		return if data then HeroRules.view(data) else nil
 	end
 	get.Parent = remotes
+	local edit = Instance.new("RemoteFunction")
+	edit.Name = "HotbarAction"
+	edit.OnServerInvoke = function(player: Player, action: any, first: any, second: any)
+		local now = os.clock()
+		if now - (lastAction[player] or -math.huge) < 0.1 then return false, "réessaie dans un instant" end
+		lastAction[player] = now
+		local ok, reason = self:HotbarAction(player, action, first, second)
+		if ok then push(player) end
+		local data = DataService:GetData(player)
+		return ok, reason, if data then HeroRules.view(data) else nil
+	end
+	edit.Parent = remotes
+	Players.PlayerRemoving:Connect(function(player) lastAction[player] = nil end)
 
 	DataService:OnPlayerReady(function(player: Player, data: any)
 		HeroRules.normalizeHotbar(data, HeroConfig.HotbarSize)

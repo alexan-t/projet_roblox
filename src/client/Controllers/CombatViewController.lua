@@ -52,7 +52,7 @@ end
 local views: { [number]: View } = {}
 
 local function folder(): Instance?
-	return Workspace:FindFirstChild(`PreparationCombat_{Players.LocalPlayer.UserId}`)
+	return require(script.Parent.Parent.Arena.PlotView).world()
 end
 
 local function findModel(unitId: number): Model?
@@ -306,9 +306,9 @@ local function watchFolder(root: Instance)
 end
 
 function CombatViewController:Start()
-	local name = `PreparationCombat_{Players.LocalPlayer.UserId}`
-	Workspace.ChildAdded:Connect(function(child: Instance)
-		if child.Name == name then
+	local name = "PreparationCombat"
+	Workspace.DescendantAdded:Connect(function(child: Instance)
+		if child.Name == name and child:GetAttribute("OwnerUserId") == Players.LocalPlayer.UserId then
 			watchFolder(child)
 		end
 	end)
