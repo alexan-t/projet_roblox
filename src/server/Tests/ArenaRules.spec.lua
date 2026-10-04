@@ -89,6 +89,44 @@ return function(ArenaRules: any, stageConfig: any, arenaConfig: any)
 		end
 	end)
 
+	-- Deux arènes de plots voisins : A autour de (0, 0), B autour de (163, 0) (écart mesuré en Studio).
+	local function grid(ox: number): any
+		local poses = {}
+		for slot = 1, 9 do poses[slot] = { x = ox + ((slot - 1) % 3) * 10, z = ((slot - 1) // 3) * 10 } end
+		return poses
+	end
+	local posesA, posesB = grid(0), grid(163)
+	local zoneA = ArenaRules.zone(posesA, 10)
+	local zoneB = ArenaRules.zone(posesB, 10)
+
+	test("zone: circle around the 9 tiles plus margin", function()
+		assert(zoneA and zoneA.center.x == 10 and zoneA.center.z == 10)
+		assert(math.abs(zoneA.radius - (math.sqrt(200) + 10)) < 1e-6)
+		assert(ArenaRules.zone({}, 10) == nil, "no tiles, no zone")
+	end)
+
+	test("A acts on its own arena only from inside its zone and within reach of the tile", function()
+		assert(ArenaRules.canInteract({ x = 11, z = 9 }, zoneA, posesA[5], 14) == true, "standing on its tile 5")
+		assert(ArenaRules.canInteract({ x = 11, z = 9 }, zoneA, nil, 14) == true, "Ready from inside the zone")
+		local ok, reason = ArenaRules.canInteract({ x = 11, z = 9 }, zoneA, posesA[6], 14)
+		assert(ok == true and reason == nil, "neighbour tile 6 (9 studs) within reach")
+		ok, reason = ArenaRules.canInteract({ x = -5, z = 20 }, zoneA, posesA[3], 14)
+		assert(ok == false and reason == "Approche-toi de la dalle", "inside the zone but too far from that tile")
+	end)
+
+	test("A standing in B's arena (or anywhere outside its own zone) can do nothing on its arena", function()
+		local inB = { x = 173, z = 10 }
+		assert(ArenaRules.canInteract(inB, zoneB, posesB[5], 14) == true, "B's own position is fine for B")
+		for _, pose in { posesA[1], posesA[5], posesA[9], nil } :: { any } do
+			local ok, reason = ArenaRules.canInteract(inB, zoneA, pose, 14)
+			assert(ok == false and reason == "Approche-toi de ton arène")
+		end
+		local ok, reason = ArenaRules.canInteract({ x = 60, z = 10 }, zoneA, nil, 14)
+		assert(ok == false and reason == "Approche-toi de ton arène", "between plots: no Ready")
+		assert(select(2, ArenaRules.canInteract(nil, zoneA, posesA[1], 14)) == "Approche-toi de ton arène", "no character")
+		assert(select(2, ArenaRules.canInteract({ x = 10, z = 10 }, nil, posesA[1], 14)) == "Approche-toi de ton arène", "no arena")
+	end)
+
 	print(`ArenaRules: {passed} passed, {failed} failed`)
 	if failed > 0 then
 		error(`{failed} ArenaRules test(s) failed`)

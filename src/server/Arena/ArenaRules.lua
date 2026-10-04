@@ -105,4 +105,47 @@ function ArenaRules.count(formation: Formation): number
 	return count(formation)
 end
 
+-- Positions au sol (x, z) : la hauteur ne compte pas.
+export type Point = { x: number, z: number }
+export type Zone = { center: Point, radius: number }
+
+local function flatDistance(a: Point, b: Point): number
+	local dx, dz = a.x - b.x, a.z - b.z
+	return math.sqrt(dx * dx + dz * dz)
+end
+
+-- Zone de préparation d'une arène : cercle autour de ses dalles, plus une marge.
+function ArenaRules.zone(poses: { [number]: Point }, margin: number): Zone?
+	local sx, sz, n = 0, 0, 0
+	for _, p in poses do
+		sx += p.x
+		sz += p.z
+		n += 1
+	end
+	if n == 0 then
+		return nil
+	end
+	local center = { x = sx / n, z = sz / n }
+	local radius = 0
+	for _, p in poses do
+		radius = math.max(radius, flatDistance(p, center))
+	end
+	return { center = center, radius = radius + margin }
+end
+
+-- Le joueur peut-il agir sur SON arène ? Il doit être dans sa zone de préparation et, pour une
+-- dalle précise, à portée de cette dalle. (L'arène visée est toujours celle de son propre plot.)
+function ArenaRules.canInteract(position: Point?, zone: Zone?, pose: Point?, reach: number): (boolean, string?)
+	if not position or not zone then
+		return false, "Approche-toi de ton arène"
+	end
+	if flatDistance(position, zone.center) > zone.radius then
+		return false, "Approche-toi de ton arène"
+	end
+	if pose and flatDistance(position, pose) > reach then
+		return false, "Approche-toi de la dalle"
+	end
+	return true, nil
+end
+
 return ArenaRules

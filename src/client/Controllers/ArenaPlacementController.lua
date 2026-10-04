@@ -47,12 +47,18 @@ local arenaRoot: Instance? = nil
 local prompt: ProximityPrompt? = nil
 local promptInfo: PlacementState.Prompt? = nil
 local prepMode = false -- bouton Arène : dalles mises en évidence
+local render: () -> () -- défini plus bas (rendu complet : panneau, statut, dalles)
 
 ------------------------------------------------------------------ arène du plot
 
 local function refreshCases()
 	local root = PlotView.arena()
-	if root == arenaRoot and next(caseModels) then
+	local known = 0
+	for _ in caseModels do
+		known += 1
+	end
+	-- Liste figée seulement une fois les 9 dalles répliquées (elles peuvent arriver après le plot).
+	if root == arenaRoot and known >= 9 then
 		return
 	end
 	for _, highlight in caseHighlights do
@@ -108,12 +114,14 @@ local arenaCenter: Vector3? = nil
 local arenaRadius = 0
 local inArena = false
 
+local measuredCount = 0
 local function measureArena()
 	local sum, count = Vector3.zero, 0
 	for _, pose in casePoses do
 		sum += pose.Position
 		count += 1
 	end
+	measuredCount = count
 	if count == 0 then
 		arenaCenter = nil
 		return
@@ -123,7 +131,7 @@ local function measureArena()
 	for _, pose in casePoses do
 		radius = math.max(radius, ((pose.Position - center) * Vector3.new(1, 0, 1)).Magnitude)
 	end
-	arenaCenter, arenaRadius = center, radius + ArenaConfig.PromptDistance
+	arenaCenter, arenaRadius = center, radius + ArenaConfig.ZoneMargin -- même zone que le serveur
 end
 
 local function playerInArena(): boolean
@@ -206,7 +214,7 @@ local function updatePrompt()
 	local nowInArena = playerInArena()
 	if nowInArena ~= inArena then
 		inArena = nowInArena
-		renderCases()
+		render() -- lumières de placement et bouton Prêt suivent la zone
 	end
 	if not root or not root:IsA("BasePart") or ArenaStore.inCombat() or ArenaStore.arena.Available == false then
 		hidePrompt()
@@ -442,7 +450,7 @@ local function build()
 	screen.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
 end
 
-local function render()
+function render()
 	local held = ArenaStore.placement.held
 	local state = ArenaStore.arena
 	local phase = state.Phase
@@ -454,7 +462,8 @@ local function render()
 	ui.stage.Text = `Stage {state.Zone or "?"}-{state.Stage or "?"}`
 	ui.team.Text = `{count} / {max}`
 	renderEnemies()
-	ui.ready.setEnabled(phase == "Placement" and count >= 1 and count <= max and not ArenaStore.busy)
+	-- Prêt : 1 à 4 héros, et seulement depuis sa zone de préparation (le serveur revérifie).
+	ui.ready.setEnabled(phase == "Placement" and count >= 1 and count <= max and inArena and not ArenaStore.busy)
 	ui.arena.setSelected(prepMode)
 	if held and not inCombat then
 		ui.statusText.Text = `{heroName(held.instanceId)} en main · approche-toi d'une dalle : E`
@@ -529,7 +538,12 @@ function ArenaPlacementController:Start()
 			task.wait(1)
 			local before = arenaRoot
 			refreshCases()
-			if arenaRoot ~= before then
+			-- Les dalles peuvent se répliquer après le plot : mesurer tant que ce n'est pas fait.
+			local count = 0
+			for _ in casePoses do
+				count += 1
+			end
+			if arenaRoot ~= before or arenaCenter == nil or count ~= measuredCount then
 				measureArena()
 				render()
 			end

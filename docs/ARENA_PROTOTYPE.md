@@ -86,9 +86,15 @@ Masqué pendant le combat.
 | `src/client/Controllers/ArenaPlacementController.lua` | prompt E, lumières, panneau Arène, pastille de combat |
 
 - **Serveur autoritaire** : `Remotes.ArenaAction` n'accepte que `"Place", case, HeroInstanceId`,
-  `"Remove", case`, `"Ready"` et `"Leave"`. Il vérifie le plot et l'arène du joueur, la distance
-  à la dalle (`ArenaConfig.InteractionDistance`, 14 studs), l'exemplaire possédé, la phase, la
-  case, l'unicité, le maximum de 4 et l'absence de combat. Le prompt n'a aucune autorité.
+  `"Remove", case`, `"Ready"` et `"Leave"`. Il vérifie l'exemplaire possédé, la phase, la case,
+  l'unicité, le maximum de 4 et l'absence de combat. Le prompt n'a aucune autorité.
+- **Chacun sa propre arène, et seulement sur place** : une action ne désigne qu'un numéro de case,
+  toujours résolu dans l'arène du plot du joueur qui l'envoie ; aucun paramètre ne permet de viser
+  l'arène d'un autre. Placer / Reprendre / Prêt exigent en plus que le personnage (vivant) soit
+  dans **sa zone de préparation** : cercle autour de ses 9 dalles + `ArenaConfig.ZoneMargin`
+  (10 studs) ; Placer / Reprendre exigent aussi d'être à portée de la dalle
+  (`ArenaConfig.InteractionDistance`, 14 studs). Règle pure : `ArenaRules.canInteract` (testée).
+  Seul Quitter (X) reste possible de partout. Le client applique la même zone (lumières, Prêt).
 - **État versionné** : chaque `ArenaState` porte un `Version` croissant ; le client ignore un état
   plus ancien (évite qu'une réponse initiale en retard masque le panneau).
 - **Pas de prompt serveur « Combattre »** : il a été supprimé.

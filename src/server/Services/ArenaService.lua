@@ -25,12 +25,21 @@ local function context(player: Player): any
 	return nil
 end
 
-local function nearby(player: Player, part: BasePart): boolean
+local function flat(v: Vector3): ArenaRules.Point
+	return { x = v.X, z = v.Z }
+end
+
+-- Le joueur agit-il réellement depuis SA zone de préparation (et, pour une dalle, à portée) ?
+-- Position = celle que le serveur connaît du personnage vivant.
+local function canInteract(player: Player, c: any, slot: number?): (boolean, string?)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	return root ~= nil and root:IsA("BasePart") and humanoid ~= nil and humanoid.Health > 0
-		and (root.Position - part.Position).Magnitude <= Config.InteractionDistance
+	if not root or not root:IsA("BasePart") or not humanoid or humanoid.Health <= 0 then
+		return false, "Approche-toi de ton arène"
+	end
+	local pose = if slot then c.poses[slot] else nil
+	return ArenaRules.canInteract(flat(root.Position), c.zone, if pose then flat(pose.Position) else nil, Config.InteractionDistance)
 end
 
 local function spawnModel(templateName: string, parent: Instance, feet: Vector3, lookAt: Vector3, attributes: any): Model?
@@ -173,7 +182,12 @@ local function setup(player: Player, plot: Model)
 	for slot = 1, 9 do if not poses[slot] then warn(`ArenaService : case {slot} absente`); return end end
 	-- Plus de prompt « Combattre » : E sert au placement (prompt local du client sur la dalle la
 	-- plus proche) et le combat démarre par le bouton Prêt (ArenaAction "Ready").
-	contexts[player] = { plot = plot, runtime = runtime, arena = arena, poses = poses, front = front }
+	local points = {}
+	for slot, pose in poses do
+		points[slot] = flat(pose.Position)
+	end
+	contexts[player] = { plot = plot, runtime = runtime, arena = arena, poses = poses, front = front,
+		zone = ArenaRules.zone(points, Config.ZoneMargin) }
 	send(player)
 end
 
@@ -210,11 +224,16 @@ function ArenaService:Start()
 		local c = context(player)
 		if not c then return false, "Ton arène est indisponible" end
 		local ok, reason
-		if verb == "Leave" then ok = manager:leave(player)
-		elseif verb == "Ready" then ok, reason = manager:ready(player)
+		-- L'arène visée est toujours celle du plot du joueur (c) : aucune action sur l'arène d'un autre.
+		if verb == "Leave" then ok = manager:leave(player) -- abandonner reste possible de partout
+		elseif verb == "Ready" then
+			local inZone, why = canInteract(player, c, nil)
+			if not inZone then return false, why end
+			ok, reason = manager:ready(player)
 		elseif verb == "Place" or verb == "Remove" then
 			if not ArenaRules.isSlot(slot) then return false, "case invalide" end
-			if not nearby(player, c.poses[slot]) then return false, "Approche-toi de ton arène" end
+			local inReach, why = canInteract(player, c, slot)
+			if not inReach then return false, why end
 			if verb == "Place" then ok, reason = manager:place(player, slot, instanceId)
 			else ok, reason = manager:remove(player, slot) end
 		else return false, "action inconnue" end

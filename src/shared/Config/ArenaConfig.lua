@@ -8,6 +8,9 @@ local ArenaConfig = {
 	PromptDistance = 8,
 	-- Distance maximale vérifiée côté serveur pour poser / reprendre : portée du prompt + marge réseau.
 	InteractionDistance = 14,
+	-- Zone de préparation : cercle autour des dalles de l'arène + cette marge (studs). Le serveur
+	-- refuse Placer / Reprendre / Prêt hors de cette zone ; le client n'y allume les dalles qu'à l'intérieur.
+	ZoneMargin = 10,
 	-- Stage Alpha lancé depuis chaque arène.
 	Zone = 1,
 	Stage = 1,
