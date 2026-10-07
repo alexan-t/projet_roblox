@@ -1,55 +1,95 @@
 # Items 2D
 
-Les items (équipements et ressources) sont des **icônes 2D**, pas des modèles 3D. Ce document
-dit ce qui existe déjà, comment produire une icône et **où chaque item doit s'afficher**.
+Les items sont des **icônes 2D**, pas des modèles 3D. Ce document dit ce qui existe déjà,
+comment la liste est répartie, **où le worker doit poser chaque item créé** et comment produire
+une icône.
 
 ## 1. État actuel
 
-- **Aucun système d'items en jeu** pour l'instant : `PlayerData` ne stocke que les monnaies
-  (`Gold`, `Gems`, `SummonTickets`), les héros, l'équipe, le royaume, les quêtes et les
-  réglages (`src/shared/Types/PlayerDataTypes.lua`). Le catalogue, les statistiques, le stockage
-  et l'obtention des items restent à définir côté gameplay. **Ne pas inventer de rareté** :
-  elle n'est pas définie (voir `UI_DESIGN_SYSTEM.md` § 2).
+- **Catalogue de production** : `items_equipment.json` (format des tâches du pipeline, une
+  entrée par item). C'est la source de vérité pour l'identifiant, le nom, la rareté, le type
+  d'emplacement et l'idée de l'icône (`icon_hook`).
+- **Aucun système d'items en jeu** pour l'instant : `PlayerData` ne stocke que les monnaies,
+  les héros, l'équipe, le royaume, les quêtes et les réglages
+  (`src/shared/Types/PlayerDataTypes.lua`). Les statistiques, le stockage et l'obtention des
+  items restent à définir côté gameplay.
 - La **Sacoche** du joueur (`HeroBarController`, PR #44) prévoit déjà les onglets
   **Équipement** et **Ressources**, encore vides (« Bientôt disponible »).
 - Les règles visuelles viennent du design system UI : cartes et slots (§ 6), icônes (§ 7).
 
-## 2. Où les items s'affichent
+## 2. Répartition du catalogue
 
-| Où | Quand | Rôle |
+**100 items, tous des équipements** (`item_001` à `item_100`, `"type": "item"`). Aucune
+ressource pour l'instant.
+
+Les identifiants suivent la **rareté croissante**, en 10 paliers contigus :
+
+| Rareté | Items | Nombre |
 | --- | --- | --- |
-| **Vitrine `Inventaire`** de la place Studio « test » | dès qu'une icône est produite | voir toutes les icônes ensemble, à la bonne taille, dans le cadre réel des cartes, et les valider |
-| **Sacoche**, onglets Équipement / Ressources | quand le système d'items existera | inventaire du joueur en jeu |
-| **Écran de récompenses** | quand #9 existera | cartes de récompense, quantité en bas à droite (« ×3 ») |
+| Commun | 001 – 004 | 4 |
+| Peu commun | 005 – 010 | 6 |
+| Rare | 011 – 020 | 10 |
+| Épique | 021 – 034 | 14 |
+| Légendaire | 035 – 052 | 18 |
+| Mythique | 053 – 070 | 18 |
+| Maudit | 071 – 082 | 12 |
+| Suprême | 083 – 090 | 8 |
+| Calamité | 091 – 096 | 6 |
+| Transcendant | 097 – 100 | 4 |
 
-**Règle : tout item produit doit être posé dans la vitrine `Inventaire`.** Un item qui n'y est
-pas n'est pas considéré comme livré.
+Types d'emplacement (`slot_type`) : arme `weapon` 26, relique `relic` 21, accessoire
+`accessory` 17, armure `armor` 15, casque `helmet` 14, bottes `boots` 5, gants `gloves` 2.
 
-### Vitrine `Inventaire` (Studio)
+La rareté des items est **celle du catalogue**. On ne l'invente pas et on ne la modifie pas.
+Ses couleurs ne sont pas encore définies dans `UITheme` : ne pas en créer dans les icônes ni
+dans les cartes (cadre neutre `Ink`, comme les héros).
 
-`Workspace.Bestiaire.Inventaire`, à gauche de la section Héros du Bestiaire. Deux panneaux en
-bois, une catégorie par panneau, mêmes noms que les onglets de la Sacoche :
+## 3. Où poser les items créés (directives pour le worker)
+
+**Règle : chaque item créé est posé dans la vitrine `Inventaire` de la place Studio « test »,
+dans son emplacement réservé. Un item qui n'y est pas n'est pas livré.**
+
+Plus tard, le même item s'affichera en jeu dans la **Sacoche** (onglet Équipement) et sur
+l'**écran de récompenses** (#9). Ces écrans liront le catalogue ; le worker n'a rien à y faire.
+
+### Vitrine `Inventaire`
+
+`Workspace.Bestiaire.Inventaire`, à gauche de la section Héros du Bestiaire : un grand panneau
+en bois « Équipement · 100 items », **une rangée par rareté**, dans l'ordre du tableau § 2.
+Les 100 emplacements existent déjà, avec nom et attributs pré-remplis depuis le catalogue.
+
+Correspondance tâche → emplacement :
 
 ```
-Workspace.Bestiaire.Inventaire
-  Equipement.Panneau.Affichage.Frame.Emplacements.Slot_01 … Slot_45
-  Ressources.Panneau.Affichage.Frame.Emplacements.Slot_01 … Slot_45
+"target_studio_slot": "Items #NNN [Rareté]"
+  → Workspace.Bestiaire.Inventaire.Equipement.Panneau.Affichage.Fond.Emplacements.Item_NNN
 ```
 
-Chaque `Slot_NN` reprend la carte standard de la Sacoche (`Cream`, contour `Ink`, zone
-d'illustration `Sand`, numéro en badge) et contient :
+Exemple : `item_037` (« Items #037 [Légendaire] ») →
+`…Emplacements.Item_037`, rangée Légendaire.
 
-| Élément | À remplir |
-| --- | --- |
-| `Illustration.Icone` (ImageLabel) | `Image` = `rbxassetid://…` de l'icône |
-| `Nom` (TextLabel) | nom court affiché (« Épée en bois ») |
-| attribut `ItemId` du slot | identifiant `snake_case` (`epee_bois`) |
-| attribut `Categorie` | déjà rempli (`Équipement` ou `Ressources`) |
+Chaque `Item_NNN` est une carte standard de la Sacoche :
 
-Remplir les slots dans l'ordre, sans trou. Quand un panneau est plein, en ajouter un à côté
-(même construction) plutôt que de réduire les cartes.
+| Élément | État | Le worker fait |
+| --- | --- | --- |
+| `Illustration.Icone` (ImageLabel) | vide | `Image` = `rbxassetid://…` de l'icône |
+| attribut `AssetId` | vide | même identifiant d'asset que `Icone.Image` |
+| `Nom` (TextLabel) | rempli | rien (corriger seulement s'il diffère du catalogue) |
+| attributs `ItemId`, `Index`, `Rarete`, `SlotType` | remplis | rien |
 
-## 3. Produire une icône
+Interdits : déplacer, renommer, supprimer ou réordonner un emplacement ; poser un item dans
+l'emplacement d'un autre ; changer la taille des cartes ; ajouter une couleur de rareté. Si un
+item est refait, remplacer seulement `Icone.Image` et `AssetId` ; l'ancienne icône reste
+référencée dans la tâche (`notes`).
+
+Captures pour la review : la carte seule (de près) et la rangée de sa rareté (pour comparer
+avec ses voisines).
+
+Quand de nouveaux items (ou des ressources) seront ajoutés au catalogue, on ajoute leurs
+emplacements à la vitrine (nouvelle rangée ou nouveau panneau à côté) **avant** de lancer
+leurs tâches.
+
+## 4. Produire une icône
 
 Règles du design system (§ 7), résumées :
 
@@ -60,14 +100,15 @@ Règles du design system (§ 7), résumées :
   une couleur dominante + un accent.
 - **Contour `Ink` (`#1F1A17`) cuit dans l'image**, environ 6 % de la taille.
 - Vue de **trois quarts**, **fond transparent**, PNG **512 × 512** (256 minimum).
+- Partir de l'`icon_hook` de la tâche : c'est l'idée principale à rendre lisible.
 - Interdits : emoji, icônes plates génériques, traits fins, style futuriste, photoréalisme.
 
-Nommage : fichier `item_<item_id>.png`, `ItemId` en `snake_case`, nom affiché court en
-majuscule initiale uniquement.
+Nommage du fichier source : `<item_id>.png` (ex. `item_037.png`).
 
-## 4. Contrôle avant de livrer un item
+## 5. Contrôle avant de livrer un item
 
-1. L'icône est posée dans le bon panneau de la vitrine, avec `Nom` et `ItemId` remplis.
-2. Elle se lit de loin (capture de la vitrine entière) et de près (capture de la carte).
+1. L'icône est dans **son** emplacement `Item_NNN`, `Icone.Image` et `AssetId` remplis.
+2. Elle se lit de loin (rangée entière) et de près (carte seule).
 3. Elle a le même rendu que ses voisines : contour, lumière, saturation, taille de l'objet.
-4. Aucune rareté ni statistique inventée dans le nom ou l'image.
+4. Elle correspond à l'`icon_hook` et au `slot_type` du catalogue.
+5. Aucune couleur de rareté ni statistique inventée dans l'image.
