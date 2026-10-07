@@ -116,9 +116,14 @@ droits et crée une session, que le combat (#8) terminera. Voir les
 
 Le serveur simule tout le combat par pas fixes (`src/server/Combat/CombatEngine.lua`),
 avec des stats temporaires dans `src/server/Config/CombatConfig.lua`. Il annonce la victoire ou
-la défaite à ZoneService, et le client ne peut que demander l'ultime ou la vitesse x1/x2. Voir
-[le moteur, les événements et la sécurité](docs/COMBAT.md) et le
-[prototype de préparation dans l'arène de test](docs/ARENA_PROTOTYPE.md).
+la défaite à ZoneService. Les ultimes sont automatiques ; le client ne peut que choisir la
+vitesse x1/x2. Voir [le moteur, les événements et la sécurité](docs/COMBAT.md) et le
+[placement des héros dans l'arène de test](docs/ARENA_PROTOTYPE.md) (hotbar, sacoche, E = Combattre).
+
+## Héros possédés et hotbar (HeroService, Alpha)
+
+Kit de départ, hotbar de 10 raccourcis sauvegardée et vérification de possession : voir
+[les données, les règles et l'API](docs/HEROES.md).
 
 ## Workflow Git
 

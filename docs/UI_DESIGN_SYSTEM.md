@@ -260,17 +260,23 @@ module et par ce document.
 
 ## 10. Exemples appliqués aux écrans existants
 
-### Préparation de combat (`ArenaPrepController`)
-- **Main de héros** : cartes héros standard (§ 6) en bas de l'écran, à `PanelStrong`, portrait
-  ViewportFrame, icône de classe dessinée (§ 7) à la place des emoji ; carte posée = badge
-  `Équipé`. L'arène reste entièrement visible au-dessus.
-- **Pastille du roster** (« Stage 1-1 · Slime ×2… ») : pastille `HUD` + texte `Label` contouré.
-- **Combattre** : bouton principal doré. **Quitter** : bouton secondaire bois.
-- **Grille** : surbrillance de la case survolée en `Selected`.
+### Hotbar, sacoche et placement (`HeroBarController`, `ArenaPlacementController`)
+Moins de fenêtres, plus d'interaction avec le monde : on **prend** un héros et on le **pose**.
+- **Hotbar** : panneau `HUD` en bas, 10 raccourcis `Cream` semi-transparents, contour Ink,
+  numéro de touche en `Caption`. Raccourci choisi : surélevé, contour `Selected` épais, pop.
+  Héros posé sur l'arène : pastille `Selected`. Grisée pendant le combat.
+- **Sacoche** : bouton bois à gauche de la hotbar ; panneau `Panel` à gauche de l'écran,
+  bandeau titre en bois, onglet Héros (doré), cartes standard (§ 6) avec badge « Posé »,
+  bouton principal **Placer** (désactivé sans sélection).
+- **Placement** : feedback dans le monde (états des cases en surbrillance claire, `Selected`
+  doré, `Error` discret), petit aperçu du héros au curseur, pastille de statut `HUD`
+  (« Archer en main · choisis une case 2/4 », boutons secondaires Retirer / Annuler).
+- **Refus** : toast `Tooltip` crème en haut (« 4 héros maximum », « Arène occupée par … »).
 
-### Combat (`ArenaPrepController`, `CombatViewController`)
+### Combat (`ArenaPlacementController`, `CombatViewController`)
 - Les informations des unités restent **dans le monde** : barres PV/énergie (§ 6), icône de
-  classe, chiffres de dégâts Fredoka contourés, ultime en touchant le héros prêt.
+  classe, chiffres de dégâts Fredoka contourés. Ultimes automatiques : éclat doré sur
+  `UltimateUsed`, aucun bouton.
 - **Barre basse légère** : une pastille `HUD` centrée en bas, avec « Vague 1/1 », x1/x2 (onglets,
   actif doré) et un bouton rond « X » pour quitter. Pas de portraits permanents ni de doublon
   des PV.

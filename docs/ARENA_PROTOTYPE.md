@@ -1,70 +1,103 @@
-# Prototype — préparation de combat dans l'arène de test
+# Préparation de combat dans l'arène du plot
 
-**Prototype de préparation pour tester la boucle en Studio.** La phase de combat est
-désormais prise en charge par **CombatService** (#8, voir `docs/COMBAT.md`). L'UI reste
-provisoire (#11).
+Chaque joueur prépare et combat dans **l'arène de SON plot** (`PlotService:GetPlot(player)` →
+`Arene` → `CaseHeros`). Deux joueurs préparent et combattent en même temps, chacun chez soi.
+Le combat appartient à **CombatService** (`docs/COMBAT.md`) ; les héros et la hotbar à
+**HeroService** (`docs/HEROES.md`).
 
-## Ce qu'on peut faire
+Deux actions séparées :
 
-1. S'approcher de l'étendard de l'arène `Workspace.PlotTravail.Arene` : un prompt
-   **« Préparer le combat »** (touche E) lance le **Stage 1-1** via ZoneService. Pas de
-   fenêtre : on place les héros **directement sur l'arène**.
-   - En bas, la **main** : une carte compacte par héros (miniature 3D, icône, nom, ✓ si
-     posé). Pas encore de rareté (contour neutre) : elle viendra avec #10.
-   - En haut, une petite pastille annonce **quels ennemis** on va affronter
-     (Slime ×2, Gobelin ×4, ★ Boss), **pas leurs positions**.
-   - La grille 3x3 des héros reste discrète ; elle n'est bien visible que pendant un choix
-     ou un glisser, avec la case survolée en surbrillance.
-2. **Souris ou toucher** :
-   - **glisser** une carte sur une case, ou **toucher** une carte puis une case ;
-   - appuyer sur un héros posé puis le glisser vers une autre case (**déplacement**) ou
-     vers la main (**retrait**) ;
-   - une case occupée + un autre héros = **remplacement** ;
-   - **4 héros maximum**, une unité par classe : reposer une classe la déplace.
-3. **Combattre** : ArenaService passe la formation et la géométrie de l'arène à
-   **CombatService**, qui fait le vrai combat automatique. La vague 1 apparaît au hasard sur
-   le 3x3 ennemi, puis le mini-boss une fois la vague morte. Il y a un nouveau tirage à
-   chaque combat. La main disparaît ; il ne reste que **x1 / x2 / X** en haut à droite.
-   PV, mana et ultime sont dans le monde, au-dessus des unités (voir `docs/COMBAT.md`) :
-   **toucher un héros à mana pleine** lance son ultime.
-4. **Fin** : « Victoire ! » ou « Défaite… », décidée par le serveur, puis l'arène est rangée.
-   **Quitter** arrête le combat sans résultat et annule la session.
+```
+E    = interaction avec le monde : Placer / Remplacer / Reprendre un héros sur une dalle
+Prêt = lancer le combat (panneau Arène)
+```
+
+## Flow
+
+```
+hotbar (1..0) ou Sacoche > Héros > Placer
+        ↓
+héros visible dans les mains du personnage (HeldHeroController, client)
+        ↓
+entrer dans son arène → les dalles valides s'illuminent légèrement
+        ↓
+s'approcher d'une dalle → prompt « E · Placer Archer » (une seule dalle, la plus proche)
+        ↓
+E → le serveur pose le héros (le héros reste en main tant qu'il n'a pas accepté)
+        ↓
+jusqu'à 4 héros
+        ↓
+panneau Arène : Stage, ennemis, équipe x/4 → Prêt
+        ↓
+combat automatique, ultimes automatiques, vagues, mini-boss, victoire / défaite
+```
+
+1. **Prendre un héros** : touche 1..9 / 0 ou clic sur un raccourci ; ou Sacoche > Héros > un
+   héros > **Placer** (la sacoche se ferme). Annuler ou Échap vide les mains.
+2. **Placer** : près d'une dalle (8 studs, `ArenaConfig.PromptDistance`), un seul
+   `ProximityPrompt` local apparaît, sur la dalle valide la plus proche :
+   - héros en main, dalle libre → « Placer Archer » ;
+   - héros en main, dalle occupée → « Remplacer Archer » (le héros remplacé retourne à la collection) ;
+   - main vide, héros posé → « Reprendre Paladin » : il quitte la dalle et revient dans les mains.
+   Sur mobile, le prompt se touche. Refus du serveur : le héros reste en main, message bref.
+3. **Prêt** : actif avec 1 à 4 héros posés, hors combat. Il vide les mains puis envoie
+   `ArenaAction("Ready")` ; le serveur revalide et appelle `CombatService:StartCombat`.
+4. **Pendant le combat** : aucun prompt, aucune lumière, aucun changement de formation ; pastille
+   x1 / x2 / X. **X** arrête sans résultat.
+5. **Fin** : « Victoire ! » ou « Défaite… », la préparation est libérée.
+
+### Lumières de placement (client seulement)
+
+Allumées seulement si **héros en main + joueur dans son arène + hors combat**, et uniquement sur
+les dalles du plot du joueur (jamais celles d'un autre). Surbrillances `Highlight` locales, sans
+modifier les dalles (`UITheme.World.Case`) :
+
+| État | Rendu |
+| --- | --- |
+| Libre valide | voile crème léger (`ValidTarget`) |
+| Candidate du prompt E | voile et contour plus marqués (`Hover`) |
+| Occupée (remplacement) | teinte bois (`Occupied`) |
+| Libre à 4/4 | rien : pas une cible |
+| Dalle du héros tenu | doré (`Selected`) |
+
+Hors arène, après un placement accepté ou en combat : tout s'éteint. Le bouton **Arène** peut
+montrer les dalles volontairement quand rien n'est en main.
+
+### Panneau Arène
+
+À droite, semi-transparent (`UITheme` / `UIKit`) : **Stage x-y** (session ou config, rien en dur),
+**ennemis agrégés** (`ArenaRules.summarize` : « Slime ×2 », « Gobelin ×4 », « Mini-boss : Boss »,
+jamais de position), **équipe x / 4**, boutons **Arène** (secondaire) et **Prêt** (principal).
+Masqué pendant le combat.
 
 ## Découpage
 
 | Fichier | Rôle |
 | --- | --- |
-| `src/shared/Config/ArenaConfig.lua` | arène de test, stage lancé, collection de 6 classes, max 4, mannequins par `EnemyId` |
-| `src/server/Arena/ArenaRules.lua` | règles pures : roster annoncé (sans positions), formation (assign, clear) |
-| `src/server/Services/ArenaService.lua` | prompt, phases Placement → Combat, géométrie et mannequins, remotes ; délègue le combat à CombatService |
-| `src/client/Controllers/ArenaPrepController.lua` | main de héros, glisser-déposer sur la grille de l'arène, x1/x2/X pendant le combat |
-| `src/client/Controllers/CombatViewController.lua` | barres PV/mana, icônes, dégâts et ultime au toucher, dans le monde |
+| `src/shared/Config/ArenaConfig.lua` | nom de l'arène dans le plot, portée du prompt, distance serveur, stage, max 4, mannequins ennemis |
+| `src/server/Arena/ArenaRules.lua` | règles pures : roster agrégé, formation case → exemplaire |
+| `src/server/Arena/ArenaPrep.lua` | préparation pure, une par joueur : Place / Remove / Ready / Leave, fin, départ (testée) |
+| `src/server/Services/ArenaService.lua` | monde du plot : mannequins, remotes, distance, état envoyé (versionné), géométrie pour CombatService |
+| `src/client/Arena/PlacementState.lua` | héros en main et décision du prompt E (pur, testé) |
+| `src/client/Arena/ArenaStore.lua` | état client partagé (héros, hotbar, préparation, main) |
+| `src/client/Arena/PlotView.lua` | plot / arène / monde du joueur local (affichage seulement) |
+| `src/client/Controllers/HeroBarController.lua` | hotbar, sacoche |
+| `src/client/Controllers/HeldHeroController.lua` | héros visible dans les mains |
+| `src/client/Controllers/ArenaPlacementController.lua` | prompt E, lumières, panneau Arène, pastille de combat |
 
-- **Serveur autoritaire** : `Remotes.ArenaAction` n'accepte que `"Assign", case, classe`,
-  `"Clear", case`, `"Fight"` et `"Leave"`. Le serveur valide la case (1..9), la classe, la limite et la phase,
-  puis transmet une copie de la formation à CombatService. Pendant la préparation, le client
-  ne reçoit que la liste agrégée des ennemis ; les unités d'une vague ne lui sont décrites que
-  lorsque le serveur la lance. Il ne peut jamais déclarer une victoire.
-- **3x3 héros** : les 9 `CaseHeros` de l'arène (attribut `Slot`, repère `PointDePose`).
-- **3x3 ennemi** : `Zones.<ZoneId = 1>.SourcesEnnemis.FrontEnnemi` découpé en 3 × 3.
-  La première ligne est côté héros, et les colonnes sont dans le même ordre que les cases héros.
-- **Mannequins** : ceux du design (`ReplicatedStorage.Assets.Combat`), clonés tels quels par
-  ArenaService quand CombatService crée une unité (`context.SpawnUnit`).
-  Il n'existe qu'un `MannequinHeros` : ArenaService pose l'attribut `HeroClass`, et le client
-  affiche une petite icône de classe provisoire au-dessus.
-- **Apparition de test** (Studio uniquement) : à chaque apparition, le personnage est déplacé
-  sur `PlotTravail.PointApparition` (`ArenaConfig.TestSpawn`, `nil` pour désactiver), une seconde
-  après le placement de PlotService. Le plot attribué ne change pas.
-- **Intro de démonstration** : l'attribut `IntroDemoBoucle` de l'arène est coupé pendant la
-  préparation (runtime seulement) puis restauré ; le client retire les restes `IntroCombat`.
-- Une seule préparation à la fois (arène de test unique). Départ, fin de session (debug) ou
-  perte de profil : l'arène est rangée en moins d'une seconde.
-
-## Limites (prototype)
-
-- La collection n'est pas encore `PlayerData.Heroes` (vide) : 6 classes fixes pour le test.
-- La main, les icônes (emoji) et les barres sont provisoires : #11 et le design.
-- L'arène est celle de `PlotTravail`, pas celle du plot du joueur, qui n'a pas encore d'arène.
+- **Serveur autoritaire** : `Remotes.ArenaAction` n'accepte que `"Place", case, HeroInstanceId`,
+  `"Remove", case`, `"Ready"` et `"Leave"`. Il vérifie l'exemplaire possédé, la phase, la case,
+  l'unicité, le maximum de 4 et l'absence de combat. Le prompt n'a aucune autorité.
+- **Chacun sa propre arène, et seulement sur place** : une action ne désigne qu'un numéro de case,
+  toujours résolu dans l'arène du plot du joueur qui l'envoie ; aucun paramètre ne permet de viser
+  l'arène d'un autre. Placer / Reprendre / Prêt exigent en plus que le personnage (vivant) soit
+  dans **sa zone de préparation** : cercle autour de ses 9 dalles + `ArenaConfig.ZoneMargin`
+  (10 studs) ; Placer / Reprendre exigent aussi d'être à portée de la dalle
+  (`ArenaConfig.InteractionDistance`, 14 studs). Règle pure : `ArenaRules.canInteract` (testée).
+  Seul Quitter (X) reste possible de partout. Le client applique la même zone (lumières, Prêt).
+- **État versionné** : chaque `ArenaState` porte un `Version` croissant ; le client ignore un état
+  plus ancien (évite qu'une réponse initiale en retard masque le panneau).
+- **Pas de prompt serveur « Combattre »** : il a été supprimé.
 
 ## Tests
 
@@ -72,5 +105,6 @@ provisoire (#11).
 ./tools/test-arena.ps1 -LuauPath <chemin-vers-luau.exe>
 ```
 
-Les règles pures de préparation sont testées avec la vraie StageConfig (roster annoncé,
-placement, remplacement, retrait). Le combat est testé par `./tools/test-combat.ps1`.
+ArenaRules (formation), ArenaPrep (placement, refus, Prêt avec 0 / 1 / 4 héros, double Prêt,
+arènes indépendantes) et PlacementState (hotbar, sacoche, prompt Placer / Remplacer / Reprendre,
+refus qui garde le héros en main, verrou en combat).

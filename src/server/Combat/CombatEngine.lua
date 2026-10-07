@@ -4,6 +4,8 @@
 -- Tout est déterministe : les unités agissent dans l'ordre de leur UnitId, les égalités de
 -- ciblage sont tranchées par UnitId, et le seul hasard (cases des ennemis) vient de l'objet
 -- Random fourni.
+-- Aucune action joueur pendant le combat : l'ultime d'un héros part automatiquement quand sa
+-- jauge est pleine et qu'il a une cible.
 
 export type Vec = { x: number, z: number }
 export type Stats = {
@@ -233,7 +235,52 @@ local function progress(state: State)
 	end
 end
 
+local function alive(unit: Unit?): boolean
+	return unit ~= nil and unit.Alive and unit.Health > 0
+end
+
+-- Ultime générique, automatique : dégâts de zone autour de la cible, énergie remise à 0.
+local function castUltimate(state: State, unit: Unit, target: Unit)
+	unit.Energy = 0
+	emit(state, { Type = "EnergyChanged", UnitId = unit.UnitId, Energy = 0, MaxEnergy = unit.MaxEnergy })
+	local center = target.Position
+	local hits: { number } = {}
+	for _, other in state.units do
+		if alive(other) and other.Team ~= unit.Team and distance(center, other.Position) <= state.options.UltimateRadius + EPSILON then
+			table.insert(hits, other.UnitId)
+		end
+	end
+	emit(state, { Type = "UltimateUsed", UnitId = unit.UnitId, TargetId = target.UnitId, Hits = hits })
+	for _, id in hits do
+		damage(state, state.byId[id], unit.stats.UltimateDamage or 0, unit.UnitId)
+	end
+end
+
+-- Jauge pleine + cible vivante : l'ultime part tout seul (une fois par remplissage).
+-- Sans cible (fin de vague), la jauge reste pleine jusqu'à la prochaine cible.
+local function tryUltimate(state: State, unit: Unit): boolean
+	if unit.MaxEnergy <= 0 or unit.Energy < unit.MaxEnergy then
+		return false
+	end
+	local current = if unit.TargetId then state.byId[unit.TargetId] else nil
+	local target = if current and alive(current) then current else nearest(state, unit)
+	if not target then
+		return false
+	end
+	if target.UnitId ~= unit.TargetId then
+		unit.TargetId = target.UnitId
+		emit(state, { Type = "TargetChanged", UnitId = unit.UnitId, TargetId = target.UnitId })
+	end
+	castUltimate(state, unit, target)
+	return true
+end
+
 local function act(state: State, unit: Unit, dt: number)
+	-- Jauge restée pleine faute de cible : l'ultime part dès qu'une cible existe, à la place d'une action.
+	if tryUltimate(state, unit) then
+		unit.moving = false
+		return
+	end
 	local target = if unit.TargetId then state.byId[unit.TargetId] else nil
 	if not target or not target.Alive or target.Health <= 0 then
 		target = nearest(state, unit)
@@ -273,6 +320,7 @@ local function act(state: State, unit: Unit, dt: number)
 		emit(state, { Type = "Attack", UnitId = unit.UnitId, TargetId = target.UnitId })
 		damage(state, target, stats.AttackDamage, unit.UnitId)
 		gainEnergy(state, unit, stats.EnergyPerAttack or 0)
+		tryUltimate(state, unit)
 	end
 end
 
@@ -340,46 +388,6 @@ function CombatEngine.advance(state: State, dt: number, speed: number): number
 		steps += 1
 	end
 	return steps
-end
-
--- Ultime générique d'un héros : énergie pleine requise, remise à 0, dégâts de zone autour de sa cible.
-function CombatEngine.useUltimate(state: State, unitId: any): (boolean, string?)
-	if state.result then
-		return false, "combat terminé"
-	end
-	local unit = if typeof(unitId) == "number" then state.byId[unitId] else nil
-	if not unit or unit.Team ~= "Ally" then
-		return false, "unité invalide"
-	end
-	if not unit.Alive then
-		return false, "unité morte"
-	end
-	if unit.MaxEnergy <= 0 or unit.Energy < unit.MaxEnergy then
-		return false, "énergie insuffisante"
-	end
-	local target = if unit.TargetId then state.byId[unit.TargetId] else nil
-	if not target or not target.Alive then
-		target = nearest(state, unit)
-	end
-	if not target then
-		return false, "aucune cible"
-	end
-	unit.Energy = 0
-	emit(state, { Type = "EnergyChanged", UnitId = unit.UnitId, Energy = 0, MaxEnergy = unit.MaxEnergy })
-	local center = target.Position
-	local hits: { number } = {}
-	for _, other in state.units do
-		if other.Alive and other.Team == "Enemy" and distance(center, other.Position) <= state.options.UltimateRadius + EPSILON then
-			table.insert(hits, other.UnitId)
-		end
-	end
-	emit(state, { Type = "UltimateUsed", UnitId = unit.UnitId, TargetId = target.UnitId, Hits = hits })
-	for _, id in hits do
-		damage(state, state.byId[id], unit.stats.UltimateDamage or 0, unit.UnitId)
-	end
-	resolveDeaths(state)
-	progress(state)
-	return true, nil
 end
 
 -- Événements produits depuis le dernier appel (dans l'ordre), et unités déplacées.

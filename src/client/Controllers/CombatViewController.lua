@@ -5,29 +5,30 @@
 --     large pour le mini-boss. Petite icône de classe au-dessus des héros, sans nom.
 --   • Dégâts : chiffres brefs au-dessus des ennemis (plus gros pour un ultime), qui s'effacent vite.
 --   • Mort : les barres disparaissent, puis l'animation de mort (MonsterAnimationController).
---   • Ultime : toucher / cliquer un héros dont la mana est pleine (le serveur vérifie tout).
+--   • Ultime : automatique côté serveur ; UltimateUsed déclenche seulement un éclat doré (le
+--     design pourra y brancher animation, VFX, SFX). Le joueur n'a rien à faire.
 -- Aucune règle de combat ici : PV, mana, morts et résultat viennent uniquement du serveur.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
-local ArenaConfig = require(ReplicatedStorage.Shared.Config.ArenaConfig)
+local HeroConfig = require(ReplicatedStorage.Shared.Config.HeroConfig)
+local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local MonsterAnimationController = require(script.Parent.MonsterAnimationController)
+local UIKit = require(script.Parent.Parent.UI.UIKit)
 
 local CombatViewController = {}
 
 local RETRY_DELAY = 0.2
 local RETRIES = 10
 local LOW_HEALTH = 0.3
-local TAP_RADIUS = 70 -- pixels autour d'un héros pour lancer son ultime
-local HEALTH = Color3.fromRGB(90, 205, 90)
-local HEALTH_LOW = Color3.fromRGB(235, 60, 50)
-local ENEMY_HEALTH = Color3.fromRGB(220, 80, 70)
-local MANA = Color3.fromRGB(80, 150, 255)
-local MANA_FULL = Color3.fromRGB(255, 205, 80)
+local HEALTH = UITheme.Colors.Health
+local HEALTH_LOW = UITheme.Colors.HealthLow
+local ENEMY_HEALTH = UITheme.Colors.EnemyHealth
+local MANA = UITheme.Colors.Energy
+local MANA_FULL = UITheme.Colors.EnergyFull
 
 type View = {
 	team: string,
@@ -44,16 +45,14 @@ type View = {
 }
 
 local icons: { [string]: string } = {}
-for _, class in ArenaConfig.HeroClasses do
-	icons[class.Id] = class.Icon
+for heroId, info in HeroConfig.Heroes do
+	icons[heroId] = info.PlaceholderIcon
 end
 
 local views: { [number]: View } = {}
-local combatAction: RemoteFunction? = nil
-local active = false
 
 local function folder(): Instance?
-	return Workspace:FindFirstChild(`PreparationCombat_{Players.LocalPlayer.UserId}`)
+	return require(script.Parent.Parent.Arena.PlotView).world()
 end
 
 local function findModel(unitId: number): Model?
@@ -107,7 +106,7 @@ local function refresh(view: View)
 		manaFill.Size = UDim2.fromScale(math.clamp(view.energy / view.maxEnergy, 0, 1), 1)
 		manaFill.BackgroundColor3 = if full then MANA_FULL else MANA
 		if full and not view.pulse then
-			view.pulse = TweenService:Create(manaFill, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { BackgroundTransparency = 0.45 })
+			view.pulse = TweenService:Create(manaFill, UITheme.Animation.Pulse, { BackgroundTransparency = UITheme.Transparency.Pulse })
 			view.pulse:Play()
 		elseif not full and view.pulse then
 			view.pulse:Cancel()
@@ -123,8 +122,8 @@ end
 
 local function bar(parent: Instance, y: number, height: number, color: Color3): Frame
 	local back = Instance.new("Frame")
-	back.BackgroundColor3 = Color3.new(0, 0, 0)
-	back.BackgroundTransparency = 0.35
+	back.BackgroundColor3 = UITheme.Colors.BarTrack
+	back.BackgroundTransparency = UITheme.Transparency.Track
 	back.BorderSizePixel = 0
 	back.Position = UDim2.fromOffset(0, y)
 	back.Size = UDim2.new(1, 0, 0, height)
@@ -165,7 +164,7 @@ local function attachBars(unitId: number, miniBoss: boolean, attempt: number)
 		local glow = Instance.new("Highlight")
 		glow.FillTransparency = 1
 		glow.OutlineColor = MANA_FULL
-		glow.OutlineTransparency = 0.35
+		glow.OutlineTransparency = UITheme.World.Glow
 		glow.DepthMode = Enum.HighlightDepthMode.Occluded
 		glow.Enabled = false
 		glow.Parent = model
@@ -187,20 +186,37 @@ local function popDamage(view: View, amount: number, big: boolean)
 	gui.Size = UDim2.fromOffset(60, 24)
 	gui.StudsOffsetWorldSpace = Vector3.new(math.random(-8, 8) / 10, top(model) + 1.2, 0)
 	gui.AlwaysOnTop = true
-	local text = Instance.new("TextLabel")
-	text.BackgroundTransparency = 1
-	text.Size = UDim2.fromScale(1, 1)
-	text.Font = Enum.Font.GothamBold
-	text.TextSize = if big then 22 else 14
-	text.TextColor3 = if big then MANA_FULL else Color3.new(1, 1, 1)
-	text.TextStrokeTransparency = 0.4
-	text.Text = tostring(math.floor(amount + 0.5))
-	text.Parent = gui
+	-- Fredoka One contouré (design system) ; plus gros et doré pour un ultime.
+	local size = if big then UITheme.Typography.Size.Button else UITheme.Typography.Size.Caption
+	local text = UIKit.text(gui, tostring(math.floor(amount + 0.5)), size, if big then MANA_FULL else UITheme.Colors.TextLight)
+	local outline = text:FindFirstChildOfClass("UIStroke")
 	gui.Parent = model
-	TweenService:Create(gui, TweenInfo.new(0.6), { StudsOffsetWorldSpace = gui.StudsOffsetWorldSpace + Vector3.new(0, 1.2, 0) }):Play()
-	TweenService:Create(text, TweenInfo.new(0.6), { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+	TweenService:Create(gui, UITheme.Animation.Damage, { StudsOffsetWorldSpace = gui.StudsOffsetWorldSpace + Vector3.new(0, 1.2, 0) }):Play()
+	TweenService:Create(text, UITheme.Animation.Damage, { TextTransparency = 1 }):Play()
+	if outline then
+		TweenService:Create(outline, UITheme.Animation.Damage, { Transparency = 1 }):Play()
+	end
 	task.delay(0.65, function()
 		gui:Destroy()
+	end)
+end
+
+-- Ultime automatique : bref éclat doré sur le héros (point d'accroche pour les VFX du design).
+local function flashUltimate(view: View?)
+	local model = if view then view.model else nil
+	if not model or not model.Parent then
+		return
+	end
+	local burst = Instance.new("Highlight")
+	burst.FillColor = MANA_FULL
+	burst.OutlineColor = MANA_FULL
+	burst.FillTransparency = UITheme.World.Glow
+	burst.OutlineTransparency = 0
+	burst.DepthMode = Enum.HighlightDepthMode.Occluded
+	burst.Parent = model
+	TweenService:Create(burst, UITheme.Animation.Burst, { FillTransparency = 1, OutlineTransparency = 1 }):Play()
+	task.delay(0.5, function()
+		burst:Destroy()
 	end)
 end
 
@@ -218,7 +234,6 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 		local kind = event.Type
 		if kind == "CombatStarted" then
 			table.clear(views)
-			active = true
 		elseif kind == "UnitSpawned" then
 			views[event.UnitId] = {
 				team = event.Team,
@@ -232,6 +247,7 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 			for _, id in event.Hits do
 				ultimateHits[id] = true
 			end
+			flashUltimate(views[event.UnitId])
 		elseif kind == "Damage" then
 			local view = views[event.TargetId]
 			if view then
@@ -272,64 +288,7 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 			end
 			animate(event.UnitId, "Mort")
 			views[event.UnitId] = nil
-		elseif kind == "CombatEnded" then
-			active = false
 		end
-	end
-end
-
--- Toucher un héros dont la mana est pleine : demande d'ultime (validée par le serveur).
-local function onTap(input: InputObject, processed: boolean)
-	if not active or processed then
-		return
-	end
-	if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then
-		return
-	end
-	local camera = Workspace.CurrentCamera
-	local remote = combatAction
-	if not camera or not remote then
-		return
-	end
-	local tap = Vector2.new(input.Position.X, input.Position.Y)
-	local ready: { [Model]: number } = {}
-	local models: { Instance } = {}
-	for unitId, view in views do
-		local model = view.model
-		if view.team == "Ally" and model and model.Parent and view.maxEnergy > 0 and view.energy >= view.maxEnergy then
-			ready[model] = unitId
-			table.insert(models, model)
-		end
-	end
-	if #models == 0 then
-		return
-	end
-	-- D'abord le héros réellement touché (son corps), sinon le plus proche du doigt.
-	local best: number? = nil
-	local ray = camera:ScreenPointToRay(tap.X, tap.Y)
-	local params = RaycastParams.new()
-	params.FilterType = Enum.RaycastFilterType.Include
-	params.FilterDescendantsInstances = models
-	local hit = Workspace:Raycast(ray.Origin, ray.Direction * 500, params)
-	if hit then
-		local model = hit.Instance:FindFirstAncestorOfClass("Model")
-		while model and not ready[model] do
-			model = model:FindFirstAncestorOfClass("Model")
-		end
-		best = if model then ready[model] else nil
-	end
-	if not best then
-		local bestDistance = TAP_RADIUS
-		for model, unitId in ready do
-			local point, visible = camera:WorldToScreenPoint(model:GetPivot().Position)
-			local d = (Vector2.new(point.X, point.Y) - tap).Magnitude
-			if visible and d < bestDistance then
-				best, bestDistance = unitId, d
-			end
-		end
-	end
-	if best then
-		remote:InvokeServer("UseUltimate", best)
 	end
 end
 
@@ -347,9 +306,9 @@ local function watchFolder(root: Instance)
 end
 
 function CombatViewController:Start()
-	local name = `PreparationCombat_{Players.LocalPlayer.UserId}`
-	Workspace.ChildAdded:Connect(function(child: Instance)
-		if child.Name == name then
+	local name = "PreparationCombat"
+	Workspace.DescendantAdded:Connect(function(child: Instance)
+		if child.Name == name and child:GetAttribute("OwnerUserId") == Players.LocalPlayer.UserId then
 			watchFolder(child)
 		end
 	end)
@@ -357,14 +316,9 @@ function CombatViewController:Start()
 	if existing then
 		watchFolder(existing)
 	end
-	UserInputService.InputBegan:Connect(onTap)
 
 	local remotes = ReplicatedStorage:WaitForChild("Remotes")
 	local events = remotes:WaitForChild("CombatEvent", 30)
-	local actionRemote = remotes:WaitForChild("CombatAction", 30)
-	if actionRemote and actionRemote:IsA("RemoteFunction") then
-		combatAction = actionRemote
-	end
 	if events and events:IsA("RemoteEvent") then
 		events.OnClientEvent:Connect(onEvents)
 	end

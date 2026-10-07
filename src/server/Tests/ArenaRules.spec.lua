@@ -1,6 +1,7 @@
 --!strict
 -- Hors du dossier Services : jamais exécuté par le bootstrap.
--- Teste le vrai module ArenaRules (règles pures du prototype de préparation) avec la vraie StageConfig.
+-- Teste le vrai module ArenaRules (règles pures de la préparation) avec la vraie StageConfig.
+-- La formation associe une case à un identifiant d'exemplaire de héros (H1, H2...).
 
 return function(ArenaRules: any, stageConfig: any, arenaConfig: any)
 	local passed, failed = 0, 0
@@ -16,8 +17,6 @@ return function(ArenaRules: any, stageConfig: any, arenaConfig: any)
 	end
 
 	local stage = stageConfig.Zones[1].Stages[1]
-	local classes = {}
-	for _, class in arenaConfig.HeroClasses do classes[class.Id] = true end
 
 	test("Stage 1-1 expands to 2 Slime, 4 Gobelin, then the Boss mini-boss", function()
 		local enemies = ArenaRules.expandEnemies(stage)
@@ -39,51 +38,93 @@ return function(ArenaRules: any, stageConfig: any, arenaConfig: any)
 		end
 	end)
 
-	test("assign: up to 4 heroes, one unit per class", function()
+	test("assign: up to 4 heroes, one cell per hero instance", function()
 		local f = {}
-		assert(ArenaRules.assign(f, 1, "Archer", classes, 4))
-		assert(ArenaRules.assign(f, 2, "Epeiste", classes, 4))
-		assert(ArenaRules.assign(f, 5, "Barbare", classes, 4))
-		assert(ArenaRules.assign(f, 9, "Paladin", classes, 4))
-		local ok, reason = ArenaRules.assign(f, 3, "Magicien", classes, 4)
+		assert(ArenaRules.assign(f, 1, "H1", 4))
+		assert(ArenaRules.assign(f, 2, "H2", 4))
+		assert(ArenaRules.assign(f, 5, "H3", 4))
+		assert(ArenaRules.assign(f, 9, "H4", 4))
+		local ok, reason = ArenaRules.assign(f, 3, "H5", 4)
 		assert(ok == false and reason == "4 héros maximum" and f[3] == nil, "5th hero refused on a free cell")
-		assert(ArenaRules.assign(f, 7, "Archer", classes, 4), "same class moves instead of duplicating")
-		assert(f[1] == nil and f[7] == "Archer" and ArenaRules.count(f) == 4)
-		assert(ArenaRules.assign(f, 7, "Archer", classes, 4) and f[7] == "Archer", "re-assigning in place is a no-op")
+		assert(ArenaRules.assign(f, 7, "H1", 4), "same instance moves instead of duplicating")
+		assert(f[1] == nil and f[7] == "H1" and ArenaRules.count(f) == 4 and ArenaRules.slotOf(f, "H1") == 7)
+		assert(ArenaRules.assign(f, 7, "H1", 4) and f[7] == "H1", "re-assigning in place is a no-op")
+	end)
+
+	test("two instances of the same class are two different heroes", function()
+		local f = {}
+		assert(ArenaRules.assign(f, 1, "ArcherA", 4) and ArenaRules.assign(f, 2, "ArcherB", 4))
+		assert(f[1] == "ArcherA" and f[2] == "ArcherB")
 	end)
 
 	test("assign on an occupied cell replaces its hero, even with a full field", function()
-		local f = { [1] = "Archer", [2] = "Epeiste", [5] = "Barbare", [9] = "Paladin" }
-		assert(ArenaRules.assign(f, 5, "Magicien", classes, 4), "replace allowed at 4/4")
-		assert(f[5] == "Magicien" and ArenaRules.count(f) == 4)
-		for _, placed in f do assert(placed ~= "Barbare", "replaced hero goes back to the collection") end
-		assert(ArenaRules.assign(f, 2, "Paladin", classes, 4), "moving a placed class onto an occupied cell")
-		assert(f[2] == "Paladin" and f[9] == nil and ArenaRules.count(f) == 3)
+		local f = { [1] = "H1", [2] = "H2", [5] = "H3", [9] = "H4" }
+		assert(ArenaRules.assign(f, 5, "H5", 4), "replace allowed at 4/4")
+		assert(f[5] == "H5" and ArenaRules.count(f) == 4 and ArenaRules.slotOf(f, "H3") == nil)
+		assert(ArenaRules.assign(f, 2, "H4", 4), "moving a placed hero onto an occupied cell")
+		assert(f[2] == "H4" and f[9] == nil and ArenaRules.count(f) == 3)
 	end)
 
-	test("clear empties a cell; invalid cells and unknown classes refused", function()
-		local f = { [4] = "Tireur" }
+	test("clear empties a cell; invalid cells and empty ids refused", function()
+		local f = { [4] = "H6" }
 		assert(ArenaRules.clear(f, 4) and f[4] == nil)
 		assert(ArenaRules.clear(f, 4), "clearing an empty cell is harmless")
 		for _, bad in { 0, 10, 1.5, "1", {} } :: { any } do
-			local ok, reason = ArenaRules.assign(f, bad, "Archer", classes, 4)
+			local ok, reason = ArenaRules.assign(f, bad, "H1", 4)
 			assert(ok == false and reason == "case invalide")
 			ok, reason = ArenaRules.clear(f, bad)
 			assert(ok == false and reason == "case invalide")
 		end
-		local ok, reason = ArenaRules.assign(f, 1, "Dragon", classes, 4)
-		assert(ok == false and reason == "classe inconnue" and next(f) == nil)
+		for _, bad in { "", 12, {} } :: { any } do
+			local ok, reason = ArenaRules.assign(f, 1, bad, 4)
+			assert(ok == false and reason == "héros inconnu")
+		end
+		assert(next(f) == nil)
 	end)
 
-	test("prototype collection: exactly the six requested classes, max 4 heroes", function()
-		local ids = {}
-		for _, class in arenaConfig.HeroClasses do table.insert(ids, class.Id) end
-		table.sort(ids)
-		assert(table.concat(ids, ",") == "Archer,Barbare,Epeiste,Magicien,Paladin,Tireur")
+	test("arena config: max 4 heroes and a mannequin for every Stage 1-1 enemy", function()
 		assert(arenaConfig.MaxHeroes == 4)
 		for _, e in ArenaRules.expandEnemies(stage) do
 			assert(arenaConfig.EnemyTemplates[e.EnemyId], "mannequin for " .. e.EnemyId)
 		end
+	end)
+
+	-- Deux arènes de plots voisins : A autour de (0, 0), B autour de (163, 0) (écart mesuré en Studio).
+	local function grid(ox: number): any
+		local poses = {}
+		for slot = 1, 9 do poses[slot] = { x = ox + ((slot - 1) % 3) * 10, z = ((slot - 1) // 3) * 10 } end
+		return poses
+	end
+	local posesA, posesB = grid(0), grid(163)
+	local zoneA = ArenaRules.zone(posesA, 10)
+	local zoneB = ArenaRules.zone(posesB, 10)
+
+	test("zone: circle around the 9 tiles plus margin", function()
+		assert(zoneA and zoneA.center.x == 10 and zoneA.center.z == 10)
+		assert(math.abs(zoneA.radius - (math.sqrt(200) + 10)) < 1e-6)
+		assert(ArenaRules.zone({}, 10) == nil, "no tiles, no zone")
+	end)
+
+	test("A acts on its own arena only from inside its zone and within reach of the tile", function()
+		assert(ArenaRules.canInteract({ x = 11, z = 9 }, zoneA, posesA[5], 14) == true, "standing on its tile 5")
+		assert(ArenaRules.canInteract({ x = 11, z = 9 }, zoneA, nil, 14) == true, "Ready from inside the zone")
+		local ok, reason = ArenaRules.canInteract({ x = 11, z = 9 }, zoneA, posesA[6], 14)
+		assert(ok == true and reason == nil, "neighbour tile 6 (9 studs) within reach")
+		ok, reason = ArenaRules.canInteract({ x = -5, z = 20 }, zoneA, posesA[3], 14)
+		assert(ok == false and reason == "Approche-toi de la dalle", "inside the zone but too far from that tile")
+	end)
+
+	test("A standing in B's arena (or anywhere outside its own zone) can do nothing on its arena", function()
+		local inB = { x = 173, z = 10 }
+		assert(ArenaRules.canInteract(inB, zoneB, posesB[5], 14) == true, "B's own position is fine for B")
+		for _, pose in { posesA[1], posesA[5], posesA[9], nil } :: { any } do
+			local ok, reason = ArenaRules.canInteract(inB, zoneA, pose, 14)
+			assert(ok == false and reason == "Approche-toi de ton arène")
+		end
+		local ok, reason = ArenaRules.canInteract({ x = 60, z = 10 }, zoneA, nil, 14)
+		assert(ok == false and reason == "Approche-toi de ton arène", "between plots: no Ready")
+		assert(select(2, ArenaRules.canInteract(nil, zoneA, posesA[1], 14)) == "Approche-toi de ton arène", "no character")
+		assert(select(2, ArenaRules.canInteract({ x = 10, z = 10 }, nil, posesA[1], 14)) == "Approche-toi de ton arène", "no arena")
 	end)
 
 	print(`ArenaRules: {passed} passed, {failed} failed`)
