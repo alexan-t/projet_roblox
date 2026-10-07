@@ -170,6 +170,9 @@ Pastilles `Medium` : actif `Gold` opaque, inactif `WoodDeep` à `PanelStrong`. T
   contour `Selected` sur la carte), `Nouveau` (`RoyalRed`, petit pop), `Verrouillé`
   (`StoneGrey`, carte à 0,4), `Max` (`Gold`).
 - Slot vide : même cadre, fond `WoodDeep` à `PanelStrong`, sans contenu.
+- **Items 2D** (équipements, ressources) : même carte, icône dans la zone d'illustration. Tout
+  item produit s'affiche dans la vitrine `Workspace.Bestiaire.Inventaire` puis dans la Sacoche :
+  voir `docs/ITEMS.md`.
 
 ### Badges
 Pastille `Pill`, couleur d'état, contour `Thin`, texte `Caption`. Un seul badge par carte.
