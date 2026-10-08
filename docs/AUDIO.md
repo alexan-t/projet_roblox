@@ -30,7 +30,7 @@ Pour chercher dans ces seules bibliothèques, utiliser l'API de la boîte à out
 | Impact spécial (Roi Orc) | `Seisme` | `AttackEffectController`, effet `Seisme` |
 | Ultime | `UltimeLancement` puis `UltimeImpact` | `UltimateEffectController.Play` (impact à l'éclat de l'anneau) |
 | Mort ennemi | `MortEnnemi` (« poof » magique) | `DefeatEffectController.Play`, au début de la dissolution |
-| Mini-boss | `MiniBoss` (rugissement grave) | `ArenaPrepController`, événement `MiniBossStarted` |
+| Mini-boss | `MiniBoss` (rugissement grave) | `ArenaPlacementController`, événement `MiniBossStarted` |
 | Victoire / défaite | `Victoire` / `Defaite` (sting APM) | `RewardScreenController.Show` |
 | Reward | `Recompense` (carillon qui monte de carte en carte) | apparition de chaque carte |
 | Invocation / reveal | `InvocationCharge`, `InvocationEclat`, `Revelation` | `SummonEffectController`, `SummonView.Reveal` |

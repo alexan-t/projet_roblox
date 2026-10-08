@@ -1,16 +1,16 @@
 # Combat — CombatService (Alpha 0.0.1)
 
-Le serveur calcule tout le combat : cibles, déplacements, attaques, PV, énergie, ultime,
-morts, vagues, mini-boss, vitesse, victoire et défaite. Le client ne fait qu'afficher et
-demander (ultime, vitesse). Les modèles 3D représentent les unités mais ne sont jamais
-une source de vérité : aucun `Humanoid.Health` n'est utilisé.
+Le serveur calcule tout le combat : cibles, déplacements, attaques, PV, énergie, ultimes
+(automatiques), morts, vagues, mini-boss, victoire et défaite. Le client affiche, et ne peut
+demander qu'une chose : la vitesse x1/x2. Les modèles 3D représentent les unités mais ne
+sont jamais une source de vérité : aucun `Humanoid.Health` n'est utilisé.
 
 ```
-ArenaService (préparation, formation, géométrie de l'arène)
+ArenaService (héros posés dans le monde, touche E, géométrie de l'arène)
       │ StartCombat(player, zoneSessionId, formation, context)
       ▼
 CombatService (CombatSession par joueur, Heartbeat, remotes)
-      │ CombatEngine.advance / useUltimate
+      │ CombatEngine.advance (ultimes compris)
       ▼
 CombatEngine (pur, testable hors Studio)
       │ fin : CompleteStage(player, zoneSessionId, victoire)
@@ -69,9 +69,15 @@ horizontal), `Alive`, `Slot` (héros) ou `Cell` (ennemi), `MiniBoss`.
 - **Attaque** : cible vivante et à portée, `AttackInterval` respecté (première attaque
   immédiate). `Health = max(0, Health − AttackDamage)`.
 - **Énergie** : `+EnergyPerAttack` par attaque d'un héros, bornée à `MaxEnergy`.
-- **Ultime** (générique) : héros vivant du joueur, énergie pleine, combat en cours.
-  L'énergie repasse à 0, puis `UltimateDamage` touche la cible (ou l'ennemi le plus proche)
-  et tous les ennemis à moins de `Radius` d'elle. Un double clic est refusé : il n'y a plus d'énergie.
+- **Ultime automatique** (générique) : aucune action du joueur. Dès que la jauge d'un héros
+  vivant est pleine et qu'il a une cible vivante (la sienne, sinon l'ennemi le plus proche),
+  le moteur lance l'ultime : `Energy` repasse à 0 (`EnergyChanged`), puis `UltimateUsed`,
+  puis `UltimateDamage` sur la cible et sur tous les ennemis à moins de `Radius` d'elle.
+  Cycle : attaque → 100 → ultime → 0, une fois par remplissage, jamais deux dans le même pas.
+- **Sans cible** (la jauge se remplit sur le coup qui tue le dernier ennemi d'une vague) :
+  l'ultime n'est pas perdu ni lancé dans le vide. La jauge reste pleine et l'ultime part au
+  premier pas où une cible existe (vague suivante ou mini-boss), à la place d'une action.
+  Rien n'est lancé entre deux vagues. Les ennemis n'ont pas d'énergie, donc pas d'ultime.
 - **Mort** : `UnitDied` une seule fois ; l'unité ne cible, ne bouge et n'attaque plus ;
   son modèle est retiré 1,7 s après (le temps de sa disparition côté client, même retardée jusqu'au coup visible).
 
@@ -112,21 +118,22 @@ attaque ou meurt. Durées tenues en x2 : attaque du Roi Orc 0,7 s pour un interv
 | `StartCombat(player, zoneSessionId, formation, context)` | `combatId`, ou `nil` et la raison |
 | `GetCombat(player)` | vue copiée : `Id`, `ZoneSessionId`, `Zone`, `Stage`, `Wave`, `WaveCount`, `Speed`, `Units` |
 | `CancelCombat(player)` | arrêt sans résultat |
-| `UseUltimate(player, unitId)` | `true`, ou `false` et la raison |
 | `SetSpeed(player, speed)` | `true` pour 1 ou 2 |
 | `OnCombatEnded(callback)` | `callback(player, combatId, "Victory" \| "Defeat")` après l'annonce à ZoneService |
 
-`formation` : `{ [slot] = classId }` (1 à 4 héros, classes de CombatConfig).
+`formation` : `{ [slot] = classId }` (1 à 4 héros, classes de CombatConfig). ArenaService la
+construit à partir des exemplaires posés (`HeroId` de chaque `HeroInstanceId`).
 `context` (fourni par ArenaService, aucun nom d'asset dans CombatService) :
 `HeroPositions[slot]` et `EnemyPositions[case]` (Vector3 au sol) et
-`SpawnUnit(unit, pieds, regard) -> Model?` qui crée la représentation de l'unité.
+`SpawnUnit(unit, pieds, regard) -> Model?` qui crée la représentation de l'unité
+(`unit` = `UnitId`, `Team`, `TypeId`, `Slot`).
 
 ## Remotes
 
-- `ReplicatedStorage.Remotes.CombatAction` (RemoteFunction), seules demandes acceptées :
-  `("UseUltimate", unitId)` et `("SetSpeed", 1 | 2)`. Tout autre nom est refusé
-  (`"action inconnue"`), les arguments en trop sont ignorés. Le client ne peut jamais
-  envoyer dégâts, PV, énergie, cible, position, vague, ennemi, stats ni résultat.
+- `ReplicatedStorage.Remotes.SetCombatSpeed` (RemoteFunction) : `(1 | 2)`, seule demande
+  possible du client. Toute autre valeur est refusée (`"vitesse invalide"`). Il n'existe
+  aucun remote d'ultime ou d'action : le client ne peut jamais envoyer dégâts, PV, énergie,
+  cible, position, vague, ennemi, stats, ultime ni résultat.
 - `ReplicatedStorage.Remotes.CombatEvent` (RemoteEvent), serveur → propriétaire du
   combat uniquement : `(combatId, events)` par frame.
 
@@ -137,7 +144,8 @@ attaque ou meurt. Durées tenues en x2 : attaque du Roi Orc 0,7 s pour un interv
 Health, MaxHealth, Energy, MaxEnergy}`, `TargetChanged {UnitId, TargetId}`,
 `MoveStarted {UnitId, TargetId}`, `Attack {UnitId, TargetId}`,
 `Damage {TargetId, SourceId, Amount, Health}`, `EnergyChanged {UnitId, Energy, MaxEnergy}`,
-`UltimateUsed {UnitId, TargetId, Hits}`, `UnitDied {UnitId, Team, TypeId}`,
+`UltimateUsed {UnitId, TargetId, Hits}` (automatique : point d'accroche pour animation, VFX,
+SFX, caméra), `UnitDied {UnitId, Team, TypeId}`,
 `CombatEnded {Result}`.
 
 Les positions suivent les modèles répliqués (pas d'événement par frame). Le gameplay
@@ -148,34 +156,34 @@ n'attend jamais une animation. Les modèles portent les attributs `UnitId`, `Tea
 
 Règle d'interface : une information qui peut s'afficher dans le monde n'a pas de HUD séparé.
 
-- `ArenaPrepController` (#11 fera l'UI finale) : pendant le combat, seulement **x1 / x2 / X**
-  (quitter) en haut à droite, une annonce brève à chaque vague ou au mini-boss, et le
-  message de fin.
+- `ArenaPlacementController` : pendant le combat, une pastille légère au-dessus de la hotbar
+  (vague, **x1 / x2**, **X** pour quitter), une annonce brève à chaque vague ou au mini-boss,
+  et le résultat. La hotbar reste visible, grisée : elle ne modifie plus la formation.
 - `CombatViewController` : tout le reste est **dans le monde**, au-dessus des unités.
   - Petite barre de **PV** (rouge sous 30 %) et, pour les héros, barre de **mana**. Barre
     plus large pour le mini-boss. Petite icône de classe (attribut `HeroClass`) au-dessus
     des héros, sans nom.
   - **Mana pleine** : la barre devient dorée et pulse, et le héros a un léger contour doré.
-  - **Ultime** : toucher ou cliquer un héros dont la mana est pleine (raycast sur son
-    corps, sinon le héros prêt le plus proche dans un rayon de 70 px). Le client envoie
-    seulement `CombatAction("UseUltimate", unitId)` ; le serveur vérifie tout.
+  - **Ultime** : automatique côté serveur ; le joueur n'a rien à faire. Sur `UltimateUsed`, le héros
+    joue « Ultime » (`UltimateEffectController`, « Charge du Rempart ») : lueur dorée, une lame dorée
+    file de son arme vers la cible, puis un anneau doré éclate au sol au rayon des ennemis touchés.
+    Les chiffres de dégâts et la disparition des ennemis touchés attendent l'impact de l'onde
+    (`IMPACT_DELAY`, 0,45 s).
   - **Coup visible** : les chiffres de dégâts et la disparition de la cible attendent l'instant du
     coup de l'animation « Attaque » de l'attaquant (attribut `Impact` de la séquence). Un modèle
     avec l'attribut `EffetAttaque` joue aussi un effet d'impact (`AttackEffectController`, ex.
     `"Seisme"` pour le Roi Orc).
-  - **Effet de l'ultime** (« Charge du Rempart », `UltimateEffectController`) : le héros joue
-    « Ultime » (lueur dorée, estoc), une lame dorée file de son arme vers la cible, puis un anneau
-    doré éclate au sol au rayon des ennemis touchés. Les chiffres de dégâts et la disparition des
-    ennemis touchés attendent l'impact de l'onde (`IMPACT_DELAY`, 0,45 s).
   - **Dégâts** (`DamageFeedbackController`), à l'instant du coup visible : flash bref de la cible
     (clair sur un ennemi, rouge sur un héros), petit recul à l'opposé de l'attaquant, chiffre au
     design system (Fredoka contourée : clair, doré pour un ultime, rouge sur un héros) et traînée
     claire sur la barre de vie qui se résorbe. Pas d'animation de douleur ; un coup fatal laisse la
     place à la disparition. Démonstration Studio : tag `ApercuDegats` (`ApercuAllie` pour un héros).
   - **Mort** : les barres disparaissent, puis l'unité **se dissout** (`DefeatEffectController`,
-    0,85 s, avant le retrait du modèle par le serveur à 1 s) : flash clair, petit sursaut, effacement
-    de haut en bas avec poussière et étincelles dorées. Pas d'animation de douleur : le jeu est
-    surtout en one-shot. Démonstration en Studio : tag `ApercuDisparition` sur un modèle.
+    0,85 s, avant le retrait du modèle par le serveur à 1,7 s) : flash clair, petit sursaut,
+    effacement de haut en bas avec poussière et étincelles dorées. Pas d'animation de douleur : le
+    jeu est surtout en one-shot. Démonstration en Studio : tag `ApercuDisparition` sur un modèle.
+  - **Vitesse x2** : animations, instants d'impact et effets suivent la vitesse du combat.
+  - **Sons** (`AudioController`, `docs/AUDIO.md`) : élan, impact, ultime, dissolution, mini-boss.
   - Animations `Marche`, `Attaque`, `Touche`, `Mort` via `MonsterAnimationController.Play`,
     pour les modèles qui portent l'attribut `JeuAnimations`.
 - `CombatIntroController` (Cypher) : reste une **démo** d'entrée en combat (vague fixe,
@@ -188,19 +196,20 @@ Règle d'interface : une information qui peut s'afficher dans le monde n'a pas d
 ## Intégrations futures
 
 - **#9 RewardService** : sera appelé par ZoneService à la victoire (même point que QuestService).
-  L'écran de fin est prêt côté client : `RewardScreenController.Show({ Result, FirstClear, Rewards },
-  onContinue)` (« Victoire ! » avec rayons dorés et étincelles, cartes de récompense en cascade avec
-  objet 3D et montant qui défile, badge « Nouveau », bouton « Continuer » ; « Défaite… » sobre). Il
-  ne décide d'aucune récompense : #9 / #11 l'appellent avec les récompenses réellement attribuées.
+  L'écran de fin est prêt côté client et s'affiche sur `CombatEnded` (`ArenaPlacementController`) :
+  `RewardScreenController.Show({ Result, FirstClear, Rewards }, onContinue)` (« Victoire ! » avec
+  rayons dorés et étincelles, cartes de récompense en cascade avec objet 3D et montant qui défile,
+  badge « Nouveau », bouton « Continuer » ; « Défaite… » sobre). Il ne décide d'aucune récompense :
+  #9 renseignera `Rewards` (et `FirstClear`) avec les récompenses réellement attribuées.
   Démonstration Studio : attribut `Workspace.ApercuEcranRecompenses = true`.
-- **#10 HeroService** : la formation vient aujourd'hui de la collection fixe du prototype
-  (6 classes) ; elle viendra de `PlayerData.Heroes`. **Dette assumée.**
+- **#10 HeroService** : la partie Alpha existe (`docs/HEROES.md` : exemplaires possédés, kit de
+  départ, hotbar). Restent l'invocation, les niveaux et la rareté.
 - **#11 UI** : remplacera les panneaux et barres provisoires en consommant les mêmes événements.
 
 ## Limites
 
 - Mannequins temporaires (un seul `MannequinHeros`, classes distinguées par une petite
-  icône provisoire ; vrais portraits et rareté avec #10), sans animation. Une seule arène de test (`PlotTravail.Arene`), donc un combat physique à
+  icône provisoire ; vrais portraits et rareté avec #10), sans animation. Chaque joueur combat dans l'arène de son plot (lancement par le bouton Prêt), donc plusieurs combats physiques à
   la fois. Le moteur gère plusieurs sessions, ce que les tests prouvent.
 - Pas de collision entre unités (elles peuvent se superposer), pas de pathfinding.
 

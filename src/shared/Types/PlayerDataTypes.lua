@@ -43,6 +43,9 @@ export type PlayerData = {
 	Heroes: { [string]: Hero },
 	-- Liste ordonnée d'identifiants d'exemplaires de Heroes.
 	Team: { string },
+	-- Raccourcis 1..0 : exactement HeroConfig.HotbarSize identifiants d'exemplaires, "" = case vide
+	-- (pas de tableau à trous dans ProfileStore).
+	Hotbar: { string },
 	Kingdom: Kingdom,
 	-- Clé = identifiant de quête.
 	Quests: { [string]: QuestState },

@@ -62,7 +62,7 @@ function SummonView.Show(data: Data, options: ShowOptions?)
 		end
 	end
 	veil.Activated:Connect(close)
-	local panel, content = UIKit.panel(screen, { Size = WINDOW, Title = "Invocation", OnClose = close })
+	local panel, content = UIKit.window(screen, { Size = WINDOW, Title = "Invocation", OnClose = close })
 	panel.AnchorPoint = Vector2.new(0.5, 0.5)
 	panel.Position = UDim2.fromScale(0.5, 0.5)
 	current = { screen = screen, panel = panel, veil = veil }
@@ -84,20 +84,16 @@ function SummonView.Show(data: Data, options: ShowOptions?)
 	price.Position = UDim2.fromOffset(0, 144)
 	price.Size = UDim2.new(1, 0, 0, 22)
 
-	local summon = UIKit.button(content, {
-		Text = "Invoquer",
-		Style = if enough and opts.OnSummon then "Primary" else "Disabled",
-		Size = Vector2.new(240, 56),
-		OnClick = function()
-			if enough and opts.OnSummon then
-				local onSummon = opts.OnSummon
-				SummonView.Hide()
-				onSummon()
-			end
-		end,
-	})
-	summon.Holder.AnchorPoint = Vector2.new(0.5, 1)
-	summon.Holder.Position = UDim2.new(0.5, 0, 1, -(if enough then 0 else 26))
+	local summon = UIKit.button(content, "Invoquer", "Primary", UDim2.fromOffset(240, 56 + UITheme.Shadow.ButtonLip), function()
+		if enough and opts.OnSummon then
+			local onSummon = opts.OnSummon
+			SummonView.Hide()
+			onSummon()
+		end
+	end)
+	summon.setEnabled(enough and opts.OnSummon ~= nil)
+	summon.holder.AnchorPoint = Vector2.new(0.5, 1)
+	summon.holder.Position = UDim2.new(0.5, 0, 1, -(if enough then 0 else 26))
 	if not enough then
 		local hint = UIKit.text(content, "Gagne des tickets en combattant", Typography.Size.Caption, { Color = Colors.TextMuted })
 		hint.AnchorPoint = Vector2.new(0.5, 1)
@@ -174,7 +170,7 @@ function SummonView.Reveal(hero: Hero, options: RevealOptions?)
 	name.TextWrapped = true
 	UIKit.tween(holder, TweenInfo.new(FLIP / 2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = UDim2.fromOffset(REVEAL_CARD.X, REVEAL_CARD.Y) })
 	if hero.New ~= false then
-		local badge = UIKit.badge(card, "Nouveau", Colors.RoyalRed)
+		local badge = UIKit.edgeBadge(card, "Nouveau", Colors.RoyalRed)
 		badge.Size = UDim2.fromOffset(120, 30)
 		UIKit.popIn(badge, FLIP / 2 + 0.1)
 	end
@@ -188,20 +184,15 @@ function SummonView.Reveal(hero: Hero, options: RevealOptions?)
 		title.Text = "Héros obtenu !"
 	end
 
-	local continue = UIKit.button(root, {
-		Text = "Continuer",
-		Style = "Primary",
-		Size = Vector2.new(220, 56),
-		OnClick = function()
-			SummonView.Hide()
-			if opts.OnContinue then
-				task.delay(Animation.Close.Time, opts.OnContinue)
-			end
-		end,
-	})
-	continue.Holder.AnchorPoint = Vector2.new(0.5, 1)
-	continue.Holder.Position = UDim2.fromScale(0.5, 1)
-	UIKit.popIn(continue.Holder, FLIP / 2 + 0.25, 1.06)
+	local continue = UIKit.button(root, "Continuer", "Primary", UDim2.fromOffset(220, 56 + UITheme.Shadow.ButtonLip), function()
+		SummonView.Hide()
+		if opts.OnContinue then
+			task.delay(Animation.Close.Time, opts.OnContinue)
+		end
+	end)
+	continue.holder.AnchorPoint = Vector2.new(0.5, 1)
+	continue.holder.Position = UDim2.fromScale(0.5, 1)
+	UIKit.popIn(continue.holder, FLIP / 2 + 0.25, 1.06)
 end
 
 return SummonView

@@ -299,60 +299,51 @@ return function(createService: any, CombatEngine: any, combatConfig: any, stageC
 		assert(#e.completions == 1 and e.completions[1].player == b and e.completions[1].victory == false)
 	end)
 
-	test("client CombatAction: only UseUltimate(own ally) and SetSpeed(1|2); everything else refused or ignored", function()
+	test("27. client: only SetCombatSpeed(1|2); no remote can cast an ultimate or change the combat", function()
 		local e = fixture()
 		local s = e.start()
-		local action = e.remote("CombatAction")
-		assert(action and action.Parent and action.Parent.Name == "Remotes")
-		local a, b = e.player("A"), e.player("B")
+		assert(e.remote("CombatAction") == nil, "no ultimate / action remote any more")
+		assert(s.UseUltimate == nil, "no ultimate API on the service")
+		local speed = e.remote("SetCombatSpeed")
+		assert(speed and speed.ClassName == "RemoteFunction" and speed.Parent.Name == "Remotes")
+		local a = e.player("A")
 		s:StartCombat(a, e.stages[a].Id, TEAM, e.context())
-		s:StartCombat(b, e.stages[b].Id, TEAM, e.context())
-		local view = s:GetCombat(a)
-		local ally: any, enemy: any
-		for _, u in view.Units do
-			if u.Team == "Ally" and not ally then ally = u end
-			if u.Team == "Enemy" and not enemy then enemy = u end
+		local enemy: any
+		for _, u in s:GetCombat(a).Units do if u.Team == "Enemy" then enemy = u end end
+		for _, bad in { "UseUltimate", "Victory", 3, 100, 0, -1, 1.5, "2", { Damage = 999999 } } :: { any } do
+			local ok, reason = speed.OnServerInvoke(a, bad, 1)
+			assert(ok == false and reason == "vitesse invalide", tostring(bad))
 		end
-		local healthBefore = enemy.Health
-		for _, bad in { { "Victory", true }, { "SetHealth", 999999 }, { "Damage", 999999 }, { "SetTarget", enemy.UnitId }, { "Wave", 99 } } :: { any } do
-			local ok, reason = action.OnServerInvoke(a, bad[1], bad[2])
-			assert(ok == false and reason == "action inconnue", tostring(bad[1]))
+		assert(#e.events(a, "UltimateUsed") == 0, "no ultimate forced")
+		for _, u in s:GetCombat(a).Units do
+			if u.UnitId == enemy.UnitId then assert(u.Health == enemy.Health) end
+			assert(u.Energy == 0)
 		end
-		for _, speed in { 3, 100, 0, -1, 1.5, "2" } :: { any } do
-			assert(select(2, action.OnServerInvoke(a, "SetSpeed", speed)) == "vitesse invalide")
-		end
-		assert(select(2, action.OnServerInvoke(a, "UseUltimate", ally.UnitId, { Damage = 999999 })) == "énergie insuffisante", "no energy yet")
-		assert(select(2, action.OnServerInvoke(a, "UseUltimate", enemy.UnitId)) == "unité invalide", "enemy unit")
-		assert(select(2, action.OnServerInvoke(a, "UseUltimate", 99999)) == "unité invalide", "unknown unit")
-		-- Unité alliée de B, vue depuis A : les UnitId sont propres à chaque session.
-		local bAlly: any
-		for _, u in s:GetCombat(b).Units do if u.Team == "Ally" and u.UnitId > 10 then bAlly = u end end
-		assert(bAlly == nil or select(1, action.OnServerInvoke(a, "UseUltimate", bAlly.UnitId)) == false)
-		assert(s:GetCombat(a).Units[1].Energy == 0 and enemy.Health == healthBefore)
-		assert(#e.completions == 0, "no client action can end a stage")
-		local noCombat = e.player("C")
-		assert(select(2, action.OnServerInvoke(noCombat, "UseUltimate", 1)) == "aucun combat en cours")
+		assert(speed.OnServerInvoke(a, 2) == true and s:GetCombat(a).Speed == 2)
+		assert(#e.completions == 0, "no client request can end a stage")
 	end)
 
-	test("ultimate with full energy: accepted once, energy reset, damage applied; dead hero refused", function()
+	test("18-20. automatic ultimates in a real combat: full gauge -> UltimateUsed -> energy 0, once per fill", function()
 		local e = fixture()
 		local s = e.start()
 		local p = e.player("A")
-		s:StartCombat(p, e.stages[p].Id, { [5] = "Archer", [4] = "Paladin" }, e.context())
-		local archer: any
-		for _ = 1, 400 do
-			e.heartbeat:Fire(0.1)
-			for _, u in s:GetCombat(p).Units do if u.TypeId == "Archer" and u.Energy >= u.MaxEnergy then archer = u end end
-			if archer then break end
-		end
-		assert(archer, "archer reaches full energy")
-		local action = e.remote("CombatAction")
-		local ok = action.OnServerInvoke(p, "UseUltimate", archer.UnitId)
-		assert(ok == true)
-		assert(select(2, action.OnServerInvoke(p, "UseUltimate", archer.UnitId)) == "énergie insuffisante", "spam refused")
+		s:StartCombat(p, e.stages[p].Id, TEAM, e.context())
+		e.runUntilEnd(s, p, 300)
 		local used = e.events(p, "UltimateUsed")
-		assert(#used == 1 and used[1].UnitId == archer.UnitId and #used[1].Hits >= 1)
-		for _, u in s:GetCombat(p).Units do if u.UnitId == archer.UnitId then assert(u.Energy == 0) end end
+		assert(#used >= 1, "heroes cast on their own")
+		-- Pour chaque héros : énergie pleine, puis remise à 0, puis UltimateUsed ; jamais deux ultimes sans recharge.
+		local energy: { [number]: number } = {}
+		local ready: { [number]: boolean } = {}
+		for _, ev in e.events(p) do
+			if ev.Type == "EnergyChanged" then
+				if ev.Energy >= ev.MaxEnergy then ready[ev.UnitId] = true end
+				energy[ev.UnitId] = ev.Energy
+			elseif ev.Type == "UltimateUsed" then
+				assert(ready[ev.UnitId], "ultimate only after a full gauge")
+				assert(energy[ev.UnitId] == 0, "energy reset before the burst")
+				ready[ev.UnitId] = nil
+			end
+		end
 	end)
 
 	test("x1/x2: accepted values only, saved in Settings.CombatSpeed only, twice the progress at x2", function()
@@ -378,8 +369,13 @@ return function(createService: any, CombatEngine: any, combatConfig: any, stageC
 		local changes = e.events(p, "SpeedChanged")
 		assert(#changes == 3 and changes[1].Speed == 1 and changes[2].Speed == 2 and changes[3].Speed == 1)
 		e.data[p].Settings.CombatSpeed = before.Settings.CombatSpeed
+		-- Aucun coup ne dépasse la plus forte stat de la config (attaque ou ultime) : x2 ne double rien.
+		local maxHit = 0
+		for _, group in { combatConfig.Heroes, combatConfig.Enemies } do
+			for _, stats in group do maxHit = math.max(maxHit, stats.AttackDamage, stats.UltimateDamage or 0) end
+		end
 		for _, attack in e.events(p, "Damage") do
-			assert(attack.Amount <= 22, "damage per hit never doubled")
+			assert(attack.Amount <= maxHit, "damage per hit never doubled")
 		end
 	end)
 
@@ -564,22 +560,24 @@ return function(createService: any, CombatEngine: any, combatConfig: any, stageC
 		assert(s:GetCombat(p) == nil)
 	end)
 
-	test("UseUltimate refused once the combat is over", function()
+	test("speed request after the combat: setting saved, nothing sent", function()
 		local e = fixture()
 		local s = e.start()
 		local p = e.player("A")
 		s:StartCombat(p, e.stages[p].Id, { [5] = "Magicien" }, e.context())
 		e.runUntilEnd(s, p, 300)
-		assert(select(2, s:UseUltimate(p, 1)) == "aucun combat en cours")
+		local sent = #e.fired
+		assert(e.remote("SetCombatSpeed").OnServerInvoke(p, 2) == true and e.data[p].Settings.CombatSpeed == 2)
+		assert(#e.fired == sent)
 	end)
 
 	test("remotes created in ReplicatedStorage.Remotes with the right classes", function()
 		local e = fixture()
 		e.start()
-		local events, action = e.remote("CombatEvent"), e.remote("CombatAction")
-		assert(events.ClassName == "RemoteEvent" and action.ClassName == "RemoteFunction")
-		assert(events.Parent.Name == "Remotes" and action.Parent == events.Parent)
-		assert(type(action.OnServerInvoke) == "function")
+		local events, speed = e.remote("CombatEvent"), e.remote("SetCombatSpeed")
+		assert(events.ClassName == "RemoteEvent" and speed.ClassName == "RemoteFunction")
+		assert(events.Parent.Name == "Remotes" and speed.Parent == events.Parent)
+		assert(type(speed.OnServerInvoke) == "function")
 	end)
 
 	test("a lag spike does not finish the combat at once", function()

@@ -95,7 +95,7 @@ function CurrencyView.Set(currencies: Currencies, animate: boolean?)
 			if animate then
 				UIKit.tween(entry.value, UITheme.Animation.Count, { Value = target })
 				if gain then
-					UIKit.bump(entry.icon)
+					UIKit.pop(entry.icon)
 				end
 			else
 				entry.value.Value = target

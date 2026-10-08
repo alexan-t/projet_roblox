@@ -3,8 +3,8 @@
 -- à pas fixe sur Heartbeat. CombatService possède les unités et le résultat ; il annonce la fin
 -- à ZoneService, une seule fois. Il ne connaît aucun asset : l'appelant (ArenaService) fournit
 -- les positions et une fonction qui crée le modèle d'une unité.
--- Le client ne peut que demander un ultime ou la vitesse x1/x2 (Remotes.CombatAction) ;
--- il reçoit les événements de son combat (Remotes.CombatEvent).
+-- Le combat est entièrement automatique (ultimes compris). Le client ne peut que choisir la
+-- vitesse x1/x2 (Remotes.SetCombatSpeed) ; il reçoit les événements de son combat (Remotes.CombatEvent).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -20,7 +20,7 @@ local ZoneService = require(script.Parent.ZoneService)
 export type ArenaContext = {
 	HeroPositions: { [number]: Vector3 }, -- slot 1..9 -> pieds
 	EnemyPositions: { [number]: Vector3 }, -- case 1..9 -> pieds
-	SpawnUnit: (unit: { UnitId: number, Team: string, TypeId: string }, feet: Vector3, lookAt: Vector3) -> Model?,
+	SpawnUnit: (unit: { UnitId: number, Team: string, TypeId: string, Slot: number? }, feet: Vector3, lookAt: Vector3) -> Model?,
 }
 export type CombatView = {
 	Id: number,
@@ -113,7 +113,7 @@ local function present(session: Session, events: { CombatEngine.Event }, moved: 
 			local points = if unit.Team == "Ally" then session.context.HeroPositions else session.context.EnemyPositions
 			local anchor = if unit.Team == "Ally" then points[unit.Slot :: number] else points[unit.Cell :: number]
 			local facing = if unit.Team == "Ally" then session.enemyFacing else session.allyFacing
-			local model = session.context.SpawnUnit({ UnitId = unit.UnitId, Team = unit.Team, TypeId = unit.TypeId }, anchor, facing)
+			local model = session.context.SpawnUnit({ UnitId = unit.UnitId, Team = unit.Team, TypeId = unit.TypeId, Slot = unit.Slot }, anchor, facing)
 			if model then
 				model:SetAttribute("UnitId", unit.UnitId)
 				model:SetAttribute("Team", unit.Team)
@@ -311,20 +311,6 @@ function CombatService:CancelCombat(player: Player): boolean
 	return true
 end
 
-function CombatService:UseUltimate(player: Player, unitId: any): (boolean, string?)
-	local session = sessions[player]
-	if not session or not contextAlive(session) then
-		return false, "aucun combat en cours"
-	end
-	local ok, reason = CombatEngine.useUltimate(session.state, unitId)
-	if ok then
-		local events, moved = CombatEngine.drain(session.state)
-		present(session, events, moved)
-		finalize(session)
-	end
-	return ok, reason
-end
-
 -- Vitesse x1 ou x2 : accélère la simulation, jamais les stats. Mémorisée dans Settings.CombatSpeed.
 function CombatService:SetSpeed(player: Player, speed: any): (boolean, string?)
 	if not isSpeed(speed) then
@@ -367,18 +353,13 @@ function CombatService:Start()
 	events.Name = "CombatEvent"
 	events.Parent = remotes
 	eventRemote = events
-	-- Seules demandes client : ultime d'une de ses unités, vitesse 1 ou 2. Le reste est ignoré.
-	local action = Instance.new("RemoteFunction")
-	action.Name = "CombatAction"
-	action.OnServerInvoke = function(player: Player, name: any, value: any): (boolean, string?)
-		if name == "UseUltimate" then
-			return CombatService:UseUltimate(player, value)
-		elseif name == "SetSpeed" then
-			return CombatService:SetSpeed(player, value)
-		end
-		return false, "action inconnue"
+	-- Seule demande client pendant un combat : la vitesse, 1 ou 2.
+	local speed = Instance.new("RemoteFunction")
+	speed.Name = "SetCombatSpeed"
+	speed.OnServerInvoke = function(player: Player, value: any): (boolean, string?)
+		return CombatService:SetSpeed(player, value)
 	end
-	action.Parent = remotes
+	speed.Parent = remotes
 end
 
 return CombatService

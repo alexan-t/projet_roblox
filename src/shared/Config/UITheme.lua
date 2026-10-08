@@ -75,6 +75,24 @@ local Transparency = {
 	Shadow = 0.75, -- ombre portée
 	Disabled = 0.45, -- contenu (texte, icône) d'un élément désactivé
 	Hover = 0.08, -- voile clair ajouté au survol
+	Slot = 0.32, -- raccourci de hotbar occupé (plus léger qu'une carte)
+	Empty = 0.85, -- raccourci vide
+	Art = 0.35, -- zone d'illustration d'une carte
+	Pulse = 0.45, -- creux de la pulsation d'une jauge pleine
+}
+
+-- Éléments dans le monde : grille de l'arène et surbrillances (Highlight), sans néon.
+local World = {
+	GridHidden = 0.85, -- transparence locale des cases hors placement
+	Glow = 0.35, -- contour d'un héros à jauge pleine, éclat d'ultime
+	-- États des cases avant combat : remplissage et contour (transparences).
+	Case = {
+		Hover = { Fill = Colors.Cream, FillT = 0.55, Outline = Colors.Cream, OutlineT = 0 },
+		ValidTarget = { Fill = Colors.Cream, FillT = 0.85, Outline = Colors.Cream, OutlineT = 0.55 },
+		Occupied = { Fill = Colors.WoodLight, FillT = 0.8, Outline = Colors.WoodLight, OutlineT = 0.4 },
+		Selected = { Fill = Colors.Selected, FillT = 0.65, Outline = Colors.Selected, OutlineT = 0 },
+		Invalid = { Fill = Colors.Error, FillT = 0.75, Outline = Colors.Error, OutlineT = 0.2 },
+	},
 }
 
 -- Fredoka One : titres, boutons, onglets, noms, compteurs, labels courts.
@@ -92,6 +110,8 @@ local Typography = {
 		Label = 18, -- onglet, compteur, badge long
 		Body = 18, -- description (Builder Sans)
 		Caption = 14, -- badge, mention courte ; jamais en dessous
+		Icon = 30, -- icône de raccourci, aperçu du héros en main
+		IconLarge = 40, -- icône de carte
 	},
 	-- Épaisseur du contour Ink du texte Fredoka selon sa taille (px).
 	TextStroke = {
@@ -117,6 +137,7 @@ local Stroke = {
 	-- (UIStroke.StrokeSizingMode = ScaledSize) pour rester constante quelle que soit la distance.
 	WorldScaled = 0.08,
 	LineJoin = Enum.LineJoinMode.Round,
+	ScrollBar = 6, -- barre de défilement d'une liste
 }
 
 local Spacing = {
@@ -145,6 +166,9 @@ local Animation = {
 	Fade = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 	Toast = TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
 	Count = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), -- compteur qui défile
+	Pulse = TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), -- jauge pleine
+	Damage = TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), -- chiffre de dégâts
+	Burst = TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), -- éclat d'ultime
 	Scale = {
 		Pressed = 0.94,
 		Hover = 1.04,
@@ -156,6 +180,17 @@ local Animation = {
 local UITheme = {
 	Colors = table.freeze(Colors),
 	Transparency = table.freeze(Transparency),
+	World = table.freeze({
+		GridHidden = World.GridHidden,
+		Glow = World.Glow,
+		Case = table.freeze({
+			Hover = table.freeze(World.Case.Hover),
+			ValidTarget = table.freeze(World.Case.ValidTarget),
+			Occupied = table.freeze(World.Case.Occupied),
+			Selected = table.freeze(World.Case.Selected),
+			Invalid = table.freeze(World.Case.Invalid),
+		}),
+	}),
 	Typography = table.freeze({
 		Display = Typography.Display,
 		Body = Typography.Body,
@@ -175,6 +210,9 @@ local UITheme = {
 		Fade = Animation.Fade,
 		Toast = Animation.Toast,
 		Count = Animation.Count,
+		Pulse = Animation.Pulse,
+		Damage = Animation.Damage,
+		Burst = Animation.Burst,
 		Scale = table.freeze(Animation.Scale),
 	}),
 }

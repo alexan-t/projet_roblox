@@ -53,7 +53,7 @@ function CollectionView.Show(heroes: { HeroEntry }, options: Options?)
 		end
 	end
 	veil.Activated:Connect(close)
-	local panel, content = UIKit.panel(screen, { Size = WINDOW, Title = "Collection", OnClose = close })
+	local panel, content = UIKit.window(screen, { Size = WINDOW, Title = "Collection", OnClose = close })
 	panel.AnchorPoint = Vector2.new(0.5, 0.5)
 	panel.Position = UDim2.fromScale(0.5, 0.5)
 	current = { screen = screen, panel = panel, veil = veil }

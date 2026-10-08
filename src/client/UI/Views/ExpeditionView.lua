@@ -62,11 +62,11 @@ local function stageCard(parent: Instance, zone: number, stage: Stage): (Frame, 
 	name.Size = UDim2.new(1, 0, 0, 26)
 	if not stage.Unlocked then
 		name.TextTransparency = UITheme.Transparency.Disabled
-		UIKit.badge(frame, "Verrouillé", Colors.StoneGrey)
+		UIKit.edgeBadge(frame, "Verrouillé", Colors.StoneGrey)
 	elseif stage.Cleared then
-		UIKit.badge(frame, "Terminé", Colors.Gold)
+		UIKit.edgeBadge(frame, "Terminé", Colors.Gold)
 	else
-		UIKit.badge(frame, "Disponible", Colors.Success)
+		UIKit.edgeBadge(frame, "Disponible", Colors.Success)
 	end
 	local touch = Instance.new("TextButton")
 	touch.BackgroundTransparency = 1
@@ -102,7 +102,7 @@ function ExpeditionView.Show(data: Data, options: Options?)
 		end
 	end
 	veil.Activated:Connect(close)
-	local panel, content = UIKit.panel(screen, { Size = WINDOW, Title = "Expédition", OnClose = close })
+	local panel, content = UIKit.window(screen, { Size = WINDOW, Title = "Expédition", OnClose = close })
 	panel.AnchorPoint = Vector2.new(0.5, 0.5)
 	panel.Position = UDim2.fromScale(0.5, 0.5)
 	current = { screen = screen, panel = panel, veil = veil }
@@ -133,12 +133,20 @@ function ExpeditionView.Show(data: Data, options: Options?)
 	detailText.Size = UDim2.new(1, -2 * Spacing.L, 1, 0)
 	detailText.TextTruncate = Enum.TextTruncate.AtEnd
 
-	local launch = UIKit.button(content, { Text = "Lancer", Style = "Disabled", Size = Vector2.new(220, 56) })
-	launch.Holder.AnchorPoint = Vector2.new(0.5, 1)
-	launch.Holder.Position = UDim2.new(0.5, 0, 1, 0)
+	local selected: Stage? = nil
+	local launch = UIKit.button(content, "Lancer", "Primary", UDim2.fromOffset(220, 56 + UITheme.Shadow.ButtonLip), function()
+		local stage = selected
+		if stage and stage.Unlocked and opts.OnLaunch then
+			local onLaunch = opts.OnLaunch
+			ExpeditionView.Hide()
+			onLaunch(data.Zone, stage.Stage)
+		end
+	end)
+	launch.holder.AnchorPoint = Vector2.new(0.5, 1)
+	launch.holder.Position = UDim2.new(0.5, 0, 1, 0)
+	launch.setEnabled(false)
 
 	local borders: { [number]: UIStroke } = {}
-	local selected: Stage? = nil
 	local function select(stage: Stage)
 		selected = stage
 		for number, border in borders do
@@ -147,7 +155,7 @@ function ExpeditionView.Show(data: Data, options: Options?)
 			border.Thickness = if on then UITheme.Stroke.Thick else UITheme.Stroke.Regular
 		end
 		detailText.Text = if stage.Unlocked then describe(stage) else "Termine le stage précédent pour débloquer celui-ci"
-		launch.SetStyle(if stage.Unlocked and opts.OnLaunch then "Primary" else "Disabled")
+		launch.setEnabled(stage.Unlocked and opts.OnLaunch ~= nil)
 	end
 	for index, stage in data.Stages do
 		local frame, border, touch = stageCard(row, data.Zone, stage)
@@ -157,14 +165,6 @@ function ExpeditionView.Show(data: Data, options: Options?)
 			select(stage)
 		end)
 	end
-	launch.Face.Activated:Connect(function()
-		local stage = selected
-		if stage and stage.Unlocked and opts.OnLaunch then
-			local onLaunch = opts.OnLaunch
-			ExpeditionView.Hide()
-			onLaunch(data.Zone, stage.Stage)
-		end
-	end)
 	-- par défaut : le premier stage disponible non terminé, sinon le premier
 	local default = data.Stages[1]
 	for _, stage in data.Stages do

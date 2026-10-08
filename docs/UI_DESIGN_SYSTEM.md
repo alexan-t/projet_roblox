@@ -260,17 +260,23 @@ module et par ce document.
 
 ## 10. Exemples appliqués aux écrans existants
 
-### Préparation de combat (`ArenaPrepController`)
-- **Main de héros** : cartes héros standard (§ 6) en bas de l'écran, à `PanelStrong`, portrait
-  ViewportFrame, icône de classe dessinée (§ 7) à la place des emoji ; carte posée = badge
-  `Équipé`. L'arène reste entièrement visible au-dessus.
-- **Pastille du roster** (« Stage 1-1 · Slime ×2… ») : pastille `HUD` + texte `Label` contouré.
-- **Combattre** : bouton principal doré. **Quitter** : bouton secondaire bois.
-- **Grille** : surbrillance de la case survolée en `Selected`.
+### Hotbar, sacoche et placement (`HeroBarController`, `ArenaPlacementController`)
+Moins de fenêtres, plus d'interaction avec le monde : on **prend** un héros et on le **pose**.
+- **Hotbar** : panneau `HUD` en bas, 10 raccourcis `Cream` semi-transparents, contour Ink,
+  numéro de touche en `Caption`. Raccourci choisi : surélevé, contour `Selected` épais, pop.
+  Héros posé sur l'arène : pastille `Selected`. Grisée pendant le combat.
+- **Sacoche** : bouton bois à gauche de la hotbar ; panneau `Panel` à gauche de l'écran,
+  bandeau titre en bois, onglet Héros (doré), cartes standard (§ 6) avec badge « Posé »,
+  bouton principal **Placer** (désactivé sans sélection).
+- **Placement** : feedback dans le monde (états des cases en surbrillance claire, `Selected`
+  doré, `Error` discret), petit aperçu du héros au curseur, pastille de statut `HUD`
+  (« Archer en main · choisis une case 2/4 », boutons secondaires Retirer / Annuler).
+- **Refus** : toast `Tooltip` crème en haut (« 4 héros maximum », « Arène occupée par … »).
 
-### Combat (`ArenaPrepController`, `CombatViewController`)
+### Combat (`ArenaPlacementController`, `CombatViewController`)
 - Les informations des unités restent **dans le monde** : barres PV/énergie (§ 6), icône de
-  classe, chiffres de dégâts Fredoka contourés, ultime en touchant le héros prêt.
+  classe, chiffres de dégâts Fredoka contourés. Ultimes automatiques : éclat doré sur
+  `UltimateUsed`, aucun bouton.
 - **Barre basse légère** : une pastille `HUD` centrée en bas, avec « Vague 1/1 », x1/x2 (onglets,
   actif doré) et un bouton rond « X » pour quitter. Pas de portraits permanents ni de doublon
   des PV.
@@ -297,38 +303,53 @@ module et par ce document.
 
 ## 12. Implémentation : UIKit (issue #19)
 
-Les composants de ce document existent en code, côté client : `src/client/UI/UIKit.lua`
-(`StarterPlayerScripts.Client.UI.UIKit`). Un écran se construit avec eux plutôt qu'à la main :
+Les composants de ce document existent en code, côté client, dans un seul module :
+`src/client/UI/UIKit.lua` (`StarterPlayerScripts.Client.UI.UIKit`). Un écran se construit avec
+eux plutôt qu'à la main.
+
+**Briques de base** (utilisées par la préparation, la hotbar et la sacoche) :
 
 | Fonction | Composant (§) |
 | --- | --- |
-| `UIKit.screen(name, order?)` | ScreenGui + `UIScale` global (écran de référence 1080 px, entre 0,7 et 1,25) |
-| `UIKit.text(parent, text, size, { Color, Stroke, Align })` | texte Fredoka contouré Ink, épaisseur selon la taille (§ 4) |
-| `UIKit.button(parent, { Text, Style, Size, OnClick })` | bouton chunky `Primary` / `Secondary` / `Danger` / `Disabled`, états survol, appui, sélection (§ 6) |
+| `UIKit.text(parent, texte, taille, couleur ou { Color, Stroke, Align, Font })` | texte Fredoka contouré Ink, épaisseur selon la taille (§ 4) ; `Stroke = false` pour un texte sombre sur fond clair |
+| `UIKit.button(parent, texte, "Primary"/"Secondary"/"Danger"/"Tab", taille, action)` | bouton chunky ; `setEnabled`, `setSelected` (§ 6) |
+| `UIKit.panel(parent, transparence?, rayon?, contour?)` | panneau bois sombre contouré |
+| `UIKit.badge(parent, texte, couleur)` | pastille d'état (largeur automatique) |
+| `UIKit.pop(objet)` | pop de gain 1,12 → 1 (§ 8) |
+| `UIKit.corner`, `UIKit.stroke`, `UIKit.textStroke` | coins, contour Ink, épaisseur de contour du texte |
+
+**Écrans et fenêtres** :
+
+| Fonction | Composant (§) |
+| --- | --- |
+| `UIKit.screen(nom, ordre?)` | ScreenGui + `UIScale` global (écran de référence 1080 px, entre 0,7 et 1,25) |
+| `UIKit.window(parent, { Size, Title, OnClose })` | fenêtre : fond `WoodDeep`, ombre, bandeau de titre en bois, fermer ; renvoie la fenêtre et son contenu |
 | `UIKit.roundButton(parent, { Text = "X", ... })` | bouton rond (fermer) |
-| `UIKit.panel(parent, { Size, Title, OnClose })` | fenêtre : fond `WoodDeep`, ombre, bandeau de titre en bois, fermer |
 | `UIKit.subPanel`, `UIKit.pill` | sous-panneau `PanelStrong`, pastille `HUD` |
-| `UIKit.badge(parent, text, color)` | badge d'état à cheval sur le bord haut |
-| `UIKit.bar(parent, { Color })` | barre PV / énergie / progression (`Set(ratio, animate?)`) |
-| `UIKit.tabs(parent, { Items, Selected, OnSelect })` | onglets, actif doré |
+| `UIKit.edgeBadge(parent, texte, couleur)` | badge d'état à cheval sur le bord haut d'une carte |
+| `UIKit.bar(parent, { Color, Size })` | barre PV / énergie / progression (`Set(ratio, animate?)`) |
 | `UIKit.card(parent, { Name, Model, Badge, Selected, Locked, Empty })` | carte standard avec portrait 3D |
-| `UIKit.portrait(parent, model)` | portrait 3D trois quarts (ViewportFrame) |
-| `UIKit.overlay`, `UIKit.open`, `UIKit.close`, `UIKit.popIn`, `UIKit.bump`, `UIKit.announce` | voile, ouverture / fermeture, apparition, pop de gain, annonce (§ 8) |
-| `UIKit.rays(parent, length)` | rayons dorés tournants (victoire, héros obtenu) |
-| `UIKit.curtain(title?, onMiddle?)` | transition entre deux scènes (voile Ink + titre) |
+| `UIKit.portrait(parent, modèle, enPied?)` | portrait 3D trois quarts (ViewportFrame) |
+| `UIKit.overlay`, `UIKit.open`, `UIKit.close`, `UIKit.popIn`, `UIKit.announce` | voile, ouverture / fermeture, apparition, annonce (§ 8) |
+| `UIKit.rays(parent, longueur)` | rayons dorés tournants (victoire, héros obtenu) |
+| `UIKit.curtain(titre?, auMilieu?)` | transition entre deux scènes (voile Ink + titre) |
 
 Une seule `UIScale` par élément : ouverture, pop et survol partagent la même (Roblox n'en
 applique qu'une).
 
 Icônes (§ 7) : `src/client/UI/Icons.lua`, petits objets 3D avec silhouette Ink, dans un
-ViewportFrame — plus d'emoji. Classes (arc, épée, hache, bouclier, bâton, cible) et objets
-(`Parchemin`, `Or`, `Gemmes`, `Ticket`, `Combat`, `Cadenas`).
+ViewportFrame. Classes de héros (`Archer` arc, `Epeiste` épée, `Barbare` hache, `Paladin`
+bouclier, `Magicien` bâton, `Tireur` cible) : ce sont les `HeroId` de `HeroConfig`, et ces icônes
+remplacent les monogrammes provisoires (`PlaceholderIcon`). Objets : `Parchemin`, `Or`,
+`Gemmes`, `Ticket`, `Combat`, `Cadenas`.
 
 ### Écrans
 
-Écrans branchés sur des états réels : préparation et HUD de combat (`ArenaPrepController`),
-barres et bouton « Ultime » au-dessus des héros (`CombatViewController`), écran Victoire /
-Défaite et récompenses (`RewardScreenController`), branché sur `CombatEnded`.
+Branchés sur des états réels :
+
+- barres de PV / mana et icône de classe au-dessus des unités (`CombatViewController`) ;
+- écran Victoire / Défaite et récompenses (`RewardScreenController`), affiché sur `CombatEnded`
+  par `ArenaPlacementController`.
 
 Vues prêtes à brancher par les contrôleurs de #11 (`src/client/UI/Views`, présentation seule,
 aucune règle de jeu) :
@@ -339,16 +360,14 @@ aucune règle de jeu) :
 | `CurrencyView` | `Set(currencies, animate?)`, `Hide()` | `PlayerData.Currencies` : `{ Gold, Gems, SummonTickets }` |
 | `ExpeditionView` | `Show(data, { OnLaunch, OnClose })`, `Hide()` | `{ Zone, Stages = { { Stage, Unlocked, Cleared, Waves, Enemies } } }` ; `OnLaunch` → `RequestStartStage` |
 | `SummonView` | `Show({ Tickets, Cost }, { OnSummon, OnClose })`, `Reveal(hero, { OnContinue })`, `Hide()` | tirage de HeroService (#10) ; `Reveal` après l'effet 3D du portail (`SummonEffectController`) |
-| `CollectionView` | `Show(heroes, { OnClose, OnSelect })`, `Hide()` | `{ { Name, Model, ClassId, Count, New, Equipped } }` depuis `Heroes` / `Team` |
+| `CollectionView` | `Show(heroes, { OnClose, OnSelect })`, `Hide()` | `{ { Name, Model, ClassId, Count, New, Equipped } }` depuis `Heroes` / la hotbar |
 
 Placement : quête en haut à gauche, monnaies en haut au centre (la liste des joueurs de Roblox
 occupe le haut à droite), fenêtres centrées avec voile.
 
 ### Démonstrations Studio (sans serveur)
 
-- `Workspace.ApercuHudCombat = true` : préparation → combat simulé → victoire.
-- Tag `ApercuBarres` sur un modèle (attributs `Equipe`, `Classe`) : barres, mana, bouton Ultime.
-- `Workspace.ApercuUI` = `Quete`, `Monnaies`, `Expedition`, `Invocation`, `Collection`,
-  `Transition` ou `Tout` (`UIPreviewController`) ; modifiable en cours de Play. Les héros de
-  démonstration sont les copies de `ReplicatedStorage.AtelierInvocation` (attributs `NomAffiche`,
-  `Classe`).
+`Workspace.ApercuUI` = `Quete`, `Monnaies`, `Expedition`, `Invocation`, `Collection`,
+`Transition` ou `Tout` (`UIPreviewController`) ; modifiable en cours de Play. Les héros de
+démonstration sont les copies de `ReplicatedStorage.AtelierInvocation` (attributs `NomAffiche`,
+`Classe`). Écran de fin : `Workspace.ApercuEcranRecompenses = true`.

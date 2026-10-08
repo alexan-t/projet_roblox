@@ -87,14 +87,14 @@ function QuestView.Show(quest: Quest, options: Options?)
 	r.counter.Text = `{progress}/{target}`
 	r.bar.Set(progress / target, sameQuest)
 	if sameQuest and previous and quest.Progress > previous.Progress then
-		UIKit.bump(r.counter)
+		UIKit.pop(r.counter)
 	end
 
 	local completed = quest.Completed
 	r.panel.Size = UDim2.fromOffset(WIDTH, if completed and opts.OnClaim then HEIGHT_DONE else HEIGHT)
 	r.bar.SetColor(if completed then Colors.Success else Colors.Progress)
 	if completed and not r.badge then
-		local badge = UIKit.badge(r.panel, "Terminée", Colors.Success)
+		local badge = UIKit.edgeBadge(r.panel, "Terminée", Colors.Success)
 		r.badge = badge
 		UIKit.popIn(badge)
 		if sameQuest then
@@ -105,21 +105,16 @@ function QuestView.Show(quest: Quest, options: Options?)
 		r.badge = nil
 	end
 	if r.claim then
-		r.claim.Holder:Destroy()
+		r.claim.holder:Destroy()
 		r.claim = nil
 	end
 	if completed and opts.OnClaim then
 		local onClaim = opts.OnClaim
-		local claim = UIKit.button(r.panel, {
-			Text = "Récupérer",
-			Style = "Primary",
-			Size = Vector2.new(WIDTH - 2 * Spacing.M, 44),
-			OnClick = function()
-				onClaim()
-			end,
-		})
-		claim.Holder.Position = UDim2.new(0, Spacing.M, 0, HEIGHT - Spacing.XS)
-		UIKit.popIn(claim.Holder, 0.1, 1.06)
+		local claim = UIKit.button(r.panel, "Récupérer", "Primary", UDim2.fromOffset(WIDTH - 2 * Spacing.M, 44 + UITheme.Shadow.ButtonLip), function()
+			onClaim()
+		end)
+		claim.holder.Position = UDim2.new(0, Spacing.M, 0, HEIGHT - Spacing.XS)
+		UIKit.popIn(claim.holder, 0.1, 1.06)
 		r.claim = claim
 	end
 end

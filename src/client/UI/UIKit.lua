@@ -1,58 +1,38 @@
 --!strict
--- Composants d'interface du design system (docs/UI_DESIGN_SYSTEM.md) — issue #19.
--- Toutes les valeurs de style viennent de UITheme : un écran construit avec UIKit n'a aucune couleur,
--- police, rayon ni durée en dur. UIKit ne contient aucune règle de jeu.
---   UIKit.screen(name, order?)                 ScreenGui + UIScale global (écran de référence 1080 px)
---   UIKit.text(parent, text, size, options?)    texte Fredoka clair contouré Ink
---   UIKit.button(parent, options)               bouton « chunky » (face + lèvre) : Primary, Secondary, Disabled
---   UIKit.roundButton(parent, options)          bouton rond (fermer « X », action ronde)
---   UIKit.panel(parent, options)                panneau / fenêtre (bandeau de titre en bois, fermer)
---   UIKit.pill(parent, size)                    pastille HUD
---   UIKit.badge(parent, text, color)            badge d'état à cheval sur le bord haut
---   UIKit.bar(parent, options)                  barre (PV, énergie, progression)
---   UIKit.tabs(parent, options)                 onglets (actif doré)
---   UIKit.card(parent, options)                 carte (héros, récompense, slot) avec zone d'illustration
---   UIKit.portrait(parent, model)               portrait 3D d'un modèle (ViewportFrame)
---   UIKit.overlay(screen)                       voile Ink derrière une fenêtre modale
---   UIKit.open(object, overlay?) / UIKit.close(object, overlay?, destroy?)  transitions de fenêtre
---   UIKit.popIn(object, delay?, peak?)          pop 0 → peak → 1 (apparition)
---   UIKit.bump(object, peak?)                   pop 1 → peak → 1 (gain sur un élément affiché)
---   UIKit.announce(screen, text, options?)      annonce (vague, mini-boss, quête) : pop, tenue, fondu
---   UIKit.rays(parent, length, count?)          rayons dorés tournants (victoire, héros obtenu)
---   UIKit.curtain(title?, onMiddle?, hold?)     transition entre deux scènes (bloquante)
+-- Briques d'interface du design system (docs/UI_DESIGN_SYSTEM.md). Toutes les valeurs viennent
+-- de UITheme : les Controllers composent ces briques au lieu de régler couleurs et tailles en dur.
+-- Aucune règle de jeu ici.
+--   Briques de base : corner, stroke, textStroke, text, panel, badge, button, pop.
+--   Écrans et fenêtres (issue #19) : screen (UIScale global), window (bandeau de titre, fermer),
+--   subPanel, pill, roundButton, edgeBadge (à cheval sur le bord haut), bar, card, portrait (3D),
+--   overlay, open / close (transitions), popIn, announce, rays, curtain (transition de scène), tween.
 
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
-local Workspace = game:GetService("Workspace")
 
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 
-local Colors = UITheme.Colors
-local Typography = UITheme.Typography
-local Animation = UITheme.Animation
-local Spacing = UITheme.Spacing
+local C = UITheme.Colors
+local T = UITheme.Transparency
 
-local REFERENCE_HEIGHT = 1080 -- tailles du design system données pour un écran de 1080 px de haut
-local MIN_SCALE, MAX_SCALE = 0.7, 1.25 -- en dessous, le texte passerait sous 14 px réels
+export type ButtonKind = "Primary" | "Secondary" | "Danger" | "Tab"
+export type Button = {
+	holder: Frame,
+	face: TextButton,
+	label: TextLabel,
+	setEnabled: (enabled: boolean) -> (),
+	setSelected: (selected: boolean) -> (),
+}
 
 local UIKit = {}
 
-function UIKit.tween(instance: Instance, info: TweenInfo, goal: { [string]: any }): Tween
-	local t = TweenService:Create(instance, info, goal)
-	t:Play()
-	return t
-end
-local tween = UIKit.tween
-
-function UIKit.corner(parent: Instance, radius: UDim): UICorner
+function UIKit.corner(parent: Instance, radius: UDim)
 	local c = Instance.new("UICorner")
 	c.CornerRadius = radius
 	c.Parent = parent
-	return c
 end
 
--- Contour Ink : Border sur un cadre (suit les coins arrondis), Contextual sur un texte.
+-- Contour Ink qui suit les coins arrondis (Border) ou entoure le texte (Contextual).
 function UIKit.stroke(parent: Instance, thickness: number, color: Color3?): UIStroke
 	local s = Instance.new("UIStroke")
 	s.Color = color or UITheme.Stroke.Color
@@ -64,9 +44,184 @@ function UIKit.stroke(parent: Instance, thickness: number, color: Color3?): UISt
 end
 
 -- Épaisseur du contour d'un texte selon sa taille (design system § 4).
-function UIKit.textStroke(size: number): number
-	return if size <= 18 then Typography.TextStroke.Small elseif size <= 32 then Typography.TextStroke.Medium else Typography.TextStroke.Large
+local function textStroke(size: number): number
+	local strokes = UITheme.Typography.TextStroke
+	return if size <= 18 then strokes.Small elseif size <= 32 then strokes.Medium else strokes.Large
 end
+UIKit.textStroke = textStroke
+
+export type TextOptions = { Color: Color3?, Stroke: boolean?, Font: Font?, Align: Enum.TextXAlignment? }
+
+-- Texte Fredoka One clair, contour Ink (lisible sur un fond transparent). Le 4e argument est une
+-- couleur, ou des options : Stroke = false pour un texte sombre sur fond clair (InkSoft sur Cream).
+function UIKit.text(parent: Instance, content: string, size: number, style: (Color3 | TextOptions)?): TextLabel
+	local opts: TextOptions = if typeof(style) == "Color3" then { Color = style } elseif typeof(style) == "table" then style else {}
+	local label = Instance.new("TextLabel")
+	label.BackgroundTransparency = 1
+	label.FontFace = opts.Font or UITheme.Typography.Display
+	label.TextSize = size
+	label.TextColor3 = opts.Color or C.TextLight
+	label.TextXAlignment = opts.Align or Enum.TextXAlignment.Center
+	label.Text = content
+	label.Size = UDim2.fromScale(1, 1)
+	label.Parent = parent
+	if opts.Stroke ~= false then
+		UIKit.stroke(label, textStroke(size))
+	end
+	return label
+end
+
+-- Panneau semi-transparent (bois sombre), contour Ink.
+function UIKit.panel(parent: Instance, transparency: number?, radius: UDim?, thickness: number?): Frame
+	local frame = Instance.new("Frame")
+	frame.BackgroundColor3 = C.WoodDeep
+	frame.BackgroundTransparency = transparency or T.Panel
+	frame.BorderSizePixel = 0
+	frame.Parent = parent
+	UIKit.corner(frame, radius or UITheme.Radius.Large)
+	UIKit.stroke(frame, thickness or UITheme.Stroke.Thick)
+	return frame
+end
+
+-- Pastille d'état (Disponible, Posé, Nouveau…).
+function UIKit.badge(parent: Instance, content: string, color: Color3): Frame
+	local size = UITheme.Typography.Size.Caption
+	local badge = Instance.new("Frame")
+	badge.BackgroundColor3 = color
+	badge.BorderSizePixel = 0
+	badge.AutomaticSize = Enum.AutomaticSize.X
+	badge.Size = UDim2.fromOffset(0, size + 8)
+	badge.Parent = parent
+	UIKit.corner(badge, UITheme.Radius.Pill)
+	UIKit.stroke(badge, UITheme.Stroke.Thin)
+	local padding = Instance.new("UIPadding")
+	padding.PaddingLeft = UDim.new(0, UITheme.Spacing.S)
+	padding.PaddingRight = UDim.new(0, UITheme.Spacing.S)
+	padding.Parent = badge
+	local label = UIKit.text(badge, content, size)
+	label.AutomaticSize = Enum.AutomaticSize.X
+	label.Size = UDim2.fromScale(0, 1)
+	return badge
+end
+
+local KINDS: { [string]: { top: Color3, bottom: Color3, lip: Color3 } } = {
+	Primary = { top = C.GoldLight, bottom = C.GoldDeep, lip = C.WoodDark },
+	Secondary = { top = C.WoodLight, bottom = C.Wood, lip = C.WoodDark },
+	Danger = { top = C.Error, bottom = C.RoyalRed, lip = C.WoodDark },
+	Tab = { top = C.WoodDeep, bottom = C.WoodDeep, lip = C.Ink },
+}
+
+-- Bouton « chunky » : une face posée sur une lèvre plus sombre ; la face s'enfonce au clic.
+function UIKit.button(parent: Instance, content: string, kind: ButtonKind, size: UDim2, onClick: () -> ()): Button
+	local style = KINDS[kind]
+	local lipHeight = UITheme.Shadow.ButtonLip
+	local holder = Instance.new("Frame")
+	holder.BackgroundTransparency = 1
+	holder.Size = size
+	holder.Parent = parent
+
+	local lip = Instance.new("Frame")
+	lip.BackgroundColor3 = style.lip
+	lip.BorderSizePixel = 0
+	lip.Position = UDim2.fromOffset(0, lipHeight)
+	lip.Size = UDim2.new(1, 0, 1, -lipHeight)
+	lip.Parent = holder
+	UIKit.corner(lip, UITheme.Radius.Medium)
+	UIKit.stroke(lip, UITheme.Stroke.Regular)
+
+	local face = Instance.new("TextButton")
+	face.AutoButtonColor = false
+	face.Text = ""
+	face.BackgroundColor3 = Color3.new(1, 1, 1)
+	face.BorderSizePixel = 0
+	face.Size = UDim2.new(1, 0, 1, -lipHeight)
+	face.Parent = holder
+	UIKit.corner(face, UITheme.Radius.Medium)
+	local faceStroke = UIKit.stroke(face, UITheme.Stroke.Regular)
+	local gradient = Instance.new("UIGradient")
+	gradient.Rotation = 90
+	gradient.Color = ColorSequence.new(style.top, style.bottom)
+	gradient.Parent = face
+	local label = UIKit.text(face, content, UITheme.Typography.Size.Button)
+
+	local enabled, selected = true, false
+	local function paint()
+		local top, bottom = style.top, style.bottom
+		if not enabled then
+			top, bottom = C.Disabled, C.StoneGrey
+		elseif kind == "Tab" and selected then
+			top, bottom = C.GoldLight, C.GoldDeep
+		end
+		gradient.Color = ColorSequence.new(top, bottom)
+		face.BackgroundTransparency = if kind == "Tab" and not selected then T.PanelStrong else 0
+		label.TextTransparency = if enabled then 0 else T.Disabled
+		faceStroke.Color = if selected and kind ~= "Tab" then C.Selected else UITheme.Stroke.Color
+		faceStroke.Thickness = if selected and kind ~= "Tab" then UITheme.Stroke.Thick else UITheme.Stroke.Regular
+	end
+	local function press(down: boolean)
+		if not enabled then
+			return
+		end
+		local offset = if down then lipHeight else 0
+		TweenService:Create(face, UITheme.Animation.Press, { Position = UDim2.fromOffset(0, offset) }):Play()
+	end
+	face.MouseButton1Down:Connect(function()
+		press(true)
+	end)
+	face.MouseButton1Up:Connect(function()
+		press(false)
+	end)
+	face.MouseLeave:Connect(function()
+		press(false)
+	end)
+	face.Activated:Connect(function()
+		if enabled then
+			onClick()
+		end
+	end)
+	paint()
+	return {
+		holder = holder,
+		face = face,
+		label = label,
+		setEnabled = function(value: boolean)
+			enabled = value
+			paint()
+		end,
+		setSelected = function(value: boolean)
+			selected = value
+			paint()
+		end,
+	}
+end
+
+-- Petit « pop » (gain, nouveau badge, prise en main).
+function UIKit.pop(target: GuiObject)
+	local scale = target:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
+	scale.Parent = target
+	scale.Scale = UITheme.Animation.Scale.Pop
+	TweenService:Create(scale, UITheme.Animation.Open, { Scale = 1 }):Play()
+end
+
+------------------------------------------------------------------ écrans et fenêtres (issue #19)
+
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+
+local Colors = UITheme.Colors
+local Typography = UITheme.Typography
+local Animation = UITheme.Animation
+local Spacing = UITheme.Spacing
+
+local REFERENCE_HEIGHT = 1080 -- tailles du design system données pour un écran de 1080 px de haut
+local MIN_SCALE, MAX_SCALE = 0.7, 1.25 -- en dessous, le texte passerait sous 14 px réels
+
+function UIKit.tween(instance: Instance, info: TweenInfo, goal: { [string]: any }): Tween
+	local t = TweenService:Create(instance, info, goal)
+	t:Play()
+	return t
+end
+local tween = UIKit.tween
 
 function UIKit.screen(name: string, order: number?): ScreenGui
 	local screen = Instance.new("ScreenGui")
@@ -89,138 +244,6 @@ function UIKit.screen(name: string, order: number?): ScreenGui
 	end
 	screen.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
 	return screen
-end
-
-export type TextOptions = { Color: Color3?, Stroke: boolean?, Font: Font?, Align: Enum.TextXAlignment? }
-
--- Texte Fredoka clair contouré Ink (tout texte posé sur un fond transparent). Stroke = false pour un
--- texte sombre sur fond clair (InkSoft sur Cream).
-function UIKit.text(parent: Instance, text: string, size: number, options: TextOptions?): TextLabel
-	local opts: TextOptions = options or {}
-	local l = Instance.new("TextLabel")
-	l.BackgroundTransparency = 1
-	l.FontFace = opts.Font or Typography.Display
-	l.TextSize = size
-	l.TextColor3 = opts.Color or Colors.TextLight
-	l.TextXAlignment = opts.Align or Enum.TextXAlignment.Center
-	l.Text = text
-	l.Size = UDim2.fromScale(1, 1)
-	l.Parent = parent
-	if opts.Stroke ~= false then
-		UIKit.stroke(l, UIKit.textStroke(size))
-	end
-	return l
-end
-
------------------------------------------------------------------- boutons
-
-local BUTTON_STYLES = {
-	Primary = { Top = Colors.GoldLight, Bottom = Colors.GoldDeep, Lip = Colors.GoldDeep:Lerp(Colors.Ink, 0.35) },
-	Secondary = { Top = Colors.WoodLight, Bottom = Colors.Wood, Lip = Colors.WoodDark },
-	Danger = { Top = Colors.RoyalRed, Bottom = Colors.RoyalRed:Lerp(Colors.Ink, 0.2), Lip = Colors.RoyalRed:Lerp(Colors.Ink, 0.45) },
-	Disabled = { Top = Colors.Disabled, Bottom = Colors.StoneGrey, Lip = Colors.StoneGrey:Lerp(Colors.Ink, 0.4) },
-}
-
-export type ButtonOptions = {
-	Text: string,
-	Style: string?, -- "Primary" (un seul par écran), "Secondary", "Danger", "Disabled"
-	Size: Vector2?,
-	TextSize: number?,
-	Name: string?,
-	OnClick: (() -> ())?,
-}
-export type Button = {
-	Holder: Frame,
-	Face: TextButton,
-	Label: TextLabel,
-	SetStyle: (style: string) -> (),
-	SetText: (text: string) -> (),
-	SetSelected: (selected: boolean) -> (),
-}
-
--- Bouton « chunky » : une face (dégradé vertical léger) et une lèvre plus sombre décalée vers le bas.
--- États : survol (1,04), appui (la face descend sur la lèvre, 0,94), désactivé (gris, aucun retour),
--- sélectionné (contour Selected épais).
-function UIKit.button(parent: Instance, options: ButtonOptions): Button
-	local lipHeight = UITheme.Shadow.ButtonLip
-	local size = options.Size or Vector2.new(200, 52)
-	local holder = Instance.new("Frame")
-	holder.Name = options.Name or options.Text
-	holder.Size = UDim2.fromOffset(size.X, size.Y + lipHeight)
-	holder.BackgroundTransparency = 1
-	holder.Parent = parent
-	local lip = Instance.new("Frame")
-	lip.Name = "Levre"
-	lip.Position = UDim2.fromOffset(0, lipHeight)
-	lip.Size = UDim2.new(1, 0, 1, -lipHeight)
-	lip.Parent = holder
-	UIKit.corner(lip, UITheme.Radius.Medium)
-	UIKit.stroke(lip, UITheme.Stroke.Regular)
-	local face = Instance.new("TextButton")
-	face.Name = "Face"
-	face.AutoButtonColor = false
-	face.Text = ""
-	face.Size = UDim2.new(1, 0, 1, -lipHeight)
-	face.BackgroundColor3 = Color3.new(1, 1, 1)
-	face.Parent = holder
-	UIKit.corner(face, UITheme.Radius.Medium)
-	local border = UIKit.stroke(face, UITheme.Stroke.Regular)
-	local gradient = Instance.new("UIGradient")
-	gradient.Rotation = 90
-	gradient.Parent = face
-	local textSize = options.TextSize or Typography.Size.Button
-	local label = UIKit.text(face, options.Text, textSize)
-	label.ZIndex = 2
-	local scale = Instance.new("UIScale")
-	scale.Parent = holder
-
-	local style = options.Style or "Secondary"
-	local function apply()
-		local colors = BUTTON_STYLES[style] or BUTTON_STYLES.Secondary
-		gradient.Color = ColorSequence.new(colors.Top, colors.Bottom)
-		lip.BackgroundColor3 = colors.Lip
-		label.TextTransparency = if style == "Disabled" then UITheme.Transparency.Disabled else 0
-		face.Active = style ~= "Disabled"
-	end
-	apply()
-	local function release()
-		face.Position = UDim2.fromOffset(0, 0)
-		tween(scale, Animation.Hover, { Scale = 1 })
-	end
-	face.MouseEnter:Connect(function()
-		if style ~= "Disabled" then
-			tween(scale, Animation.Hover, { Scale = Animation.Scale.Hover })
-		end
-	end)
-	face.MouseLeave:Connect(release)
-	face.MouseButton1Down:Connect(function()
-		if style ~= "Disabled" then
-			tween(scale, Animation.Press, { Scale = Animation.Scale.Pressed })
-			face.Position = UDim2.fromOffset(0, lipHeight)
-		end
-	end)
-	face.MouseButton1Up:Connect(release)
-	face.Activated:Connect(function()
-		if style ~= "Disabled" and options.OnClick then
-			options.OnClick()
-		end
-	end)
-	return {
-		Holder = holder,
-		Face = face,
-		Label = label,
-		SetStyle = function(newStyle: string)
-			style = newStyle
-			apply()
-		end,
-		SetText = function(text: string)
-			label.Text = text
-		end,
-		SetSelected = function(selected: boolean)
-			border.Color = if selected then Colors.Selected else UITheme.Stroke.Color
-			border.Thickness = if selected then UITheme.Stroke.Thick else UITheme.Stroke.Regular
-		end,
-	}
 end
 
 export type RoundOptions = { Text: string, Color: Color3?, Size: number?, TextSize: number?, Name: string?, OnClick: (() -> ())? }
@@ -263,12 +286,12 @@ end
 
 ------------------------------------------------------------------ surfaces
 
-export type PanelOptions = { Size: Vector2, Title: string?, OnClose: (() -> ())?, Name: string? }
+export type WindowOptions = { Size: Vector2, Title: string?, OnClose: (() -> ())?, Name: string? }
 
--- Panneau / fenêtre : WoodDeep à Panel, contour épais, rayon Large, ombre pleine décalée. Titre dans un
+-- Fenêtre : WoodDeep à Panel, contour épais, rayon Large, ombre pleine décalée. Titre dans un
 -- bandeau en bois à cheval sur le bord haut ; bouton fermer rond à cheval sur le coin haut droit.
 -- Renvoie le panneau (à positionner) et son cadre de contenu.
-function UIKit.panel(parent: Instance, options: PanelOptions): (Frame, Frame)
+function UIKit.window(parent: Instance, options: WindowOptions): (Frame, Frame)
 	local panel = Instance.new("Frame")
 	panel.Name = options.Name or "Panneau"
 	panel.Size = UDim2.fromOffset(options.Size.X, options.Size.Y)
@@ -325,6 +348,7 @@ function UIKit.panel(parent: Instance, options: PanelOptions): (Frame, Frame)
 	return panel, content
 end
 
+
 -- Sous-panneau (ligne de quête, zone de texte long) : WoodDeep à PanelStrong, contour Thin.
 function UIKit.subPanel(parent: Instance, size: UDim2): Frame
 	local f = Instance.new("Frame")
@@ -349,8 +373,9 @@ function UIKit.pill(parent: Instance, size: Vector2): Frame
 	return f
 end
 
+
 -- Badge d'état, à cheval sur le bord haut du parent (Disponible, Équipé, Nouveau, Verrouillé, Max).
-function UIKit.badge(parent: Instance, text: string, color: Color3): Frame
+function UIKit.edgeBadge(parent: Instance, text: string, color: Color3): Frame
 	local b = Instance.new("Frame")
 	b.Name = "Badge"
 	b.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -365,6 +390,7 @@ function UIKit.badge(parent: Instance, text: string, color: Color3): Frame
 	l.ZIndex = 6
 	return b
 end
+
 
 export type BarOptions = { Color: Color3, Size: UDim2?, Thin: boolean? }
 export type Bar = { Frame: Frame, Fill: Frame, Set: (ratio: number, animate: boolean?) -> (), SetColor: (color: Color3) -> () }
@@ -402,65 +428,6 @@ function UIKit.bar(parent: Instance, options: BarOptions): Bar
 		end,
 	}
 end
-
-export type TabsOptions = { Items: { string }, Selected: number?, Size: Vector2?, OnSelect: ((index: number) -> ())? }
-export type Tabs = { Frame: Frame, Select: (index: number) -> () }
-
--- Onglets en pastilles : actif Gold opaque, inactif WoodDeep à PanelStrong.
-function UIKit.tabs(parent: Instance, options: TabsOptions): Tabs
-	local size = options.Size or Vector2.new(56, Spacing.TouchTarget)
-	local frame = Instance.new("Frame")
-	frame.Name = "Onglets"
-	frame.BackgroundTransparency = 1
-	frame.Size = UDim2.fromOffset(#options.Items * size.X + (#options.Items - 1) * Spacing.S, size.Y)
-	frame.Parent = parent
-	local list = Instance.new("UIListLayout")
-	list.FillDirection = Enum.FillDirection.Horizontal
-	list.Padding = UDim.new(0, Spacing.S)
-	list.SortOrder = Enum.SortOrder.LayoutOrder
-	list.Parent = frame
-	local buttons: { TextButton } = {}
-	local function select(index: number)
-		for i, b in buttons do
-			local active = i == index
-			b.BackgroundColor3 = if active then Colors.Gold else Colors.WoodDeep
-			b.BackgroundTransparency = if active then 0 else UITheme.Transparency.PanelStrong
-		end
-	end
-	for i, item in options.Items do
-		local b = Instance.new("TextButton")
-		b.Name = item
-		b.AutoButtonColor = false
-		b.Text = ""
-		b.LayoutOrder = i
-		b.Size = UDim2.fromOffset(size.X, size.Y)
-		b.Parent = frame
-		UIKit.corner(b, UITheme.Radius.Medium)
-		UIKit.stroke(b, UITheme.Stroke.Regular)
-		UIKit.text(b, item, Typography.Size.Label)
-		local scale = Instance.new("UIScale")
-		scale.Parent = b
-		b.MouseButton1Down:Connect(function()
-			tween(scale, Animation.Press, { Scale = Animation.Scale.Pressed })
-		end)
-		b.MouseButton1Up:Connect(function()
-			tween(scale, Animation.Hover, { Scale = 1 })
-		end)
-		b.MouseLeave:Connect(function()
-			tween(scale, Animation.Hover, { Scale = 1 })
-		end)
-		b.Activated:Connect(function()
-			if options.OnSelect then
-				options.OnSelect(i)
-			end
-		end)
-		buttons[i] = b
-	end
-	select(options.Selected or 1)
-	return { Frame = frame, Select = select }
-end
-
------------------------------------------------------------------- cartes et portraits
 
 -- Portrait 3D d'un modèle (copie) dans un ViewportFrame, cadré sur le haut du corps, éclairé d'en
 -- haut à gauche. La caméra regarde l'avant du modèle (déduit des bras pour les héros générés).
@@ -553,7 +520,7 @@ function UIKit.card(parent: Instance, options: CardOptions): Frame
 		name.TextWrapped = true
 	end
 	if options.Badge then
-		UIKit.badge(frame, options.Badge, options.BadgeColor or Colors.RoyalRed)
+		UIKit.edgeBadge(frame, options.Badge, options.BadgeColor or Colors.RoyalRed)
 	end
 	if options.Locked then
 		for _, item in frame:GetDescendants() do
@@ -569,6 +536,7 @@ function UIKit.card(parent: Instance, options: CardOptions): Frame
 end
 
 ------------------------------------------------------------------ transitions
+
 
 -- Voile Ink à Overlay derrière une fenêtre modale (jamais noir plein). Absorbe les clics.
 function UIKit.overlay(screen: Instance): TextButton
@@ -661,15 +629,6 @@ function UIKit.popIn(object: GuiObject, delay: number?, peak: number?)
 		if scale.Parent then
 			tween(scale, TweenInfo.new(Animation.Toast.Time * 0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1 })
 		end
-	end)
-end
-
--- Pop d'un élément déjà affiché : 1 → peak → 1 (gain, compteur qui avance).
-function UIKit.bump(object: GuiObject, peak: number?)
-	local s = scaleOf(object)
-	local up = tween(s, TweenInfo.new(Animation.Toast.Time * 0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = peak or Animation.Scale.Pop })
-	up.Completed:Connect(function()
-		tween(s, TweenInfo.new(Animation.Toast.Time * 0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1 })
 	end)
 end
 
