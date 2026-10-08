@@ -8,7 +8,7 @@ Jeu Roblox, Alpha 0.0.1. Le code vit dans Git et est synchronisé dans Studio av
 | --- | --- | --- |
 | Code Luau (scripts, modules) | `src/` dans Git | branche `feature/*` → PR vers `develop`, synchronisé par Rojo |
 | Assets, maps, UI, modèles | Studio (Team Create, Packages) | pas de Git |
-| Snapshot du Sandbox partenaire | `studio/sandbox/partner_sandbox_v3.rbxl` (version courante ; `partner_sandbox_v2.rbxl` et `partner_sandbox.rbxl` = anciennes versions) | fichier remplacé en entier, jamais fusionné, sans code Luau |
+| Snapshot du Sandbox partenaire | `studio/sandbox/partner_sandbox_v4.rbxl` (version courante, place « test 3 » qui réunit « test » et « test 2 » ; `partner_sandbox_v3.rbxl`, `_v2` et `partner_sandbox.rbxl` = anciennes versions) | fichier remplacé en entier, jamais fusionné, sans code Luau |
 
 Ne jamais écrire de code directement dans Studio : Rojo écrase les scripts qu'il gère à chaque synchronisation.
 
