@@ -33,6 +33,7 @@ Un dossier `Workspace.Plots` ou un repère nommé `Spawn` (ancienne convention) 
   est placé quatre studs au-dessus de ce repère. Vérifier le dégagement avec l'avatar.
 - Garder un spawn initial commun sûr pour l'attente du chargement des données.
   Les repères des plots ne doivent pas participer au choix aléatoire des spawns Roblox.
+  Dans la DEV : `Lobby.Monde.SpawnLobby`, seul `SpawnLocation` actif (voir `docs/WORLD.md`).
 - Ne pas créer de dossier `Runtime` dans les assets : ce nom est réservé au
   service. Un plot qui en possède déjà un au démarrage est ignoré, sans effacement.
 - Régler la capacité du serveur au plus au nombre de plots valides (8 à 12 pour

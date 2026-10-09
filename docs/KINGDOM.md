@@ -45,16 +45,17 @@ Workspace.Lobby.Plots.<plot> (dossier de PlotConfig, voir docs/PLOTS.md)
   pivot posé comme pour le royaume.
 - Tous les assets doivent être ancrés, `Archivable` et sans script.
 
-Ce qui n'existe pas encore dans la DEV (constaté le 27/09/2026) : un modèle
-d'état 2, les modèles de héros, les repères de héros dans le royaume, et
-`Royaume.EmplacementCentral` dans les plots de `Workspace.Plots`. Sans eux, le
-service journalise la raison et n'affiche pas l'élément manquant.
+Un élément manquant (modèle d'état, repère, asset de héros) n'est pas inventé : le
+service journalise la raison et ne l'affiche pas.
 
-### Assets préparés dans Test 3 (issue #35)
+## État actuel DEV
 
-Préparés et vérifiés dans la place Studio « test 3 », à copier dans la DEV commune :
+Assets préparés dans la place Studio « test 3 » (issue #35), puis intégrés dans la DEV commune
+(« Projet Roblox - Alpha ») et validés en Studio : `Refresh` affiche l'état 1 et l'état 2, sans
+doublon, et renvoie `true` avec des héros réels (`ecuyer_du_rempart` sur `Heros_1`,
+`barde_de_fer` sur `Heros_2`).
 
-- `ServerStorage.Assets.RoyaumeEtats` :
+- `ServerStorage.Assets.RoyaumeEtats` (présent) :
   - `Royaume_Etat1` (`VisualState = 1`) : le royaume niveau 1 validé (celui de `PlotTravail`) ;
   - `Royaume_Etat2` (`VisualState = 2`) : le niveau 2 de la vitrine, aligné sur le niveau 1 comme
     dans `Workspace.AtelierRoyaume` (montée de niveau validée).
@@ -64,9 +65,10 @@ Préparés et vérifiés dans la place Studio « test 3 », à copier dans la DE
   - `Emplacements.Heros.Heros_1..6` : au sol, en arc de rayon 20 studs devant le socle, du côté
     d'où arrive le joueur (`PointApparition`), tournés vers lui. `Heros_1` au centre, puis
     alternance droite / gauche. Repères invisibles, sans collision ni requête.
-- `ServerStorage.Assets.Heros` : les 22 héros du Bestiaire, un `Model` par `HeroId` (reprend
-  l'attribut `HerosId` du Bestiaire, attribut `Rarete` conservé). Pivot aux pieds, face avant
-  déduite des bras (ou, à défaut, du sens dans lequel les héros font face au Bestiaire).
+- `ServerStorage.Assets.Heros` (présent) : les **22 héros réels** du Bestiaire, un `Model` par
+  `HeroId` (reprend l'attribut `HerosId` du Bestiaire, attribut `Rarete` conservé). Pivot aux pieds,
+  face avant déduite des bras (ou, à défaut, du sens dans lequel les héros font face au Bestiaire).
+  Le pivot de `briseur_de_cloche`, posé sur le buste dans Test 3, a été recalé aux pieds dans la DEV.
   - **Héros de départ proposé** : `ecuyer_du_rempart` (celui des animations #16).
   - Tout `HeroId` de la liste peut sortir d'une invocation : `alchimiste_aux_masques`,
     `apprenti_pyromancien`, `barde_de_fer`, `brise_pierre`, `briseur_de_cloche`,
@@ -78,6 +80,13 @@ Préparés et vérifiés dans la place Studio « test 3 », à copier dans la DE
 - `Workspace.Lobby.Plots.Plot_1..8` : `PlotId`, `PointApparition` ancré, `Royaume.EmplacementCentral`,
   **sans** royaume posé (les anciens royaumes posés sont rangés dans
   `ServerStorage.Archive_Plots.Lobby_RoyaumesPosesAvant35`).
+
+**HeroConfig temporaire, à aligner dans #10** : `HeroConfig`, `CombatConfig` et le kit de départ
+utilisent encore 6 classes temporaires (`Archer`, `Epeiste`, `Barbare`, `Paladin`, `Magicien`,
+`Tireur`), qui n'ont aucun modèle dans `ServerStorage.Assets.Heros`. Avec le kit de départ actuel,
+ces héros ne sont donc pas affichés sur le royaume (ils occupent quand même les repères dans l'ordre
+des identifiants) et `Refresh` renvoie `false`. Remplacer ces classes par les `HeroId` réels
+ci-dessus appartient à #10 (HeroService + première invocation).
 
 ## Runtime
 
@@ -106,7 +115,8 @@ pièce sur ces modèles de plusieurs centaines de pièces.
 
 Le modèle d'état doit donc porter l'attribut `VisualState` (déjà requis ci-dessus). Démonstration
 Studio : tag `ApercuRoyaume` sur un dossier de modèles portant `VisualState` ou `Niveau`, posés au
-même endroit (dans Test 3 : `Workspace.AtelierRoyaume`, copies des niveaux 1 à 3 de la vitrine).
+même endroit (dans Test 3 : `Workspace.AtelierRoyaume`, copies des niveaux 1 à 3 de la vitrine ;
+cet atelier n'a pas été importé dans la DEV).
 
 ## Cycle de vie
 
