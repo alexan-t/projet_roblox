@@ -502,8 +502,9 @@ local function onCombatEvents(_combatId: number, events: { { [string]: any } })
 			ui.x1.setSelected(event.Speed == 1)
 			ui.x2.setSelected(event.Speed == 2)
 		elseif event.Type == "CombatEnded" then
-			-- Écran de fin (#17, #19) une fois la dernière unité dissoute ; les récompenses viendront
-			-- de RewardService (#9).
+			-- Écran de fin (#17, #19) une fois la dernière unité dissoute. Un seul CombatEnded par
+			-- combat, envoyé par le serveur après l'attribution : FirstClear et Rewards sont les
+			-- récompenses de RewardService (#9), déjà sauvegardées. L'écran ne fait que les montrer.
 			local rewards = event.Rewards
 			task.delay(RESULT_DELAY, function()
 				RewardScreenController.Show({

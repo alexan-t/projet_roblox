@@ -146,9 +146,21 @@ local function present(session: Session, events: { CombatEngine.Event }, moved: 
 			model:PivotTo(CFrame.lookAt(position, look))
 		end
 	end
-	send(session, events)
+	-- Le CombatEnded du moteur reste interne : le client reçoit un seul CombatEnded, enrichi des
+	-- récompenses, envoyé par finalize une fois le stage complété (voir finalize).
+	local outgoing = {}
+	for _, event in events do
+		if event.Type ~= "CombatEnded" then
+			table.insert(outgoing, event)
+		end
+	end
+	send(session, outgoing)
 end
 
+-- Fin de combat, dans cet ordre et une seule fois :
+--   moteur : Victory / Defeat → verrouillage de la session → ZoneService:CompleteStage
+--   (QuestService, puis RewardService à la victoire) → CombatEnded final au client, avec
+--   FirstClear et Rewards réellement attribués et déjà sauvegardés → callbacks (ArenaService).
 local function finalize(session: Session)
 	local result = session.state.result
 	if not result or sessions[session.player] ~= session then
@@ -158,7 +170,13 @@ local function finalize(session: Session)
 	stop(session)
 	local victory = result == "Victory"
 	Log.info(SCOPE, `Combat {session.id} de {session.player.Name} : {if victory then "victoire" else "défaite"}`)
-	ZoneService:CompleteStage(session.player, session.zoneSessionId, victory)
+	local _, reward = ZoneService:CompleteStage(session.player, session.zoneSessionId, victory)
+	send(session, { {
+		Type = "CombatEnded",
+		Result = result,
+		FirstClear = if victory and reward then reward.FirstClear else false,
+		Rewards = if victory and reward then reward.Rewards else {},
+	} })
 	for _, callback in endedCallbacks do
 		task.spawn(callback, session.player, session.id, result)
 	end

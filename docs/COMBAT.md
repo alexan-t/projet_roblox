@@ -96,7 +96,10 @@ Stage 1-1 : Slime ×2 + Gobelin ×4, puis Boss.
   jamais directement.
 - **Quitter** (`CancelCombat`), départ du joueur, perte du profil ou de la session de
   stage : combat arrêté sans résultat, aucun `CompleteStage`.
-- Aucune récompense : devises, tickets et `FirstClears` relèvent de RewardService (#9).
+- CombatService n'attribue aucune récompense. Devises, tickets et `FirstClears` relèvent de
+  RewardService (#9), appelé par ZoneService. Le `CombatEnded` du moteur reste interne : après
+  `CompleteStage`, le client reçoit **un seul** `CombatEnded { Result, FirstClear, Rewards }`
+  (défaite : `FirstClear = false`, `Rewards = {}`). Voir `docs/REWARDS.md`.
 
 ## Vitesse x1 / x2
 
@@ -146,7 +149,8 @@ Health, MaxHealth, Energy, MaxEnergy}`, `TargetChanged {UnitId, TargetId}`,
 `Damage {TargetId, SourceId, Amount, Health}`, `EnergyChanged {UnitId, Energy, MaxEnergy}`,
 `UltimateUsed {UnitId, TargetId, Hits}` (automatique : point d'accroche pour animation, VFX,
 SFX, caméra), `UnitDied {UnitId, Team, TypeId}`,
-`CombatEnded {Result}`.
+`CombatEnded {Result, FirstClear, Rewards}` (un seul, envoyé après `CompleteStage` et l'attribution
+des récompenses ; `Rewards` est `{}` à la défaite).
 
 Les positions suivent les modèles répliqués (pas d'événement par frame). Le gameplay
 n'attend jamais une animation. Les modèles portent les attributs `UnitId`, `Team`,
@@ -195,12 +199,12 @@ Règle d'interface : une information qui peut s'afficher dans le monde n'a pas d
 
 ## Intégrations futures
 
-- **#9 RewardService** : sera appelé par ZoneService à la victoire (même point que QuestService).
-  L'écran de fin est prêt côté client et s'affiche sur `CombatEnded` (`ArenaPlacementController`) :
-  `RewardScreenController.Show({ Result, FirstClear, Rewards }, onContinue)` (« Victoire ! » avec
-  rayons dorés et étincelles, cartes de récompense en cascade avec objet 3D et montant qui défile,
-  badge « Nouveau », bouton « Continuer » ; « Défaite… » sobre). Il ne décide d'aucune récompense :
-  #9 renseignera `Rewards` (et `FirstClear`) avec les récompenses réellement attribuées.
+- **#9 RewardService** (fait, `docs/REWARDS.md`) : ZoneService l'appelle à la victoire, juste après
+  QuestService. L'écran de fin s'affiche sur `CombatEnded` (`ArenaPlacementController`) avec
+  `RewardScreenController.Show({ Result, FirstClear, Rewards }, onContinue)`. Côté victoire : « Victoire ! »
+  avec rayons dorés et étincelles, cartes de récompense en cascade avec objet 3D et montant qui défile,
+  badge « Nouveau » et bouton « Continuer ». Côté défaite : un « Défaite… » sobre. Le client ne décide
+  d'aucune récompense : `Rewards` et `FirstClear` sont celles réellement attribuées et déjà sauvegardées.
   Démonstration Studio : attribut `Workspace.ApercuEcranRecompenses = true`.
 - **#10 HeroService** : la partie Alpha existe (`docs/HEROES.md` : exemplaires possédés, kit de
   départ, hotbar). Restent l'invocation, les niveaux et la rareté.

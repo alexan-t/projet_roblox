@@ -132,6 +132,13 @@ la défaite à ZoneService. Les ultimes sont automatiques ; le client ne peut qu
 vitesse x1/x2. Voir [le moteur, les événements et la sécurité](docs/COMBAT.md) et le
 [placement des héros dans l'arène de test](docs/ARENA_PROTOTYPE.md) (hotbar, sacoche, E = Combattre).
 
+## Récompenses et First Clear (RewardService)
+
+À la victoire, ZoneService prévient QuestService puis RewardService. RewardService marque le First
+Clear et ajoute les récompenses de `src/server/Config/RewardConfig.lua` (premier clear de 1-1 :
++1 ticket d'invocation ; valeurs Alpha provisoires). Le tout est sauvegardé avant l'écran de fin,
+sans action « réclamer ». Voir [la config, le flux et les garanties](docs/REWARDS.md).
+
 ## Héros possédés et hotbar (HeroService, Alpha)
 
 Kit de départ, hotbar de 10 raccourcis sauvegardée et vérification de possession : voir
