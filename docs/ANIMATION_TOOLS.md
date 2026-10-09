@@ -201,6 +201,36 @@ démonstrations (marche, attaque, ultime, effets) jouent à cette vitesse. `2` =
 supprimer l'attribut pour revenir en x1. En combat, la vitesse vient de `SpeedChanged` (voir
 `docs/COMBAT.md`).
 
+## État actuel DEV
+
+Intégrés dans la DEV commune (« Projet Roblox - Alpha ») depuis la place « test 3 » :
+
+| Jeu (`ReplicatedStorage.Assets.Animations`) | Séquences | `AssetId` |
+| --- | --- | --- |
+| `EcuyerDuRempart` | Marche, Attaque, Ultime | absent |
+| `TreantMasque` | Marche, Attaque (pas d'Ultime) | absent |
+| `RoiOrc` | Marche, Attaque (pas d'Ultime) | absent |
+| `Gobelin` (déjà présent) | Attente, Marche, Attaque, Touche, Mort | absent |
+| `Apercu_EcuyerDuRempart`, `Apercu_TreantMasque`, `Apercu_RoiOrc` | Attente (démonstration d'atelier, pas pour le combat) | absent |
+
+`Workspace.AtelierAnimation` contient les modèles articulés qui jouent ces jeux : Écuyer du Rempart,
+Tréant masqué et Roi Orc. Les modèles du Bestiaire et de `ServerStorage.Assets.Heros` ne sont pas
+articulés. Bestiaire et atelier sont des références / outils de design, pas une source de vérité
+gameplay.
+
+- **Studio : fonctionnel.** Vérifié au Play : les trois modèles de l'atelier jouent leurs
+  animations, enregistrées à la volée.
+- **Production : `AssetId` requis.** Aucune `KeyframeSequence` n'a encore d'`AssetId` publié, pas
+  même celles du Gobelin. Hors Studio, une séquence sans `AssetId` ne joue pas. Chaque séquence de
+  combat doit être publiée **par le propriétaire de l'expérience** (sinon Roblox refuse de la jouer
+  dans cette expérience), puis son identifiant mis dans l'attribut `AssetId` de la séquence.
+- Le combat actuel utilise encore les mannequins de `ReplicatedStorage.Assets.Combat`, sans jeu
+  d'animation : ces animations ne joueront en combat que sur des modèles articulés portant
+  `JeuAnimations`.
+- Dans la DEV, deux `SpawnLocation` existent (`Lobby.Monde.SpawnLobby` actif, ancien
+  `Workspace.SpawnLocation` de test désactivé). `Kit.arrange` prend le premier `SpawnLocation`
+  trouvé : vérifier lequel avant de ranger l'atelier.
+
 ## Limites
 
 - Les animations sont enregistrées à la volée, **uniquement en Studio**. Pour le jeu publié :

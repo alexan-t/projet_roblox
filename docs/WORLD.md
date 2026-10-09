@@ -1,7 +1,8 @@
 # Monde Alpha (issue #25)
 
 Map commune minimale pour 8 joueurs, construite dans la place Studio « test 3 » à partir du Lobby
-existant, à copier dans la DEV commune. Aucune logique de jeu dans les assets.
+existant, puis **intégrée dans la DEV commune** (« Projet Roblox - Alpha ») et validée à deux
+joueurs (voir « Validation dans la DEV »). Aucune logique de jeu dans les assets.
 Contrat des plots : `docs/PLOTS.md` ; royaume et héros : `docs/KINGDOM.md`.
 
 ## Plan
@@ -28,24 +29,26 @@ Contrat des plots : `docs/PLOTS.md` ; royaume et héros : `docs/KINGDOM.md`.
 | `PointApparition` | arrivée du joueur (PlotService) |
 | `Royaume.EmplacementCentral` | royaume posé par KingdomService (aucun royaume dans le décor) |
 | `PortailInvocation` | invocation (Roll), 62 studs du spawn |
-| `Arene` (arène de Zone 1, 9 cases `CaseHeros`, porche « Zone 1 ») | **point d'Expédition / Stage 1**, 127 studs du spawn |
+| `Arene` (arène de Zone 1, 9 cases `CaseHeros`, `FrontEnnemi`, porche « Zone 1 ») | **point d'Expédition / Stage 1**, 127 studs du spawn |
 | `Nature`, `Bordure`, `Sol`, `Props`, `PanneauProprietaire` | décor |
 
 Les copies d'arène n'ont pas les attributs de démonstration `IntroDemo` / `IntroDemoBoucle`.
 Aucun script dans les plots.
 
-**À faire côté gameplay (#7 / #8 / #10 / #11)** : aujourd'hui `ArenaConfig.ArenaPath` vise la seule
-arène de test (`PlotTravail.Arene`), et l'invocation n'est pas encore branchée. Avec ce monde,
-l'Expédition se lance depuis **l'arène du plot du joueur** et l'invocation depuis **le portail de
-son plot**. Les tags des copies (`CaseHeros`, `AreneCombat`…) sont aujourd'hui ignorés par le code,
-qui filtre sur `PlotTravail`.
+**Gameplay** : l'Expédition se lance depuis **l'arène du plot du joueur** (`ArenaConfig.ArenaName`,
+arène personnelle de #8, voir `docs/ARENA_PROTOTYPE.md`) ; les arènes des plots sont celles du
+partenaire, revalidées avec ce flow. `Workspace.PlotTravail` reste une référence / sandbox, jamais
+l'arène de jeu. L'invocation n'est pas encore branchée : #10 utilisera **le `PortailInvocation` du
+plot du joueur**, pas un portail global.
 
 ## Spawn initial
 
 `Lobby.Monde.SpawnLobby` : `SpawnLocation` invisible au centre de la place, neutre. Spawn commun
 sûr pendant le chargement des données, avant que PlotService n'envoie le joueur sur son plot.
-**Désactivé dans Test 3** (attribut `Note`) pour garder le spawn près des ateliers d'animation ;
-à **activer dans la DEV** et désactiver tout autre `SpawnLocation`.
+**Actif dans la DEV** ; l'ancien `Workspace.SpawnLocation` de test y est désactivé (gardé, pas
+supprimé), et aucun autre `SpawnLocation` n'est actif. Dans Test 3, il reste désactivé (attribut
+`Note`) pour garder le spawn près des ateliers d'animation. Les `PointApparition` des plots restent
+des `BasePart` de repère (convention de PlotService), pas des `SpawnLocation`.
 
 ## Environnement et limites
 
@@ -65,6 +68,20 @@ sûr pendant le chargement des données, avant que PlotService n'envoie le joueu
 
 Identiques pour les 8 plots. Toute la boucle Join → Plot → Royaume → Expédition → Stage 1 →
 retour au plot se fait sans quitter son plot.
+
+## Validation dans la DEV
+
+Test Studio « Serveur et clients », 2 joueurs, après intégration :
+
+- plots distincts (`Plot_1`, `Plot_2`), arrivée sur leur `PointApparition` ;
+- respawn (reset du personnage) sur le bon plot ;
+- royaumes indépendants (changer l'état de l'un ne touche pas l'autre) ;
+- ownership de l'arène : un joueur ne peut ni placer ni lancer depuis l'arène d'un autre ;
+- placements sur les 9 cases, bouton Prêt ;
+- deux combats simultanés, chacun dans l'arène et le `Runtime` de son plot.
+
+Les anciens éléments remplacés (royaumes posés, arènes DEV d'avant l'intégration) sont archivés
+dans `ServerStorage.Archive_Plots`, pas supprimés.
 
 ## Capacité
 

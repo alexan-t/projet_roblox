@@ -92,11 +92,19 @@ joueur au respawn, puis libère l'emplacement et ses objets temporaires au dépa
 Les 8 à 12 emplacements restent créés dans Studio : voir le
 [contrat de map, l'API serveur et les tests](docs/PLOTS.md).
 
+## Monde Alpha
+
+Lobby commun de la DEV : place centrale, 8 plots (royaume, portail d'invocation, arène personnelle),
+spawn commun `Lobby.Monde.SpawnLobby`, forêt de bordure et limites. Intégré depuis la place
+partenaire « test 3 » et validé à deux joueurs : voir [le plan, les distances et la validation](docs/WORLD.md).
+
 ## Royaume (KingdomService)
 
 Le serveur clone sur le plot du joueur le modèle de royaume qui correspond à
 `Kingdom.VisualState`, puis un modèle par héros possédé. Les modèles et les
 repères restent dans Studio : voir le [contrat d'assets, l'API et les tests](docs/KINGDOM.md).
+Dans la DEV : états 1 et 2 et 22 héros réels présents ; le kit de départ utilise encore des classes
+temporaires, à aligner dans #10.
 
 ## Audio (SFX et ambiance)
 
@@ -130,7 +138,8 @@ Le serveur simule tout le combat par pas fixes (`src/server/Combat/CombatEngine.
 avec des stats temporaires dans `src/server/Config/CombatConfig.lua`. Il annonce la victoire ou
 la défaite à ZoneService. Les ultimes sont automatiques ; le client ne peut que choisir la
 vitesse x1/x2. Voir [le moteur, les événements et la sécurité](docs/COMBAT.md) et le
-[placement des héros dans l'arène de test](docs/ARENA_PROTOTYPE.md) (hotbar, sacoche, E = Combattre).
+[placement des héros dans l'arène personnelle du plot](docs/ARENA_PROTOTYPE.md) (hotbar, sacoche,
+E = Placer / Reprendre, Prêt = combat).
 
 ## Héros possédés et hotbar (HeroService, Alpha)
 
@@ -142,6 +151,7 @@ Kit de départ, hotbar de 10 raccourcis sauvegardée et vérification de possess
 `tools/animation/AnimationKit.luau` est un outil Studio (non synchronisé par Rojo) qui pose un
 squelette sur un héros ou un monstre généré par l'IA, génère sa marche et la montre en boucle à
 côté du spawn au Play. Voir [l'utilisation, le format de modèle et les profils](docs/ANIMATION_TOOLS.md).
+Les animations de la DEV jouent en Studio ; aucune n'a encore d'`AssetId` publié (requis en production).
 
 ## Workflow Git
 
