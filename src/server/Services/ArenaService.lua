@@ -67,10 +67,6 @@ local function feet(pose: BasePart): Vector3
 	return pose.Position - Vector3.new(0, pose.Size.Y / 2 - 0.1, 0)
 end
 
-local function heroTemplate(heroId: string): string
-	return `Heros_{heroId}` -- modèles provisoires par classe, communs au preview
-end
-
 local function stageConfigOf(zone: number, stage: number): any
 	local zones = StageConfig.Zones
 	local entry = zones and zones[zone]
@@ -82,7 +78,8 @@ local function stateOf(player: Player, message: string?): any
 	local formation = {}
 	if prep then
 		for slot, instanceId in prep.formation do
-			table.insert(formation, { Slot = slot, HeroInstanceId = instanceId, HeroId = HeroService:GetCombatHero(player, instanceId) })
+			local hero = HeroService:GetCombatHero(player, instanceId)
+			table.insert(formation, { Slot = slot, HeroInstanceId = instanceId, HeroId = if hero then hero.HeroId else nil })
 		end
 	end
 	-- Stage réellement courant (session) ou stage que l'arène lancera ; ennemis agrégés, sans position.
@@ -106,9 +103,9 @@ end
 local function rebuild(player: Player, w: any, c: any)
 	w.heroes:ClearAllChildren()
 	for slot, id in w.prep.formation do
-		local heroId = HeroService:GetCombatHero(player, id)
-		if heroId then spawnModel(heroTemplate(heroId), w.heroes, feet(c.poses[slot]), c.front.Position,
-			{ HeroClass = heroId, HeroInstanceId = id, Slot = slot, OwnerUserId = player.UserId }) end
+		local hero = HeroService:GetCombatHero(player, id)
+		if hero then spawnModel(hero.CombatTemplate, w.heroes, feet(c.poses[slot]), c.front.Position,
+			{ HeroClass = hero.CombatProfile, HeroId = hero.HeroId, HeroInstanceId = id, Slot = slot, OwnerUserId = player.UserId }) end
 	end
 end
 
@@ -148,10 +145,14 @@ local function startCombat(player: Player, sessionId: number, classes: { [number
 		SpawnUnit = function(unit, position: Vector3, lookAt: Vector3): Model?
 			if context(player) ~= c or worlds[player] ~= w then return nil end
 			local ally = unit.Team == "Ally"
-			local template = if ally then heroTemplate(unit.TypeId) else Config.EnemyTemplates[unit.TypeId]
+			-- Allié : modèle de combat du héros posé sur sa case (HeroConfig.CombatTemplate) ;
+			-- unit.TypeId est son profil de combat (stats), pas son HeroId.
+			local instanceId = if ally and unit.Slot then formation[unit.Slot] else nil
+			local hero = if instanceId then HeroService:GetCombatHero(player, instanceId) else nil
+			local template = if ally then (if hero then hero.CombatTemplate else nil) else Config.EnemyTemplates[unit.TypeId]
 			return if template then spawnModel(template, if ally then w.heroes else w.enemies, position, lookAt,
 				{ OwnerUserId = player.UserId, HeroClass = if ally then unit.TypeId else nil,
-					HeroInstanceId = if ally and unit.Slot then formation[unit.Slot] else nil }) else nil
+					HeroId = if hero then hero.HeroId else nil, HeroInstanceId = instanceId }) else nil
 		end,
 	})
 end
@@ -202,7 +203,11 @@ function ArenaService:Init()
 			return context(player) ~= nil and session ~= nil and session.Id == id
 		end,
 		cancelStage = function(player) ZoneService:CancelStage(player) end,
-		heroOf = function(player, id) return HeroService:GetCombatHero(player, id) end,
+		-- Profil de combat (clé de CombatConfig.Heroes) de l'exemplaire, pas son HeroId.
+		heroOf = function(player, id)
+			local hero, reason = HeroService:GetCombatHero(player, id)
+			return if hero then hero.CombatProfile else nil, reason
+		end,
 		startCombat = startCombat, cancelCombat = function(player) CombatService:CancelCombat(player) end,
 	})
 end

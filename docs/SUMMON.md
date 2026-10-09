@@ -1,8 +1,9 @@
 # Invocation — effet d'apparition du héros (issue #17)
 
 Effet purement visuel, côté client : `src/client/Controllers/SummonEffectController.lua`.
-Il se joue au portail d'invocation de la map (`Workspace.PlotTravail.PortailInvocation`).
-Le tirage lui-même (quel héros, doublon ou non) relève de HeroService (#10).
+En jeu, il se joue au `PortailInvocation` **du plot du joueur** (la démonstration Studio utilise
+celui de `PlotTravail`). Le tirage lui-même (quel héros, doublon ou non) relève de HeroService (#10,
+voir `docs/HEROES.md`).
 
 ## Déroulé (≈ 2,3 s jusqu'au nom affiché)
 
@@ -36,10 +37,12 @@ SummonEffectController.Play(portal: Model, heroTemplate: Model, options?) -> Mod
 - `Keep` : secondes avant de retirer la copie après la révélation (4 par défaut, `0` = la garder ;
   l'appelant la détruit alors lui-même).
 
-**Intégration HeroService (#10)** : quand le serveur annonce un héros obtenu, le client appelle
-`Play` avec le portail, le modèle du héros (asset de `ReplicatedStorage.Assets.Heros`), son nom
-affiché, `New = true` si c'est le premier exemplaire. Puis `KingdomService:Refresh` place le héros
-dans le royaume (voir `KINGDOM.md`).
+**Contrat HeroService (#10, en place)** : le client demande `Remotes.RequestSummon` (sans argument)
+près du portail de son plot ; le serveur décide et sauvegarde tout, rafraîchit le royaume, puis envoie
+`Remotes.HeroObtained` `{ InstanceId, HeroId, Name, New }` au seul joueur concerné. Le modèle à
+révéler est l'enfant de `ReplicatedStorage.Assets.Heros` dont l'attribut `HeroId` correspond (copie
+créée par HeroService au démarrage). Le branchement client (`Play` sur `HeroObtained`, interface
+d'invocation) relève de #11.
 
 ## Démonstration Studio
 

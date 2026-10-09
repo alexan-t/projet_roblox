@@ -6,7 +6,7 @@
 --   game.ServerStorage.DebugData:Invoke(player, "Get")                     -> copie des données
 --   game.ServerStorage.DebugData:Invoke(player, "AddCurrency", "Gold", 100) -> nouveau montant
 --   game.ServerStorage.DebugData:Invoke(player, "SetKingdomState", 2)       -> résultat de KingdomService:Refresh
---   game.ServerStorage.DebugData:Invoke(player, "AddHero", "Archer")        -> identifiant de l'exemplaire (HeroService)
+--   game.ServerStorage.DebugData:Invoke(player, "AddHero", "tireuse_des_faubourgs") -> identifiant (héros activé de HeroConfig, sinon nil)
 --   game.ServerStorage.DebugData:Invoke(player, "RemoveHero", id)           -> true si retiré (HeroService)
 --   game.ServerStorage.DebugData:Invoke(player, "RefreshKingdom")           -> résultat de KingdomService:Refresh
 --   game.ServerStorage.DebugData:Invoke(player, "GetActiveQuest")           -> QuestService:GetActiveQuest

@@ -21,7 +21,7 @@ héros visible dans les mains du personnage (HeldHeroController, client)
         ↓
 entrer dans son arène → les dalles valides s'illuminent légèrement
         ↓
-s'approcher d'une dalle → prompt « E · Placer Archer » (une seule dalle, la plus proche)
+s'approcher d'une dalle → prompt « E · Placer Écuyer du Rempart » (une seule dalle, la plus proche)
         ↓
 E → le serveur pose le héros (le héros reste en main tant qu'il n'a pas accepté)
         ↓
@@ -36,9 +36,9 @@ combat automatique, ultimes automatiques, vagues, mini-boss, victoire / défaite
    héros > **Placer** (la sacoche se ferme). Annuler ou Échap vide les mains.
 2. **Placer** : près d'une dalle (8 studs, `ArenaConfig.PromptDistance`), un seul
    `ProximityPrompt` local apparaît, sur la dalle valide la plus proche :
-   - héros en main, dalle libre → « Placer Archer » ;
-   - héros en main, dalle occupée → « Remplacer Archer » (le héros remplacé retourne à la collection) ;
-   - main vide, héros posé → « Reprendre Paladin » : il quitte la dalle et revient dans les mains.
+   - héros en main, dalle libre → « Placer Écuyer du Rempart » ;
+   - héros en main, dalle occupée → « Remplacer Écuyer du Rempart » (le héros remplacé retourne à la collection) ;
+   - main vide, héros posé → « Reprendre Tireuse des Faubourgs » : il quitte la dalle et revient dans les mains.
    Sur mobile, le prompt se touche. Refus du serveur : le héros reste en main, message bref.
 3. **Prêt** : actif avec 1 à 4 héros posés, hors combat. Il vide les mains puis envoie
    `ArenaAction("Ready")` ; le serveur revalide et appelle `CombatService:StartCombat`.

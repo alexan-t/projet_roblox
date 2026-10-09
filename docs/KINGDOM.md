@@ -81,12 +81,11 @@ doublon, et renvoie `true` avec des héros réels (`ecuyer_du_rempart` sur `Hero
   **sans** royaume posé (les anciens royaumes posés sont rangés dans
   `ServerStorage.Archive_Plots.Lobby_RoyaumesPosesAvant35`).
 
-**HeroConfig temporaire, à aligner dans #10** : `HeroConfig`, `CombatConfig` et le kit de départ
-utilisent encore 6 classes temporaires (`Archer`, `Epeiste`, `Barbare`, `Paladin`, `Magicien`,
-`Tireur`), qui n'ont aucun modèle dans `ServerStorage.Assets.Heros`. Avec le kit de départ actuel,
-ces héros ne sont donc pas affichés sur le royaume (ils occupent quand même les repères dans l'ordre
-des identifiants) et `Refresh` renvoie `false`. Remplacer ces classes par les `HeroId` réels
-ci-dessus appartient à #10 (HeroService + première invocation).
+**HeroId réels depuis #10** : `PlayerData.Heroes` ne contient plus que des `HeroId` réels
+(`docs/HEROES.md`). Un nouveau joueur a l'Écuyer (`Heros_1`) ; sa première invocation donne la
+Tireuse des Faubourgs (`Heros_2`) et fait passer le royaume de l'état 1 à l'état 2. Les anciens
+profils (6 classes temporaires `Archer`… `Tireur`, sans modèle ici) sont migrés en DataVersion 2.
+`CombatConfig` garde ces classes comme **profils de combat** temporaires, pas comme HeroId.
 
 ## Runtime
 
