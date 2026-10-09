@@ -282,7 +282,7 @@ Moins de fenêtres, plus d'interaction avec le monde : on **prend** un héros et
   des PV.
 - **Annonces** (vague, mini-boss) : texte `Title` contouré, sans fond, pop puis fondu.
 - **Victoire / Défaite** : texte `Hero` (Victoire en `Gold`, Défaite en `Error`, contour 4),
-  récompenses en cartes sous le titre quand #9 existera, bouton principal « Continuer ».
+  récompenses en cartes sous le titre (fournies par RewardService, #9), bouton principal « Continuer ».
   Voile `Overlay`, jamais d'écran noir.
 
 ### Panneaux du monde

@@ -1,11 +1,11 @@
 --!strict
 -- Hors du dossier Services : jamais exécuté par le bootstrap.
 -- Exécute le vrai ZoneService avec la vraie StageConfig (ou une config de test)
--- et des doubles de DataService, PlotService et QuestService.
+-- et des doubles de DataService, PlotService, QuestService et RewardService.
 
 return function(createService: any, productionConfig: any)
 	local function fixture(config: any?): any
-		local env: any = { data = {}, plots = {}, questEvents = {}, warnings = {}, instances = {} }
+		local env: any = { data = {}, plots = {}, questEvents = {}, rewardCalls = {}, order = {}, warnings = {}, instances = {} }
 		local removing: any = { listeners = {} }
 		function removing:Connect(fn: any) table.insert(self.listeners, fn) end
 		env.players = { PlayerRemoving = removing }
@@ -31,9 +31,18 @@ return function(createService: any, productionConfig: any)
 		local questService: any = {}
 		function questService:HandleGameplayEvent(player: any, eventName: string, payload: any): boolean
 			table.insert(env.questEvents, { player = player, event = eventName, payload = payload })
+			table.insert(env.order, "Quest")
 			return true
 		end
+		local rewardService: any = {}
+		function rewardService:HandleStageCompleted(player: any, zone: number, stage: number, completionId: number): any
+			table.insert(env.rewardCalls, { player = player, zone = zone, stage = stage, completionId = completionId })
+			table.insert(env.order, "Reward")
+			return env.rewardResult
+		end
+		env.rewardResult = { FirstClear = false, Rewards = {} }
 		env.script = { Parent = { DataService = dataService, PlotService = plotService, QuestService = questService,
+			RewardService = rewardService,
 			Parent = { Config = { StageConfig = config or productionConfig } } } }
 		env.require = function(module: any): any return module end
 		env.Instance = { new = function(class: string): any
@@ -205,13 +214,15 @@ return function(createService: any, productionConfig: any)
 		assert(s:StartStage(p, 1, 1) ~= nil, "can start again")
 	end)
 
-	test("defeat frees the session and never reaches QuestService", function()
+	test("defeat frees the session and never reaches QuestService nor RewardService", function()
 		local e = fixture()
 		local s = e.start()
 		local p = e.player("A")
 		local session = s:StartStage(p, 1, 1)
-		assert(session and s:CompleteStage(p, session.Id, false) == true)
-		assert(s:GetSession(p) == nil and #e.questEvents == 0)
+		assert(session)
+		local ok, reward = s:CompleteStage(p, session.Id, false)
+		assert(ok == true and reward == nil)
+		assert(s:GetSession(p) == nil and #e.questEvents == 0 and #e.rewardCalls == 0)
 		assert(s:StartStage(p, 1, 1) ~= nil)
 	end)
 
@@ -228,6 +239,37 @@ return function(createService: any, productionConfig: any)
 		assert(deepEqual(event.payload, { Zone = 1, Stage = 1 }), "payload { Zone = 1, Stage = 1 }")
 		assert(s:CompleteStage(p, session.Id, true) == false and s:CompleteStage(p, session.Id, false) == false)
 		assert(#e.questEvents == 1, "repeated completion does not re-emit")
+		assert(#e.rewardCalls == 1, "repeated completion does not reward again")
+	end)
+
+	test("victory: QuestService then RewardService, with the session id as completion id; result returned", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		e.rewardResult = { FirstClear = true, Rewards = { { Kind = "SummonTicket", Amount = 1, New = true } } }
+		local session = s:StartStage(p, 1, 1)
+		assert(session)
+		local ok, reward = s:CompleteStage(p, session.Id, true)
+		assert(ok == true and reward == e.rewardResult, "RewardService result returned to the caller")
+		assert(deepEqual(e.order, { "Quest", "Reward" }), "quest progress, then rewards")
+		local call = e.rewardCalls[1]
+		assert(call.player == p and call.zone == 1 and call.stage == 1 and call.completionId == session.Id)
+		local other = s:StartStage(p, 1, 1)
+		assert(other and other.Id ~= session.Id)
+		s:CompleteStage(p, other.Id, true)
+		assert(e.rewardCalls[2].completionId == other.Id, "each victory is a distinct completion")
+	end)
+
+	test("victory refused by RewardService: session still ends, warning logged", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		e.rewardResult = nil
+		local session = s:StartStage(p, 1, 1)
+		assert(session)
+		local ok, reward = s:CompleteStage(p, session.Id, true)
+		assert(ok == true and reward == nil and s:GetSession(p) == nil)
+		assert(#e.warnings == 1, "missing reward is reported")
 	end)
 
 	test("stale completion of an old session cannot end the new one", function()
@@ -363,7 +405,7 @@ return function(createService: any, productionConfig: any)
 		assert(#e.questEvents == 0, "the remote can never complete a stage")
 	end)
 
-	test("no reward, currency, first clear, ticket or combat state is produced", function()
+	test("ZoneService itself never writes PlayerData (rewards delegated to RewardService)", function()
 		local e = fixture()
 		local s = e.start()
 		local p = e.player("A")
@@ -379,6 +421,7 @@ return function(createService: any, productionConfig: any)
 		s:CompleteStage(p, again.Id, false)
 		assert(deepEqual(e.data[p], before), "PlayerData never modified by ZoneService")
 		assert(#e.questEvents == 1, "only the victory reached QuestService")
+		assert(#e.rewardCalls == 1, "only the victory reached RewardService")
 	end)
 
 	print(`ZoneService: {passed} passed, {failed} failed`)

@@ -107,10 +107,12 @@ C'est la seule remote de ce lot ; #11 (ZoneController) l'utilisera.
 - **CombatService (#8)** : lit la session (`GetSession`) et sa `Config` pour créer le vrai
   combat (vagues, mini-boss). À la fin, il appelle
   `ZoneService:CompleteStage(player, session.Id, victory)`. C'est le seul appelant prévu.
-- **RewardService (#9)** : sera appelé par ZoneService au même endroit que QuestService,
-  à la victoire. Il gère First Clear (`FirstClears["<zone>-<stage>"] = true`, ce qui
-  déverrouille le stage suivant), récompenses de replay et ticket initial. ZoneService
-  n'attribue **aucune** récompense, devise ni ticket.
+- **RewardService (#9)** : à la victoire, juste après QuestService, ZoneService appelle
+  `RewardService:HandleStageCompleted(player, zone, stage, session.Id)`. L'id de session sert
+  d'identité de completion. RewardService gère le First Clear (`FirstClears["<zone>-<stage>"] = true`,
+  ce qui déverrouille le stage suivant), les récompenses de replay et le ticket initial.
+  `CompleteStage` renvoie `(true, { FirstClear, Rewards })` à CombatService, qui l'envoie au client.
+  ZoneService n'écrit lui-même **aucune** récompense, devise ni ticket. Voir `docs/REWARDS.md`.
 
 ## Validation
 

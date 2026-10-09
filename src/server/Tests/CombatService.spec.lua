@@ -58,13 +58,15 @@ return function(createService: any, CombatEngine: any, combatConfig: any, stageC
 		function dataService:GetData(player: any): any return env.data[player] end
 		local zoneService: any = {}
 		function zoneService:GetSession(player: any): any return env.stages[player] end
-		function zoneService:CompleteStage(player: any, id: number, victory: boolean): boolean
+		-- Comme le vrai ZoneService : (true, résultat RewardService) sur victoire, (true, nil) sur défaite.
+		env.reward = { FirstClear = true, Rewards = { { Kind = "Gold", Amount = 100 }, { Kind = "SummonTicket", Amount = 1, New = true } } }
+		function zoneService:CompleteStage(player: any, id: number, victory: boolean): (boolean, any)
 			env.completeCalls += 1
 			local stage = env.stages[player]
-			if not stage or stage.Id ~= id then return false end
+			if not stage or stage.Id ~= id then return false, nil end
 			env.stages[player] = nil
-			table.insert(env.completions, { player = player, id = id, victory = victory })
-			return true
+			table.insert(env.completions, { player = player, id = id, victory = victory, sentBefore = #env.fired })
+			return true, if victory then env.reward else nil
 		end
 		env.script = { Parent = { DataService = dataService, ZoneService = zoneService,
 			Parent = { Config = { CombatConfig = combatConfig }, Combat = { CombatEngine = CombatEngine } } } }
@@ -612,6 +614,44 @@ return function(createService: any, CombatEngine: any, combatConfig: any, stageC
 		local id = s:StartCombat(p, e.stages[p].Id, { [5] = "Magicien" }, e.context())
 		e.runUntilEnd(s, p, 300)
 		assert(seen and seen.player == p and seen.id == id and seen.result == "Defeat" and seen.completedBefore == 1)
+	end)
+
+	test("victory: a single CombatEnded, sent after CompleteStage, enriched with the RewardService result", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		s:StartCombat(p, e.stages[p].Id, TEAM, e.context())
+		assert(e.runUntilEnd(s, p, 300))
+		local ended = e.events(p, "CombatEnded")
+		assert(#ended == 1, "the engine's raw CombatEnded is never sent: " .. #ended)
+		local ev = ended[1]
+		assert(ev.Result == "Victory" and ev.FirstClear == true)
+		assert(#ev.Rewards == 2 and ev.Rewards[2].Kind == "SummonTicket" and ev.Rewards[2].New == true)
+		local all = e.events(p)
+		assert(all[#all] == ev, "CombatEnded is the last event of the combat")
+		local lastBatch = e.fired[#e.fired]
+		assert(e.completions[1].sentBefore < #e.fired and lastBatch.events[#lastBatch.events] == ev,
+			"rewards are known (saved) before the end event leaves the server")
+	end)
+
+	test("defeat or refused reward: CombatEnded with FirstClear false and empty Rewards", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		s:StartCombat(p, e.stages[p].Id, { [5] = "Magicien" }, e.context())
+		assert(e.runUntilEnd(s, p, 300))
+		local defeat = e.events(p, "CombatEnded")
+		assert(#defeat == 1 and defeat[1].Result == "Defeat" and defeat[1].FirstClear == false)
+		assert(typeof(defeat[1].Rewards) == "table" and #defeat[1].Rewards == 0)
+
+		local f = fixture()
+		local s2 = f.start()
+		local q = f.player("B")
+		f.reward = nil -- RewardService a refusé (config invalide, données perdues…)
+		s2:StartCombat(q, f.stages[q].Id, TEAM, f.context())
+		assert(f.runUntilEnd(s2, q, 300))
+		local victory = f.events(q, "CombatEnded")
+		assert(#victory == 1 and victory[1].Result == "Victory" and victory[1].FirstClear == false and #victory[1].Rewards == 0)
 	end)
 
 	print(`CombatService: {passed} passed, {failed} failed`)

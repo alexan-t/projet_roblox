@@ -1,6 +1,7 @@
 --!strict
 -- Zones et stages (voir docs/ZONES.md) : autorise le lancement d'un stage depuis le plot du joueur,
--- tient la session serveur (au plus une par joueur) et reçoit sa fin. Aucun combat ici : c'est #8.
+-- tient la session serveur (au plus une par joueur) et reçoit sa fin. Aucun combat ici (#8),
+-- aucune récompense ici (RewardService, #9).
 -- Une session n'existe qu'en mémoire. Elle est revérifiée à chaque accès (joueur présent,
 -- données chargées, même plot) : un départ ou une perte de profil la rend inutilisable
 -- sans attendre la livraison d'un signal.
@@ -13,6 +14,7 @@ local PlayerDataTypes = require(ReplicatedStorage.Shared.Types.PlayerDataTypes)
 local DataService = require(script.Parent.DataService)
 local PlotService = require(script.Parent.PlotService)
 local QuestService = require(script.Parent.QuestService)
+local RewardService = require(script.Parent.RewardService)
 local StageConfig = require(script.Parent.Parent.Config.StageConfig)
 
 type PlayerData = PlayerDataTypes.PlayerData
@@ -212,20 +214,27 @@ function ZoneService:GetSession(player: Player): StageSession?
 end
 
 -- Fin de session annoncée par le combat (#8). sessionId protège contre la fin tardive d'une
--- ancienne session. Une victoire émet "StageCompleted" pour QuestService ; rien d'autre.
-function ZoneService:CompleteStage(player: Player, sessionId: number, victory: boolean): boolean
+-- ancienne session : une session ne se termine qu'une fois. Une victoire émet "StageCompleted"
+-- vers QuestService (progression) puis RewardService (récompenses + First Clear), avec
+-- l'identifiant de la session comme identité de completion. ZoneService n'attribue rien lui-même.
+-- Renvoie true si la session est terminée, et le résultat des récompenses (victoire seulement).
+function ZoneService:CompleteStage(player: Player, sessionId: number, victory: boolean): (boolean, RewardService.Result?)
 	local session = currentSession(player)
 	if not session or session.id ~= sessionId then
-		return false
+		return false, nil
 	end
 	sessions[player] = nil
-	if victory == true then
-		Log.info(SCOPE, `Stage {stageKey(session.zone, session.stage)} réussi par {player.Name}`)
-		QuestService:HandleGameplayEvent(player, "StageCompleted", { Zone = session.zone, Stage = session.stage })
-	else
+	if victory ~= true then
 		Log.info(SCOPE, `Stage {stageKey(session.zone, session.stage)} échoué par {player.Name}`)
+		return true, nil
 	end
-	return true
+	Log.info(SCOPE, `Stage {stageKey(session.zone, session.stage)} réussi par {player.Name}`)
+	QuestService:HandleGameplayEvent(player, "StageCompleted", { Zone = session.zone, Stage = session.stage })
+	local rewards, reason = RewardService:HandleStageCompleted(player, session.zone, session.stage, session.id)
+	if not rewards then
+		Log.warn(SCOPE, `Aucune récompense pour {stageKey(session.zone, session.stage)} ({player.Name}) : {reason}`)
+	end
+	return true, rewards
 end
 
 -- Abandon de la session active, sans aucun effet de progression.

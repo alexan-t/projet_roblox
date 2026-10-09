@@ -88,7 +88,8 @@ local ok, reason = QuestService:ClaimQuest(player, "DefendDomain")
 - **ZoneService (#7)** : quand un stage est réellement terminé côté serveur, il appelle
   `QuestService:HandleGameplayEvent(player, "StageCompleted", { Zone = zone, Stage = stage })`.
   QuestService ne dépend pas de ZoneService ni de CombatService (#8).
-- **RewardService (#9)** : il réagit lui aussi à `StageCompleted` et reste seul responsable
+- **RewardService (#9, `docs/REWARDS.md`)** : ZoneService l'appelle juste après QuestService
+  pour le même `StageCompleted`. Il reste seul responsable
   des récompenses de stage, du First Clear (`Progression.FirstClears`) et du ticket
   d'invocation initial. Si une quête doit un jour donner une récompense, elle sera définie
   dans la config et attribuée par RewardService, pas par QuestService.

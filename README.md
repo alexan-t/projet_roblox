@@ -141,6 +141,13 @@ vitesse x1/x2. Voir [le moteur, les événements et la sécurité](docs/COMBAT.m
 [placement des héros dans l'arène personnelle du plot](docs/ARENA_PROTOTYPE.md) (hotbar, sacoche,
 E = Placer / Reprendre, Prêt = combat).
 
+## Récompenses et First Clear (RewardService)
+
+À la victoire, ZoneService prévient QuestService puis RewardService. RewardService marque le First
+Clear et ajoute les récompenses de `src/server/Config/RewardConfig.lua` (premier clear de 1-1 :
++1 ticket d'invocation ; valeurs Alpha provisoires). Le tout est sauvegardé avant l'écran de fin,
+sans action « réclamer ». Voir [la config, le flux et les garanties](docs/REWARDS.md).
+
 ## Héros possédés et hotbar (HeroService, Alpha)
 
 Kit de départ, hotbar de 10 raccourcis sauvegardée et vérification de possession : voir
