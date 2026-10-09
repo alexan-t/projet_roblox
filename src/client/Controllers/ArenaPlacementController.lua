@@ -21,6 +21,8 @@ local ArenaStore = require(script.Parent.Parent.Arena.ArenaStore)
 local PlacementState = require(script.Parent.Parent.Arena.PlacementState)
 local PlotView = require(script.Parent.Parent.Arena.PlotView)
 local UIKit = require(script.Parent.Parent.UI.UIKit)
+local AudioController = require(script.Parent.AudioController)
+local RewardScreenController = require(script.Parent.RewardScreenController)
 
 local C = UITheme.Colors
 local T = UITheme.Transparency
@@ -34,6 +36,7 @@ local GRID_HIDDEN = UITheme.World.GridHidden -- dalles hors préparation presque
 local ABOVE_HOTBAR = 112 -- hauteur réservée à la hotbar (px)
 local PROMPT_REFRESH = 0.1 -- secondes entre deux recherches de la dalle la plus proche
 local PANEL_WIDTH = 264
+local RESULT_DELAY = 1.2 -- s après CombatEnded : la dernière unité a fini de se dissoudre
 
 type CaseState = "Empty" | "Hover" | "ValidTarget" | "Occupied" | "Selected" | "Invalid"
 
@@ -492,11 +495,23 @@ local function onCombatEvents(_combatId: number, events: { { [string]: any } })
 			flash(ui.banner, 2)
 		elseif event.Type == "MiniBossStarted" then
 			ui.wave.Text = "Mini-boss"
+			AudioController.Play("MiniBoss")
 			ui.banner.Text = `★ {event.EnemyId}`
 			flash(ui.banner, 2.5)
 		elseif event.Type == "SpeedChanged" then
 			ui.x1.setSelected(event.Speed == 1)
 			ui.x2.setSelected(event.Speed == 2)
+		elseif event.Type == "CombatEnded" then
+			-- Écran de fin (#17, #19) une fois la dernière unité dissoute ; les récompenses viendront
+			-- de RewardService (#9).
+			local rewards = event.Rewards
+			task.delay(RESULT_DELAY, function()
+				RewardScreenController.Show({
+					Result = event.Result,
+					FirstClear = event.FirstClear,
+					Rewards = if typeof(rewards) == "table" then rewards else nil,
+				})
+			end)
 		end
 	end
 end

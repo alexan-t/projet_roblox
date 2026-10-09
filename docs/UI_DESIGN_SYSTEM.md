@@ -300,3 +300,74 @@ Moins de fenêtres, plus d'interaction avec le monde : on **prend** un héros et
 5. Un seul bouton principal visible ; zones tactiles ≥ 44 px.
 6. Aucune valeur de style en dur dans le Controller : tout vient de `UITheme`.
 7. Pas d'emoji ni d'icône générique dans une version livrée.
+
+## 12. Implémentation : UIKit (issue #19)
+
+Les composants de ce document existent en code, côté client, dans un seul module :
+`src/client/UI/UIKit.lua` (`StarterPlayerScripts.Client.UI.UIKit`). Un écran se construit avec
+eux plutôt qu'à la main.
+
+**Briques de base** (utilisées par la préparation, la hotbar et la sacoche) :
+
+| Fonction | Composant (§) |
+| --- | --- |
+| `UIKit.text(parent, texte, taille, couleur ou { Color, Stroke, Align, Font })` | texte Fredoka contouré Ink, épaisseur selon la taille (§ 4) ; `Stroke = false` pour un texte sombre sur fond clair |
+| `UIKit.button(parent, texte, "Primary"/"Secondary"/"Danger"/"Tab", taille, action)` | bouton chunky ; `setEnabled`, `setSelected` (§ 6) |
+| `UIKit.panel(parent, transparence?, rayon?, contour?)` | panneau bois sombre contouré |
+| `UIKit.badge(parent, texte, couleur)` | pastille d'état (largeur automatique) |
+| `UIKit.pop(objet)` | pop de gain 1,12 → 1 (§ 8) |
+| `UIKit.corner`, `UIKit.stroke`, `UIKit.textStroke` | coins, contour Ink, épaisseur de contour du texte |
+
+**Écrans et fenêtres** :
+
+| Fonction | Composant (§) |
+| --- | --- |
+| `UIKit.screen(nom, ordre?)` | ScreenGui + `UIScale` global (écran de référence 1080 px, entre 0,7 et 1,25) |
+| `UIKit.window(parent, { Size, Title, OnClose })` | fenêtre : fond `WoodDeep`, ombre, bandeau de titre en bois, fermer ; renvoie la fenêtre et son contenu |
+| `UIKit.roundButton(parent, { Text = "X", ... })` | bouton rond (fermer) |
+| `UIKit.subPanel`, `UIKit.pill` | sous-panneau `PanelStrong`, pastille `HUD` |
+| `UIKit.edgeBadge(parent, texte, couleur)` | badge d'état à cheval sur le bord haut d'une carte |
+| `UIKit.bar(parent, { Color, Size })` | barre PV / énergie / progression (`Set(ratio, animate?)`) |
+| `UIKit.card(parent, { Name, Model, Badge, Selected, Locked, Empty })` | carte standard avec portrait 3D |
+| `UIKit.portrait(parent, modèle, enPied?)` | portrait 3D trois quarts (ViewportFrame) |
+| `UIKit.overlay`, `UIKit.open`, `UIKit.close`, `UIKit.popIn`, `UIKit.announce` | voile, ouverture / fermeture, apparition, annonce (§ 8) |
+| `UIKit.rays(parent, longueur)` | rayons dorés tournants (victoire, héros obtenu) |
+| `UIKit.curtain(titre?, auMilieu?)` | transition entre deux scènes (voile Ink + titre) |
+
+Une seule `UIScale` par élément : ouverture, pop et survol partagent la même (Roblox n'en
+applique qu'une).
+
+Icônes (§ 7) : `src/client/UI/Icons.lua`, petits objets 3D avec silhouette Ink, dans un
+ViewportFrame. Classes de héros (`Archer` arc, `Epeiste` épée, `Barbare` hache, `Paladin`
+bouclier, `Magicien` bâton, `Tireur` cible) : ce sont les `HeroId` de `HeroConfig`, et ces icônes
+remplacent les monogrammes provisoires (`PlaceholderIcon`). Objets : `Parchemin`, `Or`,
+`Gemmes`, `Ticket`, `Combat`, `Cadenas`.
+
+### Écrans
+
+Branchés sur des états réels :
+
+- barres de PV / mana et icône de classe au-dessus des unités (`CombatViewController`) ;
+- écran Victoire / Défaite et récompenses (`RewardScreenController`), affiché sur `CombatEnded`
+  par `ArenaPlacementController`.
+
+Vues prêtes à brancher par les contrôleurs de #11 (`src/client/UI/Views`, présentation seule,
+aucune règle de jeu) :
+
+| Vue | API | Données attendues |
+| --- | --- | --- |
+| `QuestView` | `Show(quest, { OnClaim })`, `Hide()` | `QuestService:GetActiveQuest` : `{ Title, Progress, Target, Completed }` |
+| `CurrencyView` | `Set(currencies, animate?)`, `Hide()` | `PlayerData.Currencies` : `{ Gold, Gems, SummonTickets }` |
+| `ExpeditionView` | `Show(data, { OnLaunch, OnClose })`, `Hide()` | `{ Zone, Stages = { { Stage, Unlocked, Cleared, Waves, Enemies } } }` ; `OnLaunch` → `RequestStartStage` |
+| `SummonView` | `Show({ Tickets, Cost }, { OnSummon, OnClose })`, `Reveal(hero, { OnContinue })`, `Hide()` | tirage de HeroService (#10) ; `Reveal` après l'effet 3D du portail (`SummonEffectController`) |
+| `CollectionView` | `Show(heroes, { OnClose, OnSelect })`, `Hide()` | `{ { Name, Model, ClassId, Count, New, Equipped } }` depuis `Heroes` / la hotbar |
+
+Placement : quête en haut à gauche, monnaies en haut au centre (la liste des joueurs de Roblox
+occupe le haut à droite), fenêtres centrées avec voile.
+
+### Démonstrations Studio (sans serveur)
+
+`Workspace.ApercuUI` = `Quete`, `Monnaies`, `Expedition`, `Invocation`, `Collection`,
+`Transition` ou `Tout` (`UIPreviewController`) ; modifiable en cours de Play. Les héros de
+démonstration sont les copies de `ReplicatedStorage.AtelierInvocation` (attributs `NomAffiche`,
+`Classe`). Écran de fin : `Workspace.ApercuEcranRecompenses = true`.

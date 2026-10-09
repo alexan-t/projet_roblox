@@ -7,7 +7,9 @@
 --   • Sinon, dans Studio uniquement, on l'enregistre à la volée (aperçu avant publication).
 -- Tag "ApercuAnimation" (Model) : démonstration en boucle (Attente, puis Marche, Attaque,
 --   Touche et Mort à tour de rôle). Attribut optionnel : ApercuPause (s entre deux actions).
--- API : MonsterAnimationController.Play(model, nom) -> AnimationTrack? pour le combat plus tard.
+-- API : MonsterAnimationController.Play(model, nom) -> AnimationTrack? ; Stop(model, nom) ;
+--   SetTimeScale(vitesse) : vitesse du combat (x1 / x2), appliquée aux animations en cours et suivantes.
+-- Attribut ApercuVitesse (nombre, sur le modèle ou son dossier) : vitesse de la démonstration (ex. 2).
 
 local CollectionService = game:GetService("CollectionService")
 local KeyframeSequenceProvider = game:GetService("KeyframeSequenceProvider")
@@ -20,6 +22,7 @@ local ACTIONS = { "Marche", "Attaque", "Touche", "Mort" }
 local MonsterAnimationController = {}
 
 local tracks: { [Model]: { [string]: AnimationTrack } } = {}
+local timeScale = 1
 local registered: { [KeyframeSequence]: string } = {}
 
 local function animationId(sequence: KeyframeSequence): string?
@@ -79,8 +82,41 @@ function MonsterAnimationController.Play(model: Model, name: string, fadeTime: n
 	local track = loaded and loaded[name]
 	if track then
 		track:Play(fadeTime or 0.15)
+		track:AdjustSpeed(timeScale)
 	end
 	return track
+end
+
+function MonsterAnimationController.Stop(model: Model, name: string, fadeTime: number?)
+	local loaded = tracks[model]
+	local track = loaded and loaded[name]
+	if track and track.IsPlaying then
+		track:Stop(fadeTime or 0.2)
+	end
+end
+
+-- Vitesse du combat : x2 joue toutes les animations deux fois plus vite, comme la simulation.
+function MonsterAnimationController.SetTimeScale(scale: number)
+	timeScale = scale
+	for model, loaded in tracks do
+		if not model.Parent then
+			tracks[model] = nil
+			continue
+		end
+		for _, track in loaded do
+			if track.IsPlaying and track.Speed ~= 0 then
+				track:AdjustSpeed(scale)
+			end
+		end
+	end
+end
+
+local function demoSpeed(model: Model): number
+	local value = model:GetAttribute("ApercuVitesse")
+	if typeof(value) ~= "number" and model.Parent then
+		value = model.Parent:GetAttribute("ApercuVitesse")
+	end
+	return if typeof(value) == "number" and value > 0 then value else 1
 end
 
 local function runDemo(model: Model)
@@ -92,27 +128,33 @@ local function runDemo(model: Model)
 	local idle = loaded.Attente
 	if idle then
 		idle:Play(0.2)
+		idle:AdjustSpeed(demoSpeed(model))
 	end
 	local index = 0
 	while model.Parent and CollectionService:HasTag(model, TAG_APERCU) do
 		local pause = model:GetAttribute("ApercuPause")
-		task.wait(if typeof(pause) == "number" then pause else 2.5)
+		local speed = demoSpeed(model)
+		task.wait((if typeof(pause) == "number" then pause else 2.5) / speed)
+		if idle then
+			idle:AdjustSpeed(speed) -- suit un changement d'ApercuVitesse pendant la démonstration
+		end
 		index = index % #ACTIONS + 1
 		local name = ACTIONS[index]
 		local track = loaded[name]
 		if track then
 			track:Play(0.15)
+			track:AdjustSpeed(speed)
 			if name == "Marche" then
-				task.wait(2.4)
+				task.wait(2.4 / speed)
 				track:Stop(0.3)
 			elseif name == "Mort" then
 				-- rester au sol un moment, puis se relever
-				task.wait(track.Length - 0.05)
+				task.wait(track.Length / speed - 0.05)
 				track:AdjustSpeed(0)
-				task.wait(1.5)
+				task.wait(1.5 / speed)
 				track:Stop(0.5)
 			else
-				task.wait(track.Length)
+				task.wait(track.Length / speed)
 			end
 		end
 	end

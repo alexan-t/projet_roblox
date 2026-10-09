@@ -79,7 +79,7 @@ horizontal), `Alive`, `Slot` (héros) ou `Cell` (ennemi), `MiniBoss`.
   premier pas où une cible existe (vague suivante ou mini-boss), à la place d'une action.
   Rien n'est lancé entre deux vagues. Les ennemis n'ont pas d'énergie, donc pas d'ultime.
 - **Mort** : `UnitDied` une seule fois ; l'unité ne cible, ne bouge et n'attaque plus ;
-  son modèle est retiré une seconde après (le temps d'une animation de mort).
+  son modèle est retiré 1,7 s après (le temps de sa disparition côté client, même retardée jusqu'au coup visible).
 
 ## Vagues, mini-boss, fin
 
@@ -104,6 +104,12 @@ Stage 1-1 : Slime ×2 + Gobelin ×4, puis Boss.
 `Settings.CombatSpeed` (seul champ modifié) et reprise au combat suivant. x2 double le
 temps simulé par seconde réelle (mouvements, cadence, progression), jamais les dégâts par
 coup ; aucun événement n'est dupliqué.
+
+Côté client, `CombatViewController` suit `SpeedChanged` : toutes les animations jouent à la vitesse
+du combat (`MonsterAnimationController.SetTimeScale`), et les instants d'impact (chiffres de dégâts,
+disparition, onde de l'ultime, séisme) sont divisés par la vitesse. La marche s'arrête quand l'unité
+attaque ou meurt. Durées tenues en x2 : attaque du Roi Orc 0,7 s pour un intervalle de 0,75 s,
+épée de l'Écuyer 0,3 s pour 0,45 s (Épéiste).
 
 ## API serveur
 
@@ -158,10 +164,26 @@ Règle d'interface : une information qui peut s'afficher dans le monde n'a pas d
     plus large pour le mini-boss. Petite icône de classe (attribut `HeroClass`) au-dessus
     des héros, sans nom.
   - **Mana pleine** : la barre devient dorée et pulse, et le héros a un léger contour doré.
-  - **Ultime** : automatique. Sur `UltimateUsed`, bref éclat doré sur le héros ; le joueur
-    n'a rien à faire.
-  - **Dégâts** : chiffres brefs au-dessus des ennemis (plus gros et dorés pour un ultime).
-  - **Mort** : les barres disparaissent, puis l'animation `Mort`.
+  - **Ultime** : automatique côté serveur ; le joueur n'a rien à faire. Sur `UltimateUsed`, le héros
+    joue « Ultime » (`UltimateEffectController`, « Charge du Rempart ») : lueur dorée, une lame dorée
+    file de son arme vers la cible, puis un anneau doré éclate au sol au rayon des ennemis touchés.
+    Les chiffres de dégâts et la disparition des ennemis touchés attendent l'impact de l'onde
+    (`IMPACT_DELAY`, 0,45 s).
+  - **Coup visible** : les chiffres de dégâts et la disparition de la cible attendent l'instant du
+    coup de l'animation « Attaque » de l'attaquant (attribut `Impact` de la séquence). Un modèle
+    avec l'attribut `EffetAttaque` joue aussi un effet d'impact (`AttackEffectController`, ex.
+    `"Seisme"` pour le Roi Orc).
+  - **Dégâts** (`DamageFeedbackController`), à l'instant du coup visible : flash bref de la cible
+    (clair sur un ennemi, rouge sur un héros), petit recul à l'opposé de l'attaquant, chiffre au
+    design system (Fredoka contourée : clair, doré pour un ultime, rouge sur un héros) et traînée
+    claire sur la barre de vie qui se résorbe. Pas d'animation de douleur ; un coup fatal laisse la
+    place à la disparition. Démonstration Studio : tag `ApercuDegats` (`ApercuAllie` pour un héros).
+  - **Mort** : les barres disparaissent, puis l'unité **se dissout** (`DefeatEffectController`,
+    0,85 s, avant le retrait du modèle par le serveur à 1,7 s) : flash clair, petit sursaut,
+    effacement de haut en bas avec poussière et étincelles dorées. Pas d'animation de douleur : le
+    jeu est surtout en one-shot. Démonstration en Studio : tag `ApercuDisparition` sur un modèle.
+  - **Vitesse x2** : animations, instants d'impact et effets suivent la vitesse du combat.
+  - **Sons** (`AudioController`, `docs/AUDIO.md`) : élan, impact, ultime, dissolution, mini-boss.
   - Animations `Marche`, `Attaque`, `Touche`, `Mort` via `MonsterAnimationController.Play`,
     pour les modèles qui portent l'attribut `JeuAnimations`.
 - `CombatIntroController` (Cypher) : reste une **démo** d'entrée en combat (vague fixe,
@@ -174,6 +196,12 @@ Règle d'interface : une information qui peut s'afficher dans le monde n'a pas d
 ## Intégrations futures
 
 - **#9 RewardService** : sera appelé par ZoneService à la victoire (même point que QuestService).
+  L'écran de fin est prêt côté client et s'affiche sur `CombatEnded` (`ArenaPlacementController`) :
+  `RewardScreenController.Show({ Result, FirstClear, Rewards }, onContinue)` (« Victoire ! » avec
+  rayons dorés et étincelles, cartes de récompense en cascade avec objet 3D et montant qui défile,
+  badge « Nouveau », bouton « Continuer » ; « Défaite… » sobre). Il ne décide d'aucune récompense :
+  #9 renseignera `Rewards` (et `FirstClear`) avec les récompenses réellement attribuées.
+  Démonstration Studio : attribut `Workspace.ApercuEcranRecompenses = true`.
 - **#10 HeroService** : la partie Alpha existe (`docs/HEROES.md` : exemplaires possédés, kit de
   départ, hotbar). Restent l'invocation, les niveaux et la rareté.
 - **#11 UI** : remplacera les panneaux et barres provisoires en consommant les mêmes événements.

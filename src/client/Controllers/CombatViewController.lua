@@ -2,11 +2,16 @@
 -- Informations de combat dans le monde, côté client (voir docs/COMBAT.md) : consomme Remotes.CombatEvent.
 --   • Au-dessus de chaque unité : barre de PV (rouge sous 30 %), barre de mana pour les héros
 --     (dorée et pulsante quand l'ultime est prêt, avec un léger contour sur le héros). Barre plus
---     large pour le mini-boss. Petite icône de classe au-dessus des héros, sans nom.
---   • Dégâts : chiffres brefs au-dessus des ennemis (plus gros pour un ultime), qui s'effacent vite.
---   • Mort : les barres disparaissent, puis l'animation de mort (MonsterAnimationController).
---   • Ultime : automatique côté serveur ; UltimateUsed déclenche seulement un éclat doré (le
---     design pourra y brancher animation, VFX, SFX). Le joueur n'a rien à faire.
+--     large pour le mini-boss. Petite icône de classe au-dessus des héros (objet 3D, Icons), sans nom.
+--   • Dégâts (DamageFeedbackController), à l'instant du coup : flash et petit recul de la cible, chiffre
+--     au design system (clair sur un ennemi, doré pour un ultime, rouge sur un héros), traînée sur la barre.
+--   • Mort : les barres disparaissent, puis l'unité se dissout (DefeatEffectController) ; pas
+--     d'animation de douleur (« Touche ») ni de mort à jouer pour l'instant.
+--   • Ultime : automatique côté serveur. UltimateUsed : le héros joue « Ultime » et une onde dorée file
+--     vers la zone touchée (UltimateEffectController) ; chiffres et disparitions des ennemis touchés
+--     attendent l'impact de l'onde. Le joueur n'a rien à faire.
+--   • Vitesse x2 (SpeedChanged) : animations, instants d'impact et effets suivent la simulation.
+--   • Sons (AudioController) : élan de l'attaque ici ; les autres sons partent des effets eux-mêmes.
 -- Aucune règle de combat ici : PV, mana, morts et résultat viennent uniquement du serveur.
 
 local Players = game:GetService("Players")
@@ -14,9 +19,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
-local HeroConfig = require(ReplicatedStorage.Shared.Config.HeroConfig)
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
+local AttackEffectController = require(script.Parent.AttackEffectController)
+local AudioController = require(script.Parent.AudioController)
+local DamageFeedbackController = require(script.Parent.DamageFeedbackController)
+local DefeatEffectController = require(script.Parent.DefeatEffectController)
 local MonsterAnimationController = require(script.Parent.MonsterAnimationController)
+local UltimateEffectController = require(script.Parent.UltimateEffectController)
+local Icons = require(script.Parent.Parent.UI.Icons)
 local UIKit = require(script.Parent.Parent.UI.UIKit)
 
 local CombatViewController = {}
@@ -44,12 +54,10 @@ type View = {
 	pulse: Tween?,
 }
 
-local icons: { [string]: string } = {}
-for heroId, info in HeroConfig.Heroes do
-	icons[heroId] = info.PlaceholderIcon
-end
-
 local views: { [number]: View } = {}
+-- Vitesse du combat (SpeedChanged : 1 ou 2). x2 accélère la simulation : les animations, les
+-- instants d'impact et les effets suivent, sinon tout serait en retard sur le coup.
+local speed = 1
 
 local function folder(): Instance?
 	return require(script.Parent.Parent.Arena.PlotView).world()
@@ -73,7 +81,8 @@ local function top(model: Model): number
 	return size.Y / 2
 end
 
--- Petite icône de classe au-dessus d'un héros (placement comme combat).
+-- Petite icône de classe au-dessus d'un héros (placement comme combat) : objet 3D dans une pastille
+-- crème contourée Ink (Icons, design system § 7), à la place des monogrammes provisoires.
 local function attachIcon(model: Model)
 	local classId = model:GetAttribute("HeroClass")
 	if typeof(classId) ~= "string" or model:FindFirstChild("IconeClasse") then
@@ -81,16 +90,17 @@ local function attachIcon(model: Model)
 	end
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "IconeClasse"
-	gui.Size = UDim2.fromOffset(18, 18)
-	gui.StudsOffsetWorldSpace = Vector3.new(0, top(model) + 1.6, 0)
+	gui.Size = UDim2.fromOffset(26, 26)
+	gui.StudsOffsetWorldSpace = Vector3.new(0, top(model) + 1.7, 0)
 	gui.AlwaysOnTop = true
 	gui.MaxDistance = 150
-	local text = Instance.new("TextLabel")
-	text.BackgroundTransparency = 1
-	text.Size = UDim2.fromScale(1, 1)
-	text.TextScaled = true
-	text.Text = icons[classId] or ""
-	text.Parent = gui
+	local chip = Instance.new("Frame")
+	chip.Size = UDim2.fromScale(1, 1)
+	chip.BackgroundColor3 = UITheme.Colors.Cream
+	chip.Parent = gui
+	UIKit.corner(chip, UITheme.Radius.Pill)
+	UIKit.stroke(chip, UITheme.Stroke.Thin)
+	Icons.viewport(chip, classId)
 	gui.Parent = model
 end
 
@@ -120,20 +130,11 @@ local function refresh(view: View)
 	end
 end
 
+-- Barre du design system : fond BarTrack à Track, contour Thin, rayon Pill, remplissage opaque.
 local function bar(parent: Instance, y: number, height: number, color: Color3): Frame
-	local back = Instance.new("Frame")
-	back.BackgroundColor3 = UITheme.Colors.BarTrack
-	back.BackgroundTransparency = UITheme.Transparency.Track
-	back.BorderSizePixel = 0
-	back.Position = UDim2.fromOffset(0, y)
-	back.Size = UDim2.new(1, 0, 0, height)
-	back.Parent = parent
-	local fill = Instance.new("Frame")
-	fill.BackgroundColor3 = color
-	fill.BorderSizePixel = 0
-	fill.Size = UDim2.fromScale(1, 1)
-	fill.Parent = back
-	return fill
+	local b = UIKit.bar(parent, { Color = color, Size = UDim2.new(1, -4, 0, height) })
+	b.Frame.Position = UDim2.fromOffset(2, y + 2)
+	return b.Fill
 end
 
 local function attachBars(unitId: number, miniBoss: boolean, attempt: number)
@@ -150,17 +151,17 @@ local function attachBars(unitId: number, miniBoss: boolean, attempt: number)
 	end
 	view.model = model
 	local hero = view.team == "Ally"
-	local width = if miniBoss then 110 else 54
-	local healthHeight = if miniBoss then 8 else 5
+	local width = if miniBoss then 120 else 64
+	local healthHeight = if miniBoss then 10 else 7
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "BarresCombat"
-	gui.Size = UDim2.fromOffset(width, healthHeight + (if hero then 5 else 0))
+	gui.Size = UDim2.fromOffset(width, healthHeight + (if hero then 7 else 0) + 4)
 	gui.StudsOffsetWorldSpace = Vector3.new(0, top(model) + 0.5, 0)
 	gui.AlwaysOnTop = true
 	gui.MaxDistance = 150
 	view.healthFill = bar(gui, 0, healthHeight, if hero then HEALTH else ENEMY_HEALTH)
 	if hero and view.maxEnergy > 0 then
-		view.manaFill = bar(gui, healthHeight + 1, 4, MANA)
+		view.manaFill = bar(gui, healthHeight + 2, 5, MANA)
 		local glow = Instance.new("Highlight")
 		glow.FillTransparency = 1
 		glow.OutlineColor = MANA_FULL
@@ -176,50 +177,6 @@ local function attachBars(unitId: number, miniBoss: boolean, attempt: number)
 	refresh(view)
 end
 
--- Chiffre de dégâts bref au-dessus d'un ennemi.
-local function popDamage(view: View, amount: number, big: boolean)
-	local model = view.model
-	if not model or amount <= 0 then
-		return
-	end
-	local gui = Instance.new("BillboardGui")
-	gui.Size = UDim2.fromOffset(60, 24)
-	gui.StudsOffsetWorldSpace = Vector3.new(math.random(-8, 8) / 10, top(model) + 1.2, 0)
-	gui.AlwaysOnTop = true
-	-- Fredoka One contouré (design system) ; plus gros et doré pour un ultime.
-	local size = if big then UITheme.Typography.Size.Button else UITheme.Typography.Size.Caption
-	local text = UIKit.text(gui, tostring(math.floor(amount + 0.5)), size, if big then MANA_FULL else UITheme.Colors.TextLight)
-	local outline = text:FindFirstChildOfClass("UIStroke")
-	gui.Parent = model
-	TweenService:Create(gui, UITheme.Animation.Damage, { StudsOffsetWorldSpace = gui.StudsOffsetWorldSpace + Vector3.new(0, 1.2, 0) }):Play()
-	TweenService:Create(text, UITheme.Animation.Damage, { TextTransparency = 1 }):Play()
-	if outline then
-		TweenService:Create(outline, UITheme.Animation.Damage, { Transparency = 1 }):Play()
-	end
-	task.delay(0.65, function()
-		gui:Destroy()
-	end)
-end
-
--- Ultime automatique : bref éclat doré sur le héros (point d'accroche pour les VFX du design).
-local function flashUltimate(view: View?)
-	local model = if view then view.model else nil
-	if not model or not model.Parent then
-		return
-	end
-	local burst = Instance.new("Highlight")
-	burst.FillColor = MANA_FULL
-	burst.OutlineColor = MANA_FULL
-	burst.FillTransparency = UITheme.World.Glow
-	burst.OutlineTransparency = 0
-	burst.DepthMode = Enum.HighlightDepthMode.Occluded
-	burst.Parent = model
-	TweenService:Create(burst, UITheme.Animation.Burst, { FillTransparency = 1, OutlineTransparency = 1 }):Play()
-	task.delay(0.5, function()
-		burst:Destroy()
-	end)
-end
-
 local function animate(unitId: number?, name: string)
 	local view = if unitId then views[unitId] else nil
 	local model = if view then view.model else nil
@@ -230,9 +187,15 @@ end
 
 local function onEvents(_combatId: number, events: { { [string]: any } })
 	local ultimateHits: { [number]: boolean } = {}
+	-- Délai jusqu'au coup visible pour chaque cible frappée dans ce lot (ultime ou attaque dont
+	-- l'animation a un instant d'impact) : chiffres et disparition attendent le coup.
+	local hitDelay: { [number]: number } = {}
 	for _, event in events do
 		local kind = event.Type
-		if kind == "CombatStarted" then
+		if kind == "SpeedChanged" then
+			speed = if event.Speed == 2 then 2 else 1
+			MonsterAnimationController.SetTimeScale(speed)
+		elseif kind == "CombatStarted" then
 			table.clear(views)
 		elseif kind == "UnitSpawned" then
 			views[event.UnitId] = {
@@ -246,15 +209,58 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 		elseif kind == "UltimateUsed" then
 			for _, id in event.Hits do
 				ultimateHits[id] = true
+				hitDelay[id] = UltimateEffectController.ImpactDelay(speed)
 			end
-			flashUltimate(views[event.UnitId])
+			-- Animation « Ultime » du héros et onde dorée jusqu'au centre de la zone touchée
+			-- (anneau au rayon des ennemis touchés, au moins celui d'une petite zone).
+			local caster = views[event.UnitId]
+			local target = views[event.TargetId]
+			if caster and caster.model and target and target.model then
+				local box, size = target.model:GetBoundingBox()
+				local center = Vector3.new(box.Position.X, box.Position.Y - size.Y / 2, box.Position.Z)
+				local radius = 4
+				for _, id in event.Hits do
+					local hit = views[id]
+					if hit and hit.model then
+						local p = hit.model:GetPivot().Position
+						radius = math.max(radius, Vector3.new(p.X - center.X, 0, p.Z - center.Z).Magnitude + 2)
+					end
+				end
+				UltimateEffectController.Play(caster.model, center, radius, speed)
+			end
+			animate(event.UnitId, "Ultime")
 		elseif kind == "Damage" then
 			local view = views[event.TargetId]
 			if view then
-				view.health = event.Health
-				refresh(view)
-				if view.team == "Enemy" then
-					popDamage(view, event.Amount, ultimateHits[event.TargetId] == true)
+				-- Tout tombe avec le coup visible (impact de l'attaque, anneau de l'ultime), pas avant :
+				-- barre de vie (avec traînée), flash, recul et chiffre (DamageFeedbackController).
+				local delay = hitDelay[event.TargetId] or 0
+				local source = views[event.SourceId]
+				local from = if source and source.model then source.model:GetPivot().Position else nil
+				local ultimate = ultimateHits[event.TargetId] == true
+				local health, amount = event.Health, event.Amount
+				local function land()
+					local before = math.clamp(view.health / view.maxHealth, 0, 1)
+					view.health = health
+					refresh(view)
+					if view.healthFill then
+						DamageFeedbackController.Chip(view.healthFill, before, math.clamp(health / view.maxHealth, 0, 1), speed)
+					end
+					if view.model then
+						DamageFeedbackController.Hit(view.model, {
+							Amount = amount,
+							Ally = view.team == "Ally",
+							Ultimate = ultimate,
+							Lethal = health <= 0,
+							From = from,
+							Speed = speed,
+						})
+					end
+				end
+				if delay > 0 then
+					task.delay(delay, land)
+				else
+					land()
 				end
 			end
 			animate(event.TargetId, "Touche")
@@ -265,13 +271,26 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 				refresh(view)
 			end
 		elseif kind == "Attack" then
+			AudioController.Play("Attaque") -- élan de l'arme (#18)
+			local attacker = views[event.UnitId]
+			if attacker and attacker.model and event.TargetId then
+				-- Effet d'impact éventuel (attribut EffetAttaque) ; renvoie l'instant du coup.
+				local impact = AttackEffectController.Play(attacker.model, speed)
+				if impact > 0 and not hitDelay[event.TargetId] then
+					hitDelay[event.TargetId] = impact
+				end
+			end
+			-- À portée, l'unité ne bouge plus : la marche (bouclée) s'arrête.
+			if attacker and attacker.model then
+				MonsterAnimationController.Stop(attacker.model, "Marche")
+			end
 			animate(event.UnitId, "Attaque")
 		elseif kind == "MoveStarted" then
 			animate(event.UnitId, "Marche")
 		elseif kind == "UnitDied" then
 			local view = views[event.UnitId]
 			if view then
-				-- Les barres disparaissent d'abord, puis l'animation de mort.
+				-- Les barres disparaissent d'abord, puis l'unité se dissout.
 				if view.pulse then
 					view.pulse:Cancel()
 				end
@@ -284,6 +303,11 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 				local icon = view.model and view.model:FindFirstChild("IconeClasse")
 				if icon then
 					icon:Destroy()
+				end
+				if view.model then
+					MonsterAnimationController.Stop(view.model, "Marche")
+					-- Disparaît quand le coup l'atteint (onde de l'ultime, impact de l'attaque).
+					DefeatEffectController.Play(view.model, hitDelay[event.UnitId] or 0, speed)
 				end
 			end
 			animate(event.UnitId, "Mort")

@@ -8,7 +8,7 @@ Jeu Roblox, Alpha 0.0.1. Le code vit dans Git et est synchronisé dans Studio av
 | --- | --- | --- |
 | Code Luau (scripts, modules) | `src/` dans Git | branche `feature/*` → PR vers `develop`, synchronisé par Rojo |
 | Assets, maps, UI, modèles | Studio (Team Create, Packages) | pas de Git |
-| Snapshot du Sandbox partenaire | `studio/sandbox/partner_sandbox_v3.rbxl` (version courante ; `partner_sandbox_v2.rbxl` et `partner_sandbox.rbxl` = anciennes versions) | fichier remplacé en entier, jamais fusionné, sans code Luau |
+| Snapshot du Sandbox partenaire | `studio/sandbox/partner_sandbox_v4.rbxl` (version courante, place « test 3 » qui réunit « test » et « test 2 » ; `partner_sandbox_v3.rbxl`, `_v2` et `partner_sandbox.rbxl` = anciennes versions) | fichier remplacé en entier, jamais fusionné, sans code Luau |
 
 Ne jamais écrire de code directement dans Studio : Rojo écrase les scripts qu'il gère à chaque synchronisation.
 
@@ -98,6 +98,18 @@ Le serveur clone sur le plot du joueur le modèle de royaume qui correspond à
 `Kingdom.VisualState`, puis un modèle par héros possédé. Les modèles et les
 repères restent dans Studio : voir le [contrat d'assets, l'API et les tests](docs/KINGDOM.md).
 
+## Audio (SFX et ambiance)
+
+`AudioController` (client) joue les sons décrits dans `src/shared/Config/AudioConfig.lua`, à l'instant
+des effets visuels, avec des garde-fous contre le spam. Voir [la liste des sons, leur provenance et
+les déclencheurs](docs/AUDIO.md).
+
+## Invocation (effet d'apparition)
+
+Au portail d'invocation, `SummonEffectController` (client) joue la charge du vortex, l'éclat et la
+sortie du héros obtenu, avec son nom et le badge « Nouveau ». Voir [le déroulé, l'API et la
+démonstration Studio](docs/SUMMON.md).
+
 ## Quêtes (QuestService)
 
 Les quêtes sont décrites dans `src/server/Config/QuestConfig.lua` et suivies dans
@@ -124,6 +136,12 @@ vitesse x1/x2. Voir [le moteur, les événements et la sécurité](docs/COMBAT.m
 
 Kit de départ, hotbar de 10 raccourcis sauvegardée et vérification de possession : voir
 [les données, les règles et l'API](docs/HEROES.md).
+
+## Animations (AnimationKit)
+
+`tools/animation/AnimationKit.luau` est un outil Studio (non synchronisé par Rojo) qui pose un
+squelette sur un héros ou un monstre généré par l'IA, génère sa marche et la montre en boucle à
+côté du spawn au Play. Voir [l'utilisation, le format de modèle et les profils](docs/ANIMATION_TOOLS.md).
 
 ## Workflow Git
 
