@@ -1,7 +1,7 @@
 --!strict
 -- Fenêtre Expédition : choix du stage d'une zone — issue #19, docs/UI_DESIGN_SYSTEM.md § 6.
--- Présentation seulement : ZoneService dit quels stages sont accessibles et valide le lancement
--- (RequestStartStage) ; le contrôleur de #11 appelle cette vue.
+-- Présentation seulement : ZoneService dit quels stages sont accessibles, ArenaService valide le choix
+-- (SelectStage) et le lancement (Ready) ; ArenaPlacementController l'ouvre depuis la pancarte de l'arène (E).
 --   Fenêtre bois avec bandeau « Expédition », voile derrière, ouverture 0,9 → 1.
 --   Une carte par stage : icône épées croisées (ou cadenas), « Stage 1-1 », badge d'état :
 --   « Disponible » (Success), « Terminé » (Gold), « Verrouillé » (StoneGrey, carte estompée).
@@ -9,7 +9,10 @@
 -- API : ExpeditionView.Show(data, options) ; ExpeditionView.Hide().
 --   data = { Zone: number, Title: string?, Stages: { { Stage: number, Unlocked: boolean, Cleared: boolean?,
 --            Waves: number?, Enemies: { { EnemyId: string, Count: number, MiniBoss: boolean? } }? } } }
---   options = { OnLaunch: ((zone: number, stage: number) -> ())?, OnClose: (() -> ())? }
+--   options = { OnLaunch: ((zone: number, stage: number) -> ())?, OnClose: (() -> ())?,
+--               Selected: number? (stage choisi à l'ouverture), OnSelect: ((zone, stage) -> ())? (choix d'un
+--               stage débloqué), Team: { Placed: number, Max: number }? (« Lancer » exige 1 héros posé),
+--               OnPrepare: (() -> ())? (bouton secondaire « Préparer l'équipe ») }
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -27,7 +30,15 @@ local CARD = Vector2.new(124, 150)
 export type Enemy = { EnemyId: string, Count: number, MiniBoss: boolean? }
 export type Stage = { Stage: number, Unlocked: boolean, Cleared: boolean?, Waves: number?, Enemies: { Enemy }? }
 export type Data = { Zone: number, Title: string?, Stages: { Stage } }
-export type Options = { OnLaunch: ((zone: number, stage: number) -> ())?, OnClose: (() -> ())? }
+export type Team = { Placed: number, Max: number }
+export type Options = {
+	OnLaunch: ((zone: number, stage: number) -> ())?,
+	OnClose: (() -> ())?,
+	Selected: number?,
+	OnSelect: ((zone: number, stage: number) -> ())?,
+	Team: Team?,
+	OnPrepare: (() -> ())?,
+}
 
 local ExpeditionView = {}
 
@@ -145,6 +156,19 @@ function ExpeditionView.Show(data: Data, options: Options?)
 	launch.holder.AnchorPoint = Vector2.new(0.5, 1)
 	launch.holder.Position = UDim2.new(0.5, 0, 1, 0)
 	launch.setEnabled(false)
+	local onPrepare = opts.OnPrepare
+	if onPrepare then
+		-- Deux actions côte à côte : préparer (secondaire) à gauche, lancer (principale) à droite.
+		launch.holder.Position = UDim2.new(0.5, Spacing.S + 110, 1, 0)
+		local prepare = UIKit.button(content, "Préparer l'équipe", "Secondary", UDim2.fromOffset(220, 56 + UITheme.Shadow.ButtonLip), function()
+			ExpeditionView.Hide()
+			onPrepare()
+		end)
+		prepare.holder.AnchorPoint = Vector2.new(0.5, 1)
+		prepare.holder.Position = UDim2.new(0.5, -Spacing.S - 110, 1, 0)
+	end
+	local team = opts.Team
+	local teamReady = team == nil or team.Placed >= 1
 
 	local borders: { [number]: UIStroke } = {}
 	local function select(stage: Stage)
@@ -154,23 +178,38 @@ function ExpeditionView.Show(data: Data, options: Options?)
 			border.Color = if on then Colors.Selected else UITheme.Stroke.Color
 			border.Thickness = if on then UITheme.Stroke.Thick else UITheme.Stroke.Regular
 		end
-		detailText.Text = if stage.Unlocked then describe(stage) else "Termine le stage précédent pour débloquer celui-ci"
-		launch.setEnabled(stage.Unlocked and opts.OnLaunch ~= nil)
+		local text: string = if stage.Unlocked then describe(stage) else "Termine le stage précédent pour débloquer celui-ci"
+		if stage.Unlocked and team then
+			text = `Équipe {team.Placed}/{team.Max}  ·  ` .. (if teamReady then text else "Place au moins un héros sur les dalles")
+		end
+		detailText.Text = text
+		launch.setEnabled(stage.Unlocked and teamReady and opts.OnLaunch ~= nil)
 	end
 	for index, stage in data.Stages do
 		local frame, border, touch = stageCard(row, data.Zone, stage)
 		borders[stage.Stage] = border
 		UIKit.popIn(frame, 0.05 + (index - 1) * 0.05) -- cascade de 0,05 s par carte
 		touch.Activated:Connect(function()
+			if selected == stage then
+				return
+			end
 			select(stage)
+			if stage.Unlocked and opts.OnSelect then
+				opts.OnSelect(data.Zone, stage.Stage)
+			end
 		end)
 	end
-	-- par défaut : le premier stage disponible non terminé, sinon le premier
+	-- par défaut : le stage déjà choisi, sinon le premier stage disponible non terminé, sinon le premier
 	local default = data.Stages[1]
 	for _, stage in data.Stages do
 		if stage.Unlocked and not stage.Cleared then
 			default = stage
 			break
+		end
+	end
+	for _, stage in data.Stages do
+		if stage.Stage == opts.Selected then
+			default = stage
 		end
 	end
 	if default then

@@ -3,12 +3,13 @@
 --   • E = interaction avec le monde : un seul ProximityPrompt local, sur la dalle valide la plus
 --     proche du personnage. Héros en main → « Placer » / « Remplacer » ; main vide près d'un héros
 --     posé → « Reprendre » (il revient dans les mains). Mobile : toucher le prompt.
---   • Pancarte du stage, dans le monde à droite des dalles (Arene.PanneauStage, bannière) : stage
---     courant, ennemis agrégés (sans position), équipe x/4, bouton Arène (met les dalles en évidence)
---     et bouton Prêt (lance le combat, 1 à 4 héros). SurfaceGui locale, sur la pancarte de SON arène.
+--   • Pancarte du stage, à l'entrée de l'arène (Arene.PanneauStage, bannière) : affichage seul (stage
+--     choisi, ennemis agrégés, équipe x/4). SurfaceGui locale, sur la pancarte de SON arène.
+--     E près de la pancarte : fenêtre des stages (ExpeditionView) → choisir un stage (SelectStage),
+--     « Préparer l'équipe » (dalles mises en évidence) ou « Lancer » (Ready, 1 à 4 héros posés).
 --   • Combat : pastille légère (vague, x1/x2, X) ; PV et énergie sont dans le monde
 --     (CombatViewController). Les ultimes sont automatiques.
--- Le client n'envoie que des intentions (Place / Remove / Ready) ; ArenaService valide tout.
+-- Le client n'envoie que des intentions (Place / Remove / SelectStage / Ready) ; ArenaService valide tout.
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -24,6 +25,7 @@ local PlotView = require(script.Parent.Parent.Arena.PlotView)
 local UIKit = require(script.Parent.Parent.UI.UIKit)
 local AudioController = require(script.Parent.AudioController)
 local RewardScreenController = require(script.Parent.RewardScreenController)
+local ExpeditionView = require(script.Parent.Parent.UI.Views.ExpeditionView)
 
 local C = UITheme.Colors
 local T = UITheme.Transparency
@@ -38,8 +40,8 @@ local ABOVE_HOTBAR = 112 -- hauteur réservée à la hotbar (px)
 local PROMPT_REFRESH = 0.1 -- secondes entre deux recherches de la dalle la plus proche
 local PANEL_WIDTH = 264
 local PANEL_HEIGHT = 300 -- pancarte : même proportion que la bannière de Arene.PanneauStage
-local SIGN_NAME = "PanneauStage"
-local SIGN_BOARD = "Banniere"
+local SIGN_NAME = ArenaConfig.SignName
+local SIGN_BOARD = ArenaConfig.SignBoard
 local RESULT_DELAY = 1.2 -- s après CombatEnded : la dernière unité a fini de se dissoudre
 
 type CaseState = "Empty" | "Hover" | "ValidTarget" | "Occupied" | "Selected" | "Invalid"
@@ -53,7 +55,8 @@ local speedRemote: RemoteFunction? = nil
 local arenaRoot: Instance? = nil
 local prompt: ProximityPrompt? = nil
 local promptInfo: PlacementState.Prompt? = nil
-local prepMode = false -- bouton Arène : dalles mises en évidence
+local signPrompt: ProximityPrompt? = nil -- E près de la pancarte : fenêtre des stages
+local prepMode = false -- « Préparer l'équipe » : dalles mises en évidence
 local render: () -> () -- défini plus bas (rendu complet : panneau, statut, dalles)
 
 ------------------------------------------------------------------ arène du plot
@@ -160,7 +163,7 @@ local function caseState(slot: number, formation: { [number]: string }, full: bo
 	local held = ArenaStore.placement.held
 	local active = promptInfo ~= nil and promptInfo.Slot == slot
 	if not held or not placementLit() then
-		-- Aucune lumière de placement ; seul le bouton Arène peut montrer les dalles volontairement.
+		-- Aucune lumière de placement ; seul « Préparer l'équipe » montre les dalles volontairement.
 		return if prepMode and not held then (if formation[slot] then "Occupied" else "ValidTarget") else "Empty"
 	end
 	if formation[slot] == held.instanceId then
@@ -221,7 +224,7 @@ local function updatePrompt()
 	local nowInArena = playerInArena()
 	if nowInArena ~= inArena then
 		inArena = nowInArena
-		render() -- lumières de placement et bouton Prêt suivent la zone
+		render() -- lumières de placement et la pancarte suivent la zone
 	end
 	if not root or not root:IsA("BasePart") or ArenaStore.inCombat() or ArenaStore.arena.Available == false then
 		hidePrompt()
@@ -313,7 +316,8 @@ local function line(parent: Instance, text: string, size: number, y: number, hei
 end
 
 -- Pancarte du stage : le panneau remplit la bannière de Arene.PanneauStage (SurfaceGui de taille fixe,
--- même proportion que la bannière : 5,6 x 6,4 studs).
+-- même proportion que la bannière : 5,6 x 6,4 studs). Affichage seul : les actions sont dans la
+-- fenêtre des stages (E près de la pancarte).
 local function buildPanel(sign: SurfaceGui)
 	local panel = UIKit.panel(sign, T.Panel)
 	panel.Name = "PanneauArene"
@@ -330,27 +334,14 @@ local function buildPanel(sign: SurfaceGui)
 	ui.enemies = enemies
 	line(panel, "Équipe", SIZE.Label, 176, 22).TextColor3 = C.TextMuted
 	ui.team = line(panel, "", SIZE.Heading, 198, 30)
-
-	local buttonWidth = (PANEL_WIDTH - 2 * S.L - S.S) / 2
-	local buttonSize = UDim2.fromOffset(buttonWidth, S.TouchTarget + UITheme.Shadow.ButtonLip)
-	local arena = UIKit.button(panel, "Arène", "Secondary", buttonSize, function()
-		prepMode = not prepMode
-		if prepMode then
-			showToast("Prends un héros (1 à 0), approche-toi d'une dalle : E")
-		end
-		ArenaStore.notify()
-	end)
-	arena.holder.AnchorPoint = Vector2.new(0, 1)
-	arena.holder.Position = UDim2.new(0, S.L, 1, -S.L)
-	ui.arena = arena
-	local ready = UIKit.button(panel, "Prêt", "Primary", buttonSize, function()
-		PlacementState.cancel(ArenaStore.placement) -- plus rien en main : la formation se verrouille
-		prepMode = false
-		ArenaStore.request("Ready")
-	end)
-	ready.holder.AnchorPoint = Vector2.new(1, 1)
-	ready.holder.Position = UDim2.new(1, -S.L, 1, -S.L)
-	ui.ready = ready
+	-- Consigne en pied de pancarte : « E · Choisir un stage », ou « Combat en cours ».
+	local hint = UIKit.panel(panel, T.HUD, UITheme.Radius.Pill, UITheme.Stroke.Regular)
+	hint.AnchorPoint = Vector2.new(0.5, 1)
+	hint.Position = UDim2.new(0.5, 0, 1, -S.L)
+	hint.Size = UDim2.new(1, -2 * S.L, 0, S.TouchTarget)
+	local hintText = UIKit.text(hint, "", SIZE.Label)
+	hintText.Size = UDim2.fromScale(1, 1)
+	ui.hint = hintText
 end
 
 local function renderEnemies()
@@ -363,6 +354,61 @@ local function renderEnemies()
 		label.TextColor3 = if enemy.MiniBoss then C.Gold else C.TextLight
 		y += 28
 	end
+end
+
+-- Fenêtre des stages (E près de la pancarte) : stages réels de StageConfig vus par le serveur
+-- (débloqué / verrouillé / terminé), zone du stage choisi. Le serveur revérifie chaque action.
+local function openStageMenu()
+	local state = ArenaStore.arena
+	if ArenaStore.inCombat() or state.Available == false then
+		return
+	end
+	local zone = state.Zone or ArenaConfig.Zone
+	local stages = {}
+	for _, entry in state.Stages or {} do
+		if entry.Zone == zone then
+			table.insert(stages, { Stage = entry.Stage, Unlocked = entry.Status == "Unlocked", Cleared = entry.Cleared,
+				Waves = entry.Waves, Enemies = entry.Enemies })
+		end
+	end
+	if #stages == 0 then
+		showToast("Aucun stage disponible")
+		return
+	end
+	-- Nom de la zone : attribut « Nom » du modèle de zone de l'arène (ZoneId), sinon « Zone n ».
+	local title = `Zone {zone}`
+	local arenaModel = PlotView.arena()
+	local zones = arenaModel and arenaModel:FindFirstChild("Zones")
+	for _, model in if zones then zones:GetChildren() else {} do
+		local name = model:GetAttribute("Nom")
+		if model:GetAttribute("ZoneId") == zone and typeof(name) == "string" then
+			title = `Zone {zone} · {name}`
+		end
+	end
+	ExpeditionView.Show({ Zone = zone, Title = title, Stages = stages }, {
+		Selected = state.Stage,
+		Team = { Placed = ArenaStore.placedCount(), Max = state.MaxHeroes or ArenaConfig.MaxHeroes },
+		OnSelect = function(z: number, stage: number)
+			if z ~= ArenaStore.arena.Zone or stage ~= ArenaStore.arena.Stage then
+				ArenaStore.request("SelectStage", z, stage)
+			end
+		end,
+		OnPrepare = function()
+			prepMode = true
+			showToast("Prends un héros (1 à 0), approche-toi d'une dalle : E")
+			ArenaStore.notify()
+		end,
+		OnLaunch = function(z: number, stage: number)
+			if (z ~= ArenaStore.arena.Zone or stage ~= ArenaStore.arena.Stage)
+				and not ArenaStore.request("SelectStage", z, stage)
+			then
+				return
+			end
+			PlacementState.cancel(ArenaStore.placement) -- plus rien en main : la formation se verrouille
+			prepMode = false
+			ArenaStore.request("Ready")
+		end,
+	})
 end
 
 local function build()
@@ -477,21 +523,26 @@ function render()
 	local max = state.MaxHeroes or ArenaConfig.MaxHeroes
 	local inCombat = phase == "Combat"
 	ui.combat.Visible = inCombat
-	-- Pancarte de SON arène (pas celle d'un autre plot) ; pendant le combat elle garde les infos,
-	-- seuls les boutons disparaissent.
+	-- Pancarte de SON arène (pas celle d'un autre plot) ; pendant le combat elle garde les infos.
 	local arenaModel = PlotView.arena()
 	local signModel = arenaModel and arenaModel:FindFirstChild(SIGN_NAME)
 	local board = signModel and signModel:FindFirstChild(SIGN_BOARD)
-	ui.sign.Adornee = if board and board:IsA("BasePart") then board else nil
-	ui.sign.Enabled = ui.sign.Adornee ~= nil and state.Available ~= false
-	ui.arena.holder.Visible = not inCombat
-	ui.ready.holder.Visible = not inCombat
+	local signBoard = if board and board:IsA("BasePart") then board else nil
+	ui.sign.Adornee = signBoard
+	ui.sign.Enabled = signBoard ~= nil and state.Available ~= false
 	ui.stage.Text = `Stage {state.Zone or "?"}-{state.Stage or "?"}`
 	ui.team.Text = `{count} / {max}`
+	ui.hint.Text = if inCombat then "Combat en cours" else "E · Choisir un stage"
 	renderEnemies()
-	-- Prêt : 1 à 4 héros, et seulement depuis sa zone de préparation (le serveur revérifie).
-	ui.ready.setEnabled(phase == "Placement" and count >= 1 and count <= max and inArena and not ArenaStore.busy)
-	ui.arena.setSelected(prepMode)
+	local sp = signPrompt
+	if sp then
+		sp.ObjectText = `Stage {state.Zone or "?"}-{state.Stage or "?"}`
+		sp.Parent = signBoard
+		sp.Enabled = signBoard ~= nil and not inCombat and state.Available ~= false
+	end
+	if inCombat then
+		ExpeditionView.Hide()
+	end
 	if held and not inCombat then
 		ui.statusText.Text = `{heroName(held.instanceId)} en main · approche-toi d'une dalle : E`
 		ui.status.Visible = true
@@ -554,6 +605,16 @@ function ArenaPlacementController:Start()
 	p.Enabled = false
 	p.Triggered:Connect(onPromptTriggered)
 	prompt = p
+	local s = Instance.new("ProximityPrompt")
+	s.Name = "ChoixStage"
+	s.ActionText = "Choisir un stage"
+	s.KeyboardKeyCode = Enum.KeyCode.E
+	s.HoldDuration = 0
+	s.MaxActivationDistance = ArenaConfig.SignDistance - 2 -- le serveur vérifie SignDistance (marge réseau)
+	s.RequiresLineOfSight = false
+	s.Enabled = false
+	s.Triggered:Connect(openStageMenu)
+	signPrompt = s
 
 	ArenaStore.changed.Event:Connect(function()
 		if ArenaStore.inCombat() then

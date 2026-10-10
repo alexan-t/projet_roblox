@@ -77,7 +77,7 @@ Test Studio « Serveur et clients », 2 joueurs, après intégration :
 - respawn (reset du personnage) sur le bon plot ;
 - royaumes indépendants (changer l'état de l'un ne touche pas l'autre) ;
 - ownership de l'arène : un joueur ne peut ni placer ni lancer depuis l'arène d'un autre ;
-- placements sur les 9 cases, bouton Prêt ;
+- placements sur les 9 cases, lancement depuis la pancarte du stage ;
 - deux combats simultanés, chacun dans l'arène et le `Runtime` de son plot.
 
 Les anciens éléments remplacés (royaumes posés, arènes DEV d'avant l'intégration) sont archivés

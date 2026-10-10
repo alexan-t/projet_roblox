@@ -424,6 +424,35 @@ return function(createService: any, productionConfig: any)
 		assert(#e.rewardCalls == 1, "only the victory reached RewardService")
 	end)
 
+	test("ListStages: every stage in order, locked until the previous First Clear, cleared flag", function()
+		local e = fixture(twoStageConfig())
+		local s = e.start()
+		local p = e.player("A")
+		local list = s:ListStages(p)
+		assert(#list == 3)
+		assert(list[1].Zone == 1 and list[1].Stage == 1 and list[1].Status == "Unlocked" and list[1].Cleared == false)
+		assert(list[2].Zone == 1 and list[2].Stage == 2 and list[2].Status == "Locked")
+		assert(list[3].Zone == 2 and list[3].Stage == 1 and list[3].Status == "Locked")
+		assert(list[1].Config.Waves[1].Enemies[1].EnemyId == "Slime", "config for the enemy summary")
+		e.data[p].Progression.FirstClears["1-1"] = true
+		list = s:ListStages(p)
+		assert(list[1].Cleared == true and list[2].Status == "Unlocked" and list[3].Status == "Locked")
+		e.data[p].Progression.FirstClears["1-2"] = true
+		assert(s:ListStages(p)[3].Status == "Unlocked", "zone 2 opens after the last stage of zone 1")
+	end)
+
+	test("ListStages: invalid stage Unavailable; no data -> empty list", function()
+		local bad = twoStageConfig()
+		bad.Zones[1].Stages[2] = { Waves = {} }
+		local e = fixture(bad)
+		local s = e.start()
+		local p = e.player("A")
+		local list = s:ListStages(p)
+		assert(list[2].Status == "Unavailable" and list[2].Config == nil)
+		p.attributes.DataLoaded = nil
+		assert(#s:ListStages(p) == 0)
+	end)
+
 	print(`ZoneService: {passed} passed, {failed} failed`)
 	if failed > 0 then
 		error(`{failed} ZoneService test(s) failed`)

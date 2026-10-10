@@ -364,7 +364,7 @@ aucune règle de jeu) :
 | --- | --- | --- |
 | `QuestView` | `Show(quest, { OnClaim })`, `Hide()` | `QuestService:GetActiveQuest` : `{ Title, Progress, Target, Completed }` |
 | `CurrencyView` | `Set(currencies, animate?)`, `Hide()` | `PlayerData.Currencies` : `{ Gold, Gems, SummonTickets }` |
-| `ExpeditionView` | `Show(data, { OnLaunch, OnClose })`, `Hide()` | `{ Zone, Stages = { { Stage, Unlocked, Cleared, Waves, Enemies } } }` ; `OnLaunch` → `RequestStartStage` |
+| `ExpeditionView` | `Show(data, { OnLaunch, OnClose, Selected, OnSelect, Team, OnPrepare })`, `Hide()` | `{ Zone, Title, Stages = { { Stage, Unlocked, Cleared, Waves, Enemies } } }` ; ouverte par la pancarte du stage : `OnSelect` → `SelectStage`, `OnLaunch` → `Ready` (exige 1 héros posé si `Team`), `OnPrepare` → dalles en évidence |
 | `SummonView` | `Show({ Tickets, Cost }, { OnSummon, OnClose })`, `Reveal(hero, { OnContinue })`, `Hide()` | tirage de HeroService (#10) ; `Reveal` après l'effet 3D du portail (`SummonEffectController`) |
 | `CollectionView` | `Show(heroes, { OnClose, OnSelect })`, `Hide()` | `{ { Name, Model, ClassId, Count, New, Equipped } }` depuis `Heroes` / la hotbar |
 

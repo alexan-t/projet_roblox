@@ -192,6 +192,42 @@ function ZoneService:CanStartStage(player: Player, zone: number, stage: number):
 	return true, nil
 end
 
+export type StageEntry = {
+	Zone: number,
+	Stage: number,
+	Status: "Unlocked" | "Locked" | "Unavailable",
+	Cleared: boolean,
+	Config: any?, -- config gelée (nil si le stage est invalide)
+}
+
+-- Tous les stages de StageConfig pour ce joueur, dans l'ordre (zone, puis stage), avec leur état :
+-- "Locked" tant que le stage précédent n'est pas dans FirstClears, "Unavailable" si sa config est
+-- invalide. Cleared = First Clear déjà obtenu. Liste vide si les données ne sont pas chargées.
+function ZoneService:ListStages(player: Player): { StageEntry }
+	local data: PlayerData? = if player:GetAttribute("DataLoaded") == true then DataService:GetData(player) else nil
+	local list: { StageEntry } = {}
+	if player.Parent ~= Players or not data then
+		return list
+	end
+	for zone = 1, #stages do
+		local zoneStages = stages[zone]
+		for stage = 1, #zoneStages do
+			local config = zoneStages[stage]
+			local previousZone, previous = previousStage(zone, stage)
+			local locked = previousZone ~= nil and previous ~= nil
+				and data.Progression.FirstClears[stageKey(previousZone, previous)] ~= true
+			table.insert(list, {
+				Zone = zone,
+				Stage = stage,
+				Status = (if config == false then "Unavailable" elseif locked then "Locked" else "Unlocked") :: any,
+				Cleared = data.Progression.FirstClears[stageKey(zone, stage)] == true,
+				Config = if config == false then nil else config,
+			})
+		end
+	end
+	return list
+end
+
 -- Crée la session serveur du stage. Ne modifie aucune donnée sauvegardée.
 function ZoneService:StartStage(player: Player, zone: number, stage: number): (StageSession?, string?)
 	local ok, reason = ZoneService:CanStartStage(player, zone, stage)
