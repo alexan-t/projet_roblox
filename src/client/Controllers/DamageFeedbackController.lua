@@ -93,21 +93,22 @@ local function number(model: Model, amount: number, ally: boolean, ultimate: boo
 	local typography = UITheme.Typography
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "DegatsChiffre"
-	gui.Size = UDim2.fromOffset(90, 40)
-	gui.StudsOffsetWorldSpace = Vector3.new(math.random(-6, 6) / 10, size.Y / 2 + 1, 0)
+	-- Plus lisibles : coup de base en Heading (24), ultime en Title (32) doré avec « ! », contour épais.
+	gui.Size = if ultimate then UDim2.fromOffset(150, 64) else UDim2.fromOffset(110, 48)
+	gui.StudsOffsetWorldSpace = Vector3.new(math.random(-6, 6) / 10, size.Y / 2 + (if ultimate then 1.6 else 1), 0)
 	gui.AlwaysOnTop = true
-	gui.MaxDistance = 150
+	gui.MaxDistance = UITheme.World.CombatDistance
 	local text = Instance.new("TextLabel")
 	text.BackgroundTransparency = 1
 	text.Size = UDim2.fromScale(1, 1)
 	text.FontFace = typography.Display
-	text.TextSize = if ultimate then typography.Size.Heading else typography.Size.Label
+	text.TextSize = if ultimate then typography.Size.Title else typography.Size.Heading
 	text.TextColor3 = if ally then Colors.Error elseif ultimate then Colors.GoldLight else Colors.TextLight
-	text.Text = tostring(math.floor(amount + 0.5))
+	text.Text = tostring(math.floor(amount + 0.5)) .. (if ultimate then " !" else "")
 	text.Parent = gui
 	local stroke = Instance.new("UIStroke")
 	stroke.Color = UITheme.Stroke.Color
-	stroke.Thickness = if ultimate then typography.TextStroke.Medium else typography.TextStroke.Small
+	stroke.Thickness = if ultimate then typography.TextStroke.Large else typography.TextStroke.Medium
 	stroke.LineJoinMode = UITheme.Stroke.LineJoin
 	stroke.Parent = text
 	local scale = Instance.new("UIScale")
@@ -144,7 +145,7 @@ function DamageFeedbackController.Hit(model: Model, options: HitOptions)
 	local ultimate = options.Ultimate == true
 	-- son du coup (#18) ; l'ultime a son propre son d'impact (UltimateEffectController)
 	if not ultimate then
-		AudioController.Play("Impact")
+		AudioController.Play("Impact", { Position = model:GetPivot().Position })
 	end
 	if not options.Lethal then
 		flash(model, ally, speed)

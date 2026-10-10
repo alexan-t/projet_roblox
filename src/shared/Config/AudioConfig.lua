@@ -25,6 +25,11 @@ export type Sound = {
 }
 
 local AudioConfig = {
+	-- Portée d'écoute des sons du monde (joués avec une Position : combat, invocation, royaume),
+	-- mesurée depuis le personnage du joueur (studs). Plein volume jusqu'à Near, fondu jusqu'à Far,
+	-- silence au-delà : on n'entend pas les combats des autres arènes. Les sons d'interface (sans
+	-- Position) ne sont pas concernés.
+	Hearing = table.freeze({ Near = 45, Far = 90 }),
 	-- Volumes par groupe (SoundGroup créés par AudioController sous SoundService).
 	Groups = {
 		Effets = 0.8,

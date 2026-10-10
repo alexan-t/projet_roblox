@@ -108,12 +108,24 @@ local function syncHeroes(player: Player, heroes: { [string]: PlayerDataTypes.He
 	end
 	assert(folder)
 
-	-- Ordre stable : un même héros garde son repère d'un Refresh à l'autre.
+	-- Ordre stable et d'obtention : un même héros garde son repère d'un Refresh à l'autre, et les
+	-- premiers obtenus prennent les premiers repères (starter sur Heros_1). Les identifiants horodatés
+	-- de HeroService ("H_T<horodatage>_…") se rangent après les anciens (sans horodatage), par date ;
+	-- à égalité, ordre des identifiants.
 	local ids: { string } = {}
 	for id in heroes do
 		table.insert(ids, id)
 	end
-	table.sort(ids)
+	local function obtainedAt(id: string): string
+		return string.match(id, "^H_T(%d+)_") or ""
+	end
+	table.sort(ids, function(a: string, b: string): boolean
+		local ka, kb = obtainedAt(a), obtainedAt(b)
+		if ka ~= kb then
+			return ka < kb
+		end
+		return a < b
+	end)
 	local markers = heroMarkers(kingdom)
 	local complete = #ids <= #markers
 	if not complete then

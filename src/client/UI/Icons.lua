@@ -164,6 +164,22 @@ function Icons.model(id: string): Model
 	return model
 end
 
+-- Modèle réel d'un héros activé, copié par HeroService dans ReplicatedStorage.Assets.Heros
+-- (attribut HeroId), ou nil s'il n'est pas (encore) répliqué.
+function Icons.heroModel(heroId: string): Model?
+	local assets = ReplicatedStorage:FindFirstChild("Assets")
+	local heroes = assets and assets:FindFirstChild("Heros")
+	if not heroes then
+		return nil
+	end
+	for _, model in heroes:GetChildren() do
+		if model:IsA("Model") and model:GetAttribute("HeroId") == heroId then
+			return model
+		end
+	end
+	return nil
+end
+
 function Icons.viewport(parent: Instance, id: string): ViewportFrame
 	local viewport = Instance.new("ViewportFrame")
 	viewport.Name = "Icone"
