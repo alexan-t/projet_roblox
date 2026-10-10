@@ -327,8 +327,14 @@ local function card(hero: ArenaStore.HeroView): CardUI
 	UIKit.corner(art, UITheme.Radius.Small)
 	UIKit.text(art, if info then info.PlaceholderIcon else "?", UITheme.Typography.Size.IconLarge)
 	local name = UIKit.text(frame, if info then info.Name else hero.HeroId, UITheme.Typography.Size.Label)
-	name.Position = UDim2.fromOffset(0, 78)
-	name.Size = UDim2.new(1, 0, 0, 30)
+	-- Vrais noms de héros (« Tireuse des Faubourgs ») : deux lignes dans la carte, réduits si besoin.
+	name.Position = UDim2.fromOffset(4, 76)
+	name.Size = UDim2.new(1, -8, 0, 32)
+	name.TextWrapped = true
+	name.TextScaled = true
+	local fit = Instance.new("UITextSizeConstraint")
+	fit.MaxTextSize = UITheme.Typography.Size.Label
+	fit.Parent = name
 	local placed = UIKit.badge(frame, "Posé", C.Gold)
 	placed.AnchorPoint = Vector2.new(0.5, 0.5)
 	placed.Position = UDim2.fromScale(0.5, 0)

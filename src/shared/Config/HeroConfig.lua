@@ -28,7 +28,8 @@ local HeroConfig = {
 			PlaceholderIcon = "EC",
 			Order = 1,
 			CombatProfile = "Epeiste",
-			CombatTemplate = "Heros_Epeiste",
+			-- Modèle articulé (copie de Workspace.AtelierAnimation) : Marche, Attaque, Ultime animées.
+			CombatTemplate = "Heros_EcuyerDuRempart",
 		}),
 		tireuse_des_faubourgs = table.freeze({
 			Name = "Tireuse des Faubourgs",

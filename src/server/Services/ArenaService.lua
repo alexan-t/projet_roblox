@@ -48,10 +48,14 @@ local function spawnModel(templateName: string, parent: Instance, feet: Vector3,
 	local template = templates and templates:FindFirstChild(templateName)
 	if not template or not template:IsA("Model") then return nil end
 	local model = template:Clone()
+	-- Modèle articulé (AnimationController + Motor6D) : seule la racine est ancrée, les membres
+	-- restent mobiles pour que les animations jouent. Sinon tout est ancré.
+	local rigged = model:FindFirstChildOfClass("AnimationController") ~= nil and model.PrimaryPart ~= nil
 	for _, child in model:GetDescendants() do
 		if child:IsA("BaseScript") then child:Destroy()
 		elseif child:IsA("BasePart") then
-			child.Anchored, child.CanCollide, child.CanTouch = true, false, false
+			child.Anchored = not rigged or child == model.PrimaryPart
+			child.CanCollide, child.CanTouch = false, false
 		end
 	end
 	local box, size = model:GetBoundingBox()

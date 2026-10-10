@@ -98,7 +98,7 @@ return function(HeroRules: any, heroConfig: any, combatConfig: any)
 			assert(typeof(info.Name) == "string" and info.Name ~= "")
 		end
 		assert(heroConfig.Heroes.ecuyer_du_rempart.CombatProfile == "Epeiste")
-		assert(heroConfig.Heroes.ecuyer_du_rempart.CombatTemplate == "Heros_Epeiste")
+		assert(heroConfig.Heroes.ecuyer_du_rempart.CombatTemplate == "Heros_EcuyerDuRempart")
 		assert(heroConfig.Heroes.tireuse_des_faubourgs.CombatProfile == "Tireur")
 		assert(heroConfig.Heroes.tireuse_des_faubourgs.CombatTemplate == "Heros_Tireur")
 		assert(heroConfig.HotbarSize == 10)
@@ -136,7 +136,7 @@ return function(HeroRules: any, heroConfig: any, combatConfig: any)
 			B = { HeroId = "barde_de_fer", Level = 1 }, -- asset réel, pas encore activé
 		}
 		local e = HeroRules.combatHero(d, "E", heroConfig.Heroes, combatConfig.Heroes)
-		assert(e and e.HeroId == "ecuyer_du_rempart" and e.CombatProfile == "Epeiste" and e.CombatTemplate == "Heros_Epeiste")
+		assert(e and e.HeroId == "ecuyer_du_rempart" and e.CombatProfile == "Epeiste" and e.CombatTemplate == "Heros_EcuyerDuRempart")
 		local t = HeroRules.combatHero(d, "T", heroConfig.Heroes, combatConfig.Heroes)
 		assert(t and t.HeroId == "tireuse_des_faubourgs" and t.CombatProfile == "Tireur" and t.CombatTemplate == "Heros_Tireur")
 		assert(select(2, HeroRules.combatHero(d, "Z", heroConfig.Heroes, combatConfig.Heroes)) == "héros inconnu")

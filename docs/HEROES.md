@@ -14,17 +14,23 @@ porte, en plus du nom et du monogramme provisoire, deux détails Alpha temporair
 
 | HeroId | Nom | `CombatProfile` (stats, `CombatConfig.Heroes`) | `CombatTemplate` (`ReplicatedStorage.Assets.Combat`) |
 | --- | --- | --- | --- |
-| `ecuyer_du_rempart` | Écuyer du Rempart | `Epeiste` | `Heros_Epeiste` |
+| `ecuyer_du_rempart` | Écuyer du Rempart | `Epeiste` | `Heros_EcuyerDuRempart` (articulé, animé) |
 | `tireuse_des_faubourgs` | Tireuse des Faubourgs | `Tireur` | `Heros_Tireur` |
 
 HeroConfig est la **seule** table de correspondance : le serveur (arène, combat) et le client
-(héros dans les mains) la lisent. Les mannequins `Heros_*` restent provisoires ; les 20 autres
-assets réels ne sont pas encore activés (non jouables, pas dans le pool).
+(héros dans les mains) la lisent. `Heros_EcuyerDuRempart` est la copie articulée de
+`Workspace.AtelierAnimation.EcuyerDuRempart` (`JeuAnimations = EcuyerDuRempart` : Marche, Attaque,
+Ultime jouées en combat ; Studio uniquement tant que les séquences n'ont pas d'`AssetId`, voir
+`ANIMATION_TOOLS.md`). Un modèle articulé n'a que sa racine ancrée en arène. La Tireuse garde le
+mannequin provisoire `Heros_Tireur`. Les 20 autres assets réels ne sont pas encore activés (non
+jouables, pas dans le pool).
 
 ## Données (`PlayerData`, DataVersion 2)
 
 - `Heroes : { [HeroInstanceId] = { HeroId, Level } }` : un exemplaire par identifiant unique
-  (`H_<GUID>`). **Doublons autorisés** : même `HeroId`, `HeroInstanceId` différent.
+  (`H_T<horodatage><séquence>_<GUID>`, trié dans l'ordre d'obtention : le royaume place donc le
+  starter sur `Heros_1`, puis les héros obtenus ; les anciens `H_<GUID>` restent valides et se
+  trient avant). **Doublons autorisés** : même `HeroId`, `HeroInstanceId` différent.
 - `Hotbar : { string }` : **exactement 10** identifiants d'exemplaires, `""` = raccourci vide
   (pas de tableau à trous). La hotbar et l'arène utilisent toujours le `HeroInstanceId`.
 - `Summons : { Total }` : invocations réussies ; `Total = 0` → la prochaine est la première.

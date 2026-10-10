@@ -285,6 +285,17 @@ return function(createService: any, modules: any)
 		for _, hero in e.data[p].Heroes do assert(known[hero.HeroId], "pool only gives activated heroes") end
 	end)
 
+	test("instance ids sort in acquisition order: starter first (kingdom Heros_1), summons after", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A", { tickets = 3 })
+		local starterId = e.data[p].Hotbar[1]
+		local ids = { starterId }
+		for _ = 1, 3 do table.insert(ids, (s:RequestSummon(p)).InstanceId) end
+		for i = 2, #ids do assert(ids[i - 1] < ids[i], `{ids[i - 1]} < {ids[i]}`) end
+		assert("H_00000000-0000" < starterId and "H_FFFFFFFF-FFFF" < starterId, "legacy H_<GUID> ids sort before")
+	end)
+
 	test("hotbar full: new hero kept in the collection only", function()
 		local e = fixture()
 		local s = e.start()
@@ -405,7 +416,7 @@ return function(createService: any, modules: any)
 		local p = e.player("A", { tickets = 1 })
 		local starterId = e.data[p].Hotbar[1]
 		local hero = s:GetCombatHero(p, starterId)
-		assert(hero.HeroId == "ecuyer_du_rempart" and hero.CombatProfile == "Epeiste" and hero.CombatTemplate == "Heros_Epeiste")
+		assert(hero.HeroId == "ecuyer_du_rempart" and hero.CombatProfile == "Epeiste" and hero.CombatTemplate == "Heros_EcuyerDuRempart")
 		local got = s:RequestSummon(p)
 		local t = s:GetCombatHero(p, got.InstanceId)
 		assert(t.HeroId == "tireuse_des_faubourgs" and t.CombatProfile == "Tireur" and t.CombatTemplate == "Heros_Tireur")
