@@ -437,6 +437,26 @@ return function(createService: any, config: any)
 		assert(heroes.a.pivot.Position == vector(2001, 0, 0) and heroes.b.pivot.Position == vector(2002, 0, 0))
 	end)
 
+	test("acquisition order: legacy GUID ids (any case) first, then timestamped H_T ids by date", function()
+		local e = fixture()
+		e.start()
+		local p = e.player("A")
+		-- Cas réel : starter migré au GUID minuscule, héros invoqués ensuite (horodatés).
+		local starter = "H_da438c65-08a1-4019-acf1-43f55de460c5"
+		local later = "H_T17916378700001_ffffffff"
+		local summoned = "H_T17916378680002_00000000"
+		e.load(p, 2, {
+			[later] = { HeroId = "Archere", Level = 1 },
+			[starter] = { HeroId = "Chevalier", Level = 1 },
+			[summoned] = { HeroId = "Archere", Level = 1 },
+		})
+		e.assign(p, e.plotModel(1))
+		local heroes = e.heroes(p)
+		assert(heroes[starter].pivot.Position == vector(2001, 0, 0), "legacy starter on Heros_1")
+		assert(heroes[summoned].pivot.Position == vector(2002, 0, 0), "first summon on Heros_2")
+		assert(heroes[later].pivot.Position == vector(2003, 0, 0), "later summon on Heros_3")
+	end)
+
 	test("hero added then refresh, no duplicate across refreshes", function()
 		local e = fixture()
 		local s = e.start()

@@ -24,9 +24,9 @@ export type Deps = {
 	startStage: (player: any) -> (number?, string?),
 	sessionAlive: (player: any, sessionId: number) -> boolean,
 	cancelStage: (player: any) -> (),
-	-- HeroId d'un exemplaire possédé et utilisable au combat (HeroService).
+	-- Profil de combat d'un exemplaire possédé et utilisable au combat (HeroService), pas son HeroId.
 	heroOf: (player: any, instanceId: any) -> (string?, string?),
-	-- Combat (CombatService) : formation case -> HeroId.
+	-- Combat (CombatService) : formation case -> profil de combat.
 	startCombat: (player: any, sessionId: number, classes: { [number]: string }) -> (number?, string?),
 	cancelCombat: (player: any) -> (),
 }
@@ -38,6 +38,7 @@ export type Manager = {
 	leave: (self: Manager, player: any) -> boolean,
 	combatEnded: (self: Manager, player: any, combatId: number) -> boolean,
 	release: (self: Manager, player: any) -> boolean,
+	restage: (self: Manager, player: any) -> (boolean, string?),
 	check: (self: Manager, player: any) -> boolean,
 }
 
@@ -75,8 +76,8 @@ function ArenaPrep.new(deps: Deps): Manager
 		if not ArenaRules.isSlot(slot) then
 			return false, "case invalide"
 		end
-		local heroId, reason = deps.heroOf(player, instanceId)
-		if not heroId then
+		local profile, reason = deps.heroOf(player, instanceId)
+		if not profile then
 			return false, reason or "héros inconnu"
 		end
 		if not prep then
@@ -133,11 +134,11 @@ function ArenaPrep.new(deps: Deps): Manager
 		end
 		local classes: { [number]: string } = {}
 		for slot, instanceId in prep.formation do
-			local heroId, reason = deps.heroOf(player, instanceId)
-			if not heroId then
+			local profile, reason = deps.heroOf(player, instanceId)
+			if not profile then
 				return false, reason or "héros inconnu"
 			end
-			classes[slot] = heroId
+			classes[slot] = profile
 		end
 		local combatId, reason = deps.startCombat(player, prep.sessionId, classes)
 		if not combatId then
@@ -180,6 +181,27 @@ function ArenaPrep.new(deps: Deps): Manager
 	end
 
 	-- Vérification périodique : true si la préparation a été libérée (session de stage perdue).
+	-- Changement de stage (le stage voulu est déjà choisi côté ArenaService) : sans préparation, rien
+	-- à faire (le prochain héros posé lance le bon stage) ; en placement, la session de stage est
+	-- relancée et la formation conservée ; pendant le combat, refusé.
+	function manager:restage(player: any): (boolean, string?)
+		local prep = live(player)
+		if not prep then
+			return true, nil
+		end
+		if prep.phase ~= "Placement" then
+			return false, "combat déjà lancé"
+		end
+		deps.cancelStage(player)
+		local sessionId, reason = deps.startStage(player)
+		if not sessionId then
+			drop(prep, false) -- session perdue : l'arène est libérée
+			return false, reason or "stage indisponible"
+		end
+		prep.sessionId = sessionId
+		return true, nil
+	end
+
 	function manager:check(player: any): boolean
 		local before = manager.preps[player]
 		return before ~= nil and live(player) == nil

@@ -213,7 +213,7 @@ Règle d'interface : une information qui peut s'afficher dans le monde n'a pas d
 ## Limites
 
 - Mannequins temporaires (un seul `MannequinHeros`, classes distinguées par une petite
-  icône provisoire ; vrais portraits et rareté avec #10), sans animation. Chaque joueur combat dans l'arène de son plot (lancement par le bouton Prêt), donc plusieurs combats physiques à
+  icône provisoire ; vrais portraits et rareté avec #10), sans animation. Chaque joueur combat dans l'arène de son plot (lancement depuis la pancarte du stage), donc plusieurs combats physiques à
   la fois. Le moteur gère plusieurs sessions, ce que les tests prouvent.
 - Pas de collision entre unités (elles peuvent se superposer), pas de pathfinding.
 

@@ -274,9 +274,13 @@ Moins de fenêtres, plus d'interaction avec le monde : on **prend** un héros et
 - **Refus** : toast `Tooltip` crème en haut (« 4 héros maximum », « Arène occupée par … »).
 
 ### Combat (`ArenaPlacementController`, `CombatViewController`)
-- Les informations des unités restent **dans le monde** : barres PV/énergie (§ 6), icône de
-  classe, chiffres de dégâts Fredoka contourés. Ultimes automatiques : éclat doré sur
-  `UltimateUsed`, aucun bouton.
+- Les informations des unités restent **dans le monde** : barres PV/énergie (§ 6 ; héros : PV
+  8 px puis énergie (barre d'ultime) 8 px, séparées de 4 px pour que les contours ne se chevauchent pas), icône de
+  classe au-dessus des barres, chiffres de dégâts Fredoka contourés : coup de base `Heading`
+  (contour `Medium`), ultime `Title` doré suivi de « ! » (contour `Large`, rebond `Pop`).
+  Ultimes automatiques : éclat doré sur `UltimateUsed`, aucun bouton ; sur le héros qui le lance,
+  annonce « ULTIME ! » (`Title`, `GoldLight`, contour `Large`, rebond `Pop`), colonne de lumière
+  dorée et onde au sol (`UltimateEffectController.Announce`).
 - **Barre basse légère** : une pastille `HUD` centrée en bas, avec « Vague 1/1 », x1/x2 (onglets,
   actif doré) et un bouton rond « X » pour quitter. Pas de portraits permanents ni de doublon
   des PV.
@@ -338,10 +342,12 @@ Une seule `UIScale` par élément : ouverture, pop et survol partagent la même 
 applique qu'une).
 
 Icônes (§ 7) : `src/client/UI/Icons.lua`, petits objets 3D avec silhouette Ink, dans un
-ViewportFrame. Classes de héros (`Archer` arc, `Epeiste` épée, `Barbare` hache, `Paladin`
-bouclier, `Magicien` bâton, `Tireur` cible) : ce sont les `HeroId` de `HeroConfig`, et ces icônes
-remplacent les monogrammes provisoires (`PlaceholderIcon`). Objets : `Parchemin`, `Or`,
-`Gemmes`, `Ticket`, `Combat`, `Cadenas`.
+ViewportFrame. Classes de combat (`Archer` arc, `Epeiste` épée, `Barbare` hache, `Paladin`
+bouclier, `Magicien` bâton, `Tireur` cible) : ce sont les `CombatProfile` de `HeroConfig`
+(icône de classe au-dessus des unités). Héros dans la hotbar et la sacoche : **portrait 3D du vrai
+modèle** (`UIKit.portrait` sur `Icons.heroModel(HeroId)`, modèles de `ReplicatedStorage.Assets.Heros`),
+le monogramme provisoire (`PlaceholderIcon`) ne sert plus qu'en attendant la réplication.
+Objets : `Parchemin`, `Or`, `Gemmes`, `Ticket`, `Combat`, `Cadenas`.
 
 ### Écrans
 
@@ -358,7 +364,7 @@ aucune règle de jeu) :
 | --- | --- | --- |
 | `QuestView` | `Show(quest, { OnClaim })`, `Hide()` | `QuestService:GetActiveQuest` : `{ Title, Progress, Target, Completed }` |
 | `CurrencyView` | `Set(currencies, animate?)`, `Hide()` | `PlayerData.Currencies` : `{ Gold, Gems, SummonTickets }` |
-| `ExpeditionView` | `Show(data, { OnLaunch, OnClose })`, `Hide()` | `{ Zone, Stages = { { Stage, Unlocked, Cleared, Waves, Enemies } } }` ; `OnLaunch` → `RequestStartStage` |
+| `ExpeditionView` | `Show(data, { OnLaunch, OnClose, Selected, OnSelect, Team, OnPrepare })`, `Hide()` | `{ Zone, Title, Stages = { { Stage, Unlocked, Cleared, Waves, Enemies } } }` ; ouverte par la pancarte du stage : `OnSelect` → `SelectStage`, `OnLaunch` → `Ready` (exige 1 héros posé si `Team`), `OnPrepare` → dalles en évidence |
 | `SummonView` | `Show({ Tickets, Cost }, { OnSummon, OnClose })`, `Reveal(hero, { OnContinue })`, `Hide()` | tirage de HeroService (#10) ; `Reveal` après l'effet 3D du portail (`SummonEffectController`) |
 | `CollectionView` | `Show(heroes, { OnClose, OnSelect })`, `Hide()` | `{ { Name, Model, ClassId, Count, New, Equipped } }` depuis `Heroes` / la hotbar |
 
