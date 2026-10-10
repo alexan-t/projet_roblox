@@ -158,7 +158,7 @@ local function attachBars(unitId: number, miniBoss: boolean, attempt: number)
 	local healthHeight = if miniBoss then 10 elseif hero then 8 else 7
 	-- Énergie des héros : sous les PV, séparée par un vrai espace pour que les contours Thin ne se
 	-- chevauchent pas (sinon la barre se réduit à un trait sombre).
-	local manaGap, manaHeight = 4, 6
+	local manaGap, manaHeight = 4, 8 -- barre d'ultime aussi épaisse que les PV
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "BarresCombat"
 	gui.Size = UDim2.fromOffset(width, healthHeight + (if hero then manaGap + manaHeight else 0) + 4)
@@ -226,6 +226,10 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 			-- (anneau au rayon des ennemis touchés, au moins celui d'une petite zone).
 			local caster = views[event.UnitId]
 			local target = views[event.TargetId]
+			-- Annonce bien visible sur le héros qui lance l'ultime (« ULTIME ! », colonne, onde au sol).
+			if caster and caster.model and caster.team == "Ally" then
+				UltimateEffectController.Announce(caster.model, speed)
+			end
 			if caster and caster.model and target and target.model then
 				local box, size = target.model:GetBoundingBox()
 				local center = Vector3.new(box.Position.X, box.Position.Y - size.Y / 2, box.Position.Z)

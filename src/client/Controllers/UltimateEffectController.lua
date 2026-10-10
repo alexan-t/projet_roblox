@@ -20,6 +20,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
+local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local AudioController = require(script.Parent.AudioController)
 
 local TAG_APERCU = "ApercuUltime"
@@ -210,6 +211,95 @@ end
 
 -- Lance l'effet. caster : modèle du héros ; center : point AU SOL au centre de la zone touchée ;
 -- radius : rayon de l'anneau (studs). Renvoie IMPACT_DELAY (instant où l'anneau éclate).
+-- Annonce « ce héros lance son ultime » (en plus de son animation et de l'onde) : capte l'attention
+-- sur le lanceur, pas sur la cible.
+--   - « ULTIME ! » au-dessus du héros (Fredoka Title, GoldLight, contour Ink Large) : rebond, tenue,
+--     puis montée et fondu ;
+--   - colonne de lumière dorée qui jaillit du héros et se resserre ;
+--   - onde dorée au sol qui s'élargit sous ses pieds, avec un éclair de lumière.
+function UltimateEffectController.Announce(caster: Model, speed: number?)
+	local rate = speed or 1
+	local box, bounds = caster:GetBoundingBox()
+	local size: any = bounds
+	local feet = box.Position - Vector3.new(0, size.Y / 2, 0)
+	local typography = UITheme.Typography
+	local animation: any = UITheme.Animation
+
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "AnnonceUltime"
+	gui.Size = UDim2.fromOffset(240, 64)
+	gui.StudsOffsetWorldSpace = Vector3.new(0, size.Y / 2 + 3.6, 0)
+	gui.AlwaysOnTop = true
+	gui.MaxDistance = 200
+	local text = Instance.new("TextLabel")
+	text.BackgroundTransparency = 1
+	text.Size = UDim2.fromScale(1, 1)
+	text.FontFace = typography.Display
+	text.TextSize = typography.Size.Title
+	text.TextColor3 = UITheme.Colors.GoldLight
+	text.Text = "ULTIME !"
+	text.Parent = gui
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = UITheme.Stroke.Color
+	stroke.Thickness = typography.TextStroke.Large
+	stroke.LineJoinMode = UITheme.Stroke.LineJoin
+	stroke.Parent = text
+	local scale = Instance.new("UIScale")
+	scale.Scale = animation.Scale.OpenFrom
+	scale.Parent = text
+	gui.Parent = caster
+	TweenService:Create(scale, TweenInfo.new(animation.Toast.Time / rate, animation.Toast.EasingStyle, animation.Toast.EasingDirection), {
+		Scale = animation.Scale.Pop,
+	}):Play()
+	task.delay((animation.Toast.Time + 0.55) / rate, function()
+		if not gui.Parent then return end
+		local fade = TweenInfo.new(0.4 / rate, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+		TweenService:Create(gui, fade, { StudsOffsetWorldSpace = gui.StudsOffsetWorldSpace + Vector3.new(0, 1.5, 0) }):Play()
+		TweenService:Create(text, fade, { TextTransparency = 1 }):Play()
+		TweenService:Create(stroke, fade, { Transparency = 1 }):Play()
+		task.delay(0.45 / rate, function() gui:Destroy() end)
+	end)
+
+	-- Colonne de lumière : haute et large au départ, elle se resserre en s'effaçant.
+	local height = size.Y * 3.2
+	local pillar = effectPart({
+		Shape = Enum.PartType.Cylinder,
+		Color = GOLD_LIGHT,
+		Transparency = 0.5, -- le héros reste visible dans la colonne
+		Size = Vector3.new(height, math.max(size.X, size.Z) * 1.1, math.max(size.X, size.Z) * 1.1),
+		CFrame = CFrame.new(feet + Vector3.new(0, height / 2, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+	})
+	local flash = Instance.new("PointLight")
+	flash.Color = GOLD_LIGHT
+	flash.Range = 18
+	flash.Brightness = 4
+	flash.Parent = pillar
+	local pillarFade = TweenInfo.new(0.45 / rate, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	TweenService:Create(pillar, pillarFade, { Transparency = 1, Size = Vector3.new(height, 0.4, 0.4) }):Play()
+	TweenService:Create(flash, pillarFade, { Brightness = 0 }):Play()
+
+	-- Onde au sol sous le héros.
+	local ring = effectPart({
+		Shape = Enum.PartType.Cylinder,
+		Color = GOLD,
+		Transparency = 0.2,
+		Size = Vector3.new(0.15, 2, 2),
+		CFrame = CFrame.new(feet + Vector3.new(0, 0.1, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+	})
+	local reach = math.max(size.X, size.Z) * 3 + 6
+	TweenService:Create(ring, TweenInfo.new(0.5 / rate, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Size = Vector3.new(0.15, reach, reach),
+		Transparency = 1,
+	}):Play()
+	local host = effectPart({ Transparency = 1, Size = Vector3.new(size.X, 0.2, size.Z), CFrame = CFrame.new(feet) })
+	sparkEmitter(host, 0.7, NumberRange.new(8, 14)):Emit(24)
+	task.delay(1.2 / rate, function()
+		pillar:Destroy()
+		ring:Destroy()
+	end)
+	task.delay(1.5, function() host:Destroy() end)
+end
+
 function UltimateEffectController.Play(caster: Model, center: Vector3, radius: number?, speed: number?): number
 	local scale = speed or 1
 	if not caster.Parent then

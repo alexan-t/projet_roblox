@@ -275,10 +275,12 @@ Moins de fenêtres, plus d'interaction avec le monde : on **prend** un héros et
 
 ### Combat (`ArenaPlacementController`, `CombatViewController`)
 - Les informations des unités restent **dans le monde** : barres PV/énergie (§ 6 ; héros : PV
-  8 px puis énergie 6 px, séparées de 4 px pour que les contours ne se chevauchent pas), icône de
+  8 px puis énergie (barre d'ultime) 8 px, séparées de 4 px pour que les contours ne se chevauchent pas), icône de
   classe au-dessus des barres, chiffres de dégâts Fredoka contourés : coup de base `Heading`
   (contour `Medium`), ultime `Title` doré suivi de « ! » (contour `Large`, rebond `Pop`).
-  Ultimes automatiques : éclat doré sur `UltimateUsed`, aucun bouton.
+  Ultimes automatiques : éclat doré sur `UltimateUsed`, aucun bouton ; sur le héros qui le lance,
+  annonce « ULTIME ! » (`Title`, `GoldLight`, contour `Large`, rebond `Pop`), colonne de lumière
+  dorée et onde au sol (`UltimateEffectController.Announce`).
 - **Barre basse légère** : une pastille `HUD` centrée en bas, avec « Vague 1/1 », x1/x2 (onglets,
   actif doré) et un bouton rond « X » pour quitter. Pas de portraits permanents ni de doublon
   des PV.
