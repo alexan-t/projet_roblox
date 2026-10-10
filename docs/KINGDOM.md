@@ -125,8 +125,10 @@ cet atelier n'a pas été importé dans la DEV).
    et **garde l'affichage actuel**.
 4. Si l'état affiché vient déjà de ce modèle, il est conservé. Sinon le nouveau clone est
    créé, posé et parenté avant la destruction de l'ancien.
-5. Les héros sont synchronisés : un modèle par exemplaire possédé, dans l'ordre des
-   identifiants, un par repère. Les héros déjà affichés sont conservés et replacés ; ceux
+5. Les héros sont synchronisés : un modèle par exemplaire possédé, dans l'**ordre d'obtention**,
+   un par repère : d'abord les anciens identifiants (sans horodatage), puis les identifiants
+   horodatés de HeroService (`H_T<horodatage>_…`) par date ; à égalité, ordre des identifiants.
+   Le starter reste donc sur `Heros_1`. Les héros déjà affichés sont conservés et replacés ; ceux
    qui ont disparu ou changé de `HeroId` sont retirés. Un héros sans asset ou sans repère
    n'est pas affiché et rend le résultat `false`, sans retirer les autres.
 

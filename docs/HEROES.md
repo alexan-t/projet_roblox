@@ -28,9 +28,10 @@ jouables, pas dans le pool).
 ## Données (`PlayerData`, DataVersion 2)
 
 - `Heroes : { [HeroInstanceId] = { HeroId, Level } }` : un exemplaire par identifiant unique
-  (`H_T<horodatage><séquence>_<GUID>`, trié dans l'ordre d'obtention : le royaume place donc le
-  starter sur `Heros_1`, puis les héros obtenus ; les anciens `H_<GUID>` restent valides et se
-  trient avant). **Doublons autorisés** : même `HeroId`, `HeroInstanceId` différent.
+  (`H_T<horodatage><séquence>_<GUID>`). KingdomService range les héros dans l'ordre d'obtention :
+  anciens `H_<GUID>` d'abord (quelle que soit la casse), puis les identifiants horodatés par date ;
+  le starter reste donc sur `Heros_1`. **Doublons autorisés** : même `HeroId`, `HeroInstanceId`
+  différent.
 - `Hotbar : { string }` : **exactement 10** identifiants d'exemplaires, `""` = raccourci vide
   (pas de tableau à trous). La hotbar et l'arène utilisent toujours le `HeroInstanceId`.
 - `Summons : { Total }` : invocations réussies ; `Total = 0` → la prochaine est la première.

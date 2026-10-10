@@ -293,7 +293,7 @@ return function(createService: any, modules: any)
 		local ids = { starterId }
 		for _ = 1, 3 do table.insert(ids, (s:RequestSummon(p)).InstanceId) end
 		for i = 2, #ids do assert(ids[i - 1] < ids[i], `{ids[i - 1]} < {ids[i]}`) end
-		assert("H_00000000-0000" < starterId and "H_FFFFFFFF-FFFF" < starterId, "legacy H_<GUID> ids sort before")
+		assert(string.match(starterId, "^H_T%d+_") ~= nil, "timestamped id (KingdomService ranks legacy ids first)")
 	end)
 
 	test("hotbar full: new hero kept in the collection only", function()

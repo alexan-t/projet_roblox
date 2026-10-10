@@ -45,9 +45,8 @@ local random = Random.new()
 
 local idSequence = 0
 
--- Identifiant d'exemplaire unique, trié dans l'ordre d'obtention : préfixe horodaté de largeur fixe
--- (KingdomService range les héros dans l'ordre des identifiants : le starter reste sur Heros_1).
--- Les anciens identifiants "H_<GUID>" (chiffres / A-F) restent valides et se trient avant.
+-- Identifiant d'exemplaire unique, horodaté (largeur fixe) : KingdomService range les héros dans
+-- l'ordre d'obtention (anciens "H_<GUID>" d'abord, puis "H_T…" par date) ; le starter reste sur Heros_1.
 local function newId(): string
 	idSequence = (idSequence + 1) % 10000
 	return string.format("H_T%010d%04d_%s", os.time(), idSequence, HttpService:GenerateGUID(false))

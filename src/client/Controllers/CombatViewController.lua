@@ -76,6 +76,9 @@ local function findModel(unitId: number): Model?
 	return nil
 end
 
+-- Hauteur (studs, au-dessus du haut du modèle) de l'icône de classe : au-dessus des barres, sans les couvrir.
+local ICON_OFFSET = 2.4
+
 local function top(model: Model): number
 	local _, size = model:GetBoundingBox()
 	return size.Y / 2
@@ -91,7 +94,7 @@ local function attachIcon(model: Model)
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "IconeClasse"
 	gui.Size = UDim2.fromOffset(26, 26)
-	gui.StudsOffsetWorldSpace = Vector3.new(0, top(model) + 1.7, 0)
+	gui.StudsOffsetWorldSpace = Vector3.new(0, top(model) + ICON_OFFSET, 0)
 	gui.AlwaysOnTop = true
 	gui.MaxDistance = 150
 	local chip = Instance.new("Frame")
@@ -151,17 +154,20 @@ local function attachBars(unitId: number, miniBoss: boolean, attempt: number)
 	end
 	view.model = model
 	local hero = view.team == "Ally"
-	local width = if miniBoss then 120 else 64
-	local healthHeight = if miniBoss then 10 else 7
+	local width = if miniBoss then 120 elseif hero then 72 else 64
+	local healthHeight = if miniBoss then 10 elseif hero then 8 else 7
+	-- Énergie des héros : sous les PV, séparée par un vrai espace pour que les contours Thin ne se
+	-- chevauchent pas (sinon la barre se réduit à un trait sombre).
+	local manaGap, manaHeight = 4, 6
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "BarresCombat"
-	gui.Size = UDim2.fromOffset(width, healthHeight + (if hero then 7 else 0) + 4)
+	gui.Size = UDim2.fromOffset(width, healthHeight + (if hero then manaGap + manaHeight else 0) + 4)
 	gui.StudsOffsetWorldSpace = Vector3.new(0, top(model) + 0.5, 0)
 	gui.AlwaysOnTop = true
 	gui.MaxDistance = 150
 	view.healthFill = bar(gui, 0, healthHeight, if hero then HEALTH else ENEMY_HEALTH)
 	if hero and view.maxEnergy > 0 then
-		view.manaFill = bar(gui, healthHeight + 2, 5, MANA)
+		view.manaFill = bar(gui, healthHeight + manaGap, manaHeight, MANA)
 		local glow = Instance.new("Highlight")
 		glow.FillTransparency = 1
 		glow.OutlineColor = MANA_FULL
@@ -174,6 +180,11 @@ local function attachBars(unitId: number, miniBoss: boolean, attempt: number)
 	gui.Parent = model
 	view.gui = gui
 	attachIcon(model)
+	-- L'icône a pu être posée avant la réplication de toutes les pièces : la recaler au-dessus des barres.
+	local icon = model:FindFirstChild("IconeClasse")
+	if icon and icon:IsA("BillboardGui") then
+		icon.StudsOffsetWorldSpace = Vector3.new(0, top(model) + ICON_OFFSET, 0)
+	end
 	refresh(view)
 end
 
