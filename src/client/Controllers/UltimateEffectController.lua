@@ -230,7 +230,7 @@ function UltimateEffectController.Announce(caster: Model, speed: number?)
 	gui.Size = UDim2.fromOffset(240, 64)
 	gui.StudsOffsetWorldSpace = Vector3.new(0, size.Y / 2 + 3.6, 0)
 	gui.AlwaysOnTop = true
-	gui.MaxDistance = 200
+	gui.MaxDistance = UITheme.World.CombatDistance
 	local text = Instance.new("TextLabel")
 	text.BackgroundTransparency = 1
 	text.Size = UDim2.fromScale(1, 1)
@@ -308,8 +308,8 @@ function UltimateEffectController.Play(caster: Model, center: Vector3, radius: n
 	local box, size = caster:GetBoundingBox()
 	aura(caster, box, size, scale)
 	-- sons (#18) : lancement, puis l'anneau qui éclate
-	AudioController.Play("UltimeLancement")
-	AudioController.Play("UltimeImpact", { Delay = UltimateEffectController.ImpactDelay(scale) })
+	AudioController.Play("UltimeLancement", { Position = box.Position })
+	AudioController.Play("UltimeImpact", { Delay = UltimateEffectController.ImpactDelay(scale), Position = center })
 	task.delay(ANIMATION_IMPACT / scale, function()
 		if not caster.Parent then
 			return

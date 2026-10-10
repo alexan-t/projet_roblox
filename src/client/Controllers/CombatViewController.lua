@@ -86,17 +86,53 @@ end
 
 -- Petite icône de classe au-dessus d'un héros (placement comme combat) : objet 3D dans une pastille
 -- crème contourée Ink (Icons, design system § 7), à la place des monogrammes provisoires.
+-- Elle n'est PAS rangée dans le modèle : son objet 3D (ViewportFrame) est posé près de l'origine du
+-- monde, et GetBoundingBox l'inclurait, ce qui déplaçait au loin tout ce qui se cale sur le modèle
+-- (barres, chiffres, annonce d'ultime). Elle vit dans PlayerGui et suit le modèle par Adornee.
+local icons: { [Model]: BillboardGui } = {}
+
+local function iconFolder(): Instance
+	local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+	local existing = playerGui:FindFirstChild("IconesClasse")
+	if existing then
+		return existing
+	end
+	local created = Instance.new("Folder")
+	created.Name = "IconesClasse"
+	created.Parent = playerGui
+	return created
+end
+
+-- Recale l'icône au-dessus des barres, une fois toutes les pièces du modèle répliquées.
+local function placeIcon(model: Model)
+	local gui = icons[model]
+	local anchor: any = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
+	if not gui or not anchor then
+		return
+	end
+	local box: any, size: any = model:GetBoundingBox()
+	gui.Adornee = anchor
+	gui.StudsOffsetWorldSpace = Vector3.new(0, box.Position.Y + size.Y / 2 - anchor.Position.Y + ICON_OFFSET, 0)
+end
+
+local function removeIcon(model: Model)
+	local gui = icons[model]
+	if gui then
+		gui:Destroy()
+		icons[model] = nil
+	end
+end
+
 local function attachIcon(model: Model)
 	local classId = model:GetAttribute("HeroClass")
-	if typeof(classId) ~= "string" or model:FindFirstChild("IconeClasse") then
+	if typeof(classId) ~= "string" or icons[model] then
 		return
 	end
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "IconeClasse"
 	gui.Size = UDim2.fromOffset(26, 26)
-	gui.StudsOffsetWorldSpace = Vector3.new(0, top(model) + ICON_OFFSET, 0)
 	gui.AlwaysOnTop = true
-	gui.MaxDistance = 150
+	gui.MaxDistance = UITheme.World.CombatDistance
 	local chip = Instance.new("Frame")
 	chip.Size = UDim2.fromScale(1, 1)
 	chip.BackgroundColor3 = UITheme.Colors.Cream
@@ -104,7 +140,14 @@ local function attachIcon(model: Model)
 	UIKit.corner(chip, UITheme.Radius.Pill)
 	UIKit.stroke(chip, UITheme.Stroke.Thin)
 	Icons.viewport(chip, classId)
-	gui.Parent = model
+	icons[model] = gui
+	placeIcon(model)
+	gui.Parent = iconFolder()
+	model.AncestryChanged:Connect(function()
+		if not model:IsDescendantOf(Workspace) then
+			removeIcon(model)
+		end
+	end)
 end
 
 local function refresh(view: View)
@@ -164,7 +207,7 @@ local function attachBars(unitId: number, miniBoss: boolean, attempt: number)
 	gui.Size = UDim2.fromOffset(width, healthHeight + (if hero then manaGap + manaHeight else 0) + 4)
 	gui.StudsOffsetWorldSpace = Vector3.new(0, top(model) + 0.5, 0)
 	gui.AlwaysOnTop = true
-	gui.MaxDistance = 150
+	gui.MaxDistance = UITheme.World.CombatDistance
 	view.healthFill = bar(gui, 0, healthHeight, if hero then HEALTH else ENEMY_HEALTH)
 	if hero and view.maxEnergy > 0 then
 		view.manaFill = bar(gui, healthHeight + manaGap, manaHeight, MANA)
@@ -181,10 +224,7 @@ local function attachBars(unitId: number, miniBoss: boolean, attempt: number)
 	view.gui = gui
 	attachIcon(model)
 	-- L'icône a pu être posée avant la réplication de toutes les pièces : la recaler au-dessus des barres.
-	local icon = model:FindFirstChild("IconeClasse")
-	if icon and icon:IsA("BillboardGui") then
-		icon.StudsOffsetWorldSpace = Vector3.new(0, top(model) + ICON_OFFSET, 0)
-	end
+	placeIcon(model)
 	refresh(view)
 end
 
@@ -286,8 +326,10 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 				refresh(view)
 			end
 		elseif kind == "Attack" then
-			AudioController.Play("Attaque") -- élan de l'arme (#18)
 			local attacker = views[event.UnitId]
+			AudioController.Play("Attaque", { -- élan de l'arme (#18), entendu seulement près de l'arène
+				Position = if attacker and attacker.model then attacker.model:GetPivot().Position else nil,
+			})
 			if attacker and attacker.model and event.TargetId then
 				-- Effet d'impact éventuel (attribut EffetAttaque) ; renvoie l'instant du coup.
 				local impact = AttackEffectController.Play(attacker.model, speed)
@@ -315,9 +357,8 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 				if view.glow then
 					view.glow:Destroy()
 				end
-				local icon = view.model and view.model:FindFirstChild("IconeClasse")
-				if icon then
-					icon:Destroy()
+				if view.model then
+					removeIcon(view.model)
 				end
 				if view.model then
 					MonsterAnimationController.Stop(view.model, "Marche")

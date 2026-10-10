@@ -97,7 +97,7 @@ local function number(model: Model, amount: number, ally: boolean, ultimate: boo
 	gui.Size = if ultimate then UDim2.fromOffset(150, 64) else UDim2.fromOffset(110, 48)
 	gui.StudsOffsetWorldSpace = Vector3.new(math.random(-6, 6) / 10, size.Y / 2 + (if ultimate then 1.6 else 1), 0)
 	gui.AlwaysOnTop = true
-	gui.MaxDistance = 150
+	gui.MaxDistance = UITheme.World.CombatDistance
 	local text = Instance.new("TextLabel")
 	text.BackgroundTransparency = 1
 	text.Size = UDim2.fromScale(1, 1)
@@ -145,7 +145,7 @@ function DamageFeedbackController.Hit(model: Model, options: HitOptions)
 	local ultimate = options.Ultimate == true
 	-- son du coup (#18) ; l'ultime a son propre son d'impact (UltimateEffectController)
 	if not ultimate then
-		AudioController.Play("Impact")
+		AudioController.Play("Impact", { Position = model:GetPivot().Position })
 	end
 	if not options.Lethal then
 		flash(model, ally, speed)
