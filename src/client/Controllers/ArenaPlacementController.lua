@@ -3,8 +3,9 @@
 --   • E = interaction avec le monde : un seul ProximityPrompt local, sur la dalle valide la plus
 --     proche du personnage. Héros en main → « Placer » / « Remplacer » ; main vide près d'un héros
 --     posé → « Reprendre » (il revient dans les mains). Mobile : toucher le prompt.
---   • Panneau Arène (léger, à droite) : stage courant, ennemis agrégés (sans position), équipe x/4,
---     bouton Arène (met les dalles en évidence) et bouton Prêt (lance le combat, 1 à 4 héros).
+--   • Pancarte du stage, dans le monde à droite des dalles (Arene.PanneauStage, bannière) : stage
+--     courant, ennemis agrégés (sans position), équipe x/4, bouton Arène (met les dalles en évidence)
+--     et bouton Prêt (lance le combat, 1 à 4 héros). SurfaceGui locale, sur la pancarte de SON arène.
 --   • Combat : pastille légère (vague, x1/x2, X) ; PV et énergie sont dans le monde
 --     (CombatViewController). Les ultimes sont automatiques.
 -- Le client n'envoie que des intentions (Place / Remove / Ready) ; ArenaService valide tout.
@@ -36,6 +37,9 @@ local GRID_HIDDEN = UITheme.World.GridHidden -- dalles hors préparation presque
 local ABOVE_HOTBAR = 112 -- hauteur réservée à la hotbar (px)
 local PROMPT_REFRESH = 0.1 -- secondes entre deux recherches de la dalle la plus proche
 local PANEL_WIDTH = 264
+local PANEL_HEIGHT = 300 -- pancarte : même proportion que la bannière de Arene.PanneauStage
+local SIGN_NAME = "PanneauStage"
+local SIGN_BOARD = "Banniere"
 local RESULT_DELAY = 1.2 -- s après CombatEnded : la dernière unité a fini de se dissoudre
 
 type CaseState = "Empty" | "Hover" | "ValidTarget" | "Occupied" | "Selected" | "Invalid"
@@ -308,13 +312,13 @@ local function line(parent: Instance, text: string, size: number, y: number, hei
 	return label
 end
 
--- Panneau Arène : semi-transparent, la map et l'arène restent visibles.
-local function buildPanel(screen: ScreenGui)
-	local panel = UIKit.panel(screen, T.Panel)
+-- Pancarte du stage : le panneau remplit la bannière de Arene.PanneauStage (SurfaceGui de taille fixe,
+-- même proportion que la bannière : 5,6 x 6,4 studs).
+local function buildPanel(sign: SurfaceGui)
+	local panel = UIKit.panel(sign, T.Panel)
 	panel.Name = "PanneauArene"
-	panel.AnchorPoint = Vector2.new(1, 0.5)
-	panel.Position = UDim2.new(1, -S.ScreenMargin, 0.5, -40)
-	panel.Size = UDim2.fromOffset(PANEL_WIDTH, 300)
+	panel.Position = UDim2.fromOffset(0, 0)
+	panel.Size = UDim2.fromScale(1, 1)
 	ui.panel = panel
 	ui.stage = line(panel, "", SIZE.Title, S.M, 36)
 	line(panel, "Ennemis", SIZE.Label, 56, 22).TextColor3 = C.TextMuted
@@ -386,7 +390,19 @@ local function build()
 	cancel.holder.Position = UDim2.new(1, -S.S, 0.5, 0)
 	cancel.label.TextSize = SIZE.Label
 
-	buildPanel(screen)
+	local sign = Instance.new("SurfaceGui")
+	sign.Name = "PancarteStage"
+	sign.ResetOnSpawn = false
+	sign.SizingMode = Enum.SurfaceGuiSizingMode.FixedSize
+	sign.CanvasSize = Vector2.new(PANEL_WIDTH, PANEL_HEIGHT)
+	sign.Face = Enum.NormalId.Front -- la face avant de la bannière regarde la zone de préparation
+	sign.LightInfluence = 0
+	sign.MaxDistance = UITheme.World.CombatDistance
+	sign.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	sign.Enabled = false -- tant que la pancarte de son arène n'est pas connue
+	ui.sign = sign
+	buildPanel(sign)
+	sign.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
 
 	-- Combat : vague, x1 / x2, quitter.
 	local combat = pill(screen, T.HUD)
@@ -461,7 +477,15 @@ function render()
 	local max = state.MaxHeroes or ArenaConfig.MaxHeroes
 	local inCombat = phase == "Combat"
 	ui.combat.Visible = inCombat
-	ui.panel.Visible = not inCombat and state.Available ~= false
+	-- Pancarte de SON arène (pas celle d'un autre plot) ; pendant le combat elle garde les infos,
+	-- seuls les boutons disparaissent.
+	local arenaModel = PlotView.arena()
+	local signModel = arenaModel and arenaModel:FindFirstChild(SIGN_NAME)
+	local board = signModel and signModel:FindFirstChild(SIGN_BOARD)
+	ui.sign.Adornee = if board and board:IsA("BasePart") then board else nil
+	ui.sign.Enabled = ui.sign.Adornee ~= nil and state.Available ~= false
+	ui.arena.holder.Visible = not inCombat
+	ui.ready.holder.Visible = not inCombat
 	ui.stage.Text = `Stage {state.Zone or "?"}-{state.Stage or "?"}`
 	ui.team.Text = `{count} / {max}`
 	renderEnemies()
