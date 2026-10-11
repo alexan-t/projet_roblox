@@ -234,6 +234,33 @@ return function(ArenaPrep: any)
 		assert(e.manager:release(e.A) == true and e.manager.preps[e.A] == nil)
 	end)
 
+	test("restage: no prep -> nothing; placement -> new session, formation kept; combat -> refused", function()
+		local e = fixture()
+		local m = e.manager
+		assert(m:restage(e.A) == true and e.started == 0, "nothing to restart before the first hero")
+		assert(m:place(e.A, 1, "H1"))
+		assert(m:place(e.A, 2, "H2"))
+		local first = m.preps[e.A].sessionId
+		assert(m:restage(e.A) == true)
+		local prep = m.preps[e.A]
+		assert(prep.sessionId ~= first and e.stages[e.A] == prep.sessionId, "new stage session bound")
+		assert(prep.formation[1] == "H1" and prep.formation[2] == "H2", "formation kept")
+		assert(e.cancelledStages == 1)
+		assert(m:ready(e.A))
+		local ok, why = m:restage(e.A)
+		assert(ok == false and why == "combat déjà lancé")
+	end)
+
+	test("restage refused by the zone (locked stage): prep dropped, arena free", function()
+		local e = fixture()
+		local m = e.manager
+		assert(m:place(e.A, 1, "H1"))
+		e.refuseStage = "stage verrouillé"
+		local ok, why = m:restage(e.A)
+		assert(ok == false and why == "stage verrouillé")
+		assert(m.preps[e.A] == nil, "no stale prep bound to a cancelled session")
+	end)
+
 	print(`ArenaPrep: {passed} passed, {failed} failed`)
 	if failed > 0 then
 		error(`{failed} ArenaPrep test(s) failed`)

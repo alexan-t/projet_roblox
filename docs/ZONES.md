@@ -79,6 +79,7 @@ aussi supprimée à `PlayerRemoving`.
 | `GetSession(player)` | vue de la session active, ou `nil` |
 | `CompleteStage(player, sessionId, victory)` | `true` si la session active `sessionId` est terminée |
 | `CancelStage(player)` | `true` si une session active a été annulée |
+| `ListStages(player)` | tous les stages de `StageConfig` dans l'ordre, avec `Status` (`Unlocked` / `Locked` / `Unavailable`), `Cleared` (First Clear) et la config ; liste vide sans données |
 
 Cycle : `Running` → `CompleteStage(victoire)` ou `CompleteStage(défaite)` ou `CancelStage`.
 Dans tous les cas la session disparaît et le joueur peut relancer un stage autorisé.
@@ -97,7 +98,7 @@ local ok, reason = Remotes.RequestStartStage:InvokeServer(1, 1)
 - Le client ne fournit jamais d'ennemis, de vagues, de config, de résultat ni de récompense.
   Il n'existe **aucune** action client pour terminer un stage.
 
-C'est la seule remote de ce lot ; #11 (ZoneController) l'utilisera.
+Le jeu passe par l'arène (#11) : la pancarte du stage envoie `ArenaAction("SelectStage", zone, stage)`, qui revalide avec `ListStages` ; le premier héros posé lance la session via `StartStage` (voir `docs/ARENA_PROTOTYPE.md`).
 
 ## Contrats
 
