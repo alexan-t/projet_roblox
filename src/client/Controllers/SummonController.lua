@@ -4,13 +4,16 @@
 --     bannières (SummonBannerConfig), leurs héros mis en avant (vrais modèles) et les chances par
 --     rareté (RarityConfig).
 --   • « Invoquer » : RequestSummon(bannerId). Le serveur décide tout (héros, rareté, ticket) ; le
---     client joue l'effet du portail selon la rareté (SummonEffectController), puis montre la carte du
---     héros (SummonView.Reveal). Pendant ce temps la caméra cadre le portail ; le héros invoqué reste
---     devant le portail et la caméra revient au joueur à « Continuer ».
+--     client joue une cinématique (personnage caché, HUD masqué, caméra qui avance sur le portail
+--     puis suit le héros jusqu'à sa place) avec l'effet selon la rareté (SummonEffectController),
+--     puis montre la carte du héros (SummonView.Reveal). « Continuer » rend tout au joueur.
+--   • Pas de spoil : la collection mise à jour (hotbar, sacoche) n'est montrée qu'à « Continuer »
+--     (ArenaStore.holdHeroes / releaseHeroes).
 -- Refus du serveur (pas de ticket, trop loin…) : message bref (ArenaStore.toast).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
@@ -30,8 +33,9 @@ local PORTAL_NAME = "PortailInvocation"
 -- Le serveur accepte jusqu'à 18 studs (horizontal) du pivot du portail ; le prompt est sur le voile.
 local PROMPT_DISTANCE = 14
 local REVEAL_PAUSE = 0.9 -- s entre l'atterrissage du héros et sa carte
-local CAMERA_DISTANCE = 22 -- studs devant le voile : plan fixe pendant l'invocation
-local CAMERA_SIDE = 11 -- studs de côté : le joueur, posté face au portail, ne cache pas le héros
+local CAMERA_DISTANCE = 24 -- studs devant le voile : plan large de la cinématique
+local CAMERA_SIDE = 8 -- studs de côté (plan de trois quarts)
+local HIDE_STEP = "InvocationCachePersonnage"
 
 local prompt: ProximityPrompt? = nil
 local requestRemote: RemoteFunction? = nil
@@ -99,24 +103,81 @@ local function rates(): { SummonView.Rate }
 	return list
 end
 
--- Plan fixe face au portail pendant l'invocation (le héros se pose devant le voile, vers la caméra) ;
--- renvoie la fonction qui rend la caméra au joueur.
-local function frameCamera(portal: Model): () -> ()
-	local camera = Workspace.CurrentCamera
-	local veil = veilOf(portal)
-	if not camera or not veil then
-		return function() end
-	end
-	local forward = veil.CFrame.LookVector * Vector3.new(1, 0, 1)
-	forward = if forward.Magnitude > 1e-3 then forward.Unit else Vector3.zAxis
-	local side = Vector3.yAxis:Cross(forward)
-	local target = veil.Position + forward * 5 - Vector3.new(0, 2.5, 0)
-	local eye = veil.Position + forward * CAMERA_DISTANCE + side * CAMERA_SIDE + Vector3.new(0, 2, 0)
-	camera.CameraType = Enum.CameraType.Scriptable
-	TweenService:Create(camera, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+local function moveCamera(camera: Camera, eye: Vector3, target: Vector3, seconds: number, style: Enum.EasingStyle?)
+	TweenService:Create(camera, TweenInfo.new(seconds, style or Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 		CFrame = CFrame.lookAt(eye, target),
 	}):Play()
+end
+
+-- Cinématique d'invocation, locale au joueur. Le personnage est caché et immobilisé, le HUD masqué
+-- (rien ne dévoile le héros avant sa carte) :
+--   1. plan large sur le portail, qui avance lentement pendant la charge ;
+--   2. à l'éclat, la caméra suit le héros jusqu'à sa place et le cadre en pied, face à lui.
+-- Renvoie la fonction qui rend tout au joueur (caméra, personnage, HUD).
+local function cinematic(portal: Model, template: Model, rarity: string?): () -> ()
+	local camera = Workspace.CurrentCamera
+	if not camera then
+		return function() end
+	end
+	local center, forward, landing = SummonEffectController.Layout(portal)
+	local side = Vector3.yAxis:Cross(forward)
+	local charge = SummonEffectController.Charge(rarity)
+	local _, size = template:GetBoundingBox()
+	local height = size.Y
+
+	-- personnage caché (chaque image, après la caméra qui règle aussi la transparence) et immobile
+	local character = Players.LocalPlayer.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local walk, jump = if humanoid then humanoid.WalkSpeed else 16, if humanoid then humanoid.JumpHeight else 7.2
+	if humanoid then
+		humanoid.WalkSpeed, humanoid.JumpHeight = 0, 0
+	end
+	RunService:BindToRenderStep(HIDE_STEP, Enum.RenderPriority.Camera.Value + 1, function()
+		if character then
+			for _, part in character:GetDescendants() do
+				if part:IsA("BasePart") or part:IsA("Decal") then
+					(part :: any).LocalTransparencyModifier = 1
+				end
+			end
+		end
+	end)
+	-- HUD masqué (hotbar, pancartes, prompts) ; les écrans de l'invocation arrivent après
+	local hidden: { ScreenGui } = {}
+	for _, gui in Players.LocalPlayer.PlayerGui:GetChildren() do
+		if gui:IsA("ScreenGui") and gui.Enabled then
+			gui.Enabled = false
+			table.insert(hidden, gui)
+		end
+	end
+
+	camera.CameraType = Enum.CameraType.Scriptable
+	local wide = center + forward * CAMERA_DISTANCE + side * CAMERA_SIDE + Vector3.new(0, 4, 0)
+	local near = center + forward * (CAMERA_DISTANCE * 0.7) + side * (CAMERA_SIDE * 0.5) + Vector3.new(0, 2, 0)
+	moveCamera(camera, wide, center, 0.5)
+	task.delay(0.5, function()
+		moveCamera(camera, near, center - Vector3.new(0, 1, 0), math.max(charge - 0.5, 0.3), Enum.EasingStyle.Sine)
+	end)
+	task.delay(charge + 0.1, function()
+		local focus = landing + Vector3.new(0, height * 0.55, 0)
+		local eye = landing + forward * (height * 1.6 + 4) + side * 2.5 + Vector3.new(0, height * 0.65, 0)
+		moveCamera(camera, eye, focus, 0.8)
+	end)
+
 	return function()
+		RunService:UnbindFromRenderStep(HIDE_STEP)
+		if character then
+			for _, part in character:GetDescendants() do
+				if part:IsA("BasePart") or part:IsA("Decal") then
+					(part :: any).LocalTransparencyModifier = 0
+				end
+			end
+		end
+		if humanoid and humanoid.Parent then
+			humanoid.WalkSpeed, humanoid.JumpHeight = walk, jump
+		end
+		for _, gui in hidden do
+			gui.Enabled = true
+		end
 		camera.CameraType = Enum.CameraType.Custom
 	end
 end
@@ -133,8 +194,11 @@ local function summon(bannerId: string?)
 		return
 	end
 	lastBanner = bannerId
+	-- La collection mise à jour (avec le héros) arrive avant la réponse : elle attend la carte.
+	ArenaStore.holdHeroes()
 	local ok, accepted, result = pcall(remote.InvokeServer, remote, bannerId)
 	if not ok or accepted ~= true or typeof(result) ~= "table" then
+		ArenaStore.releaseHeroes()
 		toast(if ok and typeof(result) == "string" then result else "Invocation impossible, réessaie")
 		finish()
 		return
@@ -145,7 +209,7 @@ local function summon(bannerId: string?)
 	local shown: Model? = nil
 	local release: () -> () = function() end
 	if template and portal then
-		release = frameCamera(portal)
+		release = cinematic(portal, template, rarity)
 		shown = SummonEffectController.Play(portal, template, { Name = result.Name, New = result.New, Rarity = rarity, Keep = 0 })
 		task.wait(SummonEffectController.Duration(rarity) + REVEAL_PAUSE + RarityStyle.rank(rarity) * 0.1)
 	end
@@ -155,6 +219,7 @@ local function summon(bannerId: string?)
 				shown:Destroy()
 			end
 			release()
+			ArenaStore.releaseHeroes() -- le héros apparaît dans la hotbar / la sacoche maintenant
 			finish()
 		end,
 	})

@@ -25,6 +25,8 @@ local actionRemote: RemoteFunction? = nil
 local hotbarRemote: RemoteFunction? = nil
 ArenaStore.busy = false
 local started = false
+local heldCount = 0 -- invocations en cours : la collection reçue attend (holdHeroes / releaseHeroes)
+local pendingView: any = nil
 
 function ArenaStore.notify()
 	ArenaStore.changed:Fire()
@@ -81,6 +83,22 @@ local function applyHeroes(view: any)
 	ArenaStore.notify()
 end
 
+-- Invocation en cours : la collection reçue du serveur (avec le nouveau héros) attend la fin de
+-- l'animation pour ne rien dévoiler dans la hotbar ni la sacoche. holdHeroes() avant la demande,
+-- releaseHeroes() quand le joueur a vu le héros (ou si l'invocation échoue).
+function ArenaStore.holdHeroes()
+	heldCount += 1
+end
+
+function ArenaStore.releaseHeroes()
+	heldCount = math.max(heldCount - 1, 0)
+	local view = pendingView
+	if heldCount == 0 and view ~= nil then
+		pendingView = nil
+		applyHeroes(view)
+	end
+end
+
 function ArenaStore.hotbarAction(action: string, first: any, second: any): boolean
 	local remote = hotbarRemote
 	if not remote or ArenaStore.busy then return false end
@@ -120,7 +138,13 @@ function ArenaStore.start()
 	local getHeroes = remotes:WaitForChild("GetHeroes", 30)
 	local heroesChanged = remotes:WaitForChild("HeroesChanged", 30)
 	if heroesChanged and heroesChanged:IsA("RemoteEvent") then
-		heroesChanged.OnClientEvent:Connect(applyHeroes)
+		heroesChanged.OnClientEvent:Connect(function(view: any)
+			if heldCount > 0 then
+				pendingView = view -- montrée à la fin de l'invocation (ArenaStore.releaseHeroes)
+			else
+				applyHeroes(view)
+			end
+		end)
 	end
 	if getHeroes and getHeroes:IsA("RemoteFunction") then
 		task.spawn(function()

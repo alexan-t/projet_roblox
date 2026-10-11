@@ -19,7 +19,10 @@
 -- API : SummonEffectController.Play(portal, heroTemplate, options?) -> modèle affiché (copie locale).
 --   options = { Name: string?, New: boolean?, Rarity: string?, Jackpot: boolean?, Keep: number? (s
 --   avant de retirer la copie, 4 par défaut ; 0 = la garder) }
---   SummonEffectController.Duration(rarity?) -> secondes jusqu'à la révélation du héros.
+--   SummonEffectController.Duration(rarity?) -> secondes jusqu'à la révélation du héros ;
+--   SummonEffectController.Charge(rarity?) -> durée de la charge ; Layout(portal) -> centre du voile,
+--   face avant, place du héros. Le héros se pose sur une place d'invocation (cercle au sol, liseré de
+--   la couleur de la rareté) qui s'efface avec lui.
 -- Démonstration Studio : tag "ApercuInvocation" sur un dossier qui contient des modèles de héros et un
 -- ObjectValue « Portail » ; un héros sort toutes les ApercuPause secondes (6 par défaut), avec une
 -- rareté qui monte à chaque tour.
@@ -42,6 +45,7 @@ local CHARGE = 1.2 -- montée en puissance avant l'éclat (Commun) ; +0,2 s par 
 local FLIGHT = 0.45 -- sortie du voile jusqu'au sol
 local REVEAL = 0.6 -- la silhouette colorée s'efface
 local LANDING_DISTANCE = 7 -- studs devant le voile
+local PAD_RADIUS = 4 -- rayon de la place d'invocation (studs), un peu plus grande pour une rareté haute
 local PILLAR_HEIGHT = 160 -- colonne de lumière vers le ciel (Rare et plus)
 local SPARK_TEXTURE = "rbxasset://textures/particles/sparkles_main.dds"
 local DUST_TEXTURE = "rbxasset://textures/particles/smoke_main.dds"
@@ -366,6 +370,66 @@ local function nameplate(hero: Model, name: string, isNew: boolean, rarity: stri
 	gui.Parent = hero
 end
 
+-- Géométrie de l'invocation : centre du voile (disque au centre de l'arche), face avant du portail
+-- (horizontale) et place où le héros se pose (sol, LANDING_DISTANCE devant le voile).
+function SummonEffectController.Layout(portal: Model): (Vector3, Vector3, Vector3)
+	local structure = portal:FindFirstChild("Structure")
+	local found = if structure then structure:FindFirstChild("voile") else portal:FindFirstChild("voile", true)
+	local veil: BasePart? = if found and found:IsA("BasePart") then found else nil
+	local center = if veil then veil.Position else portal:GetBoundingBox().Position
+	local forward = if veil then veil.CFrame.LookVector else portal:GetPivot().LookVector
+	forward = Vector3.new(forward.X, 0, forward.Z).Unit
+	return center, forward, ground(center + forward * LANDING_DISTANCE, portal)
+end
+
+function SummonEffectController.Charge(rarity: string?): number
+	return chargeOf(rankOf(rarity))
+end
+
+-- Place d'invocation : cercle au sol où le héros se pose, liseré lumineux de la couleur de la rareté
+-- sur un disque de pierre claire. Apparaît pendant la charge ; renvoie la fonction qui l'efface.
+local function pad(landing: Vector3, rank: number, paint: ((Color3) -> ()) -> (), charge: number): () -> ()
+	local radius = PAD_RADIUS + rank * 0.15
+	local flat = CFrame.Angles(0, 0, math.pi / 2)
+	local rim = effectPart({
+		Name = "InvocationPlace",
+		Shape = Enum.PartType.Cylinder,
+		Material = Enum.Material.Neon,
+		Transparency = 1,
+		Size = Vector3.new(0.12, radius * 2, radius * 2),
+		CFrame = CFrame.new(landing + Vector3.new(0, 0.06, 0)) * flat,
+	})
+	paint(function(color: Color3)
+		rim.Color = color
+	end)
+	local stone = effectPart({
+		Name = "InvocationPlaceSol",
+		Shape = Enum.PartType.Cylinder,
+		Material = Enum.Material.SmoothPlastic,
+		Color = Colors.Stone,
+		Transparency = 1,
+		Size = Vector3.new(0.14, radius * 2 - 0.8, radius * 2 - 0.8),
+		CFrame = CFrame.new(landing + Vector3.new(0, 0.08, 0)) * flat,
+	})
+	local appear = TweenInfo.new(math.min(charge, 1), Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	tween(rim, appear, { Transparency = 0.15 })
+	tween(stone, appear, { Transparency = 0.1 })
+	local removed = false
+	return function()
+		if removed then
+			return
+		end
+		removed = true
+		local fade = TweenInfo.new(0.4)
+		tween(rim, fade, { Transparency = 1 })
+		tween(stone, fade, { Transparency = 1 })
+		task.delay(0.45, function()
+			rim:Destroy()
+			stone:Destroy()
+		end)
+	end
+end
+
 -- Invocation au portail. heroTemplate n'est pas modifié : une copie locale est posée devant le portail.
 function SummonEffectController.Play(portal: Model, heroTemplate: Model, options: Options?): Model?
 	local opts: Options = options or {}
@@ -373,15 +437,9 @@ function SummonEffectController.Play(portal: Model, heroTemplate: Model, options
 	local rank = rankOf(rarity)
 	local charge = chargeOf(rank)
 	local colorAt, paint, stopPalette = palette(rarity)
-	-- le voile (disque au centre de l'arche) donne le centre et la face avant du portail
-	local structure = portal:FindFirstChild("Structure")
-	local found = if structure then structure:FindFirstChild("voile") else portal:FindFirstChild("voile", true)
-	local veil: BasePart? = if found and found:IsA("BasePart") then found else nil
-	local center = if veil then veil.Position else portal:GetBoundingBox().Position
-	local forward = if veil then veil.CFrame.LookVector else portal:GetPivot().LookVector
-	forward = Vector3.new(forward.X, 0, forward.Z).Unit
-	local landing = ground(center + forward * LANDING_DISTANCE, portal)
+	local center, forward, landing = SummonEffectController.Layout(portal)
 	local portalGround = ground(center, portal)
+	local removePad = pad(landing, rank, paint, charge)
 
 	-- 1. charge : vortex coloré, étincelles qui convergent vers le voile, lumière qui monte
 	local vortex = portal:FindFirstChild("Vortex")
@@ -572,6 +630,8 @@ function SummonEffectController.Play(portal: Model, heroTemplate: Model, options
 		core:Destroy()
 		glow:Destroy()
 	end)
+	-- la place d'invocation s'efface avec le héros
+	hero.Destroying:Connect(removePad)
 	local keep = opts.Keep or 4
 	task.delay(charge + FLIGHT + REVEAL + math.max(keep, 2), stopPalette)
 	if keep > 0 then

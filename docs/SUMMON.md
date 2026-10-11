@@ -22,12 +22,24 @@ Le tirage (quel héros, quelle rareté, doublon ou non) relève de HeroService (
      rareté, en deux colonnes) et le bouton principal **Invoquer**. Sans ticket, « Invoquer » est
      désactivé et une aide indique d'en gagner en combattant.
 3. **Invoquer** : `RequestSummon(bannerId)`. En cas de refus, un message bref s'affiche. Sinon :
-   - la caméra cadre le portail (plan fixe, de côté, pour que le joueur ne cache pas le héros) ;
+   - **cinématique**, locale au joueur :
+     - le personnage est caché et immobilisé, et le HUD est masqué ;
+     - la caméra part d'un plan large de trois quarts et avance sur le portail pendant la charge ;
+     - à l'éclat, elle suit le héros jusqu'à sa **place d'invocation** (cercle au sol, liseré de la
+       couleur de la rareté, 7 studs devant le voile) et le cadre en pied, face à lui ;
    - l'effet se joue selon la rareté ;
    - la carte du héros apparaît (`SummonView.Reveal` : rayons et contour de la couleur de la rareté,
      nom, rareté, « Nouveau »).
-4. **Continuer** : le héros posé devant le portail disparaît, la caméra revient au joueur et le
-   prompt se réactive.
+4. **Continuer** :
+   - le héros et sa place disparaissent ;
+   - la caméra, le personnage et le HUD reviennent ;
+   - le prompt se réactive.
+
+**Pas de spoil** : le serveur envoie la collection à jour (`HeroesChanged`) avant même de répondre.
+Le client la met en attente (`ArenaStore.holdHeroes`) et ne la montre qu'à « Continuer »
+(`releaseHeroes`). Le nouveau héros n'apparaît donc dans la hotbar et la sacoche qu'après sa carte.
+Le royaume du plot (héros posés devant le château, serveur) se met à jour tout de suite, mais il est
+hors champ pendant la cinématique.
 
 ## Effet (rang 1 Commun → 10 Transcendant)
 
