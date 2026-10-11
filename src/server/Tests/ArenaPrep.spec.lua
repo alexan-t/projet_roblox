@@ -234,6 +234,34 @@ return function(ArenaPrep: any)
 		assert(e.manager:release(e.A) == true and e.manager.preps[e.A] == nil)
 	end)
 
+	test("combat end keeps the team: back to Placement, same formation, new stage session, Ready again", function()
+		local e = fixture()
+		local m = e.manager
+		m:place(e.A, 2, "H1")
+		m:place(e.A, 5, "H4")
+		local firstSession = m.preps[e.A].sessionId
+		assert(m:ready(e.A))
+		e.stages[e.A] = nil -- ZoneService a clos la session (CompleteStage) avant la fin du combat
+		assert(m:combatEnded(e.A, 1) == true)
+		local prep = m.preps[e.A]
+		assert(prep and prep.phase == "Placement" and prep.combatId == nil)
+		assert(prep.formation[2] == "H1" and prep.formation[5] == "H4" and count(prep.formation) == 2, "formation kept")
+		assert(prep.sessionId ~= firstSession and e.stages[e.A] == prep.sessionId, "new stage session")
+		assert(m:check(e.A) == false, "live preparation")
+		assert(m:ready(e.A) == true and #e.combats == 2, "replay without placing again")
+		assert(m:place(e.B, 1, "B1"), "other arenas unaffected")
+	end)
+
+	test("combat end: stage cannot restart (locked, profile lost) -> arena freed, nothing stale", function()
+		local e = fixture()
+		local m = e.manager
+		m:place(e.A, 1, "H1")
+		m:ready(e.A)
+		e.refuseStage = "stage verrouillé"
+		assert(m:combatEnded(e.A, 1) == true)
+		assert(m.preps[e.A] == nil and e.cancelledStages == 0)
+	end)
+
 	test("restage: no prep -> nothing; placement -> new session, formation kept; combat -> refused", function()
 		local e = fixture()
 		local m = e.manager

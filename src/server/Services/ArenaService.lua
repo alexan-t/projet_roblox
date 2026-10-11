@@ -142,7 +142,9 @@ local function send(player: Player, message: string?)
 end
 
 local function rebuild(player: Player, w: any, c: any)
+	-- Placement (y compris le retour après un combat : l'équipe est reposée, les ennemis retirés).
 	w.heroes:ClearAllChildren()
+	w.enemies:ClearAllChildren()
 	for slot, id in w.prep.formation do
 		local hero = HeroService:GetCombatHero(player, id)
 		if hero then spawnModel(hero.CombatTemplate, w.heroes, feet(c.poses[slot]), c.front.Position,
@@ -312,10 +314,11 @@ function ArenaService:Start()
 	end
 	action.Parent = remotes
 	PlotService:OnPlotAssigned(setup)
-	CombatService:OnCombatEnded(function(player, id, result)
+	CombatService:OnCombatEnded(function(player, id)
+		-- Le résultat n'est annoncé que par l'écran de fin (RewardScreenController), pas par un message.
 		if manager:combatEnded(player, id) then
 			sync(player)
-			send(player, if result == "Victory" then "Victoire !" else "Défaite…")
+			send(player)
 		end
 	end)
 	local function watch(player: Player)
