@@ -67,17 +67,41 @@ return function(HeroRules: any, heroConfig: any, combatConfig: any)
 		end
 	end
 
-	test("starter kit: the 6 classes once, all in the hotbar (1..6), every one usable in combat", function()
+	test("new player: exactly one starter, ecuyer_du_rempart, in shortcut 1; never twice", function()
 		local d = data()
-		assert(HeroRules.grantStarter(d, heroConfig.StarterHeroes, ids()) == 6)
-		for index = 1, 6 do
-			local id = d.Hotbar[index]
-			assert(id ~= "" and d.Heroes[id], "shortcut " .. index)
-			assert(combatConfig.Heroes[d.Heroes[id].HeroId], "combat stats for " .. d.Heroes[id].HeroId)
-			assert(heroConfig.Heroes[d.Heroes[id].HeroId], "display info for " .. d.Heroes[id].HeroId)
+		assert(#heroConfig.StarterHeroes == 1 and heroConfig.StarterHeroes[1] == "ecuyer_du_rempart")
+		assert(HeroRules.grantStarter(d, heroConfig.StarterHeroes, ids()) == 1)
+		local count = 0
+		for _, hero in d.Heroes do
+			count += 1
+			assert(hero.HeroId == "ecuyer_du_rempart" and hero.Level == 1)
 		end
-		assert(d.Hotbar[7] == "" and d.Hotbar[10] == "")
-		assert(HeroRules.grantStarter(d, heroConfig.StarterHeroes, ids()) == 0, "never twice")
+		assert(count == 1)
+		assert(d.Hotbar[1] ~= "" and d.Heroes[d.Hotbar[1]])
+		for i = 2, SIZE do assert(d.Hotbar[i] == "", "shortcut " .. i .. " empty") end
+		assert(HeroRules.grantStarter(d, heroConfig.StarterHeroes, ids()) == 0, "never twice (rejoin)")
+	end)
+
+	test("starter guaranteed by HeroId: a profile owning other heroes but no starter receives it once", function()
+		local d = data()
+		HeroRules.addHero(d, "T1", "tireuse_des_faubourgs")
+		assert(HeroRules.grantStarter(d, heroConfig.StarterHeroes, ids()) == 1)
+		assert(HeroRules.owns(d, "ecuyer_du_rempart") and d.Hotbar[1] == "T1" and d.Hotbar[2] ~= "")
+		assert(HeroRules.grantStarter(d, heroConfig.StarterHeroes, ids()) == 0)
+	end)
+
+	test("catalog: real HeroId != combat profile; every hero has stats and a combat template", function()
+		for heroId, info in heroConfig.Heroes do
+			assert(not combatConfig.Heroes[heroId], heroId .. " must not be a combat class")
+			assert(combatConfig.Heroes[info.CombatProfile], heroId .. " profile " .. tostring(info.CombatProfile))
+			assert(typeof(info.CombatTemplate) == "string" and info.CombatTemplate ~= "", heroId .. " template")
+			assert(typeof(info.Name) == "string" and info.Name ~= "")
+		end
+		assert(heroConfig.Heroes.ecuyer_du_rempart.CombatProfile == "Epeiste")
+		assert(heroConfig.Heroes.ecuyer_du_rempart.CombatTemplate == "Heros_EcuyerDuRempart")
+		assert(heroConfig.Heroes.tireuse_des_faubourgs.CombatProfile == "Tireur")
+		assert(heroConfig.Heroes.tireuse_des_faubourgs.CombatTemplate == "Heros_Tireur")
+		assert(heroConfig.HotbarSize == 10)
 	end)
 
 	test("new hero: first free shortcut, otherwise collection only (10 shortcuts max)", function()
@@ -103,13 +127,22 @@ return function(HeroRules: any, heroConfig: any, combatConfig: any)
 		assert(#missing.Hotbar == SIZE)
 	end)
 
-	test("ownership: only owned instances with combat stats", function()
+	test("combat hero: owned + activated -> real HeroId with its temporary profile and template", function()
 		local d = data()
-		d.Heroes = { A = { HeroId = "Archer", Level = 1 }, K = { HeroId = "Chevalier", Level = 1 } }
-		assert(HeroRules.ownedHeroId(d, "A", combatConfig.Heroes) == "Archer")
-		assert(select(2, HeroRules.ownedHeroId(d, "Z", combatConfig.Heroes)) == "héros inconnu")
-		assert(select(2, HeroRules.ownedHeroId(d, 5, combatConfig.Heroes)) == "héros inconnu")
-		assert(select(2, HeroRules.ownedHeroId(d, "K", combatConfig.Heroes)) == "héros non disponible au combat")
+		d.Heroes = {
+			E = { HeroId = "ecuyer_du_rempart", Level = 1 },
+			T = { HeroId = "tireuse_des_faubourgs", Level = 1 },
+			L = { HeroId = "Epeiste", Level = 1 }, -- ancienne classe : plus un HeroId
+			B = { HeroId = "barde_de_fer", Level = 1 }, -- asset réel, pas encore activé
+		}
+		local e = HeroRules.combatHero(d, "E", heroConfig.Heroes, combatConfig.Heroes)
+		assert(e and e.HeroId == "ecuyer_du_rempart" and e.CombatProfile == "Epeiste" and e.CombatTemplate == "Heros_EcuyerDuRempart")
+		local t = HeroRules.combatHero(d, "T", heroConfig.Heroes, combatConfig.Heroes)
+		assert(t and t.HeroId == "tireuse_des_faubourgs" and t.CombatProfile == "Tireur" and t.CombatTemplate == "Heros_Tireur")
+		assert(select(2, HeroRules.combatHero(d, "Z", heroConfig.Heroes, combatConfig.Heroes)) == "héros inconnu")
+		assert(select(2, HeroRules.combatHero(d, 5, heroConfig.Heroes, combatConfig.Heroes)) == "héros inconnu")
+		assert(select(2, HeroRules.combatHero(d, "L", heroConfig.Heroes, combatConfig.Heroes)) == "héros non disponible au combat")
+		assert(select(2, HeroRules.combatHero(d, "B", heroConfig.Heroes, combatConfig.Heroes)) == "héros non disponible au combat")
 	end)
 
 	test("removing a hero frees its shortcut and never touches anything else", function()

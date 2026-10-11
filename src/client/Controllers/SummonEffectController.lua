@@ -166,7 +166,7 @@ local function banner(hero: Model, name: string, isNew: boolean)
 	gui.Size = UDim2.fromOffset(360, 74)
 	gui.StudsOffsetWorldSpace = Vector3.new(0, size.Y / 2 + 2, 0)
 	gui.AlwaysOnTop = true
-	gui.MaxDistance = 200
+	gui.MaxDistance = UITheme.World.EffectDistance
 	local text = Instance.new("TextLabel")
 	text.BackgroundTransparency = 1
 	text.Position = UDim2.fromOffset(0, 26)
@@ -259,7 +259,7 @@ function SummonEffectController.Play(portal: Model, heroTemplate: Model, options
 		Rate = 70,
 	})
 	inward.Enabled = true
-	AudioController.Play("InvocationCharge") -- (#18)
+	AudioController.Play("InvocationCharge", { Position = center }) -- (#18)
 	local light = Instance.new("PointLight")
 	light.Color = Colors.GoldLight
 	light.Range = 22
@@ -308,7 +308,7 @@ function SummonEffectController.Play(portal: Model, heroTemplate: Model, options
 	-- 2. éclat, 3. sortie du voile
 	task.delay(CHARGE, function()
 		inward.Enabled = false
-		AudioController.Play("InvocationEclat")
+		AudioController.Play("InvocationEclat", { Position = center })
 		light.Brightness = 6
 		tween(light, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Brightness = 0 })
 		tween(glow, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { FillTransparency = 1, OutlineTransparency = 1 })

@@ -5,7 +5,8 @@
 -- donc le coup visible, en x1 comme en x2, sans aucune règle de jeu ici.
 -- Garde-fous contre le spam : délai minimal entre deux lectures d'un même son (Cooldown), nombre maximal
 -- de lectures simultanées (Max), légère variation de hauteur (Jitter), variantes tirées au hasard.
--- Sons en 2D (non spatialisés) : la caméra du jeu reste proche de l'action.
+-- Sons en 2D (non spatialisés), mais les sons du monde (Position) s'atténuent avec la distance au personnage
+-- et se taisent hors de portée (AudioConfig.Hearing) : on n'entend pas les autres arènes.
 -- API : AudioController.Play(name, options?) -> Sound? ; AudioController.StartAmbiance(name) ;
 --       AudioController.StopAmbiance().
 --   options = { Delay: number? (s), Volume: number? (multiplicateur), Pitch: number? (multiplicateur) }
@@ -13,6 +14,7 @@
 -- Studio : attribut Workspace.SonCoupe = true pour couper tous les sons (essais en silence).
 
 local ContentProvider = game:GetService("ContentProvider")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
 local Workspace = game:GetService("Workspace")
@@ -21,7 +23,9 @@ local AudioConfig = require(ReplicatedStorage.Shared.Config.AudioConfig)
 
 local AMBIANCE_FADE = 2 -- s, fondu d'entrée et de sortie de l'ambiance
 
-export type Options = { Delay: number?, Volume: number?, Pitch: number? }
+-- Position : point du monde d'où vient le son ; il s'atténue avec la distance au personnage et n'est
+-- pas joué au-delà de AudioConfig.Hearing.Far (les sons d'interface n'en ont pas).
+export type Options = { Delay: number?, Volume: number?, Pitch: number?, Position: Vector3? }
 
 local AudioController = {}
 
@@ -62,6 +66,22 @@ local function create(name: string, def: AudioConfig.Sound, options: Options?): 
 	return sound
 end
 
+-- Facteur de volume selon la distance au personnage (1 près, 0 hors de portée).
+local function hearing(position: Vector3?): number
+	if not position then
+		return 1
+	end
+	local character = Players.LocalPlayer.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local listener = if root and root:IsA("BasePart") then root.Position else Workspace.CurrentCamera.Focus.Position
+	local near, far = AudioConfig.Hearing.Near, AudioConfig.Hearing.Far
+	local distance = (position - listener).Magnitude
+	if distance >= far then
+		return 0
+	end
+	return math.clamp(1 - (distance - near) / (far - near), 0, 1)
+end
+
 local function playNow(name: string, options: Options?): Sound?
 	local def = AudioConfig.Sounds[name]
 	if not def then
@@ -70,6 +90,15 @@ local function playNow(name: string, options: Options?): Sound?
 	end
 	if muted() then
 		return nil
+	end
+	local audible = hearing(options and options.Position)
+	if audible <= 0 then
+		return nil -- trop loin : ni lecture, ni Cooldown consommé
+	end
+	if audible < 1 then
+		local opts = table.clone(options :: Options)
+		opts.Volume = (opts.Volume or 1) * audible
+		options = opts
 	end
 	local now = os.clock()
 	if def.Cooldown and now - (lastPlayed[name] or -math.huge) < def.Cooldown then

@@ -17,8 +17,15 @@ local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local ArenaStore = require(script.Parent.Parent.Arena.ArenaStore)
 local PlacementState = require(script.Parent.Parent.Arena.PlacementState)
 local UIKit = require(script.Parent.Parent.UI.UIKit)
+local Icons = require(script.Parent.Parent.UI.Icons)
 
 local Drag = require(script.Parent.Parent.UI.HeroDrag)
+
+-- Portrait 3D du vrai modèle du héros (UIKit.portrait, design system § 7), ou nil s'il n'est pas répliqué.
+local function heroPortrait(parent: Instance, heroId: string): ViewportFrame?
+	local model = Icons.heroModel(heroId)
+	return if model then UIKit.portrait(parent, model) else nil
+end
 local C = UITheme.Colors
 local T = UITheme.Transparency
 local S = UITheme.Spacing
@@ -31,8 +38,10 @@ local KEYS = {
 	Enum.KeyCode.Six, Enum.KeyCode.Seven, Enum.KeyCode.Eight, Enum.KeyCode.Nine, Enum.KeyCode.Zero,
 }
 
-type SlotUI = { frame: TextButton, stroke: UIStroke, icon: TextLabel, placed: Frame, offset: number }
-type CardUI = { frame: TextButton, stroke: UIStroke, placed: Frame, shortcut: TextLabel }
+-- portrait : vrai modèle du héros (UIKit.portrait) ; à défaut, monogramme provisoire.
+type SlotUI = { frame: TextButton, stroke: UIStroke, icon: TextLabel, placed: Frame, offset: number,
+	portrait: ViewportFrame?, portraitHero: string? }
+type CardUI = { frame: TextButton, stroke: UIStroke, placed: Frame, shortcut: TextLabel, portrait: boolean }
 
 -- Onglets de la sacoche. Équipement et Ressources n'ont pas encore de données.
 local TABS = {
@@ -124,9 +133,23 @@ local function renderHotbar()
 	local locked = ArenaStore.inCombat()
 	for index, slot in slots do
 		local id = ArenaStore.hotbar[index]
-		local _, info = ArenaStore.heroInfo(if id ~= "" then id else nil)
+		local hero, info = ArenaStore.heroInfo(if id ~= "" then id else nil)
 		local selected = id ~= "" and id == held
-		slot.icon.Text = if info then info.PlaceholderIcon else ""
+		local heroId = if hero and info then hero.HeroId else nil
+		if slot.portraitHero ~= heroId or (heroId and not slot.portrait) then
+			if slot.portrait then slot.portrait:Destroy() end
+			slot.portrait = if heroId then heroPortrait(slot.frame, heroId) else nil
+			slot.portraitHero = heroId
+			local portrait = slot.portrait
+			if portrait then
+				portrait.ZIndex = 0 -- sous le numéro de touche et la pastille « posé »
+				portrait.Position = UDim2.fromOffset(3, 3)
+				portrait.Size = UDim2.new(1, -6, 1, -6)
+			end
+		end
+		local portrait = slot.portrait
+		slot.icon.Text = if info and not portrait then info.PlaceholderIcon else ""
+		if portrait then portrait.ImageTransparency = if locked then T.Disabled else 0 end
 		slot.frame.BackgroundTransparency = if info then T.Slot else T.Empty
 		slot.frame.BackgroundColor3 = if info then C.Cream else C.WoodDeep
 		slot.icon.TextTransparency = if locked then T.Disabled else 0
@@ -239,7 +262,7 @@ local function buildBag(screen: ScreenGui)
 	list.CanvasSize = UDim2.new()
 	list.Parent = bag
 	local grid = Instance.new("UIGridLayout")
-	grid.CellSize = UDim2.fromOffset(100, 118)
+	grid.CellSize = UDim2.fromOffset(100, 132) -- portrait, nom sur deux lignes, raccourci
 	grid.CellPadding = UDim2.fromOffset(S.M, S.L)
 	grid.SortOrder = Enum.SortOrder.LayoutOrder
 	grid.Parent = list
@@ -325,10 +348,19 @@ local function card(hero: ArenaStore.HeroView): CardUI
 	art.Size = UDim2.new(1, -16, 0, 66)
 	art.Parent = frame
 	UIKit.corner(art, UITheme.Radius.Small)
-	UIKit.text(art, if info then info.PlaceholderIcon else "?", UITheme.Typography.Size.IconLarge)
+	local portrait = heroPortrait(art, hero.HeroId)
+	if not portrait then
+		UIKit.text(art, if info then info.PlaceholderIcon else "?", UITheme.Typography.Size.IconLarge)
+	end
 	local name = UIKit.text(frame, if info then info.Name else hero.HeroId, UITheme.Typography.Size.Label)
-	name.Position = UDim2.fromOffset(0, 78)
-	name.Size = UDim2.new(1, 0, 0, 30)
+	-- Vrais noms de héros (« Tireuse des Faubourgs ») : deux lignes dans la carte, réduits si besoin.
+	name.Position = UDim2.fromOffset(4, 76)
+	name.Size = UDim2.new(1, -8, 0, 34)
+	name.TextWrapped = true
+	name.TextScaled = true
+	local fit = Instance.new("UITextSizeConstraint")
+	fit.MaxTextSize = UITheme.Typography.Size.Label
+	fit.Parent = name
 	local placed = UIKit.badge(frame, "Posé", C.Gold)
 	placed.AnchorPoint = Vector2.new(0.5, 0.5)
 	placed.Position = UDim2.fromScale(0.5, 0)
@@ -341,7 +373,7 @@ local function card(hero: ArenaStore.HeroView): CardUI
 	shortcut.Position = UDim2.new(0, 0, 1, -18)
 	shortcut.Size = UDim2.new(1, 0, 0, 18)
 	Drag.bind(frame, function() return { id = hero.Id } end)
-	local entry = { frame = frame, stroke = stroke, placed = placed, shortcut = shortcut }
+	local entry = { frame = frame, stroke = stroke, placed = placed, shortcut = shortcut, portrait = portrait ~= nil }
 	cards[hero.Id] = entry
 	return entry
 end
@@ -426,6 +458,26 @@ function HeroBarController:Start()
 	ArenaStore.changed.Event:Connect(render)
 	render()
 	ArenaStore.start()
+	-- Portraits : les modèles des héros arrivent par réplication (ReplicatedStorage.Assets.Heros,
+	-- copiés par HeroService) ; les cartes créées avec un monogramme sont refaites à leur arrivée.
+	task.spawn(function()
+		local assets = ReplicatedStorage:WaitForChild("Assets", 30)
+		local heroes = assets and assets:WaitForChild("Heros", 30)
+		if not heroes then
+			return
+		end
+		local function refresh()
+			for id, entry in cards do
+				if not entry.portrait then
+					entry.frame:Destroy()
+					cards[id] = nil
+				end
+			end
+			render()
+		end
+		heroes.ChildAdded:Connect(refresh)
+		refresh()
+	end)
 end
 
 return HeroBarController

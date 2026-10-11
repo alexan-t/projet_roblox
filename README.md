@@ -103,8 +103,7 @@ partenaire « test 3 » et validé à deux joueurs : voir [le plan, les distance
 Le serveur clone sur le plot du joueur le modèle de royaume qui correspond à
 `Kingdom.VisualState`, puis un modèle par héros possédé. Les modèles et les
 repères restent dans Studio : voir le [contrat d'assets, l'API et les tests](docs/KINGDOM.md).
-Dans la DEV : états 1 et 2 et 22 héros réels présents ; le kit de départ utilise encore des classes
-temporaires, à aligner dans #10.
+Dans la DEV : états 1 et 2 et 22 héros réels présents ; les profils joueurs utilisent les HeroId réels.
 
 ## Audio (SFX et ambiance)
 
@@ -148,10 +147,12 @@ Clear et ajoute les récompenses de `src/server/Config/RewardConfig.lua` (premie
 +1 ticket d'invocation ; valeurs Alpha provisoires). Le tout est sauvegardé avant l'écran de fin,
 sans action « réclamer ». Voir [la config, le flux et les garanties](docs/REWARDS.md).
 
-## Héros possédés et hotbar (HeroService, Alpha)
+## Héros et invocation (HeroService)
 
-Kit de départ, hotbar de 10 raccourcis sauvegardée et vérification de possession : voir
-[les données, les règles et l'API](docs/HEROES.md).
+Starter unique (`ecuyer_du_rempart`), hotbar de 10 raccourcis sauvegardée, invocation au portail de
+son plot (`Remotes.RequestSummon`, un `SummonTicket`, première invocation garantie
+`tireuse_des_faubourgs`), `Remotes.HeroObtained`, migration des anciens profils en DataVersion 2.
+HeroId réel ≠ profil de combat temporaire : voir [les données, les règles et l'API](docs/HEROES.md).
 
 ## Animations (AnimationKit)
 

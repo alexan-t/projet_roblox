@@ -172,7 +172,7 @@ local function banner(kingdom: Model, level: number?, height: number)
 	gui.Size = UDim2.fromOffset(420, 70)
 	gui.StudsOffsetWorldSpace = Vector3.new(0, height / 2 + 4, 0)
 	gui.AlwaysOnTop = true
-	gui.MaxDistance = 250
+	gui.MaxDistance = UITheme.World.EffectDistance
 	local text = Instance.new("TextLabel")
 	text.BackgroundTransparency = 1
 	text.Size = UDim2.fromScale(1, 1)
@@ -242,7 +242,7 @@ function KingdomChangeController.Play(kingdom: Model, level: number?, previous: 
 	end)
 
 	-- 2. le nouveau royaume sort du sol, léger dépassement (Back) puis se pose
-	AudioController.Play("Royaume", { Delay = RISE_START }) -- (#18)
+	AudioController.Play("Royaume", { Delay = RISE_START, Position = base }) -- (#18)
 	task.delay(RISE_START, function()
 		if not kingdom.Parent then
 			return

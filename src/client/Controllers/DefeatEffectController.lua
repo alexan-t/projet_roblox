@@ -137,7 +137,7 @@ function DefeatEffectController.Play(model: Model, delay: number?, speed: number
 	end
 	model:SetAttribute("EnDisparition", true)
 	local startDelay = delay or 0
-	AudioController.Play("MortEnnemi", { Delay = startDelay }) -- son de la dissolution (#18)
+	AudioController.Play("MortEnnemi", { Delay = startDelay, Position = model:GetPivot().Position }) -- son de la dissolution (#18)
 	local scale = if speed and speed > 0 then speed else 1
 	if startDelay > 0 then
 		task.delay(startDelay, run, model, scale)

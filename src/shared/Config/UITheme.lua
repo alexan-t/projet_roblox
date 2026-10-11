@@ -85,6 +85,11 @@ local Transparency = {
 local World = {
 	GridHidden = 0.85, -- transparence locale des cases hors placement
 	Glow = 0.35, -- contour d'un héros à jauge pleine, éclat d'ultime
+	-- Distance maximale (studs) d'affichage des infos flottantes (BillboardGui.MaxDistance) :
+	-- combat (barres, icône de classe, chiffres, annonce d'ultime) visible depuis son arène, pas depuis
+	-- les autres plots ; effets ponctuels (nom du héros invoqué, niveau du royaume) un peu plus loin.
+	CombatDistance = 80,
+	EffectDistance = 120,
 	-- États des cases avant combat : remplissage et contour (transparences).
 	Case = {
 		Hover = { Fill = Colors.Cream, FillT = 0.55, Outline = Colors.Cream, OutlineT = 0 },
@@ -183,6 +188,8 @@ local UITheme = {
 	World = table.freeze({
 		GridHidden = World.GridHidden,
 		Glow = World.Glow,
+		CombatDistance = World.CombatDistance,
+		EffectDistance = World.EffectDistance,
 		Case = table.freeze({
 			Hover = table.freeze(World.Case.Hover),
 			ValidTarget = table.freeze(World.Case.ValidTarget),

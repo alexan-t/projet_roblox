@@ -17,8 +17,12 @@ export type Progression = {
 }
 
 export type Hero = {
-	HeroId: string, -- type de héros (référence au catalogue)
+	HeroId: string, -- HeroId réel (catalogue HeroConfig, modèles ServerStorage.Assets.Heros), jamais une classe de combat
 	Level: number,
+}
+
+export type Summons = {
+	Total: number, -- invocations réussies ; 0 = la prochaine est la première (tirage garanti)
 }
 
 export type Kingdom = {
@@ -46,6 +50,7 @@ export type PlayerData = {
 	-- Raccourcis 1..0 : exactement HeroConfig.HotbarSize identifiants d'exemplaires, "" = case vide
 	-- (pas de tableau à trous dans ProfileStore).
 	Hotbar: { string },
+	Summons: Summons,
 	Kingdom: Kingdom,
 	-- Clé = identifiant de quête.
 	Quests: { [string]: QuestState },

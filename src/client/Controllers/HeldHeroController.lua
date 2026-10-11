@@ -4,6 +4,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local HeroConfig = require(ReplicatedStorage.Shared.Config.HeroConfig)
 local Store = require(script.Parent.Parent.Arena.ArenaStore)
 local PlacementState = require(script.Parent.Parent.Arena.PlacementState)
 local PlotView = require(script.Parent.Parent.Arena.PlotView)
@@ -27,9 +28,11 @@ local function render()
 	if not held or not hero or Store.inCombat() then clear(); return end
 	if heldId ~= held.instanceId then
 		clear()
+		-- Même modèle de combat temporaire que l'arène (HeroConfig.CombatTemplate), pas le HeroId.
+		local info = HeroConfig.Heroes[hero.HeroId]
 		local assets = ReplicatedStorage:FindFirstChild("Assets")
 		local combat = assets and assets:FindFirstChild("Combat")
-		local template = combat and combat:FindFirstChild(`Heros_{hero.HeroId}`)
+		local template = if combat and info then combat:FindFirstChild(info.CombatTemplate) else nil
 		if not template or not template:IsA("Model") then return end
 		local model = template:Clone()
 		model.Name = "HeldHeroPreview"

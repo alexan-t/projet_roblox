@@ -24,9 +24,9 @@ export type Deps = {
 	startStage: (player: any) -> (number?, string?),
 	sessionAlive: (player: any, sessionId: number) -> boolean,
 	cancelStage: (player: any) -> (),
-	-- HeroId d'un exemplaire possédé et utilisable au combat (HeroService).
+	-- Profil de combat d'un exemplaire possédé et utilisable au combat (HeroService), pas son HeroId.
 	heroOf: (player: any, instanceId: any) -> (string?, string?),
-	-- Combat (CombatService) : formation case -> HeroId.
+	-- Combat (CombatService) : formation case -> profil de combat.
 	startCombat: (player: any, sessionId: number, classes: { [number]: string }) -> (number?, string?),
 	cancelCombat: (player: any) -> (),
 }
@@ -75,8 +75,8 @@ function ArenaPrep.new(deps: Deps): Manager
 		if not ArenaRules.isSlot(slot) then
 			return false, "case invalide"
 		end
-		local heroId, reason = deps.heroOf(player, instanceId)
-		if not heroId then
+		local profile, reason = deps.heroOf(player, instanceId)
+		if not profile then
 			return false, reason or "héros inconnu"
 		end
 		if not prep then
@@ -133,11 +133,11 @@ function ArenaPrep.new(deps: Deps): Manager
 		end
 		local classes: { [number]: string } = {}
 		for slot, instanceId in prep.formation do
-			local heroId, reason = deps.heroOf(player, instanceId)
-			if not heroId then
+			local profile, reason = deps.heroOf(player, instanceId)
+			if not profile then
 				return false, reason or "héros inconnu"
 			end
-			classes[slot] = heroId
+			classes[slot] = profile
 		end
 		local combatId, reason = deps.startCombat(player, prep.sessionId, classes)
 		if not combatId then

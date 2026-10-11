@@ -88,19 +88,36 @@ function HeroRules.removeHero(data: any, instanceId: string): boolean
 	return true
 end
 
--- Kit de départ, donné seulement à un joueur sans aucun héros. Renvoie le nombre d'exemplaires créés.
-function HeroRules.grantStarter(data: any, starter: { string }, makeId: () -> string): number
-	if next(data.Heroes) ~= nil then
-		return 0
+-- Vrai si le joueur possède au moins un exemplaire de ce HeroId.
+function HeroRules.owns(data: any, heroId: string): boolean
+	for _, hero in data.Heroes do
+		if hero.HeroId == heroId then
+			return true
+		end
 	end
-	for _, heroId in starter do
-		HeroRules.addHero(data, makeId(), heroId)
-	end
-	return #starter
+	return false
 end
 
--- HeroId d'un exemplaire réellement possédé et connu du combat, sinon nil et la raison.
-function HeroRules.ownedHeroId(data: any, instanceId: any, known: { [string]: any }): (string?, string?)
+-- Héros de départ : chaque HeroId de `starter` absent de la collection est ajouté une fois.
+-- Un nouveau joueur reçoit donc exactement un exemplaire de chacun ; un joueur qui les possède
+-- déjà ne reçoit rien. Renvoie le nombre d'exemplaires créés.
+function HeroRules.grantStarter(data: any, starter: { string }, makeId: () -> string): number
+	local granted = 0
+	for _, heroId in starter do
+		if not HeroRules.owns(data, heroId) then
+			HeroRules.addHero(data, makeId(), heroId)
+			granted += 1
+		end
+	end
+	return granted
+end
+
+export type CombatHero = { HeroId: string, CombatProfile: string, CombatTemplate: string }
+
+-- Exemplaire réellement possédé, activé (catalogue HeroConfig.Heroes) et dont le profil de combat
+-- a des stats (CombatConfig.Heroes) : HeroId réel + profil et modèle de combat temporaires.
+-- Sinon nil et la raison.
+function HeroRules.combatHero(data: any, instanceId: any, catalog: { [string]: any }, profiles: { [string]: any }): (CombatHero?, string?)
 	if typeof(instanceId) ~= "string" then
 		return nil, "héros inconnu"
 	end
@@ -108,10 +125,12 @@ function HeroRules.ownedHeroId(data: any, instanceId: any, known: { [string]: an
 	if not hero then
 		return nil, "héros inconnu"
 	end
-	if typeof(hero.HeroId) ~= "string" or not known[hero.HeroId] then
+	local info = if typeof(hero.HeroId) == "string" then catalog[hero.HeroId] else nil
+	if not info or typeof(info.CombatProfile) ~= "string" or not profiles[info.CombatProfile]
+		or typeof(info.CombatTemplate) ~= "string" then
 		return nil, "héros non disponible au combat"
 	end
-	return hero.HeroId, nil
+	return { HeroId = hero.HeroId, CombatProfile = info.CombatProfile, CombatTemplate = info.CombatTemplate }, nil
 end
 
 -- Vue envoyée au client : exemplaires possédés (triés) et hotbar.
