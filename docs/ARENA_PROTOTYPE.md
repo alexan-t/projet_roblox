@@ -46,7 +46,9 @@ combat automatique, ultimes automatiques, vagues, mini-boss, victoire / défaite
    horizontal) de la bannière de la pancarte.
 4. **Pendant le combat** : aucun prompt, aucune lumière, aucun changement de formation ; pastille
    x1 / x2 / X. **X** arrête sans résultat.
-5. **Fin** : « Victoire ! » ou « Défaite… », la préparation est libérée.
+5. **Fin** : un seul écran de fin (`RewardScreenController` : « Victoire ! » ou « Défaite… », récompenses).
+   L'**équipe reste posée** sur les mêmes dalles avec une nouvelle session du stage choisi : Lancer
+   (ou Prêt) suffit pour rejouer. Si le stage ne peut pas être relancé, l'arène est libérée.
 
 ### Lumières de placement (client seulement)
 

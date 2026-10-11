@@ -5,7 +5,8 @@
 --
 -- Flow : le joueur pose ses héros sur les dalles de SON arène (Place / Remove, via E près d'une
 -- dalle). Le premier héros posé lance la session de stage. Le bouton Prêt (Ready) démarre le
--- combat. Retirer le dernier héros annule la session de stage.
+-- combat. Retirer le dernier héros annule la session de stage. À la fin du combat, l'équipe reste
+-- posée (nouvelle session de stage) : le joueur peut relancer sans tout replacer.
 
 local ArenaRules = require(script.Parent.ArenaRules)
 
@@ -160,13 +161,22 @@ function ArenaPrep.new(deps: Deps): Manager
 		return true
 	end
 
-	-- Fin du combat : ZoneService a déjà reçu le résultat ; l'arène est libérée.
+	-- Fin du combat : ZoneService a déjà reçu le résultat (sa session est close). L'équipe est gardée :
+	-- retour en placement, mêmes héros sur les mêmes dalles, avec une nouvelle session du stage choisi
+	-- (rejouer = Prêt). Si le stage ne peut pas être relancé, l'arène est libérée.
 	function manager:combatEnded(player: any, combatId: number): boolean
 		local prep = manager.preps[player]
 		if not prep or prep.player ~= player or prep.combatId ~= combatId then
 			return false
 		end
-		drop(prep, false)
+		prep.phase = "Placement"
+		prep.combatId = nil
+		local sessionId = deps.startStage(player)
+		if sessionId then
+			prep.sessionId = sessionId
+		else
+			drop(prep, false)
+		end
 		return true
 	end
 

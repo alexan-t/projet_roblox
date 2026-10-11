@@ -294,15 +294,8 @@ local function flash(target: GuiObject, seconds: number)
 	end)
 end
 
+-- Message bref (refus, consigne). Victoire / défaite : uniquement l'écran de fin (RewardScreenController).
 local function showToast(text: string)
-	local good = text == "Victoire !"
-	local bad = text == "Défaite…"
-	if good or bad then
-		ui.result.Text = text
-		ui.result.TextColor3 = if good then C.Gold else C.Error
-		flash(ui.result, 3)
-		return
-	end
 	ui.toastText.Text = text
 	flash(ui.toast, 2.5)
 end
@@ -482,7 +475,7 @@ local function build()
 	end)
 	quit.holder.Position = UDim2.fromOffset(282, 4)
 
-	-- Annonce de vague / mini-boss, résultat, messages brefs.
+	-- Annonce de vague / mini-boss, messages brefs.
 	local banner = UIKit.text(screen, "", SIZE.Title)
 	banner.AnchorPoint = Vector2.new(0.5, 0)
 	banner.Position = UDim2.new(0.5, 0, 0, 70)
@@ -490,12 +483,6 @@ local function build()
 	banner.TextColor3 = C.Gold
 	banner.Visible = false
 	ui.banner = banner
-	local result = UIKit.text(screen, "", SIZE.Hero)
-	result.AnchorPoint = Vector2.new(0.5, 0.5)
-	result.Position = UDim2.fromScale(0.5, 0.32)
-	result.Size = UDim2.fromOffset(600, 80)
-	result.Visible = false
-	ui.result = result
 	local toast = UIKit.panel(screen, T.Tooltip, UITheme.Radius.Pill, UITheme.Stroke.Regular)
 	toast.BackgroundColor3 = C.Cream
 	toast.AnchorPoint = Vector2.new(0.5, 0)
