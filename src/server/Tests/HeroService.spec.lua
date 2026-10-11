@@ -102,7 +102,7 @@ return function(createService: any, modules: any)
 		local replicated = inst("Folder", "ReplicatedStorage")
 		replicated.Shared = { Utils = { Log = { debug = function() end, info = function() end,
 			warn = function(_s: string, m: string) table.insert(env.warnings, m) end } },
-			Config = { HeroConfig = HeroConfig } }
+			Config = { HeroConfig = HeroConfig, RarityConfig = modules.RarityConfig, SummonBannerConfig = modules.SummonBannerConfig } }
 		env.replicated = replicated
 		-- ServerStorage.Assets.Heros : modèles réels (dont un avec script parasite) + un héros d'un
 		-- autre format qui ne doit jamais être copié.
@@ -329,12 +329,122 @@ return function(createService: any, modules: any)
 		assert(#e.events(p, "HeroObtained") == 1)
 	end)
 
-	test("remote ignores every client argument (HeroId, cost, result)", function()
+	test("remote: only a known banner id is read; HeroId, cost and result stay server-side", function()
 		local e = fixture()
 		e.start()
 		local p = e.player("A", { tickets = 1 })
-		local ok, r = e.remote("RequestSummon").OnServerInvoke(p, "barde_de_fer", 0, { HeroId = "barde_de_fer", New = true })
-		assert(ok and r.HeroId == "tireuse_des_faubourgs" and e.data[p].Currencies.SummonTickets == 0)
+		local invoke = e.remote("RequestSummon").OnServerInvoke
+		for _, bad in { "barde_de_fer", 0, { Id = "royaume" }, "" } :: { any } do
+			local ok, why = invoke(p, bad, 0, { HeroId = "barde_de_fer", New = true })
+			assert(ok == false and why == "bannière inconnue", tostring(bad))
+		end
+		assert(e.data[p].Currencies.SummonTickets == 1 and e.data[p].Summons.Total == 0, "nothing consumed")
+		local ok, r = invoke(p, "aube", "barde_de_fer", 0, { HeroId = "barde_de_fer", New = true })
+		assert(ok and r.HeroId == "tireuse_des_faubourgs" and r.Rarity == "Commun" and e.data[p].Currencies.SummonTickets == 0)
+		e.data[p].Currencies.SummonTickets = 1
+		local ok2, r2 = invoke(p) -- sans bannière : bannière par défaut
+		assert(ok2 and modules.HeroConfig.Heroes[r2.HeroId] and r2.Rarity == modules.HeroConfig.Heroes[r2.HeroId].Rarity)
+	end)
+
+	test("GetSummonState: own tickets and cost only; nil before data is loaded", function()
+		local e = fixture()
+		e.start()
+		local a = e.player("A", { tickets = 3 })
+		local b = e.player("B", { tickets = 7, portal = vector(300, 3, 0) })
+		local get = e.remote("GetSummonState").OnServerInvoke
+		local sa, sb = get(a), get(b)
+		assert(sa.Tickets == 3 and sa.Cost == SummonConfig.Cost and sb.Tickets == 7)
+		a.attributes.DataLoaded = nil
+		assert(get(a) == nil)
+	end)
+
+	-- Tirage par rareté (SummonRules pur, vraies HeroConfig / RarityConfig / bannières) -------------
+
+	local SummonRules = modules.SummonRules
+	local Rarity = modules.RarityConfig
+
+	test("pool: 10 tiers, chances sum to 10 000, every hero exactly once in its rarity", function()
+		local pool = SummonRules.buildPool(Rarity.Tiers, HeroConfig.Heroes)
+		assert(#pool.Tiers == 10 and pool.Total == 10000)
+		local seen, total = {}, 0
+		for i, tier in pool.Tiers do
+			assert(tier.Id == Rarity.Tiers[i].Id and tier.Weight == Rarity.Tiers[i].Weight, tier.Id .. " keeps its own chance")
+			assert(#tier.Heroes > 0, tier.Id .. " has heroes")
+			for _, heroId in tier.Heroes do
+				assert(not seen[heroId] and HeroConfig.Heroes[heroId].Rarity == tier.Id)
+				seen[heroId] = true
+				total += 1
+			end
+		end
+		assert(total == 60)
+		assert(pool.Tiers[1].Heroes[1] == "ecuyer_du_rempart", "catalog order")
+	end)
+
+	test("pool: an empty rarity hands its chance to the nearest lower one (upper if none)", function()
+		local catalog = {
+			a = { Rarity = "PeuCommun", Order = 1 },
+			b = { Rarity = "Legendaire", Order = 2 },
+		}
+		local pool = SummonRules.buildPool(Rarity.Tiers, catalog)
+		local weights = {}
+		for _, tier in pool.Tiers do weights[tier.Id] = tier.Weight end
+		assert(weights.Commun == 0, "nothing below Peu commun: Commun goes up")
+		assert(weights.PeuCommun == 5000 + 2500 + 1300 + 700)
+		assert(weights.Legendaire == 350 + 100 + 30 + 12 + 6 + 2)
+		assert(pool.Total == 10000)
+	end)
+
+	test("roll: tier boundaries follow the weights exactly; each tier is reachable", function()
+		local pool = SummonRules.buildPool(Rarity.Tiers, HeroConfig.Heroes)
+		local function rollAt(value: number): string
+			local first = true
+			return SummonRules.roll(pool, nil, function(n: number): number
+				if first then first = false; return value end
+				return 1
+			end)
+		end
+		local cumulative = 0
+		for _, tier in Rarity.Tiers do
+			local low, high = cumulative + 1, cumulative + tier.Weight
+			assert(HeroConfig.Heroes[rollAt(low)].Rarity == tier.Id, tier.Id .. " low")
+			assert(HeroConfig.Heroes[rollAt(high)].Rarity == tier.Id, tier.Id .. " high")
+			cumulative = high
+		end
+		assert(cumulative == 10000)
+		-- toutes les valeurs 1..10000 : chaque rareté sort exactement Weight fois
+		local counts = {}
+		for v = 1, 10000 do
+			local r = HeroConfig.Heroes[rollAt(v)].Rarity
+			counts[r] = (counts[r] or 0) + 1
+		end
+		for _, tier in Rarity.Tiers do assert(counts[tier.Id] == tier.Weight, tier.Id) end
+	end)
+
+	test("banner: featured hero of the rolled rarity comes out with FeaturedShare; other rarities untouched", function()
+		local pool = SummonRules.buildPool(Rarity.Tiers, HeroConfig.Heroes)
+		local banner = modules.SummonBannerConfig.ById.royaume
+		local legendaryStart = 5000 + 2500 + 1300 + 700 + 1
+		local function sequence(values: { number }): (number) -> number
+			local i = 0
+			return function(n: number): number
+				i += 1
+				return math.clamp(values[i] or 1, 1, n)
+			end
+		end
+		-- Légendaire tiré, part mise en avant (50 <= 50) : un héros Featured de ce palier
+		local featured = SummonRules.roll(pool, banner, sequence({ legendaryStart, 50, 1 }))
+		assert(table.find(banner.Featured, featured) and HeroConfig.Heroes[featured].Rarity == "Legendaire", featured)
+		-- 51 > 50 : n'importe quel héros Légendaire (ici le premier du catalogue)
+		local any = SummonRules.roll(pool, banner, sequence({ legendaryStart, 51, 1 }))
+		assert(any == pool.Tiers[5].Heroes[1])
+		-- Commun : aucune mise en avant possible, un seul pick après le palier
+		local calls = 0
+		local commun = SummonRules.roll(pool, banner, function(n: number): number calls += 1; return 1 end)
+		assert(HeroConfig.Heroes[commun].Rarity == "Commun" and calls == 2)
+		for _, b in modules.SummonBannerConfig.Banners do
+			for _, heroId in b.Featured do assert(HeroConfig.Heroes[heroId], b.Id .. " " .. heroId) end
+		end
+		assert(#SummonRules.configProblems(SummonConfig, HeroConfig.Heroes, Rarity.Tiers, modules.SummonBannerConfig.Banners) == 0)
 	end)
 
 	test("portal: out of range refused; near ANOTHER player's portal refused; only its own plot portal", function()
@@ -420,7 +530,8 @@ return function(createService: any, modules: any)
 		local got = s:RequestSummon(p)
 		local t = s:GetCombatHero(p, got.InstanceId)
 		assert(t.HeroId == "tireuse_des_faubourgs" and t.CombatProfile == "Tireur" and t.CombatTemplate == "Heros_Tireur")
-		assert(s:AddHero(p, "Epeiste") == nil and s:AddHero(p, "barde_de_fer") == nil)
+		assert(s:AddHero(p, "Epeiste") == nil and s:AddHero(p, "heros_retire") == nil)
+		assert(s:AddHero(p, "barde_de_fer") ~= nil, "every catalog hero is activated")
 		assert(s:AddHero(p, "tireuse_des_faubourgs") ~= nil)
 	end)
 
@@ -438,7 +549,7 @@ return function(createService: any, modules: any)
 				if d:IsA("BasePart") then assert(d.Anchored and not d.CanCollide and not d.CanTouch and not d.CanQuery) end
 			end
 		end
-		assert(ids.ecuyer_du_rempart and ids.tireuse_des_faubourgs and count(ids) == 2, "only activated heroes")
+		assert(ids.ecuyer_du_rempart and ids.tireuse_des_faubourgs and ids.barde_de_fer and count(ids) == 3, "activated heroes present in ServerStorage, never the one without HeroId")
 		local source = e.serverHeroes:GetChildren()[1]
 		assert(#source:GetChildren() == 2 and source:FindFirstChild("Parasite"), "ServerStorage source untouched")
 	end)

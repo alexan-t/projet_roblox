@@ -65,18 +65,15 @@ doublon, et renvoie `true` avec des héros réels (`ecuyer_du_rempart` sur `Hero
   - `Emplacements.Heros.Heros_1..6` : au sol, en arc de rayon 20 studs devant le socle, du côté
     d'où arrive le joueur (`PointApparition`), tournés vers lui. `Heros_1` au centre, puis
     alternance droite / gauche. Repères invisibles, sans collision ni requête.
-- `ServerStorage.Assets.Heros` (présent) : les **22 héros réels** du Bestiaire, un `Model` par
+- `ServerStorage.Assets.Heros` (présent) : les **60 héros réels** du Bestiaire, un `Model` par
   `HeroId` (reprend l'attribut `HerosId` du Bestiaire, attribut `Rarete` conservé). Pivot aux pieds,
   face avant déduite des bras (ou, à défaut, du sens dans lequel les héros font face au Bestiaire).
   Le pivot de `briseur_de_cloche`, posé sur le buste dans Test 3, a été recalé aux pieds dans la DEV.
   - **Héros de départ proposé** : `ecuyer_du_rempart` (celui des animations #16).
-  - Tout `HeroId` de la liste peut sortir d'une invocation : `alchimiste_aux_masques`,
-    `apprenti_pyromancien`, `barde_de_fer`, `brise_pierre`, `briseur_de_cloche`,
-    `cartomancienne_d_ambre`, `chevalier_du_lierre`, `chevalier_du_soleil_creux`,
-    `dame_aux_mille_bannieres`, `duelliste_du_croissant`, `ecuyer_du_rempart`, `fauconnier_gris`,
-    `forgeron_runique`, `gardien_des_ronces`, `guetteuse_des_pins`, `lancier_des_champs`,
-    `lanciere_des_sources`, `mage_des_lanternes`, `moine_du_vent_bas`, `pretresse_aux_lucioles`,
-    `tireuse_des_faubourgs`, `veneur_de_givre`.
+  - Les 38 derniers (raretés Légendaire à Transcendant surtout) ont été copiés du Bestiaire avec la
+    même règle (pivot aux pieds, face avant des bras, sinon +Z du Bestiaire) ; le Bestiaire n'est
+    pas modifié.
+  - Tout `HeroId` de `HeroConfig` (les 60) peut sortir d'une invocation (`docs/HEROES.md`).
 - `Workspace.Lobby.Plots.Plot_1..8` : `PlotId`, `PointApparition` ancré, `Royaume.EmplacementCentral`,
   **sans** royaume posé (les anciens royaumes posés sont rangés dans
   `ServerStorage.Archive_Plots.Lobby_RoyaumesPosesAvant35`).

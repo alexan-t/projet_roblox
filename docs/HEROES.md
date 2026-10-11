@@ -2,7 +2,8 @@
 
 Boucle Alpha fermée : Combat → récompense (RewardService, +1 `SummonTicket` au premier clear de 1-1)
 → invocation au portail de son plot → nouveau héros → collection / hotbar → royaume.
-Hors scope : niveaux, rareté, vrai gacha, interface d'invocation (#11).
+Raretés, bannières et interface d'invocation : voir § Raretés, § Bannières et `docs/SUMMON.md`.
+Hors scope : niveaux, stats par rareté (tous les héros d'un même profil ont les mêmes stats).
 
 ## HeroId réel ≠ profil de combat
 
@@ -10,20 +11,53 @@ Hors scope : niveaux, rareté, vrai gacha, interface d'invocation (#11).
 `ServerStorage.Assets.Heros`. C'est lui qui est sauvegardé, jamais une classe de combat.
 
 Le catalogue des héros **activés** est `src/shared/Config/HeroConfig.lua` (partagé). Chaque entrée
-porte, en plus du nom et du monogramme provisoire, deux détails Alpha temporaires :
+porte le nom, la **rareté** (`Rarity`, Id de `RarityConfig`, reprise de l'attribut `Rarete` du
+Bestiaire), le monogramme provisoire, l'ordre du Bestiaire et deux détails Alpha temporaires.
+Les **60 héros** du Bestiaire sont activés (tous jouables, tous invocables) :
 
-| HeroId | Nom | `CombatProfile` (stats, `CombatConfig.Heroes`) | `CombatTemplate` (`ReplicatedStorage.Assets.Combat`) |
-| --- | --- | --- | --- |
-| `ecuyer_du_rempart` | Écuyer du Rempart | `Epeiste` | `Heros_EcuyerDuRempart` (articulé, animé) |
-| `tireuse_des_faubourgs` | Tireuse des Faubourgs | `Tireur` | `Heros_Tireur` |
+| HeroId | `CombatProfile` (stats, `CombatConfig.Heroes`) | `CombatTemplate` (`ReplicatedStorage.Assets.Combat`) |
+| --- | --- | --- |
+| `ecuyer_du_rempart` | `Epeiste` | `Heros_EcuyerDuRempart` (articulé, animé) |
+| `tireuse_des_faubourgs` | `Tireur` | `Heros_Tireur` |
+| les 58 autres | un des 6 profils selon leur rôle (`Epeiste`, `Tireur`, `Archer`, `Barbare`, `Paladin`, `Magicien`) | aucun : le combat pose le **vrai modèle** du héros (`ReplicatedStorage.Assets.Heros`, par `HeroId`, statique) |
 
 HeroConfig est la **seule** table de correspondance : le serveur (arène, combat) et le client
 (héros dans les mains) la lisent. `Heros_EcuyerDuRempart` est la copie articulée de
 `Workspace.AtelierAnimation.EcuyerDuRempart` (`JeuAnimations = EcuyerDuRempart` : Marche, Attaque,
 Ultime jouées en combat ; Studio uniquement tant que les séquences n'ont pas d'`AssetId`, voir
 `ANIMATION_TOOLS.md`). Un modèle articulé n'a que sa racine ancrée en arène. La Tireuse garde le
-mannequin provisoire `Heros_Tireur`. Les 20 autres assets réels ne sont pas encore activés (non
-jouables, pas dans le pool).
+mannequin provisoire `Heros_Tireur`. Les autres héros n'ont pas encore d'animation : leur vrai
+modèle est posé tel quel (comme le slime).
+
+## Raretés
+
+`src/shared/Config/RarityConfig.lua` (partagé), du rang 1 au rang 10. Chance de tirage en pour dix
+mille (somme 10 000) ; couleurs dans `UITheme.Rarity` (Transcendant : dégradé `UITheme.RarityPrism`).
+Les monstres n'ont **aucune** rareté.
+
+| Rang | Id | Libellé | Chance | Héros |
+| --- | --- | --- | --- | --- |
+| 1 | `Commun` | Commun | 50 % | 2 |
+| 2 | `PeuCommun` | Peu commun | 25 % | 4 |
+| 3 | `Rare` | Rare | 13 % | 6 |
+| 4 | `Epique` | Épique | 7 % | 8 |
+| 5 | `Legendaire` | Légendaire | 3,5 % | 10 |
+| 6 | `Mythique` | Mythique | 1 % | 10 |
+| 7 | `Maudit` | Maudit | 0,3 % | 8 |
+| 8 | `Supreme` | Suprême | 0,12 % | 6 |
+| 9 | `Calamite` | Calamité | 0,06 % | 4 |
+| 10 | `Transcendant` | Transcendant | 0,02 % | 2 |
+
+Un palier sans héros invocable reporte sa chance sur le palier inférieur le plus proche qui en a
+(au supérieur s'il n'y en a aucun) : la somme reste 10 000 (`SummonRules.buildPool`, testé).
+
+## Bannières
+
+`src/shared/Config/SummonBannerConfig.lua` (partagé) : `Appel du Royaume` (par défaut), `Première
+Aube`, `Serment Brisé`. Toutes tirent dans le même pool (les 60 héros) avec les mêmes chances par
+rareté. Chacune met en avant 3 héros (`Featured`) : quand la rareté tirée contient un héros mis en
+avant, l'un d'eux sort une fois sur deux (`FeaturedShare = 0,5`), sinon un héros quelconque de ce
+palier.
 
 ## Données (`PlayerData`, DataVersion 2)
 
@@ -61,9 +95,12 @@ collection est ajouté une fois au chargement (`HeroRules.grantStarter`). Un nou
 
 ## Invocation
 
-`Remotes.RequestSummon` (RemoteFunction). **Le client n'envoie rien** : HeroId, coût, rareté et
-résultat sont décidés par le serveur ; tout argument est ignoré. Réponse : `(true, Obtained)` ou
-`(false, raison)`.
+`Remotes.RequestSummon` (RemoteFunction). **Le client n'envoie que l'Id de la bannière** (texte,
+facultatif : bannière par défaut ; inconnu ou d'un autre type → refus « bannière inconnue », rien
+consommé). HeroId, coût, rareté et résultat sont décidés par le serveur ; tout autre argument est
+ignoré. Réponse : `(true, Obtained)` ou `(false, raison)`.
+`Remotes.GetSummonState` (RemoteFunction, lecture seule) : `{ Tickets, Cost }` pour la fenêtre
+d'invocation.
 
 Conditions vérifiées par le serveur (`HeroService:CanSummon`), réglages dans
 `src/server/Config/SummonConfig.lua` :
@@ -82,12 +119,13 @@ invocation seulement, `Kingdom.VisualState` 1 → 2. Deux demandes avec un seul 
 réussite, un seul héros, ticket final 0. Ensuite : `KingdomService:Refresh`, `HeroesChanged`,
 `HeroObtained`.
 
-**Tirage Alpha** (pas de gacha) :
+**Tirage** :
 
 - toute première invocation du profil (`Summons.Total == 0`) → **`tireuse_des_faubourgs`**, toujours
   (différente du starter). Un profil qui la possède déjà (test, migration) la reçoit quand même :
   c'est un doublon, `New = false` ;
-- invocations suivantes (tests) → un héros du pool `SummonConfig.Pool` (héros activés), au hasard.
+- invocations suivantes → une rareté selon les chances (§ Raretés), puis un héros de cette rareté
+  (mise en avant de la bannière, § Bannières). `SummonRules.roll`, pur et testé.
 
 **Royaume** : `VisualState` 1 → 2 une seule fois (première invocation), jamais au-delà dans #10.
 `Kingdom.Level` n'a pas encore de règle et n'est pas modifié. Les héros apparaissent sur les
@@ -98,14 +136,15 @@ repères du royaume dans l'ordre de leurs identifiants (`KINGDOM.md`).
 - `HeroService:OnHeroObtained(callback)` (serveur) : `callback(player, Obtained)` après la sauvegarde
   dans PlayerData et le Refresh du royaume.
 - `Remotes.HeroObtained` (RemoteEvent, serveur → **seul** le joueur concerné) :
-  `{ InstanceId, HeroId, Name, New }`.
+  `{ InstanceId, HeroId, Name, New, Rarity }`.
 - `Remotes.HeroesChanged` (RemoteEvent) : nouvelle vue de la collection après tout changement.
 
 ## Modèles côté client
 
 Au démarrage, HeroService clone les modèles des héros **activés** de `ServerStorage.Assets.Heros`
 vers `ReplicatedStorage.Assets.Heros` (attribut `HeroId`), pour la révélation de l'invocation
-(`SummonEffectController`, #11). Copies sans script, ancrées, sans collision ni requête ; la source
+(`SummonEffectController`), les cartes des bannières et le combat des héros sans modèle dédié.
+Copies sans script, ancrées, sans collision ni requête ; la source
 ServerStorage n'est pas modifiée. Seuls les HeroId de HeroConfig sont copiés.
 
 ## Règles (`src/server/Heroes/HeroRules.lua`, pur, testé)
@@ -125,7 +164,7 @@ ServerStorage n'est pas modifiée. Seuls les HeroId de HeroConfig sont copiés.
 | Méthode | Résultat |
 | --- | --- |
 | `GetCombatHero(player, instanceId)` | `{ HeroId, CombatProfile, CombatTemplate }`, ou `nil` et la raison (ArenaService) |
-| `RequestSummon(player)` | `Obtained`, ou `nil` et la raison |
+| `RequestSummon(player, bannerId?)` | `Obtained` (avec `Rarity`), ou `nil` et la raison |
 | `CanSummon(player)` | données du joueur, ou `nil` et la raison |
 | `OnHeroObtained(callback)` | voir Événements |
 | `AddHero(player, heroId)` | identifiant du nouvel exemplaire (héros activé uniquement, sinon `nil`) |
@@ -139,7 +178,8 @@ les modèles d'arène portent `HeroId` (réel), `HeroClass` (profil) et `HeroIns
 
 `ServerStorage.DebugData:Invoke(player, "AddHero", "tireuse_des_faubourgs")` et `"RemoveHero", id`
 passent par HeroService. Pour invoquer, appeler `Remotes.RequestSummon:InvokeServer()` depuis un
-client placé près du portail de son plot.
+client placé près du portail de son plot, ou passer par le portail (E). `"AddCurrency", "SummonTickets", 10`
+donne des tickets.
 
 ## Tests
 

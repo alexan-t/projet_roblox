@@ -6,8 +6,10 @@
 --   GetHeroes (RemoteFunction)     -> vue { Heroes, Hotbar } du joueur ;
 --   HeroesChanged (RemoteEvent)    -> nouvelle vue après tout changement ;
 --   HotbarAction (RemoteFunction)  -> Assign / Clear / Swap, revérifiés ;
---   RequestSummon (RemoteFunction) -> invocation ; le client n'envoie rien : le serveur décide tout ;
---   HeroObtained (RemoteEvent)     -> { InstanceId, HeroId, Name, New } au seul joueur concerné.
+--   RequestSummon (RemoteFunction) -> invocation ; le client n'envoie que l'Id de la bannière
+--                                     (validé) : héros, rareté, coût et résultat sont décidés ici ;
+--   HeroObtained (RemoteEvent)     -> { InstanceId, HeroId, Name, New, Rarity } au seul joueur concerné ;
+--   GetSummonState (RemoteFunction) -> { Tickets, Cost } pour la fenêtre d'invocation (lecture seule).
 -- Au démarrage, les modèles des héros activés sont clonés de ServerStorage.Assets.Heros vers
 -- ReplicatedStorage.Assets.Heros (révélation de l'invocation côté client).
 
@@ -18,6 +20,8 @@ local ServerStorage = game:GetService("ServerStorage")
 
 local Log = require(ReplicatedStorage.Shared.Utils.Log)
 local HeroConfig = require(ReplicatedStorage.Shared.Config.HeroConfig)
+local RarityConfig = require(ReplicatedStorage.Shared.Config.RarityConfig)
+local SummonBannerConfig = require(ReplicatedStorage.Shared.Config.SummonBannerConfig)
 local CombatConfig = require(script.Parent.Parent.Config.CombatConfig)
 local SummonConfig = require(script.Parent.Parent.Config.SummonConfig)
 local HeroRules = require(script.Parent.Parent.Heroes.HeroRules)
@@ -30,7 +34,7 @@ local SCOPE = "HeroService"
 local ASSETS_NAME = "Assets"
 local HEROES_ASSETS_NAME = "Heros"
 
-export type Obtained = { InstanceId: string, HeroId: string, Name: string, New: boolean }
+export type Obtained = { InstanceId: string, HeroId: string, Name: string, New: boolean, Rarity: string }
 type ObtainedCallback = (player: Player, obtained: Obtained) -> ()
 
 local HeroService = {}
@@ -42,6 +46,8 @@ local lastAction: { [Player]: number } = {}
 local summoning: { [Player]: boolean } = {}
 local summonEnabled = true
 local random = Random.new()
+-- Pool de tirage (tous les héros de HeroConfig, par rareté), construit au démarrage.
+local pool: SummonRules.Pool = SummonRules.buildPool(RarityConfig.Tiers, HeroConfig.Heroes)
 
 local idSequence = 0
 
@@ -157,7 +163,14 @@ end
 
 -- Invocation autoritaire. Section critique synchrone (aucun yield) entre la vérification du ticket
 -- et les mutations : deux demandes simultanées avec un seul ticket donnent une seule réussite.
-function HeroService:RequestSummon(player: Player): (Obtained?, string?)
+-- bannerId : Id de SummonBannerConfig (nil = bannière par défaut) ; tout autre valeur est refusée.
+function HeroService:RequestSummon(player: Player, bannerId: any?): (Obtained?, string?)
+	local banner = if bannerId == nil then SummonBannerConfig.ById[SummonBannerConfig.Default]
+		elseif typeof(bannerId) == "string" then SummonBannerConfig.ById[bannerId]
+		else nil
+	if not banner then
+		return nil, "bannière inconnue"
+	end
 	local data, reason = HeroService:CanSummon(player)
 	if not data then
 		return nil, reason
@@ -165,7 +178,7 @@ function HeroService:RequestSummon(player: Player): (Obtained?, string?)
 	summoning[player] = true
 	local ok, result, why = pcall(SummonRules.summon, data, SummonConfig, newId, function(n: number): number
 		return random:NextInteger(1, n)
-	end)
+	end, pool, banner)
 	summoning[player] = nil
 	if not ok then
 		Log.warn(SCOPE, `Invocation de {player.Name} en échec : {tostring(result)}`)
@@ -180,8 +193,9 @@ function HeroService:RequestSummon(player: Player): (Obtained?, string?)
 		HeroId = result.HeroId,
 		Name = if info then info.Name else result.HeroId,
 		New = result.New,
+		Rarity = if info then info.Rarity else RarityConfig.Tiers[1].Id,
 	}
-	Log.info(SCOPE, `{player.Name} invoque {result.HeroId} ({result.InstanceId}, nouveau = {tostring(result.New)}, royaume = {tostring(result.KingdomChanged)})`)
+	Log.info(SCOPE, `{player.Name} invoque {result.HeroId} [{obtained.Rarity}] sur {banner.Id} ({result.InstanceId}, nouveau = {tostring(result.New)}, royaume = {tostring(result.KingdomChanged)})`)
 	KingdomService:Refresh(player)
 	push(player)
 	local event = obtainedEvent
@@ -248,7 +262,7 @@ local function replicateHeroAssets()
 end
 
 function HeroService:Init()
-	local problems = SummonRules.configProblems(SummonConfig, HeroConfig.Heroes)
+	local problems = SummonRules.configProblems(SummonConfig, HeroConfig.Heroes, RarityConfig.Tiers, SummonBannerConfig.Banners)
 	for heroId, info in HeroConfig.Heroes do
 		if not CombatConfig.Heroes[info.CombatProfile] then
 			table.insert(problems, `{heroId} : profil de combat inconnu {info.CombatProfile}`)
@@ -300,17 +314,28 @@ function HeroService:Start()
 		return ok, reason, if data then HeroRules.view(data) else nil
 	end
 	edit.Parent = remotes
-	-- Aucun argument n'est lu : HeroId, coût et résultat sont décidés par le serveur.
+	-- Seul l'Id de bannière est lu (validé) : HeroId, rareté, coût et résultat sont décidés par le serveur.
 	local summon = Instance.new("RemoteFunction")
 	summon.Name = "RequestSummon"
-	summon.OnServerInvoke = function(player: Player): (boolean, any)
-		local result, reason = HeroService:RequestSummon(player)
+	summon.OnServerInvoke = function(player: Player, bannerId: any): (boolean, any)
+		local result, reason = HeroService:RequestSummon(player, bannerId)
 		if result then
 			return true, result
 		end
 		return false, reason
 	end
 	summon.Parent = remotes
+	-- Lecture seule pour la fenêtre d'invocation : tickets du joueur et coût d'une invocation.
+	local state = Instance.new("RemoteFunction")
+	state.Name = "GetSummonState"
+	state.OnServerInvoke = function(player: Player): any
+		local data = loaded(player)
+		if not data then
+			return nil
+		end
+		return { Tickets = data.Currencies.SummonTickets, Cost = SummonConfig.Cost }
+	end
+	state.Parent = remotes
 	Players.PlayerRemoving:Connect(function(player)
 		lastAction[player] = nil
 		summoning[player] = nil

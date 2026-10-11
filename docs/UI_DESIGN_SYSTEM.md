@@ -70,8 +70,29 @@ Les couleurs « matière » sont **relevées dans la map** (surfaces de `PlotTra
 `EnergyFull #F5C542` (pulse), `Progress #E8C670`, fond `BarTrack` = `Ink`.
 Monnaies : `CurrencyGold #E6B23A`, `CurrencyGems #48C8E8`, `CurrencyTickets #B83E30`.
 
-**Rareté des héros** : pas encore définie (#10). Ne pas inventer de paliers ni de couleurs ;
-le cadre reste neutre (`Ink`) en attendant. Les **monstres n'ont aucune rareté**.
+**Rareté des héros** (`UITheme.Rarity`, paliers de `RarityConfig`, voir `docs/HEROES.md`) :
+
+| Rareté | Couleur |
+| --- | --- |
+| Commun | `#B9B0A3` (pierre claire) |
+| Peu commun | `#6CC04A` (vert prairie) |
+| Rare | `#46A2EC` (bleu rivière) |
+| Épique | `#A45BE0` (violet) |
+| Légendaire | `#F5C542` (or) |
+| Mythique | `#FF5A8A` (rose rubis) |
+| Maudit | `#7B2FA8` (violet sombre), avec de l'ombre (`Ink`) plutôt que de la lumière |
+| Suprême | `#EAF3FF` (blanc céleste) |
+| Calamité | `#D2321E` (braise rouge) |
+| Transcendant | dégradé `UITheme.RarityPrism` qui tourne (jamais une seule couleur) |
+
+Usage :
+
+- badge de rareté (pastille contourée `Ink`, texte clair) ;
+- contour de carte et rayons du reveal ;
+- lumière de l'effet d'invocation.
+
+Rendu commun : `src/client/UI/RarityStyle.lua`. Hors invocation, le cadre des cartes reste
+neutre (`Ink`). Les **monstres n'ont aucune rareté**.
 
 Règle de dosage, reprise de la DA : base **bois/sable** désaturée, accents saturés (or, rouge,
 bleu) **rares** et porteurs de sens.
@@ -365,7 +386,7 @@ aucune règle de jeu) :
 | `QuestView` | `Show(quest, { OnClaim })`, `Hide()` | `QuestService:GetActiveQuest` : `{ Title, Progress, Target, Completed }` |
 | `CurrencyView` | `Set(currencies, animate?)`, `Hide()` | `PlayerData.Currencies` : `{ Gold, Gems, SummonTickets }` |
 | `ExpeditionView` | `Show(data, { OnLaunch, OnClose, Selected, OnSelect, Team, OnPrepare })`, `Hide()` | `{ Zone, Title, Stages = { { Stage, Unlocked, Cleared, Waves, Enemies } } }` ; ouverte par la pancarte du stage : `OnSelect` → `SelectStage`, `OnLaunch` → `Ready` (exige 1 héros posé si `Team`), `OnPrepare` → dalles en évidence |
-| `SummonView` | `Show({ Tickets, Cost }, { OnSummon, OnClose })`, `Reveal(hero, { OnContinue })`, `Hide()` | tirage de HeroService (#10) ; `Reveal` après l'effet 3D du portail (`SummonEffectController`) |
+| `SummonView` | `Show({ Tickets, Cost, Banners?, Rates?, Selected? }, { OnSummon(bannerId), OnClose })`, `Reveal({ Name, Model, New, Rarity }, { OnContinue })`, `Hide()` | ouverte au portail par `SummonController` ; bannières (onglets, héros mis en avant), taux par rareté ; `Reveal` après l'effet 3D du portail (`SummonEffectController`) |
 | `CollectionView` | `Show(heroes, { OnClose, OnSelect })`, `Hide()` | `{ { Name, Model, ClassId, Count, New, Equipped } }` depuis `Heroes` / la hotbar |
 
 Placement : quête en haut à gauche, monnaies en haut au centre (la liste des joueurs de Roblox

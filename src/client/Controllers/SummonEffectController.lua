@@ -1,20 +1,28 @@
 --!strict
--- VFX d'invocation et d'apparition du héros (purement visuel, côté client) — issue #17.
--- Joué au portail d'invocation de la map (PortailInvocation) ; HeroService (#10) fournit le héros obtenu.
--- Déroulé (≈ 3 s) :
---   1. charge : le vortex s'illumine d'or, des étincelles convergent vers le voile, le halo au sol monte ;
---   2. éclat : flash du voile, lumière, onde dorée au sol ;
---   3. le héros jaillit du voile en silhouette dorée, se pose devant le portail (poussière), puis la
+-- VFX d'invocation et d'apparition du héros (purement visuel, côté client) — issue #17, docs/SUMMON.md.
+-- Joué au portail d'invocation du plot du joueur (PortailInvocation) ; HeroService fournit le héros
+-- obtenu et sa rareté. Déroulé :
+--   1. charge : le vortex s'illumine de la couleur de la rareté, des étincelles convergent vers le
+--      voile, la lumière monte (la charge dure plus longtemps pour une rareté plus haute) ;
+--   2. éclat : flash du voile, lumière, onde(s) au sol ;
+--   3. le héros jaillit du voile en silhouette colorée, se pose devant le portail (poussière), puis la
 --      silhouette s'efface et révèle le héros ;
---   4. son nom s'affiche au-dessus (Fredoka, contour Ink) avec le badge « Nouveau ».
--- Option Jackpot : utilise le kit EffetJackpot préparé dans le portail par le design (faisceau vers le
--- ciel, cœur, lumière, étincelles, étoile) pour un tirage exceptionnel. Aucune rareté n'est inventée :
--- c'est HeroService qui décidera quand l'utiliser.
+--   4. son nom et sa rareté s'affichent au-dessus (Fredoka, contour Ink) avec le badge « Nouveau ».
+-- La rareté (RarityConfig, rang 1 Commun → 10 Transcendant) marque le joueur de plus en plus fort :
+--   Rare et plus     : colonne de lumière vers le ciel, annonce à l'écran (« Rare ! ») ;
+--   Épique et plus   : ondes supplémentaires ;
+--   Légendaire et +  : secousse de caméra ; kit doré EffetJackpot (Légendaire, Mythique, Suprême) ;
+--   Mythique et plus : flash plein écran, grande annonce ;
+--   Maudit           : fumée sombre et voile d'ombre ; Calamité : braises et secousse forte ;
+--   Transcendant     : toutes les couleurs du prisme qui tournent.
+-- Couleurs : UITheme.Rarity (sans rareté : or, comme la démonstration).
 -- API : SummonEffectController.Play(portal, heroTemplate, options?) -> modèle affiché (copie locale).
---   options = { Name: string?, New: boolean?, Jackpot: boolean?, Keep: number? (s avant de retirer la
---   copie, 4 par défaut ; 0 = la garder) }
+--   options = { Name: string?, New: boolean?, Rarity: string?, Jackpot: boolean?, Keep: number? (s
+--   avant de retirer la copie, 4 par défaut ; 0 = la garder) }
+--   SummonEffectController.Duration(rarity?) -> secondes jusqu'à la révélation du héros.
 -- Démonstration Studio : tag "ApercuInvocation" sur un dossier qui contient des modèles de héros et un
--- ObjectValue « Portail » ; un héros sort toutes les ApercuPause secondes (6 par défaut), jackpot 1 fois sur 3.
+-- ObjectValue « Portail » ; un héros sort toutes les ApercuPause secondes (6 par défaut), avec une
+-- rareté qui monte à chaque tour.
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -23,26 +31,43 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
+local RarityConfig = require(ReplicatedStorage.Shared.Config.RarityConfig)
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
+local RarityStyle = require(script.Parent.Parent.UI.RarityStyle)
+local UIKit = require(script.Parent.Parent.UI.UIKit)
 local AudioController = require(script.Parent.AudioController)
 
 local TAG_APERCU = "ApercuInvocation"
-local CHARGE = 1.2 -- montée en puissance avant l'éclat
+local CHARGE = 1.2 -- montée en puissance avant l'éclat (Commun) ; +0,2 s par rang
 local FLIGHT = 0.45 -- sortie du voile jusqu'au sol
-local REVEAL = 0.6 -- la silhouette dorée s'efface
+local REVEAL = 0.6 -- la silhouette colorée s'efface
 local LANDING_DISTANCE = 7 -- studs devant le voile
+local PILLAR_HEIGHT = 160 -- colonne de lumière vers le ciel (Rare et plus)
 local SPARK_TEXTURE = "rbxasset://textures/particles/sparkles_main.dds"
 local DUST_TEXTURE = "rbxasset://textures/particles/smoke_main.dds"
+local FIRE_TEXTURE = "rbxasset://textures/particles/fire_main.dds"
 
 local Colors = UITheme.Colors
 local SummonEffectController = {}
 
-export type Options = { Name: string?, New: boolean?, Jackpot: boolean?, Keep: number? }
+export type Options = { Name: string?, New: boolean?, Rarity: string?, Jackpot: boolean?, Keep: number? }
 
 local function tween(instance: Instance, info: TweenInfo, goal: { [string]: any }): Tween
 	local t = TweenService:Create(instance, info, goal)
 	t:Play()
 	return t
+end
+
+local function rankOf(rarity: string?): number
+	return if rarity then RarityStyle.rank(rarity) else 1
+end
+
+local function chargeOf(rank: number): number
+	return CHARGE + 0.2 * (rank - 1)
+end
+
+function SummonEffectController.Duration(rarity: string?): number
+	return chargeOf(rankOf(rarity)) + FLIGHT + REVEAL
 end
 
 local function effectPart(props: { [string]: any }): Part
@@ -98,18 +123,48 @@ local function frontOf(model: Model): Vector3
 	return if look.Magnitude > 1e-3 then look.Unit else Vector3.zAxis
 end
 
--- Onde dorée au sol (cercle de segments jointifs qui s'élargit puis s'efface).
-local function ring(center: Vector3, radius: number)
+-- Couleur vivante de l'effet : fixe, ou le prisme qui tourne (Transcendant). paint(fn) applique la
+-- couleur courante tout de suite et, pour le prisme, à chaque image tant que l'effet vit.
+local function palette(rarity: string?): ((t: number) -> Color3, (apply: (Color3) -> ()) -> (), () -> ())
+	local function colorAt(t: number): Color3
+		return if rarity then RarityStyle.colorAt(rarity, t) else Colors.GoldLight
+	end
+	local appliers: { (Color3) -> () } = {}
+	local connection: RBXScriptConnection? = nil
+	if rarity and RarityStyle.prismatic(rarity) then
+		connection = RunService.RenderStepped:Connect(function()
+			local color = colorAt(os.clock())
+			for _, apply in appliers do
+				apply(color)
+			end
+		end)
+	end
+	local function paint(apply: (Color3) -> ())
+		apply(colorAt(os.clock()))
+		table.insert(appliers, apply)
+	end
+	local function stop()
+		if connection then
+			connection:Disconnect()
+		end
+		table.clear(appliers)
+	end
+	return colorAt, paint, stop
+end
+
+-- Onde au sol (cercle de segments jointifs qui s'élargit puis s'efface).
+local function ring(center: Vector3, radius: number, color: Color3, duration: number?)
 	local count = 28
 	local segments: { BasePart } = {}
 	for i = 1, count do
-		segments[i] = effectPart({ Name = "InvocationOnde", Material = Enum.Material.Neon, Color = Colors.Gold, Size = Vector3.new(1, 0.2, 0.5) })
+		segments[i] = effectPart({ Name = "InvocationOnde", Material = Enum.Material.Neon, Color = color, Size = Vector3.new(1, 0.2, 0.5) })
 	end
 	local floor = center + Vector3.new(0, 0.12, 0)
 	local start = os.clock()
+	local length = duration or 0.5
 	local connection: RBXScriptConnection
 	connection = RunService.RenderStepped:Connect(function()
-		local progress = math.clamp((os.clock() - start) / 0.5, 0, 1)
+		local progress = math.clamp((os.clock() - start) / length, 0, 1)
 		local r = radius * (0.25 + 0.75 * (1 - (1 - progress) ^ 3))
 		local alpha = if progress < 0.5 then 0.05 else 0.05 + 0.95 * (progress - 0.5) / 0.5
 		for i, segment in segments do
@@ -158,13 +213,88 @@ local function jackpot(portal: Instance, duration: number)
 	end)
 end
 
-local function banner(hero: Model, name: string, isNew: boolean)
+-- Colonne de lumière du sol vers le ciel (Rare et plus) : s'élargit à l'éclat puis s'efface.
+-- Maudit : colonne d'ombre (mate, assombrie vers Ink) au lieu d'une colonne de lumière.
+local function pillar(base: Vector3, rank: number, paint: ((Color3) -> ()) -> (), hold: number, cursed: boolean)
+	local width = 1.5 + rank * 0.7
+	local column = effectPart({
+		Name = "InvocationColonne",
+		Shape = Enum.PartType.Cylinder,
+		Material = if cursed then Enum.Material.SmoothPlastic else Enum.Material.Neon,
+		Transparency = if cursed then 0.3 else 0.15,
+		Size = Vector3.new(PILLAR_HEIGHT, 0.2, 0.2),
+		CFrame = CFrame.new(base + Vector3.new(0, PILLAR_HEIGHT / 2, 0)) * CFrame.Angles(0, 0, math.pi / 2),
+	})
+	paint(function(color: Color3)
+		column.Color = if cursed then color:Lerp(Colors.Ink, 0.55) else color
+	end)
+	tween(column, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = Vector3.new(PILLAR_HEIGHT, width, width) })
+	task.delay(hold, function()
+		tween(column, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Size = Vector3.new(PILLAR_HEIGHT, 0.1, 0.1), Transparency = 1 })
+		task.delay(0.9, function()
+			column:Destroy()
+		end)
+	end)
+end
+
+-- Secousse de la caméra du joueur local (décalage du Humanoid, rendu ensuite).
+local function shake(magnitude: number, duration: number)
+	local character = Players.LocalPlayer.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then
+		return
+	end
+	local start = os.clock()
+	local connection: RBXScriptConnection
+	connection = RunService.RenderStepped:Connect(function()
+		local t = (os.clock() - start) / duration
+		if t >= 1 or not humanoid.Parent then
+			connection:Disconnect()
+			humanoid.CameraOffset = Vector3.zero
+			return
+		end
+		local m = magnitude * (1 - t)
+		humanoid.CameraOffset = Vector3.new((math.random() - 0.5) * 2 * m, (math.random() - 0.5) * 2 * m, 0)
+	end)
+end
+
+-- Flash plein écran (Mythique et plus ; voile d'ombre pour Maudit) et annonce de la rareté.
+local function announce(rarity: string, rank: number, paint: ((Color3) -> ()) -> ())
+	local screen = UIKit.screen("InvocationRarete", 20)
+	if rank >= 6 then
+		local flash = Instance.new("Frame")
+		flash.Name = "Flash"
+		flash.Size = UDim2.fromScale(1, 1)
+		flash.BorderSizePixel = 0
+		flash.BackgroundTransparency = if rarity == "Maudit" then 0.2 else 0.4
+		flash.Parent = screen
+		if rarity == "Maudit" then
+			flash.BackgroundColor3 = Colors.Ink
+		else
+			paint(function(color: Color3)
+				flash.BackgroundColor3 = color
+			end)
+		end
+		tween(flash, TweenInfo.new(if rarity == "Maudit" then 1.6 else 0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 1 })
+	end
+	local label = UIKit.announce(screen, `{RarityStyle.name(rarity)} !`, {
+		Size = if rank >= 6 then UITheme.Typography.Size.Hero else UITheme.Typography.Size.Title,
+		Hold = 1.5 + rank * 0.15,
+		Y = 150,
+	})
+	RarityStyle.paint(label, rarity)
+	task.delay(5, function()
+		screen:Destroy()
+	end)
+end
+
+local function nameplate(hero: Model, name: string, isNew: boolean, rarity: string?)
 	local typography = UITheme.Typography
 	local _, size = hero:GetBoundingBox()
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "InvocationNom"
-	gui.Size = UDim2.fromOffset(360, 74)
-	gui.StudsOffsetWorldSpace = Vector3.new(0, size.Y / 2 + 2, 0)
+	gui.Size = UDim2.fromOffset(420, if rarity then 100 else 74)
+	gui.StudsOffsetWorldSpace = Vector3.new(0, size.Y / 2 + 2.4, 0)
 	gui.AlwaysOnTop = true
 	gui.MaxDistance = UITheme.World.EffectDistance
 	local text = Instance.new("TextLabel")
@@ -181,6 +311,22 @@ local function banner(hero: Model, name: string, isNew: boolean)
 	stroke.Thickness = typography.TextStroke.Medium
 	stroke.LineJoinMode = UITheme.Stroke.LineJoin
 	stroke.Parent = text
+	if rarity then
+		local label = Instance.new("TextLabel")
+		label.BackgroundTransparency = 1
+		label.Position = UDim2.fromOffset(0, 70)
+		label.Size = UDim2.new(1, 0, 0, 28)
+		label.FontFace = typography.Display
+		label.TextSize = typography.Size.Heading
+		label.Text = RarityStyle.name(rarity)
+		label.Parent = gui
+		RarityStyle.paint(label, rarity)
+		local labelStroke = Instance.new("UIStroke")
+		labelStroke.Color = UITheme.Stroke.Color
+		labelStroke.Thickness = typography.TextStroke.Medium
+		labelStroke.LineJoinMode = UITheme.Stroke.LineJoin
+		labelStroke.Parent = label
+	end
 	if isNew then
 		local badge = Instance.new("Frame")
 		badge.AnchorPoint = Vector2.new(0.5, 0)
@@ -223,6 +369,10 @@ end
 -- Invocation au portail. heroTemplate n'est pas modifié : une copie locale est posée devant le portail.
 function SummonEffectController.Play(portal: Model, heroTemplate: Model, options: Options?): Model?
 	local opts: Options = options or {}
+	local rarity = opts.Rarity
+	local rank = rankOf(rarity)
+	local charge = chargeOf(rank)
+	local colorAt, paint, stopPalette = palette(rarity)
 	-- le voile (disque au centre de l'arche) donne le centre et la face avant du portail
 	local structure = portal:FindFirstChild("Structure")
 	local found = if structure then structure:FindFirstChild("voile") else portal:FindFirstChild("voile", true)
@@ -233,41 +383,66 @@ function SummonEffectController.Play(portal: Model, heroTemplate: Model, options
 	local landing = ground(center + forward * LANDING_DISTANCE, portal)
 	local portalGround = ground(center, portal)
 
-	-- 1. charge : vortex doré, étincelles qui convergent vers le voile, lumière qui monte
+	-- 1. charge : vortex coloré, étincelles qui convergent vers le voile, lumière qui monte
 	local vortex = portal:FindFirstChild("Vortex")
 	local glow = Instance.new("Highlight")
-	glow.FillColor = Colors.GoldLight
-	glow.OutlineColor = Colors.Gold
 	glow.FillTransparency = 1
 	glow.OutlineTransparency = 1
 	glow.DepthMode = Enum.HighlightDepthMode.Occluded
 	glow.Adornee = vortex or portal
 	glow.Parent = vortex or portal
-	tween(glow, TweenInfo.new(CHARGE, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { FillTransparency = 0.25, OutlineTransparency = 0.2 })
+	paint(function(color: Color3)
+		glow.FillColor = color
+		glow.OutlineColor = color
+	end)
+	tween(glow, TweenInfo.new(charge, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { FillTransparency = 0.25, OutlineTransparency = 0.2 })
 
-	local core = effectPart({ Name = "InvocationCoeur", Transparency = 1, Shape = Enum.PartType.Ball, Size = Vector3.one * 10, CFrame = CFrame.new(center) })
+	local core = effectPart({ Name = "InvocationCoeur", Transparency = 1, Shape = Enum.PartType.Ball, Size = Vector3.one * (10 + rank), CFrame = CFrame.new(center) })
 	local inward = emitter(core, {
 		Texture = SPARK_TEXTURE,
 		Shape = Enum.ParticleEmitterShape.Sphere,
 		ShapeInOut = Enum.ParticleEmitterShapeInOut.Inward,
 		ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface,
-		Color = ColorSequence.new(Colors.GoldLight),
-		Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(0.5, 0.6), NumberSequenceKeypoint.new(1, 0) }),
+		Color = if rarity then RarityStyle.sequence(rarity) else ColorSequence.new(Colors.GoldLight),
+		Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(0.5, 0.6 + rank * 0.05), NumberSequenceKeypoint.new(1, 0) }),
 		Lifetime = NumberRange.new(0.5, 0.7),
-		Speed = NumberRange.new(8, 10),
+		Speed = NumberRange.new(8, 10 + rank),
 		LightEmission = 1,
-		Rate = 70,
+		Rate = 70 + 30 * (rank - 1),
 	})
 	inward.Enabled = true
-	AudioController.Play("InvocationCharge", { Position = center }) -- (#18)
+	AudioController.Play("InvocationCharge", { Position = center, Pitch = 1 - 0.03 * (rank - 1) }) -- (#18)
 	local light = Instance.new("PointLight")
-	light.Color = Colors.GoldLight
-	light.Range = 22
+	light.Range = 22 + rank * 2
 	light.Brightness = 0
 	light.Parent = core
-	tween(light, TweenInfo.new(CHARGE, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Brightness = 3 })
-	if opts.Jackpot then
-		jackpot(portal, CHARGE + FLIGHT + REVEAL + 1.5)
+	paint(function(color: Color3)
+		light.Color = color
+	end)
+	tween(light, TweenInfo.new(charge, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Brightness = 3 + rank * 0.3 })
+	if rarity == "Maudit" or rarity == "Calamite" then
+		-- fumée sombre (Maudit) ou braises (Calamité) qui montent autour du portail pendant la charge
+		local cursed = rarity == "Maudit"
+		local smoke = emitter(core, {
+			Texture = if cursed then DUST_TEXTURE else FIRE_TEXTURE,
+			Shape = Enum.ParticleEmitterShape.Sphere,
+			Color = if cursed then ColorSequence.new(Colors.Ink, RarityStyle.color("Maudit")) else ColorSequence.new(RarityStyle.color("Calamite"), Colors.Torch),
+			Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1.5), NumberSequenceKeypoint.new(1, 4) }),
+			Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1) }),
+			Lifetime = NumberRange.new(1, 1.6),
+			Speed = NumberRange.new(2, 5),
+			Acceleration = Vector3.new(0, 4, 0),
+			LightEmission = if cursed then 0 else 0.8,
+			Rate = 40,
+		})
+		smoke.Enabled = true
+		task.delay(charge + 1, function()
+			smoke.Enabled = false
+		end)
+	end
+	-- kit doré du portail : seulement pour les raretés lumineuses (pas Maudit, Calamité ni le prisme)
+	if opts.Jackpot or rarity == "Legendaire" or rarity == "Mythique" or rarity == "Supreme" then
+		jackpot(portal, charge + FLIGHT + REVEAL + 1.5)
 	end
 
 	-- le héros, caché jusqu'à l'éclat
@@ -291,38 +466,61 @@ function SummonEffectController.Play(portal: Model, heroTemplate: Model, options
 	local pivotInFeet = feetFrame:ToObjectSpace(pivot)
 	-- le héros regarde à l'opposé du portail (vers le joueur)
 	local facing = CFrame.lookAt(Vector3.zero, forward).Rotation
-	local function placeFeet(feet: Vector3)
-		hero:PivotTo(CFrame.new(feet) * facing * pivotInFeet)
+	local function placeFeet(at: Vector3)
+		hero:PivotTo(CFrame.new(at) * facing * pivotInFeet)
 	end
 	placeFeet(center - Vector3.new(0, size.Y / 2, 0))
 	hero.Parent = Workspace
 
 	local silhouette = Instance.new("Highlight")
-	silhouette.FillColor = Colors.GoldLight
-	silhouette.OutlineColor = Colors.Gold
 	silhouette.FillTransparency = 0
 	silhouette.OutlineTransparency = 0
 	silhouette.DepthMode = Enum.HighlightDepthMode.Occluded
 	silhouette.Adornee = hero
+	paint(function(color: Color3)
+		silhouette.FillColor = color
+		silhouette.OutlineColor = color
+	end)
 
 	-- 2. éclat, 3. sortie du voile
-	task.delay(CHARGE, function()
+	task.delay(charge, function()
 		inward.Enabled = false
 		AudioController.Play("InvocationEclat", { Position = center })
-		light.Brightness = 6
-		tween(light, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Brightness = 0 })
+		if rank >= 5 then
+			AudioController.Play("Royaume", { Position = center })
+		end
+		if rarity == "Calamite" then
+			AudioController.Play("Seisme", { Position = center })
+		end
+		light.Brightness = 6 + rank
+		tween(light, TweenInfo.new(0.8 + rank * 0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Brightness = 0 })
 		tween(glow, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { FillTransparency = 1, OutlineTransparency = 1 })
 		emitter(core, {
 			Texture = SPARK_TEXTURE,
-			Color = ColorSequence.new(Colors.GoldLight, Colors.TextLight),
-			Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.8), NumberSequenceKeypoint.new(1, 0) }),
-			Lifetime = NumberRange.new(0.4, 0.8),
-			Speed = NumberRange.new(10, 18),
+			Color = if rarity then RarityStyle.sequence(rarity) else ColorSequence.new(Colors.GoldLight, Colors.TextLight),
+			Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.8 + rank * 0.05), NumberSequenceKeypoint.new(1, 0) }),
+			Lifetime = NumberRange.new(0.4, 0.8 + rank * 0.05),
+			Speed = NumberRange.new(10, 18 + rank * 2),
 			SpreadAngle = Vector2.new(180, 180),
 			Drag = 3,
 			LightEmission = 1,
-		}):Emit(40)
-		ring(portalGround, 9)
+		}):Emit(40 + rank * 12)
+		-- ondes : 1 (Commun à Rare), 2 (Épique à Mythique), 3 (Maudit à Calamité), 4 (Transcendant)
+		local rings = if rank >= 10 then 4 elseif rank >= 7 then 3 elseif rank >= 4 then 2 else 1
+		for i = 1, rings do
+			task.delay((i - 1) * 0.18, function()
+				ring(portalGround, 9 + (i - 1) * 4 + rank * 0.4, colorAt(os.clock()), 0.5 + (i - 1) * 0.12)
+			end)
+		end
+		if rank >= 3 then
+			pillar(portalGround, rank, paint, FLIGHT + REVEAL + 0.6 + rank * 0.15, rarity == "Maudit")
+		end
+		if rank >= 5 then
+			shake(0.12 * (rank - 4) + (if rarity == "Calamite" then 0.35 else 0), 0.5 + rank * 0.06)
+		end
+		if rarity and rank >= 3 then
+			announce(rarity, rank, paint)
+		end
 
 		for _, part in hero:GetDescendants() do
 			if part:IsA("BasePart") then
@@ -347,7 +545,7 @@ function SummonEffectController.Play(portal: Model, heroTemplate: Model, options
 			if t >= 1 then
 				connection:Disconnect()
 				placeFeet(landing)
-				-- poussière à l'atterrissage, puis la silhouette dorée révèle le héros
+				-- poussière à l'atterrissage, puis la silhouette colorée révèle le héros
 				local puff = effectPart({ Transparency = 1, Size = Vector3.new(size.X, 0.4, size.Z), CFrame = CFrame.new(landing + Vector3.new(0, 0.3, 0)) })
 				emitter(puff, {
 					Texture = DUST_TEXTURE,
@@ -365,18 +563,19 @@ function SummonEffectController.Play(portal: Model, heroTemplate: Model, options
 					puff:Destroy()
 				end)
 				tween(silhouette, TweenInfo.new(REVEAL, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { FillTransparency = 1, OutlineTransparency = 1 })
-				banner(hero, opts.Name or heroTemplate.Name, opts.New ~= false)
+				nameplate(hero, opts.Name or heroTemplate.Name, opts.New ~= false, rarity)
 			end
 		end)
 	end)
 
-	task.delay(CHARGE + 1.5, function()
+	task.delay(charge + 1.5, function()
 		core:Destroy()
 		glow:Destroy()
 	end)
 	local keep = opts.Keep or 4
+	task.delay(charge + FLIGHT + REVEAL + math.max(keep, 2), stopPalette)
 	if keep > 0 then
-		task.delay(CHARGE + FLIGHT + REVEAL + keep, function()
+		task.delay(charge + FLIGHT + REVEAL + keep, function()
 			hero:Destroy()
 		end)
 	end
@@ -385,6 +584,7 @@ end
 
 -- Démonstration Studio. Le dossier peut être rangé hors du Workspace (ReplicatedStorage) pour que les
 -- modèles de héros ne soient pas visibles ; le lien « Portail » est relu à chaque tour (streaming).
+-- La rareté monte d'un rang à chaque tour (Commun → Transcendant, puis recommence).
 local function runDemo(folder: Instance)
 	local index = 0
 	local shown: Model? = nil
@@ -409,7 +609,7 @@ local function runDemo(folder: Instance)
 			shown = SummonEffectController.Play(portal, template, {
 				Name = if typeof(name) == "string" then name else nil,
 				New = true,
-				Jackpot = index % 3 == 0,
+				Rarity = RarityConfig.Tiers[(index - 1) % #RarityConfig.Tiers + 1].Id,
 				Keep = 0,
 			})
 		end
