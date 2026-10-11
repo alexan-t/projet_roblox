@@ -82,6 +82,16 @@ local function spawnModel(templateName: string, parent: Instance, feet: Vector3,
 	local assets = ReplicatedStorage:FindFirstChild("Assets")
 	local templates = assets and assets:FindFirstChild("Combat")
 	local template = templates and templates:FindFirstChild(templateName)
+	if not template then
+		-- Héros sans modèle de combat dédié : son vrai modèle (copie de HeroService), par HeroId.
+		local heroes = assets and assets:FindFirstChild("Heros")
+		for _, candidate in if heroes then heroes:GetChildren() else {} do
+			if candidate:GetAttribute("HeroId") == templateName then
+				template = candidate
+				break
+			end
+		end
+	end
 	if not template or not template:IsA("Model") then return nil end
 	local model = template:Clone()
 	-- Modèle articulé (AnimationController + Motor6D) : seule la racine est ancrée, les membres

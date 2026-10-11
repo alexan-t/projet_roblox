@@ -1,6 +1,7 @@
 --!strict
 -- Invocation Alpha (voir docs/HEROES.md). Uniquement des données, lues par HeroService.
--- Aucun gacha : premier tirage garanti, puis un petit pool des héros activés (HeroConfig).
+-- Premier tirage garanti, puis tirage pondéré par rareté (RarityConfig) parmi tous les héros activés
+-- (HeroConfig), avec la mise en avant de la bannière choisie (SummonBannerConfig).
 
 local SummonConfig = {
 	-- Tickets consommés par invocation (Currencies.SummonTickets, donnés par RewardService).
@@ -12,8 +13,6 @@ local SummonConfig = {
 	MaxDistance = 18,
 	-- Toute première invocation du profil (Summons.Total == 0) : ce héros, toujours.
 	FirstSummon = "tireuse_des_faubourgs",
-	-- Invocations suivantes : un héros de ce pool, au hasard (test Alpha uniquement).
-	Pool = table.freeze({ "ecuyer_du_rempart", "tireuse_des_faubourgs" }),
 	-- La première invocation fait passer le royaume de cet état à l'état suivant, une seule fois.
 	KingdomFrom = 1,
 	KingdomTo = 2,

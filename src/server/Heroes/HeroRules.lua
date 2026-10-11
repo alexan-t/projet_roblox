@@ -126,11 +126,12 @@ function HeroRules.combatHero(data: any, instanceId: any, catalog: { [string]: a
 		return nil, "héros inconnu"
 	end
 	local info = if typeof(hero.HeroId) == "string" then catalog[hero.HeroId] else nil
-	if not info or typeof(info.CombatProfile) ~= "string" or not profiles[info.CombatProfile]
-		or typeof(info.CombatTemplate) ~= "string" then
+	if not info or typeof(info.CombatProfile) ~= "string" or not profiles[info.CombatProfile] then
 		return nil, "héros non disponible au combat"
 	end
-	return { HeroId = hero.HeroId, CombatProfile = info.CombatProfile, CombatTemplate = info.CombatTemplate }, nil
+	-- Sans modèle de combat dédié : le vrai modèle du héros (ArenaService le cherche par HeroId).
+	local template = if typeof(info.CombatTemplate) == "string" then info.CombatTemplate else hero.HeroId
+	return { HeroId = hero.HeroId, CombatProfile = info.CombatProfile, CombatTemplate = template }, nil
 end
 
 -- Vue envoyée au client : exemplaires possédés (triés) et hotbar.

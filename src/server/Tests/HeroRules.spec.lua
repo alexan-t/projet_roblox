@@ -90,13 +90,24 @@ return function(HeroRules: any, heroConfig: any, combatConfig: any)
 		assert(HeroRules.grantStarter(d, heroConfig.StarterHeroes, ids()) == 0)
 	end)
 
-	test("catalog: real HeroId != combat profile; every hero has stats and a combat template", function()
+	test("catalog: 60 heroes, real HeroId != combat profile; stats, rarity, optional dedicated template", function()
+		local rarities = { Commun = true, PeuCommun = true, Rare = true, Epique = true, Legendaire = true, Mythique = true,
+			Maudit = true, Supreme = true, Calamite = true, Transcendant = true }
+		local count, orders = 0, {}
 		for heroId, info in heroConfig.Heroes do
+			count += 1
 			assert(not combatConfig.Heroes[heroId], heroId .. " must not be a combat class")
 			assert(combatConfig.Heroes[info.CombatProfile], heroId .. " profile " .. tostring(info.CombatProfile))
-			assert(typeof(info.CombatTemplate) == "string" and info.CombatTemplate ~= "", heroId .. " template")
+			assert(info.CombatTemplate == nil or (typeof(info.CombatTemplate) == "string" and info.CombatTemplate ~= ""), heroId .. " template")
 			assert(typeof(info.Name) == "string" and info.Name ~= "")
+			assert(rarities[info.Rarity], heroId .. " rarity " .. tostring(info.Rarity))
+			assert(typeof(info.PlaceholderIcon) == "string" and #info.PlaceholderIcon >= 1 and #info.PlaceholderIcon <= 2, heroId .. " icon")
+			assert(not orders[info.Order], "unique Order")
+			orders[info.Order] = true
 		end
+		assert(count == 60, "60 heroes, got " .. count)
+		assert(heroConfig.Heroes.ecuyer_du_rempart.PlaceholderIcon == "ER" and heroConfig.Heroes.ecuyer_du_rempart.Rarity == "Commun")
+		assert(heroConfig.Heroes.aureon_porteur_de_la_premiere_aube.Rarity == "Transcendant")
 		assert(heroConfig.Heroes.ecuyer_du_rempart.CombatProfile == "Epeiste")
 		assert(heroConfig.Heroes.ecuyer_du_rempart.CombatTemplate == "Heros_EcuyerDuRempart")
 		assert(heroConfig.Heroes.tireuse_des_faubourgs.CombatProfile == "Tireur")
@@ -133,7 +144,8 @@ return function(HeroRules: any, heroConfig: any, combatConfig: any)
 			E = { HeroId = "ecuyer_du_rempart", Level = 1 },
 			T = { HeroId = "tireuse_des_faubourgs", Level = 1 },
 			L = { HeroId = "Epeiste", Level = 1 }, -- ancienne classe : plus un HeroId
-			B = { HeroId = "barde_de_fer", Level = 1 }, -- asset réel, pas encore activé
+			B = { HeroId = "barde_de_fer", Level = 1 }, -- activé, sans modèle de combat dédié
+			X = { HeroId = "heros_retire", Level = 1 }, -- HeroId absent du catalogue
 		}
 		local e = HeroRules.combatHero(d, "E", heroConfig.Heroes, combatConfig.Heroes)
 		assert(e and e.HeroId == "ecuyer_du_rempart" and e.CombatProfile == "Epeiste" and e.CombatTemplate == "Heros_EcuyerDuRempart")
@@ -142,7 +154,9 @@ return function(HeroRules: any, heroConfig: any, combatConfig: any)
 		assert(select(2, HeroRules.combatHero(d, "Z", heroConfig.Heroes, combatConfig.Heroes)) == "héros inconnu")
 		assert(select(2, HeroRules.combatHero(d, 5, heroConfig.Heroes, combatConfig.Heroes)) == "héros inconnu")
 		assert(select(2, HeroRules.combatHero(d, "L", heroConfig.Heroes, combatConfig.Heroes)) == "héros non disponible au combat")
-		assert(select(2, HeroRules.combatHero(d, "B", heroConfig.Heroes, combatConfig.Heroes)) == "héros non disponible au combat")
+		local b = HeroRules.combatHero(d, "B", heroConfig.Heroes, combatConfig.Heroes)
+		assert(b and b.HeroId == "barde_de_fer" and b.CombatProfile == "Paladin" and b.CombatTemplate == "barde_de_fer", "real model by HeroId")
+		assert(select(2, HeroRules.combatHero(d, "X", heroConfig.Heroes, combatConfig.Heroes)) == "héros non disponible au combat")
 	end)
 
 	test("removing a hero frees its shortcut and never touches anything else", function()

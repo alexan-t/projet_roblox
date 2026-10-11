@@ -64,6 +64,22 @@ local Colors = {
 	CurrencyTickets = hex("#B83E30"),
 }
 
+-- Raretés des héros (RarityConfig) : badge, cadre de carte, lumière de l'invocation. Les monstres
+-- n'ont aucune rareté. Transcendant n'a pas une couleur mais un dégradé qui tourne (RarityPrism).
+local Rarity = {
+	Commun = hex("#B9B0A3"), -- pierre claire
+	PeuCommun = hex("#6CC04A"), -- vert prairie
+	Rare = hex("#46A2EC"), -- bleu rivière
+	Epique = hex("#A45BE0"), -- violet
+	Legendaire = hex("#F5C542"), -- or
+	Mythique = hex("#FF5A8A"), -- rose rubis
+	Maudit = hex("#7B2FA8"), -- violet sombre (avec fumée noire)
+	Supreme = hex("#EAF3FF"), -- blanc céleste
+	Calamite = hex("#D2321E"), -- braise rouge
+	Transcendant = hex("#7FF7E8"), -- teinte de repli du dégradé
+}
+local RarityPrism = { hex("#FF7A7A"), hex("#FFD36B"), hex("#7FF7A0"), hex("#7FF7E8"), hex("#8FA8FF"), hex("#E08CFF") }
+
 -- Transparence de fond (BackgroundTransparency : 0 = opaque). Le monde reste visible derrière.
 local Transparency = {
 	Panel = 0.25, -- grand panneau, fenêtre
@@ -184,6 +200,8 @@ local Animation = {
 
 local UITheme = {
 	Colors = table.freeze(Colors),
+	Rarity = table.freeze(Rarity),
+	RarityPrism = table.freeze(RarityPrism),
 	Transparency = table.freeze(Transparency),
 	World = table.freeze({
 		GridHidden = World.GridHidden,

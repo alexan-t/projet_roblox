@@ -4,7 +4,7 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $testBuild = Join-Path $repoRoot 'build'
 New-Item -ItemType Directory -Force -Path $testBuild | Out-Null
-function Source([string]$path) { Get-Content -LiteralPath (Join-Path $repoRoot $path) -Raw }
+function Source([string]$path) { Get-Content -LiteralPath (Join-Path $repoRoot $path) -Raw -Encoding UTF8 }
 function Module([string]$path) { "(function()`n$(Source $path)`nend)()" }
 
 # 1. HeroRules (pur) avec les vraies HeroConfig et CombatConfig.
@@ -16,6 +16,8 @@ $runner = "local HeroRules = $(Module 'src/server/Heroes/HeroRules.lua')`n" +
 	"local modules = {`n" +
 	"    HeroRules = HeroRules, SummonRules = SummonRules,`n" +
 	"    HeroConfig = $(Module 'src/shared/Config/HeroConfig.lua'),`n" +
+	"    RarityConfig = $(Module 'src/shared/Config/RarityConfig.lua'),`n" +
+	"    SummonBannerConfig = $(Module 'src/shared/Config/SummonBannerConfig.lua'),`n" +
 	"    CombatConfig = $(Module 'src/server/Config/CombatConfig.lua'),`n" +
 	"    SummonConfig = $(Module 'src/server/Config/SummonConfig.lua'),`n" +
 	"    Migrations = $(Module 'src/server/Data/Migrations.lua'),`n" +

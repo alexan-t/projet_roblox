@@ -664,10 +664,11 @@ function UIKit.announce(screen: Instance, text: string, options: AnnounceOptions
 	return label
 end
 
--- Rayons dorés lents derrière un titre ou une carte (victoire, héros obtenu). Un GuiObject tourne
--- autour de son propre centre : chaque rayon est un carré transparent centré qui porte un faisceau
+-- Rayons lents derrière un titre ou une carte (victoire, héros obtenu) : dorés, ou de la couleur donnée
+-- (rareté du héros). Un GuiObject tourne autour de son propre centre : chaque rayon est un carré
+-- transparent centré qui porte un faisceau
 -- partant du centre vers le haut. Renvoie le support (à positionner) ; il tourne jusqu'à sa destruction.
-function UIKit.rays(parent: Instance, length: number, count: number?): Frame
+function UIKit.rays(parent: Instance, length: number, count: number?, color: Color3?): Frame
 	local holder = Instance.new("Frame")
 	holder.Name = "Rayons"
 	holder.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -685,7 +686,7 @@ function UIKit.rays(parent: Instance, length: number, count: number?): Frame
 		beam.AnchorPoint = Vector2.new(0.5, 0)
 		beam.Position = UDim2.fromScale(0.5, 0)
 		beam.Size = UDim2.new(0, if i % 2 == 0 then length * 0.1 else length * 0.15, 0.5, 0)
-		beam.BackgroundColor3 = Colors.GoldLight
+		beam.BackgroundColor3 = color or Colors.GoldLight
 		beam.BorderSizePixel = 0
 		beam.Parent = arm
 		-- plein près du centre, effacé vers l'extérieur ; pas de reflet glossy
