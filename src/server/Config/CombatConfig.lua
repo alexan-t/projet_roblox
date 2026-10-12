@@ -1,7 +1,7 @@
 --!strict
 -- Statistiques de combat de l'Alpha (voir docs/COMBAT.md).
--- VALEURS TEMPORAIRES, pas le balancing final : choisies pour un Stage 1-1 lisible, terminable
--- en une à deux minutes à x1 avec 3-4 héros, et perdu avec un héros seul.
+-- VALEURS TEMPORAIRES, pas le balancing final. Le Stage 1-1 (entrée, sans mini-boss) se gagne avec le
+-- seul héros de départ ; un stage avec vague complète + mini-boss demande 3-4 héros (un héros seul y perd).
 -- Seul le serveur lit ce fichier. Aucune stat dans StageConfig, ArenaConfig, les modèles ou le client.
 
 local CombatConfig = {

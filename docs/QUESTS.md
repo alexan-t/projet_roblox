@@ -2,7 +2,8 @@
 
 `QuestService` (#6) guide le joueur par une chaîne de quêtes, sans tutoriel lourd.
 Première quête : **Défends ton domaine**, terminer Zone 1 - Stage 1.
-Tout est serveur : aucune remote, aucune UI dans ce lot.
+La logique est serveur. Le client lit une vue en lecture seule et demande la réclamation par
+remote (#11, voir § Remotes et HUD).
 
 ## QuestConfig
 
@@ -93,9 +94,30 @@ local ok, reason = QuestService:ClaimQuest(player, "DefendDomain")
   des récompenses de stage, du First Clear (`Progression.FirstClears`) et du ticket
   d'invocation initial. Si une quête doit un jour donner une récompense, elle sera définie
   dans la config et attribuée par RewardService, pas par QuestService.
-- **Controllers / UI (#11)** : `QuestController` affichera l'état fourni par `GetActiveQuest`
-  et déclenchera la réclamation via une action serveur à créer dans #11, qui appellera
-  `ClaimQuest`. Aucune remote n'est exposée aujourd'hui.
+- **Controllers / UI (#11)** : `QuestController` affiche la vue de `GetActiveQuest` et réclame
+  par `Remotes.ClaimQuest` (voir § Remotes et HUD).
+
+## Remotes et HUD (#11)
+
+| Remote | Sens | Contenu |
+| --- | --- | --- |
+| `GetActiveQuest` (RemoteFunction) | client → serveur | vue `{ Id, Title, Progress, Target, Completed }` (copie) ou `nil` |
+| `ClaimQuest` (RemoteFunction) | client → serveur | le client n'envoie que l'Id de quête (texte) ; réponse `(ok, raison?)`, tout est revérifié (`quête non terminée`, `déjà réclamée`, `quête inconnue`) |
+| `QuestChanged` (RemoteEvent) | serveur → le seul joueur | même vue, ou `nil` quand la chaîne est terminée ; envoyée à l'activation (join), à chaque progression et à la réclamation |
+
+Jamais `PlayerData` : le client ne reçoit que la vue. La réclamation ne donne aucune récompense
+(celles du stage viennent de RewardService).
+
+`src/client/Controllers/QuestController.lua` :
+- au join, il appelle `GetActiveQuest` puis `QuestView.Show` ; ensuite, chaque `QuestChanged` met
+  la vue à jour (progression, « Quête terminée ! », bouton **Récupérer**) ;
+- **Récupérer** appelle `ClaimQuest(questId)`. Une vue `nil` ferme le suivi (`QuestView.Hide`) :
+  il n'existe pas de quête suivante aujourd'hui ;
+- pendant l'écran de fin de combat, une mise à jour attend « Continuer », pour que l'annonce ne se
+  perde pas derrière l'écran.
+
+Le suivi est en haut à gauche, sous la fenêtre de chat Roblox et sa barre de saisie quand elles y
+sont. Sans cela, le chat recouvre le suivi et capte le clic sur « Récupérer ».
 
 Aucun système d'événements générique n'existe encore dans le projet. Tant que les appelants
 sont peu nombreux, #7 appelle directement QuestService (puis RewardService) ; un bus

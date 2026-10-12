@@ -9,7 +9,9 @@
 --   quest = { Title: string, Progress: number, Target: number, Completed: boolean }
 --   options = { OnClaim: (() -> ())? } (sans OnClaim, pas de bouton)
 
+local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TextChatService = game:GetService("TextChatService")
 
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local Icons = require(script.Parent.Parent.Icons)
@@ -22,7 +24,7 @@ local Spacing = UITheme.Spacing
 local WIDTH = 340
 local HEIGHT = 92
 local HEIGHT_DONE = 150
-local TOP = 72 -- sous la barre de Roblox (boutons du menu en haut à gauche)
+local TOP = 72 -- sous la barre de Roblox (boutons du menu en haut à gauche) ; plus bas si le chat est là
 
 export type Quest = { Title: string, Progress: number, Target: number, Completed: boolean }
 export type Options = { OnClaim: (() -> ())? }
@@ -41,6 +43,38 @@ type Refs = {
 }
 
 local refs: Refs? = nil
+
+-- En haut à gauche, mais sous la fenêtre de chat Roblox et sa barre de saisie quand elles y sont
+-- (sinon le chat recouvre le suivi et capte le clic sur « Récupérer »). Suit les changements de
+-- taille du chat et de l'écran.
+local function placeBelowChat(screen: ScreenGui, panel: Frame)
+	local window = TextChatService:FindFirstChildOfClass("ChatWindowConfiguration")
+	local input = TextChatService:FindFirstChildOfClass("ChatInputBarConfiguration")
+	local scale = screen:FindFirstChildOfClass("UIScale")
+	local function update()
+		local bottom = 0
+		for _, config: any in { window, input } do
+			if config and config.Enabled and config.AbsoluteSize.X > 0 then
+				bottom = math.max(bottom, config.AbsolutePosition.Y + config.AbsoluteSize.Y)
+			end
+		end
+		local inset = GuiService:GetGuiInset().Y
+		local top = if bottom > 0 then bottom + inset + Spacing.S else TOP
+		local s: number = if scale then scale.Scale else 1
+		panel.Position = UDim2.fromOffset(Spacing.ScreenMargin, math.max(top, TOP * s) / s)
+	end
+	update()
+	for _, config: any in { window, input } do
+		if config then
+			config:GetPropertyChangedSignal("AbsoluteSize"):Connect(update)
+			config:GetPropertyChangedSignal("AbsolutePosition"):Connect(update)
+			config:GetPropertyChangedSignal("Enabled"):Connect(update)
+		end
+	end
+	if scale then
+		scale:GetPropertyChangedSignal("Scale"):Connect(update)
+	end
+end
 
 local function build(): Refs
 	local screen = UIKit.screen("QueteHUD", 2)
@@ -70,6 +104,7 @@ local function build(): Refs
 	counter.AnchorPoint = Vector2.new(1, 0)
 	counter.Position = UDim2.new(1, -Spacing.M, 0, 54)
 	counter.Size = UDim2.fromOffset(52, 26)
+	placeBelowChat(screen, panel)
 	UIKit.open(panel)
 	return { screen = screen, panel = panel, title = title, bar = bar, counter = counter }
 end

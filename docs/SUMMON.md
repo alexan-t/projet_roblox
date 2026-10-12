@@ -41,6 +41,30 @@ Le client la met en attente (`ArenaStore.holdHeroes`) et ne la montre qu'à « C
 Le royaume du plot (héros posés devant le château, serveur) se met à jour tout de suite, mais il est
 hors champ pendant la cinématique.
 
+**Une seule présentation par héros** : la réponse de `RequestSummon` et `Remotes.HeroObtained`
+passent par la même fonction (`handleObtained`), dédupliquée par `InstanceId`. Le héros est montré
+une seule fois, quel que soit le message arrivé en premier.
+
+**Carte synchronisée sur l'effet** : `SummonEffectController.Play(..., { OnRevealed })` appelle
+`OnRevealed` quand la silhouette du héros s'est effacée. La carte suit après une courte pause pour
+le regarder (`HOLD_ON_HERO`, 0,7 s + 0,1 s par rang de rareté). Il n'y a pas de seconde horloge
+calquée sur la durée de l'effet.
+
+**Contenu de la carte** : son nom, son vrai modèle, l'icône de son profil de combat (`ClassId` =
+`HeroConfig.CombatProfile`), sa rareté et le badge « Nouveau ».
+
+**Après un ticket gagné**, au « Continuer » de l'écran de fin : le portail du plot s'illumine
+quelques secondes (Highlight doré) et une annonce « Nouveau ticket ! Invoque un héros au portail »
+s'affiche (`SummonController.HintPortal`). Rien ne s'ouvre à la place du joueur.
+
+**Un seul écran à la fois** (`src/client/UI/ScreenState.lua`) : la fenêtre d'invocation ne s'ouvre
+pas par-dessus la fenêtre des stages ou l'écran de fin, et le prompt « Invoquer » est désactivé
+tant qu'un écran est ouvert.
+
+**Argument de `RequestSummon`** : seul l'Id de la bannière part, choix d'interface validé par le
+serveur (bannière inconnue → refus). Héros, rareté, coût et ticket sont décidés côté serveur.
+Le ticket n'est jamais décrémenté côté client : le HUD des monnaies relit `GetCurrencies`.
+
 ## Effet (rang 1 Commun → 10 Transcendant)
 
 Tous les rangs suivent la même base :
@@ -77,7 +101,7 @@ touchés) ; seuls des objets temporaires sont ajoutés puis détruits.
 
 ```lua
 SummonEffectController.Play(portal: Model, heroTemplate: Model, options?) -> Model?
--- options = { Name: string?, New: boolean?, Rarity: string?, Jackpot: boolean?, Keep: number? }
+-- options = { Name: string?, New: boolean?, Rarity: string?, Jackpot: boolean?, Keep: number?, OnRevealed: (() -> ())? }
 SummonEffectController.Duration(rarity?) -> number -- secondes jusqu'à la révélation du héros
 ```
 

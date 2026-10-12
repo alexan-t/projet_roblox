@@ -37,7 +37,8 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 		end }
 	end
 
-	local function world(): any
+	-- stageConfig : StageConfig de test (par défaut la vraie). Les défaites utilisent HARD.
+	local function world(stageConfig: any?): any
 		local env: any = { data = {}, plots = {}, fired = {}, instances = {}, warnings = {} }
 		local function signal(): any
 			local sig: any = { listeners = {} }
@@ -63,7 +64,9 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 		env.Instance = { new = function(class: string): any
 			local i: any = { ClassName = class, Name = class }
 			if class == "RemoteEvent" then
-				function i:FireClient(player: any, combatId: number, events: any)
+				function i:FireClient(player: any, combatId: any, events: any)
+					-- seuls les lots du combat (CombatEvent) ; QuestChanged envoie une vue de quête, pas un lot
+					if self.Name ~= "CombatEvent" then return end
 					table.insert(env.fired, { player = player, combatId = combatId, events = events })
 				end
 			end
@@ -85,7 +88,12 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 		local plotService: any = {}
 		function plotService:GetPlot(player: any): any return env.plots[player] end
 		local services: any = { DataService = dataService, PlotService = plotService }
-		local tree = { Config = configs, Combat = { CombatEngine = CombatEngine }, Rewards = { RewardRules = RewardRules } }
+		local config = configs
+		if stageConfig then
+			config = table.clone(configs)
+			config.StageConfig = stageConfig
+		end
+		local tree = { Config = config, Combat = { CombatEngine = CombatEngine }, Rewards = { RewardRules = RewardRules } }
 		local function scriptFor(): any return { Parent = setmetatable({ Parent = tree }, { __index = services }) } end
 		services.RewardService = factories.reward(env, scriptFor())
 		services.QuestService = factories.quest(env, scriptFor())
@@ -152,6 +160,9 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 
 	local STRONG = { [1] = "Epeiste", [2] = "Paladin", [7] = "Archer", [9] = "Magicien" }
 	local WEAK = { [5] = "Magicien" }
+	local STARTER = { [5] = "Epeiste" } -- compte neuf : l'Écuyer du Rempart seul (profil Epeiste)
+	-- Stage 1-1 « dur » (l'ancien : 2 Slime, 4 Gobelin, mini-boss) : un héros seul y perd toujours.
+	local HARD = { Zones = { { Stages = { { Waves = { { Enemies = { { EnemyId = "Slime", Count = 2 }, { EnemyId = "Gobelin", Count = 4 } } } }, MiniBoss = { EnemyId = "Boss" } } } } } }
 	local FIRST = configs.RewardConfig.Stages["1-1"].FirstClearReward
 
 	test("Victory: CompleteStage -> quest progresses -> rewards granted -> one enriched CombatEnded", function()
@@ -171,8 +182,16 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 		assert(quest and quest.Completed == true, "QuestService progressed on the same StageCompleted")
 	end)
 
-	test("Defeat: no reward, FirstClear false, no quest progress", function()
+	test("new player loop: the starter alone wins the real Stage 1-1 -> First Clear and the first ticket", function()
 		local w = world()
+		local p = w.player("A")
+		local ended = w.fight(p, STARTER)
+		assert(#ended == 1 and ended[1].Result == "Victory" and ended[1].FirstClear == true, tostring(ended[1] and ended[1].Result))
+		assert(w.data[p].Currencies.SummonTickets == 1, "first ticket: the summon is reachable")
+	end)
+
+	test("Defeat (hard stage): no reward, FirstClear false, no quest progress", function()
+		local w = world(HARD)
 		local p = w.player("A")
 		local ended = w.fight(p, WEAK)
 		assert(#ended == 1 and ended[1].Result == "Defeat" and ended[1].FirstClear == false)
@@ -207,8 +226,8 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 		assert(w.data[p].Currencies.SummonTickets == 1)
 	end)
 
-	test("two players fighting: independent rewards and events", function()
-		local w = world()
+	test("two players fighting (hard stage): independent rewards and events", function()
+		local w = world(HARD)
 		local a, b = w.player("A"), w.player("B")
 		w.fight(a, STRONG)
 		local eb = w.fight(b, WEAK)

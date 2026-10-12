@@ -12,7 +12,7 @@ $testSource = Get-Content -LiteralPath (Join-Path $repoRoot 'src/server/Tests/Qu
 # Aucun remplacement de logique du service, aucun acces a Studio ou DataStore.
 $runnerSource = "local config = (function()`n" + $configSource + "`nend)()`n" + @'
 local function createService(env)
-    local game, script, require = env.game, env.script, env.require
+    local game, script, require, Instance = env.game, env.script, env.require, env.Instance
 '@ + "`n" + $serviceSource + "`nend`nlocal runTests = (function()`n" + $testSource + "`nend)()`nrunTests(createService, config)`n"
 $runnerPath = Join-Path $testBuild 'quest-service-tests.luau'
 [System.IO.File]::WriteAllText($runnerPath, $runnerSource, [System.Text.UTF8Encoding]::new($false))

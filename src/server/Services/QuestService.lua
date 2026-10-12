@@ -2,7 +2,12 @@
 -- Quêtes du joueur (voir docs/QUESTS.md), pilotées par QuestConfig et sauvegardées dans PlayerData.Quests.
 -- La quête active se déduit de la chaîne FirstQuestId -> NextQuestId : c'est la première quête
 -- de la chaîne qui n'est pas encore réclamée. Aucun champ supplémentaire n'est sauvegardé.
--- Serveur uniquement : les autres services signalent le gameplay avec HandleGameplayEvent.
+-- Les autres services signalent le gameplay avec HandleGameplayEvent.
+-- Remotes (lecture seule pour le client, le serveur décide tout) :
+--   GetActiveQuest (RemoteFunction) -> vue de la quête active ({ Id, Title, Progress, Target, Completed }) ou nil ;
+--   ClaimQuest (RemoteFunction)     -> (ok, raison?) : le client n'envoie que l'Id de quête, revérifié ici ;
+--   QuestChanged (RemoteEvent)      -> même vue (ou nil) à l'activation, à chaque progression et à la
+--                                      réclamation. Jamais PlayerData.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -30,6 +35,15 @@ local QuestService = {}
 
 local quests: { [string]: Quest } = {}
 local firstQuestId: string? = nil
+local changedEvent: RemoteEvent? = nil
+
+-- Envoie la vue de la quête active au seul joueur concerné (nil : plus de quête).
+local function push(player: Player)
+	local event = changedEvent
+	if event and player.Parent ~= nil then
+		event:FireClient(player, QuestService:GetActiveQuest(player))
+	end
+end
 
 local function isPositiveInteger(value: any): boolean
 	return typeof(value) == "number" and value >= 1 and value % 1 == 0 and value < math.huge
@@ -123,8 +137,37 @@ function QuestService:Init()
 end
 
 function QuestService:Start()
-	DataService:OnPlayerReady(function(_player: Player, data: PlayerData)
+	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+	if not remotes then
+		remotes = Instance.new("Folder")
+		remotes.Name = "Remotes"
+		remotes.Parent = ReplicatedStorage
+	end
+	assert(remotes)
+	local event = Instance.new("RemoteEvent")
+	event.Name = "QuestChanged"
+	event.Parent = remotes
+	changedEvent = event
+	local get = Instance.new("RemoteFunction")
+	get.Name = "GetActiveQuest"
+	get.OnServerInvoke = function(player: Player): ActiveQuest?
+		return QuestService:GetActiveQuest(player)
+	end
+	get.Parent = remotes
+	-- Le client n'envoie que l'Id de la quête ; état, cible et réclamation sont revérifiés.
+	local claim = Instance.new("RemoteFunction")
+	claim.Name = "ClaimQuest"
+	claim.OnServerInvoke = function(player: Player, questId: any): (boolean, string?)
+		if typeof(questId) ~= "string" then
+			return false, "quête inconnue"
+		end
+		return QuestService:ClaimQuest(player, questId)
+	end
+	claim.Parent = remotes
+
+	DataService:OnPlayerReady(function(player: Player, data: PlayerData)
 		activeQuestId(data)
+		push(player)
 	end)
 end
 
@@ -170,6 +213,7 @@ function QuestService:HandleGameplayEvent(player: Player, eventName: string, pay
 	end
 	state.Progress = math.min(state.Progress + 1, objective.Target)
 	Log.debug(SCOPE, `{id} : {state.Progress}/{objective.Target} pour {player.Name}`)
+	push(player)
 	return true
 end
 
@@ -197,6 +241,7 @@ function QuestService:ClaimQuest(player: Player, questId: string): (boolean, str
 	state.Claimed = true
 	local nextId = activeQuestId(data)
 	Log.info(SCOPE, `{questId} réclamée par {player.Name}{if nextId then `, quête suivante : {nextId}` else ""}`)
+	push(player)
 	return true, nil
 end
 

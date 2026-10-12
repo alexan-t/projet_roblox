@@ -398,3 +398,40 @@ occupe le haut à droite), fenêtres centrées avec voile.
 `Transition` ou `Tout` (`UIPreviewController`) ; modifiable en cours de Play. Les héros de
 démonstration sont les copies de `ReplicatedStorage.AtelierInvocation` (attributs `NomAffiche`,
 `Classe`). Écran de fin : `Workspace.ApercuEcranRecompenses = true`.
+
+## 13. États UI et branchement de la vertical slice (issue #11)
+
+Le client ne reçoit que des **vues en lecture seule**, jamais `PlayerData`. L'interface affiche ces
+états ; elle ne décide d'aucune récompense, quête, ticket, HeroId, stage ou résultat de combat.
+
+| État | Source serveur | Contrôleur client | Vue |
+| --- | --- | --- | --- |
+| Quête active | `GetActiveQuest`, `QuestChanged`, `ClaimQuest` (QuestService) | `QuestController` | `QuestView` |
+| Monnaies (Gold, Gems, SummonTickets) | `GetCurrencies` (PlayerStateService) | `CurrencyController` | `CurrencyView` |
+| Héros / hotbar | `GetHeroes`, `HeroesChanged`, `HotbarAction` (HeroService) | `HeroBarController` (via `ArenaStore`) | hotbar, sacoche |
+| Arène / stage | `GetArenaState`, `ArenaState`, `ArenaAction` (ArenaService) | `ArenaPlacementController` | pancarte, `ExpeditionView` |
+| Combat, fin, récompenses | `CombatEvent` (CombatService, RewardService) | `ArenaPlacementController`, `CombatViewController` | HUD combat, `RewardScreenController` |
+| Invocation | `GetSummonState`, `RequestSummon`, `HeroObtained` (HeroService) | `SummonController` | `SummonView`, `SummonEffectController` |
+
+**Monnaies.** `CurrencyController` relit `GetCurrencies`, sans jamais calculer de valeur :
+- au join ;
+- après une invocation (`HeroesChanged`, `HeroObtained`) ;
+- au « Continuer » de l'écran de fin : les récompenses, déjà sauvegardées, défilent alors sur le HUD.
+
+**Un écran modal à la fois** (`src/client/UI/ScreenState.lua`) : `Stage` (fenêtre des stages),
+`Summon` (invocation, cinématique, carte) et `Reward` (écran de fin).
+- Un écran ne s'ouvre pas par-dessus un autre, et les prompts (pancarte, portail, dalles) sont
+  désactivés tant qu'un écran est ouvert.
+- Un combat fini pendant une invocation affiche son écran de fin après la carte du héros.
+
+### Ancienne checklist #11 → architecture actuelle
+
+| Case historique | Réalisée par |
+| --- | --- |
+| ZoneController / lancement de stage | `ArenaPlacementController` : pancarte → E → `ExpeditionView` → Préparer l'équipe → Lancer (#49). Pas de ZoneController séparé. |
+| CombatController | `ArenaPlacementController` (x1 / x2 / quitter, fin) et `CombatViewController` (barres, chiffres, ultimes). Pas de second contrôleur. |
+| Brancher l'ultime | Ultime **automatique** (énergie pleine → `UltimateUsed`, animation, VFX, son). Pas de bouton. |
+| Retour au Plot | L'arène **fait partie du plot** : après « Continuer », l'écran se ferme et le joueur reprend la main dans son plot. Aucune téléportation ; `PlotService:TeleportToPlot` reste prévu pour un futur vrai départ en expédition. |
+| KingdomController | Pas d'action joueur : KingdomService (serveur) place les héros et l'état du royaume ; `KingdomChangeController` et `KingdomAmbientController` animent côté client. Pas de nouveau contrôleur. |
+| Collection | La sacoche et la hotbar (`HeroBarController`) servent de collection ; le nouveau héros y apparaît via `HeroesChanged` après sa carte. `CollectionView` reste une vue de design non branchée. |
+| QuestController, CurrencyController, SummonController | Créés (#11, #50), voir le tableau ci-dessus. |
