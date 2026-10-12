@@ -121,8 +121,17 @@ démonstration Studio](docs/SUMMON.md).
 
 Les quêtes sont décrites dans `src/server/Config/QuestConfig.lua` et suivies dans
 `PlayerData.Quests`. Les services de gameplay signalent les événements (par exemple
-`StageCompleted`) avec `QuestService:HandleGameplayEvent`. Voir le
+`StageCompleted`) avec `QuestService:HandleGameplayEvent`. Le client suit la quête par
+`Remotes.GetActiveQuest` / `QuestChanged` et la réclame par `ClaimQuest` (`QuestController`). Voir le
 [format de la config, l'API et les contrats avec les autres services](docs/QUESTS.md).
+
+## Interface de la vertical slice (#11)
+
+Le client n'affiche que des vues en lecture seule du serveur : quête, monnaies
+(`Remotes.GetCurrencies`, `PlayerStateService`), héros, arène, combat, invocation. Tout le parcours
+Join → Quête → Stage → Combat → Récompenses → Portail → Invocation → Collection → Royaume se fait à
+l'interface, sans commande développeur. Voir [les états UI et la correspondance avec la checklist
+#11](docs/UI_DESIGN_SYSTEM.md#13-états-ui-et-branchement-de-la-vertical-slice-issue-11).
 
 ## Zones et stages (ZoneService)
 
@@ -138,7 +147,7 @@ avec des stats temporaires dans `src/server/Config/CombatConfig.lua`. Il annonce
 la défaite à ZoneService. Les ultimes sont automatiques ; le client ne peut que choisir la
 vitesse x1/x2. Voir [le moteur, les événements et la sécurité](docs/COMBAT.md) et le
 [placement des héros dans l'arène personnelle du plot](docs/ARENA_PROTOTYPE.md) (hotbar, sacoche,
-E = Placer / Reprendre, Prêt = combat).
+E = Placer / Reprendre, pancarte du stage → Lancer). Le Stage 1-1 se gagne avec le seul héros de départ.
 
 ## Récompenses et First Clear (RewardService)
 

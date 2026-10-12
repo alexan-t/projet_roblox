@@ -25,6 +25,9 @@ local PlotView = require(script.Parent.Parent.Arena.PlotView)
 local Icons = require(script.Parent.Parent.UI.Icons)
 local RarityStyle = require(script.Parent.Parent.UI.RarityStyle)
 local SummonView = require(script.Parent.Parent.UI.Views.SummonView)
+local ScreenState = require(script.Parent.Parent.UI.ScreenState)
+local UIKit = require(script.Parent.Parent.UI.UIKit)
+local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local SummonEffectController = require(script.Parent.SummonEffectController)
 
 local SummonController = {}
@@ -32,7 +35,8 @@ local SummonController = {}
 local PORTAL_NAME = "PortailInvocation"
 -- Le serveur accepte jusqu'à 18 studs (horizontal) du pivot du portail ; le prompt est sur le voile.
 local PROMPT_DISTANCE = 14
-local REVEAL_PAUSE = 0.9 -- s entre l'atterrissage du héros et sa carte
+local HOLD_ON_HERO = 0.7 -- s pour regarder le héros révélé avant sa carte (+0,1 s par rang de rareté)
+local HINT_SECONDS = 8 -- s d'illumination du portail après un ticket gagné
 local CAMERA_DISTANCE = 24 -- studs devant le voile : plan large de la cinématique
 local CAMERA_SIDE = 8 -- studs de côté (plan de trois quarts)
 local HIDE_STEP = "InvocationCachePersonnage"
@@ -42,6 +46,7 @@ local requestRemote: RemoteFunction? = nil
 local stateRemote: RemoteFunction? = nil
 local busy = false -- fenêtre ouverte ou invocation en cours
 local lastBanner: string? = nil
+local presented: { [string]: boolean } = {} -- InstanceId déjà présentés (réponse + HeroObtained)
 
 local function portalOf(): Model?
 	local plot = PlotView.plot()
@@ -69,7 +74,7 @@ local function refreshPrompt()
 	if p.Parent ~= veil then
 		p.Parent = veil
 	end
-	p.Enabled = veil ~= nil and not busy
+	p.Enabled = veil ~= nil and not busy and ScreenState.free()
 end
 
 local function toast(text: string)
@@ -184,7 +189,59 @@ end
 
 local function finish()
 	busy = false
+	ScreenState.close("Summon")
 	refreshPrompt()
+end
+
+-- Présente un héros obtenu : cinématique + effet du portail, puis sa carte quand l'effet a révélé le
+-- héros (callback OnRevealed de l'effet, plus la pause pour le regarder). Appelée par la réponse de
+-- RequestSummon ET par Remotes.HeroObtained : chaque exemplaire (InstanceId) n'est montré qu'une fois.
+local function handleObtained(payload: any)
+	if typeof(payload) ~= "table" or typeof(payload.InstanceId) ~= "string" or presented[payload.InstanceId] then
+		return
+	end
+	presented[payload.InstanceId] = true
+	busy = true
+	ScreenState.waitAndOpen("Summon") -- déjà ouvert si l'invocation vient de la fenêtre
+	refreshPrompt()
+	local rarity = if typeof(payload.Rarity) == "string" then payload.Rarity else nil
+	local info = HeroConfig.Heroes[payload.HeroId]
+	local template = Icons.heroModel(payload.HeroId) -- vrai modèle (ReplicatedStorage.Assets.Heros, HeroId)
+	local portal = portalOf()
+	local shown: Model? = nil
+	local release: () -> () = function() end
+	local function reveal()
+		SummonView.Reveal({
+			Name = if typeof(payload.Name) == "string" then payload.Name elseif info then info.Name else payload.HeroId,
+			Model = template,
+			ClassId = if info then info.CombatProfile else nil,
+			New = payload.New,
+			Rarity = rarity,
+		}, {
+			OnContinue = function()
+				if shown then
+					shown:Destroy()
+				end
+				release()
+				ArenaStore.releaseHeroes() -- le héros apparaît dans la hotbar / la sacoche maintenant
+				finish()
+			end,
+		})
+	end
+	if template and portal then
+		release = cinematic(portal, template, rarity)
+		shown = SummonEffectController.Play(portal, template, {
+			Name = payload.Name,
+			New = payload.New,
+			Rarity = rarity,
+			Keep = 0,
+			OnRevealed = function()
+				task.delay(HOLD_ON_HERO + RarityStyle.rank(rarity) * 0.1, reveal)
+			end,
+		})
+	else
+		reveal()
+	end
 end
 
 local function summon(bannerId: string?)
@@ -196,6 +253,8 @@ local function summon(bannerId: string?)
 	lastBanner = bannerId
 	-- La collection mise à jour (avec le héros) arrive avant la réponse : elle attend la carte.
 	ArenaStore.holdHeroes()
+	-- Seul l'Id de bannière part (choix d'interface, validé par le serveur) : ni HeroId, ni coût,
+	-- ni ticket ne sont décidés ici.
 	local ok, accepted, result = pcall(remote.InvokeServer, remote, bannerId)
 	if not ok or accepted ~= true or typeof(result) ~= "table" then
 		ArenaStore.releaseHeroes()
@@ -203,30 +262,40 @@ local function summon(bannerId: string?)
 		finish()
 		return
 	end
-	local rarity = if typeof(result.Rarity) == "string" then result.Rarity else nil
-	local template = Icons.heroModel(result.HeroId)
+	handleObtained(result) -- sans effet si HeroObtained l'a déjà présenté
+end
+
+-- Après un ticket gagné (écran de fin) : le portail du plot s'illumine un moment et une annonce
+-- indique la suite. Rien n'est ouvert à la place du joueur.
+function SummonController.HintPortal()
 	local portal = portalOf()
-	local shown: Model? = nil
-	local release: () -> () = function() end
-	if template and portal then
-		release = cinematic(portal, template, rarity)
-		shown = SummonEffectController.Play(portal, template, { Name = result.Name, New = result.New, Rarity = rarity, Keep = 0 })
-		task.wait(SummonEffectController.Duration(rarity) + REVEAL_PAUSE + RarityStyle.rank(rarity) * 0.1)
+	if not portal then
+		return
 	end
-	SummonView.Reveal({ Name = result.Name, Model = template, New = result.New, Rarity = rarity }, {
-		OnContinue = function()
-			if shown then
-				shown:Destroy()
-			end
-			release()
-			ArenaStore.releaseHeroes() -- le héros apparaît dans la hotbar / la sacoche maintenant
-			finish()
-		end,
-	})
+	local glow = Instance.new("Highlight")
+	glow.Name = "IndicationPortail"
+	glow.FillColor = UITheme.Colors.GoldLight
+	glow.OutlineColor = UITheme.Colors.Gold
+	glow.FillTransparency = 1
+	glow.OutlineTransparency = 0
+	glow.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+	glow.Adornee = portal
+	glow.Parent = portal
+	local pulse = TweenService:Create(glow, UITheme.Animation.Pulse, { FillTransparency = 0.6 })
+	pulse:Play()
+	task.delay(HINT_SECONDS, function()
+		pulse:Cancel()
+		glow:Destroy()
+	end)
+	local screen = UIKit.screen("IndicationInvocation", 15)
+	UIKit.announce(screen, "Nouveau ticket ! Invoque un héros au portail", { Color = UITheme.Colors.GoldLight, Hold = 3 })
+	task.delay(5, function()
+		screen:Destroy()
+	end)
 end
 
 local function open()
-	if busy then
+	if busy or not ScreenState.open("Summon") then
 		return
 	end
 	busy = true
@@ -278,6 +347,14 @@ function SummonController:Start()
 	if state and state:IsA("RemoteFunction") then
 		stateRemote = state
 	end
+	-- Le serveur envoie aussi HeroObtained : même traitement que la réponse, une seule présentation.
+	local obtained = remotes:WaitForChild("HeroObtained", 30)
+	if obtained and obtained:IsA("RemoteEvent") then
+		obtained.OnClientEvent:Connect(function(payload: any)
+			task.spawn(handleObtained, payload)
+		end)
+	end
+	ScreenState.changed.Event:Connect(refreshPrompt)
 	-- Le plot (et son portail) peut être attribué après le démarrage, et changer au respawn.
 	Players.LocalPlayer.CharacterAdded:Connect(refreshPrompt)
 	while true do

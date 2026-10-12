@@ -18,7 +18,8 @@
 -- Couleurs : UITheme.Rarity (sans rareté : or, comme la démonstration).
 -- API : SummonEffectController.Play(portal, heroTemplate, options?) -> modèle affiché (copie locale).
 --   options = { Name: string?, New: boolean?, Rarity: string?, Jackpot: boolean?, Keep: number? (s
---   avant de retirer la copie, 4 par défaut ; 0 = la garder) }
+--   avant de retirer la copie, 4 par défaut ; 0 = la garder), OnRevealed: (() -> ())? (le héros est
+--   révélé : c'est le signal pour la carte, pas une horloge à part) }
 --   SummonEffectController.Duration(rarity?) -> secondes jusqu'à la révélation du héros ;
 --   SummonEffectController.Charge(rarity?) -> durée de la charge ; Layout(portal) -> centre du voile,
 --   face avant, place du héros. Le héros se pose sur une place d'invocation (cercle au sol, liseré de
@@ -54,7 +55,15 @@ local FIRE_TEXTURE = "rbxasset://textures/particles/fire_main.dds"
 local Colors = UITheme.Colors
 local SummonEffectController = {}
 
-export type Options = { Name: string?, New: boolean?, Rarity: string?, Jackpot: boolean?, Keep: number? }
+export type Options = {
+	Name: string?,
+	New: boolean?,
+	Rarity: string?,
+	Jackpot: boolean?,
+	Keep: number?,
+	-- appelé quand la silhouette s'est effacée : le héros est visible (la carte peut suivre)
+	OnRevealed: (() -> ())?,
+}
 
 local function tween(instance: Instance, info: TweenInfo, goal: { [string]: any }): Tween
 	local t = TweenService:Create(instance, info, goal)
@@ -622,6 +631,10 @@ function SummonEffectController.Play(portal: Model, heroTemplate: Model, options
 				end)
 				tween(silhouette, TweenInfo.new(REVEAL, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { FillTransparency = 1, OutlineTransparency = 1 })
 				nameplate(hero, opts.Name or heroTemplate.Name, opts.New ~= false, rarity)
+				local onRevealed = opts.OnRevealed
+				if onRevealed then
+					task.delay(REVEAL, onRevealed)
+				end
 			end
 		end)
 	end)

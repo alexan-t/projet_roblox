@@ -16,15 +16,52 @@ return function(createService: any, productionConfig: any)
 			info = function(_scope: string, message: string) table.insert(env.infos, message) end,
 			warn = function(_scope: string, message: string) table.insert(env.warnings, message) end,
 		}
+		-- Instances minimales : dossier Remotes, RemoteEvent (envois enregistrés), RemoteFunction.
+		env.fired = {}
+		local function inst(className: string): any
+			local i: any = { ClassName = className, Name = className, children = {} }
+			function i:FindFirstChild(n: string): any
+				for _, c in self.children do if c.Name == n then return c end end
+				return nil
+			end
+			return setmetatable({}, {
+				__index = i,
+				__newindex = function(t: any, k: string, v: any)
+					i[k] = v
+					if k == "Parent" and typeof(v) == "table" and v.children then table.insert(v.children, t) end
+				end,
+			})
+		end
+		local replicated = inst("ReplicatedStorage")
+		replicated.Shared = { Utils = { Log = log }, Types = { PlayerDataTypes = {} } }
+		env.replicated = replicated
+		env.Instance = { new = function(className: string): any
+			local i = inst(className)
+			if className == "RemoteEvent" then
+				i.FireClient = function(self: any, player: any, payload: any)
+					table.insert(env.fired, { remote = self.Name, player = player, payload = payload })
+				end
+			end
+			return i
+		end }
 		env.game = { GetService = function(_self: any, name: string): any
 			assert(name == "ReplicatedStorage", name)
-			return { Shared = { Utils = { Log = log }, Types = { PlayerDataTypes = {} } } }
+			return replicated
 		end }
+		function env.remote(name: string): any
+			local remotes = replicated:FindFirstChild("Remotes")
+			return remotes and remotes:FindFirstChild(name)
+		end
+		function env.sent(player: any): { any }
+			local out = {}
+			for _, f in env.fired do if f.player == player and f.remote == "QuestChanged" then table.insert(out, f.payload or false) end end -- false = plus de quête
+			return out
+		end
 		env.script = { Parent = { DataService = dataService,
 			Parent = { Config = { QuestConfig = config or productionConfig } } } }
 		env.require = function(module: any): any return module end
 
-		function env.player(name: string): any return { Name = name } end
+		function env.player(name: string): any return { Name = name, Parent = "Players" } end
 		-- Données fraîches, comme DefaultPlayerData (le reste du profil sert à vérifier qu'il n'est pas touché).
 		function env.freshData(): any
 			return {
@@ -300,6 +337,70 @@ return function(createService: any, productionConfig: any)
 		s:GetActiveQuest(p)
 		assert(deepEqual(withoutQuests(data), frozen), "only Quests changed")
 		assert(data.Currencies.SummonTickets == 0 and next(data.Progression.FirstClears) == nil)
+	end)
+
+	-- Remotes (#11) ---------------------------------------------------------------
+
+	test("remote GetActiveQuest: read-only view of the active quest, never PlayerData", function()
+		local e = fixture()
+		e.start()
+		local p = e.player("A")
+		local data = e.join(p)
+		local view = e.remote("GetActiveQuest").OnServerInvoke(p)
+		assert(view and view.Id == "DefendDomain" and view.Progress == 0 and view.Target == 1 and view.Completed == false)
+		assert(view.Quests == nil and view.Currencies == nil, "no profile data")
+		view.Progress = 99
+		assert(data.Quests.DefendDomain.Progress == 0, "a copy: editing the view changes nothing")
+		assert(e.remote("GetActiveQuest").OnServerInvoke(e.player("SansDonnees")) == nil)
+	end)
+
+	test("QuestChanged: sent on activation, on progress, on claim (nil when the chain is over)", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		e.join(p)
+		local sent = e.sent(p)
+		assert(#sent == 1 and sent[1].Id == "DefendDomain" and sent[1].Progress == 0, "activation")
+		s:HandleGameplayEvent(p, "StageCompleted", { Zone = 1, Stage = 2 })
+		assert(#e.sent(p) == 1, "no progress, nothing sent")
+		s:HandleGameplayEvent(p, "StageCompleted", STAGE_1_1)
+		sent = e.sent(p)
+		assert(#sent == 2 and sent[2].Progress == 1 and sent[2].Completed == true, "progress")
+		local ok = e.remote("ClaimQuest").OnServerInvoke(p, "DefendDomain")
+		sent = e.sent(p)
+		assert(ok == true and #sent == 3 and sent[3] == false, "claimed, no next quest (nil sent)")
+	end)
+
+	test("remote ClaimQuest: too early refused, valid once, double refused, bad ids refused", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		local data = e.join(p)
+		local claim = e.remote("ClaimQuest").OnServerInvoke
+		local ok, why = claim(p, "DefendDomain")
+		assert(ok == false and why == "quête non terminée" and data.Quests.DefendDomain.Claimed == false)
+		for _, bad in { 42, nil, {}, "Inconnue" } :: { any } do
+			local okBad = claim(p, bad)
+			assert(okBad == false, tostring(bad))
+		end
+		s:HandleGameplayEvent(p, "StageCompleted", STAGE_1_1)
+		assert(claim(p, "DefendDomain") == true and data.Quests.DefendDomain.Claimed == true)
+		local again, why2 = claim(p, "DefendDomain")
+		assert(again == false and why2 == "déjà réclamée")
+		assert(data.Currencies.Gold == 0 and data.Currencies.SummonTickets == 0, "no extra reward")
+	end)
+
+	test("two players: independent quests and QuestChanged to the right player only", function()
+		local e = fixture()
+		local s = e.start()
+		local a, b = e.player("A"), e.player("B")
+		local da, db = e.join(a), e.join(b)
+		s:HandleGameplayEvent(a, "StageCompleted", STAGE_1_1)
+		assert(da.Quests.DefendDomain.Progress == 1 and db.Quests.DefendDomain.Progress == 0)
+		assert(#e.sent(a) == 2 and #e.sent(b) == 1)
+		assert(e.remote("ClaimQuest").OnServerInvoke(b, "DefendDomain") == false, "B has not finished")
+		assert(e.remote("ClaimQuest").OnServerInvoke(a, "DefendDomain") == true)
+		assert(db.Quests.DefendDomain.Claimed == false)
 	end)
 
 	print(`QuestService: {passed} passed, {failed} failed`)

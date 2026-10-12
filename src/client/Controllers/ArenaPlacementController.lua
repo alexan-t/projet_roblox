@@ -26,6 +26,9 @@ local UIKit = require(script.Parent.Parent.UI.UIKit)
 local AudioController = require(script.Parent.AudioController)
 local RewardScreenController = require(script.Parent.RewardScreenController)
 local ExpeditionView = require(script.Parent.Parent.UI.Views.ExpeditionView)
+local ScreenState = require(script.Parent.Parent.UI.ScreenState)
+local CurrencyController = require(script.Parent.CurrencyController)
+local SummonController = require(script.Parent.SummonController)
 
 local C = UITheme.Colors
 local T = UITheme.Transparency
@@ -226,7 +229,9 @@ local function updatePrompt()
 		inArena = nowInArena
 		render() -- lumières de placement et la pancarte suivent la zone
 	end
-	if not root or not root:IsA("BasePart") or ArenaStore.inCombat() or ArenaStore.arena.Available == false then
+	if not root or not root:IsA("BasePart") or ArenaStore.inCombat() or ArenaStore.arena.Available == false
+		or not ScreenState.free()
+	then
 		hidePrompt()
 		return
 	end
@@ -378,7 +383,15 @@ local function openStageMenu()
 			title = `Zone {zone} · {name}`
 		end
 	end
+	-- Un seul écran à la fois (pas de fenêtre des stages par-dessus l'invocation ou l'écran de fin).
+	if not ScreenState.open("Stage") then
+		return
+	end
+	local function closed()
+		ScreenState.close("Stage")
+	end
 	ExpeditionView.Show({ Zone = zone, Title = title, Stages = stages }, {
+		OnClose = closed,
 		Selected = state.Stage,
 		Team = { Placed = ArenaStore.placedCount(), Max = state.MaxHeroes or ArenaConfig.MaxHeroes },
 		OnSelect = function(z: number, stage: number)
@@ -387,11 +400,13 @@ local function openStageMenu()
 			end
 		end,
 		OnPrepare = function()
+			closed()
 			prepMode = true
 			showToast("Prends un héros (1 à 0), approche-toi d'une dalle : E")
 			ArenaStore.notify()
 		end,
 		OnLaunch = function(z: number, stage: number)
+			closed()
 			if (z ~= ArenaStore.arena.Zone or stage ~= ArenaStore.arena.Stage)
 				and not ArenaStore.request("SelectStage", z, stage)
 			then
@@ -525,10 +540,11 @@ function render()
 	if sp then
 		sp.ObjectText = `Stage {state.Zone or "?"}-{state.Stage or "?"}`
 		sp.Parent = signBoard
-		sp.Enabled = signBoard ~= nil and not inCombat and state.Available ~= false
+		sp.Enabled = signBoard ~= nil and not inCombat and state.Available ~= false and ScreenState.free()
 	end
 	if inCombat then
 		ExpeditionView.Hide()
+		ScreenState.close("Stage")
 	end
 	if held and not inCombat then
 		ui.statusText.Text = `{heroName(held.instanceId)} en main · approche-toi d'une dalle : E`
@@ -567,13 +583,30 @@ local function onCombatEvents(_combatId: number, events: { { [string]: any } })
 			-- Écran de fin (#17, #19) une fois la dernière unité dissoute. Un seul CombatEnded par
 			-- combat, envoyé par le serveur après l'attribution : FirstClear et Rewards sont les
 			-- récompenses de RewardService (#9), déjà sauvegardées. L'écran ne fait que les montrer.
-			local rewards = event.Rewards
+			-- Continuer : l'écran se ferme, le HUD des monnaies relit le serveur (il défile alors), et
+			-- un ticket gagné montre la suite : le portail d'invocation. Le joueur est déjà sur son
+			-- plot (l'arène en fait partie) : aucun retour à téléporter.
+			local rewards: { any }? = if typeof(event.Rewards) == "table" then event.Rewards else nil
+			local ticket = false
+			for _, reward in rewards or {} do
+				if reward.Kind == "SummonTicket" and typeof(reward.Amount) == "number" and reward.Amount > 0 then
+					ticket = true
+				end
+			end
 			task.delay(RESULT_DELAY, function()
+				-- un combat fini pendant une invocation attend la carte du héros
+				ScreenState.waitAndOpen("Reward")
 				RewardScreenController.Show({
 					Result = event.Result,
 					FirstClear = event.FirstClear,
-					Rewards = if typeof(rewards) == "table" then rewards else nil,
-				})
+					Rewards = rewards,
+				}, function()
+					ScreenState.close("Reward")
+					CurrencyController.Refresh(true)
+					if ticket then
+						SummonController.HintPortal()
+					end
+				end)
 			end)
 		end
 	end
@@ -611,6 +644,11 @@ function ArenaPlacementController:Start()
 		updatePrompt()
 	end)
 	ArenaStore.toast.Event:Connect(showToast)
+	-- Un écran modal s'ouvre ou se ferme : les prompts (pancarte, dalles) suivent.
+	ScreenState.changed.Event:Connect(function()
+		render()
+		updatePrompt()
+	end)
 	UserInputService.InputBegan:Connect(onInputBegan)
 	local elapsed = 0
 	RunService.Heartbeat:Connect(function(dt: number)
