@@ -9,6 +9,11 @@ une icône.
 - **Catalogue de production** : `items_equipment.json` (format des tâches du pipeline, une
   entrée par item). C'est la source de vérité pour l'identifiant, le nom, la rareté, le type
   d'emplacement et l'idée de l'icône (`icon_hook`).
+- **Catalogue en jeu** : `src/shared/Config/ItemConfig.lua` (partagé serveur et client). Mêmes
+  identifiants, noms, raretés (Id de `RarityConfig`) et emplacements que la vitrine, plus l'icône
+  livrée (`Icon`, `nil` tant qu'elle n'existe pas). C'est ce module que liront la Sacoche et l'écran
+  de récompenses. Test : `./tools/test-items.ps1 -LuauPath <chemin-vers-luau.exe>` (répartition du
+  § 2).
 - **Aucun système d'items en jeu** pour l'instant : `PlayerData` ne stocke que les monnaies,
   les héros, l'équipe, le royaume, les quêtes et les réglages
   (`src/shared/Types/PlayerDataTypes.lua`). Les statistiques, le stockage et l'obtention des
@@ -112,3 +117,14 @@ Nommage du fichier source : `<item_id>.png` (ex. `item_037.png`).
 3. Elle a le même rendu que ses voisines : contour, lumière, saturation, taille de l'objet.
 4. Elle correspond à l'`icon_hook` et au `slot_type` du catalogue.
 5. Aucune couleur de rareté ni statistique inventée dans l'image.
+
+## 6. Vitrine et catalogue du code
+
+`tools/studio-items-vitrine.luau` (Studio EDIT, Rojo connecté, lecture seule) compare la vitrine à
+`ItemConfig` : emplacement présent, attributs, `Nom`, `Icone.Image` égal à `AssetId`. Il imprime les
+écarts, puis les lignes `item(...)` à reporter dans `ItemConfig.lua` pour les icônes livrées
+(cinquième argument `rbxassetid://…`). Le lancer après chaque lot d'icônes, reporter ces lignes
+dans une PR, et ne rien livrer tant qu'il signale un écart.
+
+Un nouvel item s'ajoute **dans le même ordre** aux deux endroits : son emplacement dans la vitrine
+(§ 3) et sa ligne dans `ItemConfig.lua` ; mettre à jour la répartition du § 2 et le test.
