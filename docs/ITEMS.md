@@ -13,7 +13,8 @@ une icône.
   identifiants, noms, raretés (Id de `RarityConfig`) et emplacements que la vitrine, plus l'icône
   livrée (`Icon`, `nil` tant qu'elle n'existe pas). C'est ce module que liront la Sacoche et l'écran
   de récompenses. Test : `./tools/test-items.ps1 -LuauPath <chemin-vers-luau.exe>` (répartition du
-  § 2).
+  § 2). Sans Luau ni Studio : `node tests/items-vitrine.test.mjs` compare aussi `ItemConfig` au
+  tableau du § 2 et à la vitrine du snapshot `studio/sandbox/partner_sandbox_v4.rbxl`.
 - **Aucun système d'items en jeu** pour l'instant : `PlayerData` ne stocke que les monnaies,
   les héros, l'équipe, le royaume, les quêtes et les réglages
   (`src/shared/Types/PlayerDataTypes.lua`). Les statistiques, le stockage et l'obtention des
