@@ -41,7 +41,8 @@ ZoneService ──► QuestService (StageCompleted, victoire seulement)
 `Radius = 8`. `TickRate = 20`, `MaxFrameTime = 0.25`, `MaxAllies = 4`.
 
 **Ces valeurs sont temporaires, ce n'est pas le balancing final.** Aucune valeur n'existait
-dans le dépôt. Objectifs : Stage 1-1 (entrée, sans mini-boss) gagné par le héros de départ seul ;
+dans le dépôt. Objectifs : Stage 1-1 (entrée) gagné par le héros de départ seul ; Zone 1 (1-1 à 1-5,
+boss compris) gagnée par l'équipe garantie Écuyer + Tireuse ;
 un stage complet (vague 2 Slime + 4 Gobelin, puis le Boss) gagné avec 3-4 héros et perdu avec un héros seul, en
 une dizaine de secondes à une demi-minute à x1 (mesuré en Studio : 14 s), écart net entre
 x1 et x2. Ces objectifs sont vérifiés par des simulations complètes dans les tests.
@@ -88,8 +89,10 @@ Les ennemis viennent de `ZoneService:GetSession(player).Config` (StageConfig), j
 client. Vague 1 → … → vague N → `MiniBoss` s'il existe → victoire. Une vague n'apparaît
 qu'une fois la précédente entièrement morte ; chaque ennemi prend une case différente du
 3x3, tirée au hasard par le serveur. Le mini-boss n'apparaît jamais avec une vague.
-Stage 1-1 : Slime ×2 + Gobelin ×2, sans mini-boss (stage d'entrée, gagnable par le héros de départ seul).
-Les tests de mécanique utilisent un stage complet (Slime ×2 + Gobelin ×4, puis Boss).
+Zone 1 : 1-1 à 1-4 sans boss, 1-5 = vague puis **boss de zone** (le Roi Orc, `Boss` →
+`Ennemi_RoiOrc`). Le champ s'appelle `MiniBoss` dans StageConfig ; la convention produit le réserve
+au boss de zone, sur X-5 seulement (contenu détaillé : `docs/ZONES.md`). Les tests de mécanique
+utilisent aussi un stage complet de test (Slime ×2 + Gobelin ×4, puis Boss).
 
 - **Victoire** : toutes les vagues et le mini-boss morts, au moins un héros vivant.
 - **Défaite** : tous les héros morts avant la fin.

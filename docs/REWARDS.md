@@ -30,6 +30,10 @@ Stages = {
   - `Amount` est un entier fini ≥ 0.
   - `New` est un simple badge « Nouveau » sur l'écran de fin, sans effet de gameplay.
 - **Valeurs Alpha provisoires.** Seul le ticket d'invocation du premier clear de 1-1 est exigé (#9, il sert à #10). L'or, les gemmes et le replay sont des valeurs de départ à équilibrer.
+- **1-2 à 1-5 (#13).** `FirstClearReward = {}` et `RepeatReward = {}`, PROVISOIRES.
+  - Le First Clear est enregistré, ce qui déverrouille le stage suivant, sans inventer d'économie.
+  - Le game design définira ces récompenses.
+  - 1-1 garde son contrat : 100 or, 10 gemmes et 1 ticket au premier clear, 20 or en replay.
 
 Au démarrage (`Init`), chaque entrée est validée. Une entrée est refusée, avec un warning, si l'un de ces cas se présente :
 - `Kind` inconnu ;
@@ -77,7 +81,7 @@ Raisons de refus :
 - **First Clear.** La section critique vérifie `FirstClears[key]`, le marque à `true`, puis ajoute les devises. Elle est synchrone, sans aucun yield. Deux appels ne peuvent donc pas voir tous les deux « pas encore cleared ».
 - **Identité de completion.** C'est l'id de la session de stage de ZoneService, unique sur le serveur. Une même completion n'est récompensée qu'une fois : un rappel tardif ou dupliqué est refusé, ce qui empêche de recevoir à la fois `FirstClearReward` et `RepeatReward` pour une seule victoire. Les ids sont mémorisés par joueur et oubliés à son départ.
 - **Persistance.** Les devises et `FirstClears` sont modifiés dans le profil DataService **avant** l'envoi de `CombatEnded` ; ProfileStore les sauvegarde. Rien n'est à « réclamer » : il n'existe aucune remote `ClaimReward`. Une déconnexion pendant l'écran de fin ne perd donc rien. Après un rejoin, le First Clear déjà sauvegardé fait que seule `RepeatReward` est donnée.
-- **Déverrouillage.** `FirstClears["1-1"] = true` déverrouille 1-2 dans ZoneService (`"stage verrouillé"`), sans autre changement.
+- **Déverrouillage.** `FirstClears["1-1"] = true` déverrouille 1-2 dans ZoneService (`"stage verrouillé"`), et ainsi de suite jusqu'à 1-5. Chaque stage DOIT donc avoir une entrée valide dans RewardConfig : sans elle, son First Clear n'est pas enregistré et le stage suivant reste verrouillé.
 - **Progression.** `Progression.HighestStage` et `Progression.CurrentZone` ne sont ni lus ni écrits. Aujourd'hui, aucun code ne les utilise : seules leurs valeurs par défaut existent. #9 ne leur invente pas de règle.
 
 ## Client
