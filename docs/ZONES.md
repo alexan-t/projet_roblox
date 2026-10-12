@@ -15,9 +15,8 @@ Zones = {
 		Stages = {
 			[1] = {
 				Waves = {
-					{ Enemies = { { EnemyId = "Slime", Count = 2 }, { EnemyId = "Gobelin", Count = 4 } } },
+					{ Enemies = { { EnemyId = "Slime", Count = 2 }, { EnemyId = "Gobelin", Count = 2 } } },
 				},
-				MiniBoss = { EnemyId = "Boss" },
 			},
 		},
 	},
@@ -29,6 +28,9 @@ Zones = {
 - `Waves` : liste non vide de vagues ; chaque vague a une liste non vide `Enemies` de
   `{ EnemyId: string non vide, Count: entier >= 1 }`.
 - `MiniBoss` : facultatif, `{ EnemyId }`, affronté après la dernière vague.
+- Le Stage 1-1 est le **stage d'entrée** : un compte neuf n'a que son héros de départ (l'Écuyer) et
+  doit pouvoir le gagner seul pour obtenir son premier ticket d'invocation (boucle Alpha, #11). Il
+  n'a donc pas de mini-boss : celui-ci reviendra avec un stage suivant.
 - `EnemyId` est un **identifiant logique**. Stage 1 reprend les types de la vague de
   démonstration de `CombatIntroController` (`Slime`, `Gobelin`, `Boss`). Aucune statistique
   (PV, dégâts, vitesse), aucun modèle, aucune position : CombatService (#8) associera ces

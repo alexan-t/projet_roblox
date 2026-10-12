@@ -355,10 +355,29 @@ return function(CombatEngine: any, combatConfig: any, stageConfig: any)
 		assert(#eventsOf(CombatEngine.drain(s), "CombatEnded") == 0 and CombatEngine.advance(s, 1, 1) == 0)
 	end)
 
-	test("real Stage 1-1 with the real config: 4 heroes win in a reasonable time, 1 Magicien loses", function()
+	test("real Stage 1-1 (entry stage): the starter alone (Epeiste) always wins, no mini-boss", function()
+		local stage = stageConfig.Zones[1].Stages[1]
+		assert(stage.MiniBoss == nil, "no mini-boss on the entry stage")
+		for seed = 1, 10 do
+			local s = CombatEngine.new({
+				Stage = stage, Heroes = combatConfig.Heroes, Enemies = combatConfig.Enemies,
+				UltimateRadius = combatConfig.Ultimate.Radius,
+				Allies = { { TypeId = "Epeiste", Slot = 5, Position = { x = 10, z = 9 } } },
+				EnemyCells = cells(), Random = seeded(seed), TickRate = 20, MaxFrameTime = 0.25,
+			})
+			for _ = 1, 20 * 300 do
+				CombatEngine.step(s, 1 / 20)
+				if s.result then break end
+			end
+			assert(s.result == "Victory", `seed {seed}: {s.result}`)
+		end
+	end)
+
+	test("hard stage (waves + mini-boss) with the real config: 4 heroes win in a reasonable time, 1 Magicien loses", function()
+		local hard = { Waves = { { Enemies = { { EnemyId = "Slime", Count = 2 }, { EnemyId = "Gobelin", Count = 4 } } } }, MiniBoss = { EnemyId = "Boss" } }
 		local function simulate(allies: { any }, seed: number): (string?, number, boolean)
 			local s = CombatEngine.new({
-				Stage = stageConfig.Zones[1].Stages[1], Heroes = combatConfig.Heroes, Enemies = combatConfig.Enemies,
+				Stage = hard, Heroes = combatConfig.Heroes, Enemies = combatConfig.Enemies,
 				UltimateRadius = combatConfig.Ultimate.Radius, Allies = allies, EnemyCells = cells(), Random = seeded(seed),
 				TickRate = 20, MaxFrameTime = 0.25,
 			})

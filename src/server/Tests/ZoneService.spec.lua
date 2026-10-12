@@ -117,14 +117,14 @@ return function(createService: any, productionConfig: any)
 		} }
 	end
 
-	test("production config: Zone 1 / Stage 1 exists, waves and mini-boss by config", function()
+	test("production config: Zone 1 / Stage 1 exists, entry stage by config (2 Slime, 2 Gobelin, no mini-boss)", function()
 		local e = fixture()
 		local s = e.start()
 		assert(#e.warnings == 0, "production config valid: " .. table.concat(e.warnings, "; "))
 		local stage = productionConfig.Zones[1].Stages[1]
 		assert(stage.Waves[1].Enemies[1].EnemyId == "Slime" and stage.Waves[1].Enemies[1].Count == 2)
-		assert(stage.Waves[1].Enemies[2].EnemyId == "Gobelin" and stage.Waves[1].Enemies[2].Count == 4)
-		assert(stage.MiniBoss.EnemyId == "Boss")
+		assert(stage.Waves[1].Enemies[2].EnemyId == "Gobelin" and stage.Waves[1].Enemies[2].Count == 2)
+		assert(stage.MiniBoss == nil, "entry stage: winnable by the starter alone")
 		local p = e.player("A")
 		assert(s:CanStartStage(p, 1, 1) == true, "new player can start 1-1")
 	end)

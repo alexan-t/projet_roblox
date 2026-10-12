@@ -3,7 +3,10 @@
 -- Exécute le vrai CombatService (avec le vrai CombatEngine et la vraie CombatConfig) et des doubles
 -- de ZoneService, DataService et des API Roblox utilisées.
 
-return function(createService: any, CombatEngine: any, combatConfig: any, stageConfig: any)
+return function(createService: any, CombatEngine: any, combatConfig: any, _stageConfig: any) -- le vrai 1-1 est vérifié par CombatEngine.spec et RewardFlow.spec
+	-- Stage de mécanique (l'ancien 1-1 : une vague 2 Slime + 4 Gobelin, puis le mini-boss) : il couvre
+	-- vagues, mini-boss, défaite et x2. Le vrai 1-1 (sans mini-boss, gagnable seul) est vérifié à part.
+	local MECHANICS = { Waves = { { Enemies = { { EnemyId = "Slime", Count = 2 }, { EnemyId = "Gobelin", Count = 4 } } } }, MiniBoss = { EnemyId = "Boss" } }
 	local passed, failed = 0, 0
 	local function test(name: string, run: () -> ())
 		local ok, err = pcall(run)
@@ -102,7 +105,7 @@ return function(createService: any, CombatEngine: any, combatConfig: any, stageC
 				Settings = { CombatSpeed = 1 }, Heroes = {}, Quests = {},
 			}
 			env.nextStageId += 1
-			env.stages[p] = { Id = env.nextStageId, Zone = 1, Stage = 1, Config = stageConfig.Zones[1].Stages[1] }
+			env.stages[p] = { Id = env.nextStageId, Zone = 1, Stage = 1, Config = MECHANICS }
 			return p
 		end
 		-- Géométrie de l'arène : 3x3 héros (z 0..18) et 3x3 ennemis (z -21..-30), comme PlotTravail.
@@ -277,11 +280,11 @@ return function(createService: any, CombatEngine: any, combatConfig: any, stageC
 		local oldZone = e.stages[p].Id
 		local old = s:StartCombat(p, oldZone, TEAM, e.context())
 		s:CancelCombat(p)
-		e.stages[p] = { Id = oldZone + 50, Zone = 1, Stage = 1, Config = stageConfig.Zones[1].Stages[1] }
+		e.stages[p] = { Id = oldZone + 50, Zone = 1, Stage = 1, Config = MECHANICS }
 		local new = s:StartCombat(p, oldZone + 50, TEAM, e.context())
 		assert(new and new ~= old)
 		assert(select(2, s:StartCombat(p, oldZone, TEAM, e.context())) == "session de stage invalide")
-		e.stages[p] = { Id = oldZone, Zone = 1, Stage = 1, Config = stageConfig.Zones[1].Stages[1] } -- ancienne session de stage
+		e.stages[p] = { Id = oldZone, Zone = 1, Stage = 1, Config = MECHANICS } -- ancienne session de stage
 		e.tick(1)
 		assert(s:GetCombat(p) == nil and #e.completions == 0, "combat bound to its own stage session")
 	end)

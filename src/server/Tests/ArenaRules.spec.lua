@@ -17,9 +17,22 @@ return function(ArenaRules: any, stageConfig: any, arenaConfig: any)
 	end
 
 	local stage = stageConfig.Zones[1].Stages[1]
+	-- Stage avec mini-boss (l'ancien 1-1) : l'expansion et le résumé du mini-boss restent couverts.
+	local hard = { Waves = { { Enemies = { { EnemyId = "Slime", Count = 2 }, { EnemyId = "Gobelin", Count = 4 } } } }, MiniBoss = { EnemyId = "Boss" } }
 
-	test("Stage 1-1 expands to 2 Slime, 4 Gobelin, then the Boss mini-boss", function()
+	test("real Stage 1-1 (entry stage) expands to 2 Slime and 2 Gobelin, no mini-boss", function()
 		local enemies = ArenaRules.expandEnemies(stage)
+		assert(#enemies == 4)
+		local counts: { [string]: number } = {}
+		for _, e in enemies do
+			counts[e.EnemyId] = (counts[e.EnemyId] or 0) + 1
+			assert(e.MiniBoss == false)
+		end
+		assert(counts.Slime == 2 and counts.Gobelin == 2 and counts.Boss == nil)
+	end)
+
+	test("a stage with a mini-boss expands to its waves, then the Boss mini-boss", function()
+		local enemies = ArenaRules.expandEnemies(hard)
 		assert(#enemies == 7)
 		local counts: { [string]: number } = {}
 		for _, e in enemies do counts[e.EnemyId] = (counts[e.EnemyId] or 0) + 1 end
@@ -28,7 +41,9 @@ return function(ArenaRules: any, stageConfig: any, arenaConfig: any)
 	end)
 
 	test("summary tells which enemies and how many, never positions", function()
-		local summary = ArenaRules.summarize(stage)
+		local real = ArenaRules.summarize(stage)
+		assert(#real == 2 and real[1].EnemyId == "Slime" and real[1].Count == 2 and real[2].EnemyId == "Gobelin" and real[2].Count == 2)
+		local summary = ArenaRules.summarize(hard)
 		assert(#summary == 3)
 		assert(summary[1].EnemyId == "Slime" and summary[1].Count == 2 and not summary[1].MiniBoss)
 		assert(summary[2].EnemyId == "Gobelin" and summary[2].Count == 4)
