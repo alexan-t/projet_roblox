@@ -240,6 +240,201 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 		end
 	end)
 
+	-- Sécurité (#12) : remotes, doublons, départs, données non chargées -----------------------
+	-- Chemin réel : remotes créées par les vrais services, CombatService → ZoneService → Quest → Reward.
+
+	local function remote(w: any, name: string): any
+		for _, i in w.instances do
+			if i.Name == name and i.OnServerInvoke then return i end
+		end
+		return nil
+	end
+	local function leave(w: any, p: any)
+		p.Parent = nil
+		w.players.PlayerRemoving:Fire(p)
+	end
+	-- Rejoin : un nouvel objet Player, les mêmes données sauvegardées.
+	local function rejoin(w: any, old: any): any
+		local p: any = { Name = old.Name, Parent = w.players, attributes = { DataLoaded = true } }
+		function p:GetAttribute(key: string): any return self.attributes[key] end
+		w.data[p] = w.data[old]
+		w.data[old] = nil
+		w.plots[p] = w.plots[old]
+		return p
+	end
+	local function snapshot(d: any): string
+		local clears = {}
+		for k, v in d.Progression.FirstClears do table.insert(clears, `{k}={tostring(v)}`) end
+		table.sort(clears)
+		local q = d.Quests.DefendDomain
+		return `{d.Currencies.Gold}/{d.Currencies.Gems}/{d.Currencies.SummonTickets}|{table.concat(clears, ",")}|{q and q.Progress}/{q and tostring(q.Claimed)}`
+	end
+	local NEVER = { 0, -1, 1.5, 2 ^ 53, math.huge, -math.huge, 0 / 0, "1", {}, { Zone = 1 } } :: { any }
+
+	test("#12 stage spam: 25 RequestStartStage -> one session, the same one, no reward; bad values refused", function()
+		local w = world()
+		local p = w.player("A")
+		local start = remote(w, "RequestStartStage")
+		local accepted = 0
+		for _ = 1, 25 do
+			if start.OnServerInvoke(p, 1, 1) == true then accepted += 1 end
+		end
+		local session = w.services.ZoneService:GetSession(p)
+		assert(accepted == 1 and session, "one session, got " .. accepted)
+		local ok, why = start.OnServerInvoke(p, 1, 1)
+		assert(ok == false and why == "session déjà en cours" and w.services.ZoneService:GetSession(p).Id == session.Id, "never replaced")
+		for _, bad in NEVER do
+			assert(start.OnServerInvoke(p, bad, 1) == false and start.OnServerInvoke(p, 1, bad) == false, tostring(bad))
+		end
+		assert(start.OnServerInvoke(p) == false, "nil refused")
+		assert(snapshot(w.data[p]) == "0/0/0||0/false", "no reward from starting: " .. snapshot(w.data[p]))
+		local q = w.player("Q")
+		assert(start.OnServerInvoke(q, 1, 2) == false and w.services.ZoneService:GetSession(q) == nil, "unknown / locked stage refused")
+		assert(w.services.CombatService:GetCombat(p) == nil, "starting a stage never starts a combat")
+	end)
+
+	test("#12 one combat per stage session: a second StartCombat (spam) is refused; foreign session useless", function()
+		local w = world()
+		local p = w.player("A")
+		local zone = w.services.ZoneService:StartStage(p, 1, 1)
+		assert(w.services.CombatService:StartCombat(p, zone.Id, STARTER, w.context()))
+		for _ = 1, 20 do
+			local id, why = w.services.CombatService:StartCombat(p, zone.Id, STARTER, w.context())
+			assert(id == nil and why == "combat déjà en cours")
+		end
+		local other = w.player("B")
+		local idB, whyB = w.services.CombatService:StartCombat(other, zone.Id, STARTER, w.context())
+		assert(idB == nil and whyB == "session de stage invalide", "another player's stage session is useless")
+	end)
+
+	test("#12 duplicate victory, 3 layers: combat ends once, CompleteStage once, completionId rewarded once", function()
+		local w = world()
+		local p = w.player("A")
+		local ended = w.fight(p, STARTER)
+		for _ = 1, 20 do w.heartbeat:Fire(0.25) end -- ticks après la fin : la session est verrouillée
+		assert(#ended == 1 and ended[1].Result == "Victory")
+		local count = 0
+		for _, batch in w.fired do
+			for _, e in batch.events do if e.Type == "CombatEnded" and batch.player == p then count += 1 end end
+		end
+		assert(count == 1, "one CombatEnded")
+		local after = snapshot(w.data[p])
+		-- ZoneService : une même session ne se termine qu'une fois
+		local zone = w.services.ZoneService:StartStage(p, 1, 1)
+		assert(w.services.ZoneService:CompleteStage(p, zone.Id, true) == true)
+		assert(w.services.ZoneService:CompleteStage(p, zone.Id, true) == false, "second CompleteStage refused")
+		local replay = snapshot(w.data[p])
+		-- RewardService : même completionId rejoué directement
+		assert(w.services.RewardService:HandleStageCompleted(p, 1, 1, zone.Id) == nil)
+		assert(snapshot(w.data[p]) == replay, "duplicate completion gives nothing")
+		assert(after ~= replay, "the real replay (new session) gave the RepeatReward")
+		assert(w.data[p].Currencies.SummonTickets == 1, "never a second first-clear ticket")
+	end)
+
+	test("#12 combat disconnect: combat and stage session gone, models destroyed, no reward; rejoin can play", function()
+		local w = world()
+		local p = w.player("A")
+		local destroyed, spawned = 0, 0
+		local ctx = w.context()
+		local spawn = ctx.SpawnUnit
+		ctx.SpawnUnit = function(...: any): any
+			local m = spawn(...)
+			spawned += 1
+			function m:Destroy() destroyed += 1 end
+			return m
+		end
+		local zone = w.services.ZoneService:StartStage(p, 1, 1)
+		assert(w.services.CombatService:StartCombat(p, zone.Id, STARTER, ctx))
+		w.heartbeat:Fire(0.25)
+		leave(w, p)
+		assert(destroyed == spawned, "models destroyed at once on PlayerRemoving (stop), before any tick")
+		for _ = 1, 400 do w.heartbeat:Fire(0.25) end
+		assert(w.services.CombatService:GetCombat(p) == nil and w.services.ZoneService:GetSession(p) == nil, "no ghost session")
+		assert(spawned > 0 and destroyed == spawned, `runtime models cleaned ({destroyed}/{spawned})`)
+		assert(snapshot(w.data[p]) == "0/0/0||0/false", "no reward, no first clear, no quest progress: " .. snapshot(w.data[p]))
+		local back = rejoin(w, p)
+		local ended = w.fight(back, STARTER)
+		assert(ended[#ended].Result == "Victory" and w.data[back].Currencies.SummonTickets == 1, "rejoin plays normally")
+	end)
+
+	test("#12 victory then disconnect before the reward screen: everything already saved, rejoin keeps it once", function()
+		local w = world()
+		local p = w.player("A")
+		w.fight(p, STARTER) -- serveur : victoire → Quest → Reward → données mutées → CombatEnded
+		local saved = snapshot(w.data[p])
+		leave(w, p) -- le client n'a jamais affiché l'écran
+		local back = rejoin(w, p)
+		local d = w.data[back]
+		assert(snapshot(d) == saved and d.Progression.FirstClears["1-1"] == true and d.Currencies.Gold == 100
+			and d.Currencies.Gems == 10 and d.Currencies.SummonTickets == 1 and d.Quests.DefendDomain.Progress == 1, saved)
+		w.fight(back, STARTER)
+		assert(w.data[back].Currencies.SummonTickets == 1, "replay after rejoin: RepeatReward only, no second ticket")
+	end)
+
+	test("#12 no client reward remote: Continuer / reopened screen / forged client cannot grant anything", function()
+		local w = world()
+		local p = w.player("A")
+		w.fight(p, STARTER)
+		local before = snapshot(w.data[p])
+		for _, i in w.instances do
+			local name = string.lower(i.Name)
+			local rewardLike = name:find("reward") or name:find("claim") or name:find("collect") or name:find("give")
+			-- ClaimQuest marque la quête réclamée et ne donne aucune récompense (vérifié ci-dessous)
+			assert(not (rewardLike and i.OnServerInvoke) or i.Name == "ClaimQuest", "no client-invocable reward remote: " .. i.Name)
+		end
+		-- client falsifié : n'importe quoi sur les seules remotes du flux combat
+		for _, args in { { "Victory" }, { 1, true }, { { Rewards = { { Kind = "Gold", Amount = 1e9 } } } } } :: { any } do
+			for _, name in { "RequestStartStage", "SetCombatSpeed" } do
+				pcall(remote(w, name).OnServerInvoke, p, table.unpack(args))
+			end
+		end
+		local claim = remote(w, "ClaimQuest")
+		for _ = 1, 20 do pcall(claim.OnServerInvoke, p, "DefendDomain") end
+		local d = w.data[p]
+		assert(d.Currencies.Gold == 100 and d.Currencies.Gems == 10 and d.Currencies.SummonTickets == 1, "claiming the quest (spam) grants nothing")
+		assert(d.Quests.DefendDomain.Claimed == true)
+		d.Quests.DefendDomain.Claimed = false -- remis pour comparer le reste
+		assert(snapshot(d) == before, "rewards untouched")
+	end)
+
+	test("#12 CombatSpeed: only 1 and 2; anything else refused, Settings and session speed unchanged", function()
+		local w = world()
+		local p = w.player("A")
+		local speed = remote(w, "SetCombatSpeed")
+		local zone = w.services.ZoneService:StartStage(p, 1, 1)
+		assert(w.services.CombatService:StartCombat(p, zone.Id, STARTER, w.context()))
+		assert(speed.OnServerInvoke(p, 2) == true and w.data[p].Settings.CombatSpeed == 2 and w.services.CombatService:GetCombat(p).Speed == 2)
+		local fake: any = setmetatable({}, { __tostring = function() return "Instance" end })
+		local values: { any } = { 0, -1, 1.5, 3, math.huge, -math.huge, 0 / 0, "2", {}, fake }
+		local ok0, why0 = speed.OnServerInvoke(p, nil)
+		assert(ok0 == false and why0 == "vitesse invalide", "nil")
+		for _, bad in values do
+			local ok, why = speed.OnServerInvoke(p, bad)
+			assert(ok == false and why == "vitesse invalide", tostring(bad))
+			assert(w.data[p].Settings.CombatSpeed == 2 and w.services.CombatService:GetCombat(p).Speed == 2, "unchanged after " .. tostring(bad))
+		end
+		assert(speed.OnServerInvoke(p, 1) == true and w.data[p].Settings.CombatSpeed == 1)
+	end)
+
+	test("#12 DataLoaded lost / profile gone: no stage, no combat, no reward, no late completion", function()
+		local w = world()
+		local p = w.player("A")
+		local zone = w.services.ZoneService:StartStage(p, 1, 1)
+		assert(w.services.CombatService:StartCombat(p, zone.Id, STARTER, w.context()))
+		p.attributes.DataLoaded = nil -- profil perdu pendant le combat
+		w.heartbeat:Fire(0.05)
+		assert(w.services.CombatService:GetCombat(p) == nil, "dropped on the very next tick (contextAlive)")
+		for _ = 1, 400 do w.heartbeat:Fire(0.25) end
+		assert(w.services.CombatService:GetCombat(p) == nil, "combat dropped")
+		assert(w.services.ZoneService:CompleteStage(p, zone.Id, true) == false, "no late completion")
+		assert(w.services.RewardService:HandleStageCompleted(p, 1, 1, "late") == nil, "no late reward")
+		assert(w.services.ZoneService:StartStage(p, 1, 1) == nil and remote(w, "RequestStartStage").OnServerInvoke(p, 1, 1) == false)
+		assert(snapshot(w.data[p]) == "0/0/0||0/false")
+		local gone = w.player("G")
+		w.data[gone] = nil -- données absentes
+		assert(w.services.ZoneService:StartStage(gone, 1, 1) == nil and w.services.RewardService:HandleStageCompleted(gone, 1, 1, 1) == nil)
+	end)
+
 	print(`RewardFlow: {passed} passed, {failed} failed`)
 	if failed > 0 then
 		error(`{failed} RewardFlow test(s) failed`)
