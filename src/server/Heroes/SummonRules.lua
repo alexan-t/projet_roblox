@@ -149,8 +149,8 @@ function SummonRules.roll(pool: Pool, banner: Banner?, pick: (number) -> number)
 	return heroes[math.clamp(pick(#heroes), 1, #heroes)]
 end
 
--- Transaction complète, synchrone : revérifie le ticket, choisit le héros, débite, crée
--- l'exemplaire (hotbar si une case est libre), compte l'invocation et, à la toute première,
+-- Transaction complète, synchrone : revérifie le ticket, choisit le héros, prépare l'identifiant, crée
+-- l'exemplaire (hotbar si une case est libre), débite, compte l'invocation et, à la toute première,
 -- fait évoluer le royaume une seule fois. La toute première invocation donne toujours FirstSummon ;
 -- les suivantes tirent dans `pool` (bannière facultative).
 -- Renvoie le résultat, ou nil et la raison sans rien modifier.
@@ -163,10 +163,12 @@ function SummonRules.summon(data: any, config: any, makeId: () -> string, pick: 
 	local first = total == 0
 	local heroId = if first then config.FirstSummon else SummonRules.roll(pool, banner, pick)
 	local new = not HeroRules.owns(data, heroId)
-
-	data.Currencies.SummonTickets -= config.Cost
+	-- Tout ce qui peut échouer (identifiant, tirage) est prêt AVANT la première mutation : une
+	-- erreur ici laisse le ticket intact. Ensuite le héros est ajouté puis le ticket débité.
 	local instanceId = makeId()
+
 	local slot = HeroRules.addHero(data, instanceId, heroId)
+	data.Currencies.SummonTickets -= config.Cost
 	data.Summons = { Total = total + 1 }
 	local kingdomChanged = false
 	if first and data.Kingdom.VisualState == config.KingdomFrom then

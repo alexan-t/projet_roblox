@@ -110,6 +110,21 @@ return function(createService: any)
 		assert(va.Gold == 100 and va.SummonTickets == 0 and vb.Gold == 0 and vb.SummonTickets == 3)
 	end)
 
+	test("#12 read-only: the service exposes no remote that changes a currency", function()
+		local e = fixture()
+		e.start()
+		local p = e.player("A", { Gold = 7, Gems = 3, SummonTickets = 1 })
+		local remotes = e.get.Parent
+		local names = {}
+		for _, r in remotes.children do table.insert(names, r.Name) end
+		assert(#names == 1 and names[1] == "GetCurrencies", "only the getter: " .. table.concat(names, ","))
+		for _, args in { { "Gold", 1e9 }, { { Gold = 1e9 } }, { 0 / 0 } } :: { any } do
+			e.get.OnServerInvoke(p, table.unpack(args))
+		end
+		local c = e.data[p].Currencies
+		assert(c.Gold == 7 and c.Gems == 3 and c.SummonTickets == 1, "arguments are ignored")
+	end)
+
 	print(`PlayerStateService: {passed} passed, {failed} failed`)
 	if failed > 0 then
 		error(`{failed} PlayerStateService test(s) failed`)

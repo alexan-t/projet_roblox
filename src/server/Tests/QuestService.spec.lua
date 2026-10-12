@@ -403,6 +403,21 @@ return function(createService: any, productionConfig: any)
 		assert(db.Quests.DefendDomain.Claimed == false)
 	end)
 
+	test("#12 ClaimQuest spam after completion: 20 claims -> one success, progression never forged", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		local data = e.join(p)
+		local claim = e.remote("ClaimQuest").OnServerInvoke
+		for _ = 1, 20 do assert(claim(p, "DefendDomain") == false, "before completion") end
+		assert(data.Quests.DefendDomain.Progress == 0 and data.Quests.DefendDomain.Claimed == false)
+		s:HandleGameplayEvent(p, "StageCompleted", STAGE_1_1)
+		local ok = 0
+		for _ = 1, 20 do if claim(p, "DefendDomain") == true then ok += 1 end end
+		assert(ok == 1 and data.Quests.DefendDomain.Claimed == true and data.Quests.DefendDomain.Progress == 1)
+		assert(s:HandleGameplayEvent(p, "StageCompleted", STAGE_1_1) == false, "no progress after the chain ended")
+	end)
+
 	print(`QuestService: {passed} passed, {failed} failed`)
 	if failed > 0 then
 		error(`{failed} QuestService test(s) failed`)

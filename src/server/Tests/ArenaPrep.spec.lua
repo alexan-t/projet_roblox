@@ -289,6 +289,62 @@ return function(ArenaPrep: any)
 		assert(m.preps[e.A] == nil, "no stale prep bound to a cancelled session")
 	end)
 
+	-- Sécurité (#12) -----------------------------------------------------------------------------
+
+	test("#12 Ready spam: 20 Ready -> exactly one combat on the one stage session", function()
+		local e = fixture()
+		e.manager:place(e.A, 5, "H1")
+		local ok = 0
+		for _ = 1, 20 do
+			if e.manager:ready(e.A) == true then ok += 1 end
+		end
+		assert(ok == 1 and #e.combats == 1 and e.started == 1, `{ok} ready, {#e.combats} combats, {e.started} sessions`)
+	end)
+
+	test("#12 SelectStage spam during placement: always exactly one live stage session, formation kept", function()
+		local e = fixture()
+		local m = e.manager
+		m:place(e.A, 1, "H1")
+		for _ = 1, 20 do
+			assert(m:restage(e.A) == true)
+		end
+		local alive = 0
+		for _, id in e.stages do if id then alive += 1 end end
+		assert(alive == 1 and e.stages[e.A] == m.preps[e.A].sessionId, "one live session, bound to the prep")
+		assert(e.started == 21 and e.cancelledStages == 20, "each restage cancels the previous one first")
+		assert(m.preps[e.A].formation[1] == "H1")
+		m:ready(e.A)
+		for _ = 1, 5 do
+			local okR, why = m:restage(e.A)
+			assert(okR == false and why == "combat déjà lancé", "no restage during combat")
+		end
+		assert(#e.combats == 1 and e.stages[e.A] == m.preps[e.A].sessionId)
+	end)
+
+	test("#12 cross-player: another player's HeroInstanceId or arena state is never usable", function()
+		local e = fixture()
+		assert(e.manager:place(e.B, 1, "B1"))
+		for _, id in { "B1", "B2" } do
+			local ok, why = e.manager:place(e.A, 2, id)
+			assert(ok == false and why == "héros inconnu", id)
+		end
+		assert(e.manager:remove(e.A, 1) == false, "A cannot remove from B's formation")
+		assert(e.manager:ready(e.A) == false and #e.combats == 0, "A cannot launch B's preparation")
+		assert(e.manager:leave(e.A) == false and e.manager.preps[e.B] ~= nil, "A cannot cancel B")
+		assert(e.manager.preps[e.B].formation[1] == "B1")
+	end)
+
+	test("#12 invalid slots / ids from a client: refused, nothing reserved", function()
+		local e = fixture()
+		for _, slot in { 0, -1, 10, 1.5, 0 / 0, math.huge, "1", {}, nil } :: { any } do
+			assert(e.manager:place(e.A, slot, "H1") == false, tostring(slot))
+		end
+		for _, id in { 42, {}, "", nil } :: { any } do
+			assert(e.manager:place(e.A, 1, id) == false, tostring(id))
+		end
+		assert(e.manager.preps[e.A] == nil and e.started == 0)
+	end)
+
 	print(`ArenaPrep: {passed} passed, {failed} failed`)
 	if failed > 0 then
 		error(`{failed} ArenaPrep test(s) failed`)

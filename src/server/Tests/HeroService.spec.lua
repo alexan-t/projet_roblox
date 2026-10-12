@@ -118,6 +118,9 @@ return function(createService: any, modules: any)
 		env.game = { GetService = function(_s: any, n: string): any
 			return ({ Players = env.players, ReplicatedStorage = replicated, ServerStorage = server,
 				HttpService = { GenerateGUID = function(): string
+					if env.failGuid then error("GenerateGUID indisponible") end
+					local hook: any = env.onGuid
+					if hook ~= nil then (hook :: any)() end
 					env.guid = (env.guid or 0) + 1
 					return string.format("%08d", env.guid)
 				end } })[n]
@@ -560,6 +563,142 @@ return function(createService: any, modules: any)
 		assert(#e.warnings >= 1)
 		local p = e.player("A", { tickets = 1 })
 		assert(s:RequestSummon(p) ~= nil)
+	end)
+
+	-- Sécurité (#12) -----------------------------------------------------------------------------
+
+	local function leaveHero(e: any, p: any)
+		p.Parent = nil
+		for _, fn in e.removing do fn(p) end
+	end
+
+	test("#12 double summon: 1 ticket, 20 RequestSummon -> 1 success, 19 refused, 1 instance, 1 HeroObtained", function()
+		local e = fixture()
+		e.start()
+		local p = e.player("A", { tickets = 1 })
+		local invoke = e.remote("RequestSummon").OnServerInvoke
+		local ok, refused = 0, 0
+		for _ = 1, 20 do
+			if invoke(p) == true then ok += 1 else refused += 1 end
+		end
+		assert(ok == 1 and refused == 19, `{ok} / {refused}`)
+		assert(e.data[p].Currencies.SummonTickets == 0 and count(e.data[p].Heroes) == 2, "starter + one summoned hero")
+		assert(#e.events(p, "HeroObtained") == 1 and e.data[p].Summons.Total == 1)
+	end)
+
+	test("#12 summon never consumes a ticket without a hero: a failure inside the transaction changes nothing", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A", { tickets = 1 })
+		local before = count(e.data[p].Heroes)
+		e.failGuid = true -- l'identifiant d'exemplaire ne peut pas être créé
+		local got, why = s:RequestSummon(p)
+		assert(got == nil and why == "invocation impossible")
+		assert(e.data[p].Currencies.SummonTickets == 1, "ticket kept")
+		assert(count(e.data[p].Heroes) == before and e.data[p].Summons.Total == 0, "no hero, no count")
+		assert(#e.events(p, "HeroObtained") == 0)
+		e.failGuid = false
+		assert(s:RequestSummon(p) ~= nil and e.data[p].Currencies.SummonTickets == 0, "works again, once")
+	end)
+
+	test("#12 summon then disconnect: committed (ticket 0 + hero) or refused (nothing); never half", function()
+		-- Cas A : la transaction est faite avant le départ → au rejoin ticket 0, héros présent, pas de 2e invocation
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A", { tickets = 1 })
+		local got = s:RequestSummon(p)
+		leaveHero(e, p)
+		local d = e.data[p]
+		assert(got and d.Currencies.SummonTickets == 0 and d.Heroes[got.InstanceId], "saved state is coherent")
+		-- rejoin : même sauvegarde, nouvel objet Player ; aucune invocation gratuite
+		local back = e.player("A2", { tickets = 0 })
+		e.data[back] = d
+		for _, fn in e.ready do fn(back, d) end
+		local again, why = s:RequestSummon(back)
+		assert(again == nil and why == "pas de ticket d'invocation" and count(d.Heroes) == 2)
+		-- Cas B : refusé avant toute mutation (joueur déjà parti)
+		local e2 = fixture()
+		local s2 = e2.start()
+		local q = e2.player("B", { tickets = 1 })
+		leaveHero(e2, q)
+		local none, why2 = s2:RequestSummon(q)
+		assert(none == nil and why2 == "données non chargées")
+		assert(e2.data[q].Currencies.SummonTickets == 1 and count(e2.data[q].Heroes) == 1, "ticket kept, no hero")
+	end)
+
+	test("#12 HotbarAction fuzz: absurd values refused cleanly, hotbar unchanged; another player's hero refused", function()
+		local e = fixture()
+		e.start()
+		local a = e.player("A", { tickets = 1 })
+		local b = e.player("B", { portal = vector(300, 3, 0) })
+		local s = e.service
+		-- la remote ajoute un anti-spam (0,1 s) : on traverse la méthode qu'elle appelle, puis la remote une fois
+		local function edit(p: any, ...: any): any return s:HotbarAction(p, ...) end
+		local bar = table.concat(e.data[a].Hotbar, "|")
+		local foreign = e.data[b].Hotbar[1]
+		local fake: any = setmetatable({}, { __tostring = function() return "Instance" end })
+		local cases: { any } = {
+			{ "Assign", foreign, 2 }, { "Assign", "inconnu", 2 }, { "Assign", 42, 2 },
+			{ "Assign", e.data[a].Hotbar[1], 0 }, { "Assign", e.data[a].Hotbar[1], -1 }, { "Assign", e.data[a].Hotbar[1], 11 },
+			{ "Assign", e.data[a].Hotbar[1], 2.5 }, { "Assign", e.data[a].Hotbar[1], 0 / 0 }, { "Assign", e.data[a].Hotbar[1], math.huge },
+			{ "Clear", {} }, { "Clear", "1" }, { "Swap", 1, 1e9 }, { "Swap", fake, 2 }, { "Detruire", 1 }, { 42 }, { fake }, {},
+		}
+		for _, args in cases do
+			local okCall, ok = pcall(edit, a, table.unpack(args))
+			assert(okCall, "no server error for " .. tostring(args[1]))
+			assert(ok == false, `refused: {tostring(args[1])} {tostring(args[2])} {tostring(args[3])}`)
+		end
+		local okRemote, okR = pcall(e.remote("HotbarAction").OnServerInvoke, a, "Assign", foreign, 2)
+		assert(okRemote and okR == false, "remote refuses too")
+		assert(table.concat(e.data[a].Hotbar, "|") == bar, "hotbar unchanged")
+		assert(e.data[b].Heroes[foreign] and not e.data[a].Heroes[foreign], "B's hero never moved to A")
+	end)
+
+	test("#12 cross-player: B's portal and B's hero instance are useless to A; A's data never changes B's", function()
+		local e = fixture()
+		local s = e.start()
+		local a = e.player("A", { tickets = 1, portal = vector(0, 3, 0) })
+		local b = e.player("B", { tickets = 1, portal = vector(500, 3, 0) })
+		e.moveTo(a, vector(500, 3, 0)) -- au pied du portail de B
+		assert(select(2, s:RequestSummon(a)) == "approche-toi de ton portail")
+		local foreign = e.data[b].Hotbar[1]
+		assert(s:GetCombatHero(a, foreign) == nil, "B's HeroInstanceId is not A's hero")
+		assert(e.data[a].Currencies.SummonTickets == 1 and e.data[b].Currencies.SummonTickets == 1)
+	end)
+
+	test("#12 PlayerRemoving clears per-player server state (summon lock, anti-spam)", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A", { tickets = 2 })
+		e.remote("HotbarAction").OnServerInvoke(p, "Clear", 3)
+		leaveHero(e, p)
+		-- un nouvel objet joueur ne bloque sur rien : pas de verrou d'invocation fantôme
+		local back = e.player("A2", { tickets = 1 })
+		assert(s:RequestSummon(back) ~= nil, "no ghost summon lock")
+	end)
+
+	test("#12 defence in depth: the summon transaction re-checks the ticket itself (no CanSummon)", function()
+		local rules = modules.SummonRules
+		local data = { Currencies = { SummonTickets = 0 }, Heroes = {}, Hotbar = table.create(HeroConfig.HotbarSize, ""),
+			Summons = { Total = 3 }, Kingdom = { VisualState = 2 } }
+		local pool = rules.buildPool(modules.RarityConfig.Tiers, HeroConfig.Heroes)
+		local made = 0
+		local got, why = rules.summon(data, SummonConfig, function(): string made += 1; return "X" end, function(): number return 1 end, pool, nil)
+		assert(got == nil and why == "pas de ticket d'invocation" and made == 0 and next(data.Heroes) == nil)
+	end)
+
+	test("#12 summon lock: a request re-entering during the transaction is refused", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A", { tickets = 2 })
+		local inner: any = nil
+		e.onGuid = function()
+			if inner == nil then inner = { s:RequestSummon(p) } end -- ré-entrée pendant la transaction
+		end
+		local got = s:RequestSummon(p)
+		e.onGuid = nil
+		assert(got ~= nil and inner and inner[1] == nil and inner[2] == "invocation déjà en cours", tostring(inner and inner[2]))
+		assert(e.data[p].Currencies.SummonTickets == 1 and e.data[p].Summons.Total == 1, "one summon only")
 	end)
 
 	print(`HeroService: {passed} passed, {failed} failed`)
