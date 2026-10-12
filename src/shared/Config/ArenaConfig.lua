@@ -32,6 +32,12 @@ local ArenaConfig = {
 		Gobelin = "Ennemi_Gobelin",
 		Boss = "Ennemi_RoiOrc",
 	}),
+	-- Noms affichés (pancarte, fenêtre des stages, annonce de combat). Boss = boss de la Zone 1 (X-5).
+	EnemyNames = table.freeze({
+		Slime = "Slime",
+		Gobelin = "Gobelin",
+		Boss = "Roi Orc",
+	}),
 }
 
 return table.freeze(ArenaConfig)

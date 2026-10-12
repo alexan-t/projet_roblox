@@ -4,7 +4,8 @@
 -- (SelectStage) et le lancement (Ready) ; ArenaPlacementController l'ouvre depuis la pancarte de l'arène (E).
 --   Fenêtre bois avec bandeau « Expédition », voile derrière, ouverture 0,9 → 1.
 --   Une carte par stage : icône épées croisées (ou cadenas), « Stage 1-1 », badge d'état :
---   « Disponible » (Success), « Terminé » (Gold), « Verrouillé » (StoneGrey, carte estompée).
+--   « Disponible » (Success), « Terminé » (Gold), « Verrouillé » (StoneGrey, carte estompée) ; stage de
+--   boss de zone (X-5) : pastille « Boss » (RoyalRed) sur l'illustration.
 --   Le stage choisi a le contour Selected ; dessous, ses ennemis ; bouton principal « Lancer ».
 -- API : ExpeditionView.Show(data, options) ; ExpeditionView.Hide().
 --   data = { Zone: number, Title: string?, Stages: { { Stage: number, Unlocked: boolean, Cleared: boolean?,
@@ -16,6 +17,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local ArenaConfig = require(ReplicatedStorage.Shared.Config.ArenaConfig)
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local Icons = require(script.Parent.Parent.Icons)
 local UIKit = require(script.Parent.Parent.UIKit)
@@ -79,6 +81,18 @@ local function stageCard(parent: Instance, zone: number, stage: Stage): (Frame, 
 	else
 		UIKit.edgeBadge(frame, "Disponible", Colors.Success)
 	end
+	-- Stage de boss de zone (X-5) : petite pastille « Boss » au coin de l'illustration.
+	local boss = false
+	for _, enemy in stage.Enemies or {} do
+		boss = boss or enemy.MiniBoss == true
+	end
+	if boss then
+		local mark = UIKit.badge(art, "Boss", Colors.RoyalRed)
+		mark.Name = "Boss"
+		mark.AnchorPoint = Vector2.new(1, 1)
+		mark.Position = UDim2.new(1, -Spacing.XS, 1, -Spacing.XS)
+		mark.ZIndex = 4
+	end
 	local touch = Instance.new("TextButton")
 	touch.BackgroundTransparency = 1
 	touch.Text = ""
@@ -91,7 +105,8 @@ end
 local function describe(stage: Stage): string
 	local parts = {}
 	for _, enemy in stage.Enemies or {} do
-		table.insert(parts, if enemy.MiniBoss then `Mini-boss {enemy.EnemyId}` else `{enemy.EnemyId} ×{enemy.Count}`)
+		local name = ArenaConfig.EnemyNames[enemy.EnemyId] or enemy.EnemyId
+		table.insert(parts, if enemy.MiniBoss then `Boss : {name}` else `{name} ×{enemy.Count}`)
 	end
 	local waves = stage.Waves
 	local prefix = if waves then (if waves > 1 then `{waves} vagues` else "1 vague") else ""

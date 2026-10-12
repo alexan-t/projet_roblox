@@ -139,9 +139,9 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 			end }
 		end
 		-- Un combat complet : stage 1-1 lancé, formation, simulation jusqu'à la fin.
-		function env.fight(p: any, formation: any): any
-			local zone = services.ZoneService:StartStage(p, 1, 1)
-			assert(zone, "stage 1-1 started")
+		function env.fight(p: any, formation: any, stage: number?): any
+			local zone = services.ZoneService:StartStage(p, 1, stage or 1)
+			assert(zone, `stage 1-{stage or 1} started`)
 			assert(services.CombatService:StartCombat(p, zone.Id, formation, env.context()))
 			for _ = 1, 300 * 4 do
 				env.heartbeat:Fire(0.25)
@@ -433,6 +433,75 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 		local gone = w.player("G")
 		w.data[gone] = nil -- données absentes
 		assert(w.services.ZoneService:StartStage(gone, 1, 1) == nil and w.services.RewardService:HandleStageCompleted(gone, 1, 1, 1) == nil)
+	end)
+
+	-- Zone 1 complète (#13) : chemin réel 1-1 → 1-5 ---------------------------------------------
+
+	local PAIR = { [2] = "Epeiste", [8] = "Tireur" } -- équipe garantie : Écuyer (Epeiste) + Tireuse (Tireur)
+
+	-- Événements envoyés à p à partir de l'indice `from` de w.fired.
+	local function eventsSince(w: any, p: any, from: number, kind: string): { any }
+		local out = {}
+		for i = from + 1, #w.fired do
+			local batch = w.fired[i]
+			if batch.player == p then
+				for _, e in batch.events do if e.Type == kind then table.insert(out, e) end end
+			end
+		end
+		return out
+	end
+
+	test("#13 Zone 1 chain on a new account: 1-1 alone, then 1-2..1-5 with the guaranteed pair; boss only on 1-5", function()
+		local w = world()
+		local p = w.player("A")
+		local zone = w.services.ZoneService
+		local function statuses(): string
+			local s = {}
+			for _, entry in zone:ListStages(p) do table.insert(s, `{entry.Stage}:{entry.Status}`) end
+			return table.concat(s, " ")
+		end
+		assert(statuses() == "1:Unlocked 2:Locked 3:Locked 4:Locked 5:Locked", statuses())
+		assert(zone:StartStage(p, 1, 5) == nil and zone:StartStage(p, 1, 2) == nil, "no skipping from a new account")
+		for stage = 1, 5 do
+			local before = #w.fired
+			local ended = w.fight(p, if stage == 1 then STARTER else PAIR, stage)
+			local last = ended[#ended]
+			assert(last and last.Result == "Victory" and last.FirstClear == true, `1-{stage}: {last and last.Result}`)
+			local bosses = eventsSince(w, p, before, "MiniBossStarted")
+			if stage == 5 then
+				assert(#bosses == 1 and bosses[1].EnemyId == "Boss", "the Roi Orc boss is fought on 1-5")
+			else
+				assert(#bosses == 0, `no boss on 1-{stage}`)
+			end
+			if stage < 5 then
+				assert(zone:ListStages(p)[stage + 1].Status == "Unlocked", `1-{stage + 1} unlocked by the First Clear of 1-{stage}`)
+			end
+		end
+		local d = w.data[p]
+		for stage = 1, 5 do assert(d.Progression.FirstClears[`1-{stage}`] == true, `FirstClear 1-{stage}`) end
+		assert(d.Currencies.Gold == 100 and d.Currencies.Gems == 10 and d.Currencies.SummonTickets == 1,
+			"only 1-1 gives currencies (1-2..1-5 rewards are empty for now)")
+		assert(#zone:ListStages(p) == 5 and zone:StartStage(p, 1, 6) == nil, "no stage 1-6")
+		-- replays : 1-1 → +20 or, aucun ticket ; 1-5 → pas de second First Clear
+		local r1 = w.fight(p, PAIR, 1)
+		assert(r1[#r1].FirstClear == false and d.Currencies.Gold == 120 and d.Currencies.SummonTickets == 1)
+		local r5 = w.fight(p, PAIR, 5)
+		assert(r5[#r5].Result == "Victory" and r5[#r5].FirstClear == false and #r5[#r5].Rewards == 0)
+		assert(d.Currencies.Gold == 120 and d.Currencies.SummonTickets == 1)
+	end)
+
+	test("#13 RewardConfig: a valid entry for every stage of StageConfig (First Clear = unlock)", function()
+		local stages = configs.StageConfig.Zones[1].Stages
+		assert(#stages == 5)
+		for stage = 1, #stages do
+			local entry = configs.RewardConfig.Stages[`1-{stage}`]
+			assert(entry, `RewardConfig 1-{stage}`)
+			assert(#RewardRules.stageProblems(entry) == 0, `valid 1-{stage}`)
+		end
+		local first = configs.RewardConfig.Stages["1-1"]
+		assert(#first.FirstClearReward == 3 and first.RepeatReward[1].Kind == "Gold" and first.RepeatReward[1].Amount == 20, "1-1 contract unchanged")
+		local w = world()
+		assert(#w.warnings == 0, "no config warning: " .. table.concat(w.warnings, "; "))
 	end)
 
 	print(`RewardFlow: {passed} passed, {failed} failed`)

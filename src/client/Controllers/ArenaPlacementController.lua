@@ -347,7 +347,8 @@ local function renderEnemies()
 	frame:ClearAllChildren()
 	local y = 0
 	for _, enemy in ArenaStore.arena.Enemies or {} do
-		local text = if enemy.MiniBoss then `Mini-boss : {enemy.EnemyId}` else `{enemy.EnemyId} ×{enemy.Count}`
+		local name = ArenaConfig.EnemyNames[enemy.EnemyId] or enemy.EnemyId
+		local text = if enemy.MiniBoss then `Boss : {name}` else `{name} ×{enemy.Count}`
 		local label = line(frame, text, SIZE.Label, y, 24)
 		label.TextColor3 = if enemy.MiniBoss then C.Gold else C.TextLight
 		y += 28
@@ -572,9 +573,9 @@ local function onCombatEvents(_combatId: number, events: { { [string]: any } })
 			ui.banner.Text = text
 			flash(ui.banner, 2)
 		elseif event.Type == "MiniBossStarted" then
-			ui.wave.Text = "Mini-boss"
+			ui.wave.Text = "Boss"
 			AudioController.Play("MiniBoss")
-			ui.banner.Text = `★ {event.EnemyId}`
+			ui.banner.Text = `Boss : {ArenaConfig.EnemyNames[event.EnemyId] or event.EnemyId}`
 			flash(ui.banner, 2.5)
 		elseif event.Type == "SpeedChanged" then
 			ui.x1.setSelected(event.Speed == 1)
