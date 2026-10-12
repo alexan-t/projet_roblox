@@ -30,8 +30,19 @@ migration, `Reconcile`, `DataLoaded`, `EndSession` au départ, sauvegarde à la 
 `OnSessionEnd` retire les données et expulse le joueur : jamais deux propriétaires.
 
 Ce qui n'est pas automatisable avec le harnais local : le comportement réel du DataStore en
-production (latence, échecs d'écriture, fermeture brutale du serveur). Validé en Studio : sauvegarde
-au départ et à l'arrêt du serveur, reprise de session (voir le rapport de la PR #12).
+production (latence, échecs d'écriture, fermeture brutale d'un serveur en ligne).
+
+Validé dans Studio (DataStore Studio réel, 2 joueurs) :
+- **Sauvegarde au départ** : un joueur expulsé juste après une invocation retrouve son ticket à 0 et
+  son héros ; un joueur expulsé à l'instant de la victoire, avant l'écran de fin, retrouve son First
+  Clear, ses monnaies, son ticket et sa quête.
+- **Sauvegarde à l'arrêt du serveur** : une mutation faite pendant la session est relue dans le
+  profil après l'arrêt (`BindToClose` de ProfileStore).
+- **Verrou de session** :
+  - sur un même serveur, ProfileStore refuse d'ouvrir deux fois le même profil ;
+  - entre deux serveurs (la fenêtre d'édition de Studio tenant le profil), le serveur de jeu n'a
+    chargé le joueur qu'après que l'autre session a reçu `OnSessionEnd` (environ 29 s) ;
+  - il n'y a jamais deux propriétaires en même temps.
 
 ## Limite connue
 
