@@ -18,15 +18,15 @@ Les **60 héros** du Bestiaire sont activés (tous jouables, tous invocables) :
 | HeroId | `CombatProfile` (stats, `CombatConfig.Heroes`) | `CombatTemplate` (`ReplicatedStorage.Assets.Combat`) |
 | --- | --- | --- |
 | `ecuyer_du_rempart` | `Epeiste` | `Heros_EcuyerDuRempart` (articulé, animé) |
-| `tireuse_des_faubourgs` | `Tireur` | `Heros_Tireur` |
+| `tireuse_des_faubourgs` | `Tireur` | aucun : son vrai modèle (le mannequin R15 `Heros_Tireur` n'est plus utilisé, #13) |
 | les 58 autres | un des 6 profils selon leur rôle (`Epeiste`, `Tireur`, `Archer`, `Barbare`, `Paladin`, `Magicien`) | aucun : le combat pose le **vrai modèle** du héros (`ReplicatedStorage.Assets.Heros`, par `HeroId`, statique) |
 
 HeroConfig est la **seule** table de correspondance : le serveur (arène, combat) et le client
 (héros dans les mains) la lisent. `Heros_EcuyerDuRempart` est la copie articulée de
 `Workspace.AtelierAnimation.EcuyerDuRempart` (`JeuAnimations = EcuyerDuRempart` : Marche, Attaque,
 Ultime jouées en combat ; Studio uniquement tant que les séquences n'ont pas d'`AssetId`, voir
-`ANIMATION_TOOLS.md`). Un modèle articulé n'a que sa racine ancrée en arène. La Tireuse garde le
-mannequin provisoire `Heros_Tireur`. Les autres héros n'ont pas encore d'animation : leur vrai
+`ANIMATION_TOOLS.md`). Un modèle articulé n'a que sa racine ancrée en arène. La Tireuse et les
+autres héros n'ont pas encore d'animation : leur vrai
 modèle est posé tel quel (comme le slime).
 
 ## Raretés

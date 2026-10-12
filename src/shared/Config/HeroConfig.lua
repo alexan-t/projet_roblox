@@ -58,7 +58,7 @@ end
 -- Commun
 -- Modèle articulé (copie de Workspace.AtelierAnimation) : Marche, Attaque, Ultime animées.
 hero("ecuyer_du_rempart", "Écuyer du Rempart", "Commun", "Epeiste", "Heros_EcuyerDuRempart")
-hero("tireuse_des_faubourgs", "Tireuse des Faubourgs", "Commun", "Tireur", "Heros_Tireur")
+hero("tireuse_des_faubourgs", "Tireuse des Faubourgs", "Commun", "Tireur") -- vrai modèle (le mannequin R15 Heros_Tireur n'est plus utilisé)
 -- Peu commun
 hero("lancier_des_champs", "Lancier des Champs", "PeuCommun", "Epeiste")
 hero("apprenti_pyromancien", "Apprenti Pyromancien", "PeuCommun", "Magicien")

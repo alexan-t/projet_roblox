@@ -7,7 +7,7 @@ réelles, mini-boss, x2 et victoire/défaite calculées sont le rôle de CombatS
 ## StageConfig
 
 `src/server/Config/StageConfig.lua` décrit tous les stages. ZoneService ne connaît aucun
-stage en particulier : ajouter le Stage 2 ou la Zone 2 se fait uniquement dans la config.
+stage en particulier : ajouter un stage ou une zone se fait uniquement dans la config. Extrait (1-1) :
 
 ```lua
 Zones = {
@@ -28,9 +28,21 @@ Zones = {
 - `Waves` : liste non vide de vagues ; chaque vague a une liste non vide `Enemies` de
   `{ EnemyId: string non vide, Count: entier >= 1 }`.
 - `MiniBoss` : facultatif, `{ EnemyId }`, affronté après la dernière vague.
-- Le Stage 1-1 est le **stage d'entrée** : un compte neuf n'a que son héros de départ (l'Écuyer) et
-  doit pouvoir le gagner seul pour obtenir son premier ticket d'invocation (boucle Alpha, #11). Il
-  n'a donc pas de mini-boss : celui-ci reviendra avec un stage suivant.
+- **Convention de progression d'une zone Alpha** : X-1 à X-4 = combats d'ennemis communs, **X-5 =
+  boss de zone** (`MiniBoss`, seulement sur X-5). C'est une convention : seule la Zone 1 existe.
+- **Zone 1** (boss = `Boss`, le Roi Orc, modèle `Ennemi_RoiOrc`) :
+
+  | Stage | Contenu | PV ennemis |
+  | --- | --- | --- |
+  | 1-1 | Slime ×2, Gobelin ×2 — stage d'entrée, gagnable par le héros de départ seul | 280 |
+  | 1-2 | Slime ×3, Gobelin ×2 | 340 |
+  | 1-3 | 2 vagues : Slime ×2 + Gobelin ×2, puis Slime ×2 + Gobelin ×1 | 480 |
+  | 1-4 | 2 vagues : Slime ×2 + Gobelin ×2, puis Gobelin ×3 | 520 |
+  | 1-5 | Slime ×2 + Gobelin ×1, puis **le Roi Orc** | 650 |
+
+  Simulations (CombatEngine + CombatConfig, 20 tirages, tests #13) : l'Écuyer seul gagne 1-1 ;
+  l'Écuyer + la Tireuse (équipe garantie après la première invocation) gagnent 1-1 à 1-5. Un stage
+  n'est jouable qu'après le First Clear du précédent (RewardService, `docs/REWARDS.md`).
 - `EnemyId` est un **identifiant logique**. Stage 1 reprend les types de la vague de
   démonstration de `CombatIntroController` (`Slime`, `Gobelin`, `Boss`). Aucune statistique
   (PV, dégâts, vitesse), aucun modèle, aucune position : CombatService (#8) associera ces

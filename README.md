@@ -147,7 +147,11 @@ avec des stats temporaires dans `src/server/Config/CombatConfig.lua`. Il annonce
 la défaite à ZoneService. Les ultimes sont automatiques ; le client ne peut que choisir la
 vitesse x1/x2. Voir [le moteur, les événements et la sécurité](docs/COMBAT.md) et le
 [placement des héros dans l'arène personnelle du plot](docs/ARENA_PROTOTYPE.md) (hotbar, sacoche,
-E = Placer / Reprendre, pancarte du stage → Lancer). Le Stage 1-1 se gagne avec le seul héros de départ.
+E = Placer / Reprendre, pancarte du stage → Lancer).
+
+**Progression Alpha** : dans chaque zone, X-1 à X-4 sont des combats d'ennemis communs et X-5 est le
+boss de zone. Zone 1 : 1-1 à 1-5, boss = Roi Orc. Le Stage 1-1 se gagne avec le seul héros de départ ;
+l'Écuyer + la Tireuse (première invocation) terminent la zone. Voir [la Zone 1](docs/ZONES.md).
 
 ## Récompenses et First Clear (RewardService)
 

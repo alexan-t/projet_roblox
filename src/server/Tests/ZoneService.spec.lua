@@ -133,7 +133,7 @@ return function(createService: any, productionConfig: any)
 		local e = fixture()
 		local s = e.start()
 		local p = e.player("A")
-		for _, case in { { 1, 2 }, { 2, 1 }, { 0, 1 }, { 1, 0 }, { 1.5, 1 }, { "1", 1 } } :: { any } do
+		for _, case in { { 1, 6 }, { 2, 1 }, { 0, 1 }, { 1, 0 }, { 1.5, 1 }, { "1", 1 } } :: { any } do
 			local session, reason = s:StartStage(p, case[1], case[2])
 			assert(session == nil and reason == "stage inconnu", `{case[1]}/{case[2]} -> {reason}`)
 		end
@@ -451,6 +451,34 @@ return function(createService: any, productionConfig: any)
 		assert(list[2].Status == "Unavailable" and list[2].Config == nil)
 		p.attributes.DataLoaded = nil
 		assert(#s:ListStages(p) == 0)
+	end)
+
+	test("#13 production Zone 1: 5 valid stages, unlocked one by one by the previous First Clear, no 1-6", function()
+		local e = fixture()
+		local s = e.start()
+		assert(#e.warnings == 0, "valid: " .. table.concat(e.warnings, "; "))
+		local p = e.player("A")
+		local function statuses(): string
+			local out = {}
+			for _, entry in s:ListStages(p) do table.insert(out, entry.Status) end
+			return table.concat(out, ",")
+		end
+		assert(statuses() == "Unlocked,Locked,Locked,Locked,Locked", statuses())
+		for stage = 2, 5 do
+			local ok, why = s:CanStartStage(p, 1, stage)
+			assert(ok == false and why == "stage verrouillé", `1-{stage} locked on a new account`)
+		end
+		local expected = { "Unlocked,Unlocked,Locked,Locked,Locked", "Unlocked,Unlocked,Unlocked,Locked,Locked",
+			"Unlocked,Unlocked,Unlocked,Unlocked,Locked", "Unlocked,Unlocked,Unlocked,Unlocked,Unlocked" }
+		for stage = 1, 4 do
+			e.data[p].Progression.FirstClears[`1-{stage}`] = true
+			assert(statuses() == expected[stage], `after 1-{stage}: {statuses()}`)
+		end
+		local ok, why = s:CanStartStage(p, 1, 6)
+		assert(ok == false and why == "stage inconnu")
+		for index, stage in productionConfig.Zones[1].Stages do
+			assert((stage.MiniBoss ~= nil) == (index == 5), `MiniBoss only on 1-5 (1-{index})`)
+		end
 	end)
 
 	print(`ZoneService: {passed} passed, {failed} failed`)

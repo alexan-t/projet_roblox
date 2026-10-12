@@ -9,6 +9,12 @@
 -- VALEURS ALPHA PROVISOIRES : aucun balancing officiel n'existe encore dans le projet.
 -- Seul le ticket d'invocation du premier clear de 1-1 est une exigence (#9, nécessaire à #10).
 -- Or et gemmes sont des valeurs de départ à ajuster avec le game design.
+--
+-- Chaque stage DOIT avoir une entrée valide : RewardService est le propriétaire de FirstClears,
+-- et le First Clear d'un stage déverrouille le suivant. 1-2 à 1-5 : listes VIDES, PROVISOIRES — le
+-- First Clear est enregistré (déverrouillage) sans inventer d'économie ; le game design les définira.
+
+local NONE = table.freeze({})
 
 local RewardConfig = {
 	Stages = {
@@ -22,6 +28,10 @@ local RewardConfig = {
 				{ Kind = "Gold", Amount = 20 },
 			},
 		},
+		["1-2"] = { FirstClearReward = NONE, RepeatReward = NONE },
+		["1-3"] = { FirstClearReward = NONE, RepeatReward = NONE },
+		["1-4"] = { FirstClearReward = NONE, RepeatReward = NONE },
+		["1-5"] = { FirstClearReward = NONE, RepeatReward = NONE },
 	},
 }
 
