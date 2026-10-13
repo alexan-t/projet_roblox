@@ -38,14 +38,15 @@ local function build(): Model?
 	local right = equipement.Panneau.CFrame.RightVector
 	local low, high = extent(equipement, right)
 	local boxCFrame, boxSize = equipement:GetBoundingBox()
-	-- Boîte un peu relevée : le dallage et le sol sous les poteaux ne comptent pas comme obstacle.
+	-- Boîte pleine, jusqu'au sol : un socle bas voisin (Bestiaire.Monstres) est un obstacle. Seuls le
+	-- terrain et l'Inventaire lui-même (dallage, bordure) sont ignorés.
 	local params = OverlapParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = { workspace.Terrain }
+	params.FilterDescendantsInstances = { workspace.Terrain, inventaire }
 	local offset
-	for _, side in { -1, 1 } do -- côté gauche (loin de la section Héros) d'abord
+	for _, side in { -1, 1 } do
 		local candidate = right * side * (high - low + GAP)
-		local hits = workspace:GetPartBoundsInBox(boxCFrame + candidate + Vector3.new(0, 1, 0), boxSize - Vector3.new(0, 1, 0), params)
+		local hits = workspace:GetPartBoundsInBox(boxCFrame + candidate, boxSize, params)
 		if #hits == 0 then
 			offset = candidate
 			break
@@ -87,6 +88,11 @@ local function build(): Model?
 		label:SetAttribute("Famille", family.Name)
 		label.Position = rowTemplate.Position + times(labelRowStep, row - 1)
 		label.TextLabel.Text = `{family.Name} ({perFamily[family.Id] or 0})`
+		-- Noms de famille plus longs que les raretés : même taille de texte, réduite seulement s'il déborde.
+		local limit = Instance.new("UITextSizeConstraint")
+		limit.MaxTextSize = label.TextLabel.TextSize
+		limit.Parent = label.TextLabel
+		label.TextLabel.TextScaled = true
 		label.Parent = fond
 	end
 
