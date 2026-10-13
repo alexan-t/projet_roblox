@@ -19,6 +19,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
+local AnimationSets = require(ReplicatedStorage.Shared.Animation.AnimationSets)
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local AttackEffectController = require(script.Parent.AttackEffectController)
 local AudioController = require(script.Parent.AudioController)
@@ -231,7 +232,7 @@ end
 local function animate(unitId: number?, name: string)
 	local view = if unitId then views[unitId] else nil
 	local model = if view then view.model else nil
-	if model and model:GetAttribute("JeuAnimations") ~= nil then
+	if model and AnimationSets.isAnimated(model) then
 		MonsterAnimationController.Play(model, name)
 	end
 end
