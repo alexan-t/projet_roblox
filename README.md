@@ -186,6 +186,10 @@ Voir [la répartition, la vitrine Studio et la production des icônes](docs/RESO
 `tools/animation/AnimationKit.luau` est un outil Studio (non synchronisé par Rojo) qui pose un
 squelette sur un héros ou un monstre généré par l'IA, génère sa marche et la montre en boucle à
 côté du spawn au Play. Voir [l'utilisation, le format de modèle et les profils](docs/ANIMATION_TOOLS.md).
+Héros et monstres humanoïdes partagent un même squelette (os communs, animations partagées comme la
+marche, fiche « cette pièce = tel os » dans `SkeletonConfig`) : l'Écuyer du Rempart et le Roi Orc
+l'utilisent, le Gobelin reste sur l'ancien squelette et les deux coexistent. Voir
+[comment brancher ou migrer un modèle](docs/SKELETON.md).
 Les animations de la DEV jouent en Studio ; aucune n'a encore d'`AssetId` publié (requis en production).
 
 ## Workflow Git

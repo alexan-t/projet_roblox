@@ -28,9 +28,10 @@ local SkeletonConfig = {
 	}),
 
 	Models = table.freeze({
-		-- Héros de départ : format IA standard. Épée en main droite, bouclier en main gauche.
+		-- Héros de départ : format IA standard (Bestiaire.Heros.Socle_01 et Assets.Combat.Heros_EcuyerDuRempart).
+		-- Épée courte en main droite, bouclier en main gauche ; cor_geom (cor de chasse) reste au buste.
 		EcuyerDuRempart = table.freeze({
-			Pieces = table.freeze({ weapon_geom = "ArmeDroite", buckler_geom = "ArmeGauche" }),
+			Pieces = table.freeze({ short_sword_geom = "ArmeDroite", shield_geom = "ArmeGauche" }),
 			Commun = "Squelette_Leger",
 			Profil = "Leger",
 			Attaque = "Epee",
