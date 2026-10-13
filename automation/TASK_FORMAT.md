@@ -11,7 +11,12 @@ Identifiant technique unique. Ne jamais le réutiliser.
 Nom lisible de la créature.
 
 `type`
-Pour le moment : `monster` ou `boss`.
+`monster`, `boss`, `item` ou `resource`.
+- `monster`, `boss` : créature 3D (`docs/MONSTER_PRODUCTION.md`).
+- `item` : icône 2D d'équipement, voir `docs/ITEMS.md` (emplacement `Item_NNN` de la vitrine).
+- `resource` : icône 2D de ressource, voir `docs/RESOURCES.md`. Champs en plus : `family`
+  (famille de `ResourceConfig`) et `icon_hook` (idée principale de l'icône). Catalogue des
+  tâches : `automation/catalogues/resources.json`.
 
 `brief_source`
 Chemin vers le brief. Le worker doit lire ce fichier avant toute création.
