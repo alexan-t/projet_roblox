@@ -172,6 +172,8 @@ HeroId réel ≠ profil de combat temporaire : voir [les données, les règles e
 `tools/animation/AnimationKit.luau` est un outil Studio (non synchronisé par Rojo) qui pose un
 squelette sur un héros ou un monstre généré par l'IA, génère sa marche et la montre en boucle à
 côté du spawn au Play. Voir [l'utilisation, le format de modèle et les profils](docs/ANIMATION_TOOLS.md).
+Héros et monstres partagent un même squelette (os communs, animations partagées, fiche « cette
+pièce = tel os ») : voir [comment brancher un nouveau modèle](docs/SKELETON.md).
 Les animations de la DEV jouent en Studio ; aucune n'a encore d'`AssetId` publié (requis en production).
 
 ## Workflow Git
