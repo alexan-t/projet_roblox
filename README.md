@@ -167,6 +167,13 @@ son plot (`Remotes.RequestSummon`, un `SummonTicket`, première invocation garan
 `tireuse_des_faubourgs`), `Remotes.HeroObtained`, migration des anciens profils en DataVersion 2.
 HeroId réel ≠ profil de combat temporaire : voir [les données, les règles et l'API](docs/HEROES.md).
 
+## Ressources 2D (ResourceConfig)
+
+Catalogue de 60 ressources en icônes 2D (6 familles de 10, aucune rareté), partagé dans
+`src/shared/Config/ResourceConfig.lua`, avec une tâche de production par icône dans
+`automation/catalogues/resources.json`. Pas encore de stockage ni d'obtention en jeu. Voir [la
+répartition, la vitrine Studio et la production des icônes](docs/RESOURCES.md).
+
 ## Animations (AnimationKit)
 
 `tools/animation/AnimationKit.luau` est un outil Studio (non synchronisé par Rojo) qui pose un
