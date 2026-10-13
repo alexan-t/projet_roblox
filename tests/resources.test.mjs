@@ -102,5 +102,74 @@ test('resources.json: tasks follow TASK_FORMAT and target their Ressources #NNN 
 	}
 });
 
+test('resources.json: schema_version 1, unique ids, every TASK_FORMAT field present', () => {
+	assert(catalogue.schema_version === 1, `schema_version ${catalogue.schema_version}`);
+	assert(new Set(catalogue.queue.map((task) => task.id)).size === catalogue.queue.length, 'identifiants en double');
+	for (const task of catalogue.queue) {
+		assert(task.worker === 'windows' && Number.isInteger(task.priority), `${task.id}: worker ou priority`);
+		assert(Array.isArray(task.screenshots) && task.screenshots.length === 0, `${task.id}: screenshots`);
+		assert(task.latest_review === null && typeof task.notes === 'string', `${task.id}: latest_review ou notes`);
+	}
+});
+
+test('resources.json: references are the four main validated creatures (CLAUDE.md, ART_DIRECTION § 1)', () => {
+	const art = read('docs/ART_DIRECTION.md');
+	const main = ['KingTreant', 'Treant_Masque', 'KingSlime', 'RoiOrc'];
+	for (const id of main) assert(art.includes(`\`${id}\``), `${id} absent de ART_DIRECTION.md`);
+	for (const task of catalogue.queue) {
+		assert(JSON.stringify(task.reference_priority) === JSON.stringify(main), `${task.id}: reference_priority`);
+	}
+});
+
+test('resources.json: icon hooks stay in the DA (no rarity, emoji, futuristic or chrome look)', () => {
+	const banned = /rar(e|eté)|légendaire|épique|commun[e]?\b|emoji|futuris|néon|chrom|holograph|photoréal/i;
+	const emoji = /\p{Extended_Pictographic}/u;
+	for (const task of catalogue.queue) {
+		const hit = task.icon_hook.match(banned);
+		assert(!hit, `${task.id}: « ${hit?.[0]} » dans icon_hook`);
+		assert(!emoji.test(task.icon_hook) && !emoji.test(task.name), `${task.id}: emoji`);
+	}
+});
+
+test('RESOURCES.md: boss trophies and slot example match ResourceConfig', () => {
+	const byId = new Map(resources.map((info) => [info.id, info]));
+	for (const [id, name] of [...doc.matchAll(/`(resource_\d{3})` \(([^,)«]+)/g)].map((m) => [m[1], m[2].replace(/\s+/g, ' ')])) {
+		assert(byId.get(id)?.name === name, `${id}: « ${name} » dans la doc, « ${byId.get(id)?.name} » au catalogue`);
+	}
+	const example = doc.match(/`(resource_\d{3})` \(« Ressources #(\d{3}) \[([^\]]+)\] »\)/);
+	assert(example, 'exemple du § 3 introuvable');
+	const familyName = new Map(families.map((f) => [f.id, f.name]));
+	assert(example[1].slice(-3) === example[2], `exemple : ${example[1]} → #${example[2]}`);
+	assert(familyName.get(byId.get(example[1]).family) === example[3], `exemple : famille ${example[3]}`);
+});
+
+test('ResourceConfig.spec.lua: FAMILIES list matches ResourceConfig.Families', () => {
+	const spec = read('src/server/Tests/ResourceConfig.spec.lua');
+	const list = spec.match(/local FAMILIES = \{([^}]*)\}/);
+	assert(list, 'FAMILIES introuvable dans le spec');
+	const ids = [...list[1].matchAll(/"(\w+)"/g)].map((m) => m[1]);
+	assert(ids.join() === families.map((f) => f.id).join(), `spec : ${ids.join()}`);
+});
+
+test('studio-resources-vitrine.luau: slot path of RESOURCES.md § 3, emits lines this test can parse', () => {
+	const vitrine = read('tools/studio-resources-vitrine.luau');
+	const path = doc.match(/→ Workspace\.Bestiaire\.Inventaire\.Ressources\.(Panneau\.Affichage\.Fond\.Emplacements)\.Ressource_NNN/);
+	assert(path && vitrine.includes(`panel.${path[1]}`), 'chemin des emplacements différent de la doc');
+	assert(/require\(.*\.Shared\.Config\.ResourceConfig\)/.test(vitrine), 'ResourceConfig non lu par le script');
+	assert(vitrine.includes('string.format("resource(%q, %q, %q, %q)"'), 'format des lignes resource(...) changé');
+	assert(/ChangeHistoryService/.test(vitrine), 'pas d\'étape ChangeHistoryService');
+	// Ligne telle que %q la produit pour une icône livrée : elle doit passer le motif du premier test.
+	const line = 'resource("resource_036", "Pépite d\'Or", "mine", "rbxassetid://123456")';
+	const m = line.match(/^resource\("([^"]*)", "([^"]*)", "([^"]*)"(?:, "([^"]*)")?\)\s*$/);
+	assert(m && /^rbxassetid:\/\/\d+$/.test(m[4]), 'ligne générée non reconnue');
+});
+
+test('docs: README, UI_DESIGN_SYSTEM and TASK_FORMAT point to RESOURCES.md', () => {
+	assert(read('README.md').includes('docs/RESOURCES.md'), 'README.md');
+	assert(read('docs/UI_DESIGN_SYSTEM.md').includes('docs/RESOURCES.md'), 'UI_DESIGN_SYSTEM.md');
+	const format = read('automation/TASK_FORMAT.md');
+	assert(format.includes('`resource`') && format.includes('docs/RESOURCES.md'), 'TASK_FORMAT.md');
+});
+
 console.log(`Resources: ${passed} passed, ${failed} failed`);
 process.exitCode = failed > 0 ? 1 : 0;
