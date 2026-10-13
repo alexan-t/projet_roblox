@@ -13,39 +13,30 @@
 --      })
 --   Le modèle source n'est jamais modifié : une copie est animée dans Workspace.AtelierAnimation,
 --   posée à côté du SpawnLocation et animée en boucle au prochain Play (MonsterAnimationController).
+--
+-- Squelette commun (docs/SKELETON.md) : Kit.rig pose des os invisibles aux noms communs (Buste, Tete,
+-- BrasGauche...) et y accroche les pièces du modèle. Les animations générées sont nommées d'après ces
+-- os : une même animation (jeu commun Squelette_Leger, Squelette_Lourd...) joue sur tous les modèles.
+-- Les os, les fiches de modèles et la recherche des animations sont du code de jeu synchronisé par
+-- Rojo (ReplicatedStorage.Shared) : ce fichier les lit, il ne les recopie pas.
 
 local ChangeHistoryService = game:GetService("ChangeHistoryService")
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
+local shared = ReplicatedStorage:FindFirstChild("Shared")
+assert(shared and shared:FindFirstChild("Animation"), "ReplicatedStorage.Shared.Animation introuvable : lancer la synchronisation Rojo (rojo serve) avant AnimationKit")
+local Skeleton = require(shared.Animation.Skeleton) :: any
+local AnimationSets = require(shared.Animation.AnimationSets) :: any
+local SkeletonConfig = require(shared.Config.SkeletonConfig) :: any
+
 local Kit = {}
 
 local ATELIER = "AtelierAnimation"
 local PREVIEW_TAG = "ApercuAnimation"
 local KEYS_PER_CYCLE = 16
-
--- Pièces repérées par leur nom : format des modèles générés par l'IA de Studio.
-local PART_NAMES = {
-	torso = { "torso_geom", "body_geom", "chest_geom" },
-	head = { "head_geom", "mask_head_geom", "skull_geom" },
-	leftArm = { "left_arm_geom" },
-	rightArm = { "right_arm_geom" },
-	leftLeg = { "left_leg_geom" },
-	rightLeg = { "right_leg_geom" },
-}
--- Une pièce dont le nom contient l'un de ces mots est tenue par la main la plus proche ;
--- toute autre pièce restante est fixée au buste (ceinture, cor, cristal, cape...).
--- Noms relevés sur les héros du Bestiaire (weapon_geom, buckler_geom, coutelas_geom, etendard_geom...).
-local HELD_WORDS = {
-	"weapon", "arme", "sword", "epee", "blade", "lame", "grip", "guard", "pommel", "garde", "pommeau", "poignee",
-	"axe", "hache", "spear", "lance", "staff", "baton", "wand", "bow", "arc", "shield", "bouclier", "buckler",
-	"dagger", "dague", "knife", "couteau", "coutelas", "hammer", "marteau", "mace", "masse", "club", "gourdin",
-	"scythe", "faux", "torch", "torche", "lantern", "lanterne", "book", "livre", "banner", "banniere", "etendard",
-	"cloche", "battant",
-}
--- Toujours fixées au buste, même si leur nom contient un mot ci-dessus (shoulder_guard, ceinture...).
-local WORN_WORDS = { "shoulder", "epaul", "cape", "tabard", "apron", "tablier", "quiver", "carquois", "belt", "ceinture", "helm", "heaume" }
+local BONE_SIZE = 0.2
 
 -- Profils de marche : chiffres en degrés (rotations), studs (hauteurs) et secondes (Cycle).
 -- Les « Lag » retardent un mouvement (en radians de phase) pour éviter que tout bouge en même temps.
@@ -66,23 +57,6 @@ Kit.Profiles = {
 	},
 }
 
--- Rôle d'une pièce animée, déduit du nom de son articulation.
-local JOINT_ROLES = {
-	Racine = "torso", Cou = "head",
-	EpauleGauche = "leftArm", EpauleDroite = "rightArm",
-	HancheGauche = "leftLeg", HancheDroite = "rightLeg",
-}
-
-local function find(model: Model, names: { string }): BasePart?
-	for _, name in names do
-		local part = model:FindFirstChild(name, true)
-		if part and part:IsA("BasePart") then
-			return part
-		end
-	end
-	return nil
-end
-
 -- Boîte d'une pièce exprimée dans un repère (min, max).
 local function bounds(part: BasePart, frame: CFrame): (Vector3, Vector3)
 	local mn, mx = Vector3.one * math.huge, -Vector3.one * math.huge
@@ -97,10 +71,15 @@ local function bounds(part: BasePart, frame: CFrame): (Vector3, Vector3)
 	return mn, mx
 end
 
+-- Os invisible du squelette commun (pas une pièce du modèle).
+local function isBone(part: Instance): boolean
+	return part.Parent ~= nil and part.Parent.Name == Skeleton.Folder and Skeleton.bone(part.Name) ~= nil
+end
+
 local function lowestPoint(model: Model): number
 	local y = math.huge
 	for _, part in model:GetDescendants() do
-		if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+		if part:IsA("BasePart") and part.Name ~= Skeleton.Root and not isBone(part) then
 			local mn = bounds(part, CFrame.identity)
 			y = math.min(y, mn.Y)
 		end
@@ -108,44 +87,100 @@ local function lowestPoint(model: Model): number
 	return y
 end
 
-local function isHeld(part: BasePart): boolean
-	local name = string.lower(part.Name)
-	for _, word in WORN_WORDS do
-		if string.find(name, word, 1, true) then
-			return false
+-- Pièces visibles du modèle (ni racine, ni os).
+local function modelPieces(model: Model): { BasePart }
+	local list: { BasePart } = {}
+	for _, part in model:GetDescendants() do
+		if part:IsA("BasePart") and part.Name ~= Skeleton.Root and not isBone(part) then
+			table.insert(list, part)
 		end
 	end
-	for _, word in HELD_WORDS do
-		if string.find(name, word, 1, true) then
-			return true
+	return list
+end
+
+-- Fiche de branchement : options.Map (clé de SkeletonConfig.Models ou table { Membres, Pieces }),
+-- complétée par les anciennes options Parts ({ [rôle] = pièce }) et Held ({ [pièce] = mode }).
+local function mapFor(options: { [string]: any }?): { Membres: { [string]: string }, Pieces: { [string]: string } }
+	local membres: { [string]: string } = {}
+	local pieces: { [string]: string } = {}
+	local entry = options and options.Map
+	if typeof(entry) == "string" then
+		local found = SkeletonConfig.Models[entry]
+		assert(found, `fiche {entry} absente de SkeletonConfig.Models`)
+		entry = found
+	end
+	if typeof(entry) == "table" then
+		for bone, name in entry.Membres or {} do
+			membres[bone] = name
+		end
+		for name, target in entry.Pieces or {} do
+			pieces[name] = target
 		end
 	end
-	return false
+	for key, name in (options and options.Parts) or {} do
+		local bone = Skeleton.resolveBone(key)
+		assert(bone, `Parts : os inconnu « {key} » (os : Buste, Tete, BrasGauche, BrasDroit, JambeGauche, JambeDroite)`)
+		membres[bone.Name] = name
+	end
+	for name, target in (options and options.Held) or {} do
+		pieces[name] = target
+	end
+	return { Membres = membres, Pieces = pieces }
 end
 
-local function jointName(part: BasePart): string
-	local base = string.gsub(part.Name, "_geom$", "")
-	return "Fixe_" .. base
+-- Associe chaque pièce à un os (Skeleton.resolve) ; s'arrête si un membre n'a pas de pièce.
+local function resolvePieces(model: Model, options: { [string]: any }?): ({ BasePart }, any)
+	local list = modelPieces(model)
+	local descriptors = {}
+	for _, part in list do
+		table.insert(descriptors, {
+			Name = part.Name,
+			Os = part:GetAttribute(Skeleton.BoneAttribute),
+			Ancre = part:GetAttribute(Skeleton.AnchorAttribute),
+		})
+	end
+	local resolution = Skeleton.resolve(descriptors, mapFor(options))
+	for _, message in resolution.warnings do
+		warn(`[AnimationKit] {model.Name} : {message}`)
+	end
+	assert(#resolution.missing == 0, `{model.Name} : aucune pièce pour {table.concat(resolution.missing, ", ")} ; `
+		.. "la désigner dans SkeletonConfig (Membres) ou par Parts, voir docs/SKELETON.md")
+	return list, resolution
 end
 
--- Pose un squelette Motor6D sur un modèle de pièces séparées (format IA : <membre>_geom).
+-- Montre, sans rien modifier, quelle pièce irait sur quel os (pour brancher un nouveau modèle).
+-- Les cibles MainProche / BrasProche sont tranchées par la géométrie au moment du rig.
+function Kit.inspect(model: Model, options: { [string]: any }?): ()
+	local list, resolution = resolvePieces(model, options)
+	local lines: { string } = {}
+	for index, part in list do
+		local target = resolution.targets[index]
+		local anchor = resolution.anchors[target] == index
+		table.insert(lines, `{part.Name} -> {target}{if anchor then " (forme du membre)" else ""}`)
+	end
+	table.sort(lines)
+	print(`[AnimationKit] {model.Name} :\n  {table.concat(lines, "\n  ")}`)
+end
+
+-- Pose le squelette commun (docs/SKELETON.md) sur un modèle de pièces séparées (format IA : <membre>_geom).
 -- Repère racine : X = droite du personnage (du bras gauche vers le bras droit), -Z = avant.
--- options.Held = { [nomDePièce] = mode } force le rattachement d'une pièce (toutes celles de ce nom) :
---   "left" / "right" : tenue en main (suit la main, animable comme arme : weaponLeft / weaponRight) ;
---   "nearest"        : portée par le bras le plus proche (épaulière, pic, crâne d'épaule) ;
---   "torso"          : fixée au buste.
--- options.Parts = { [rôle] = nomDePièce } désigne une pièce de rôle au nom inhabituel
---   (ex. { head = "body_geom" } pour le Roi Orc).
-function Kit.rig(model: Model, options: { Held: { [string]: string }?, Parts: { [string]: string }? }?): ()
-	assert(not model:FindFirstChild("HumanoidRootPart"), `{model.Name} a déjà un squelette`)
+-- Crée HumanoidRootPart, puis un os invisible par os commun (dossier « Os » : Buste, Tete, BrasGauche,
+-- BrasDroit, JambeGauche, JambeDroite, ArmeGauche, ArmeDroite) relié à son parent par l'articulation
+-- habituelle (Racine, Cou, EpauleGauche...). Chaque pièce visible est accrochée à un os et reçoit
+-- l'attribut Os (et OsAncre pour la pièce qui donne la forme du membre) : un nouveau rig les relit.
+-- options.Map = clé de SkeletonConfig.Models (ou table { Membres, Pieces }) : « cette pièce = tel os ».
+-- Anciennes options toujours acceptées :
+--   options.Parts = { [rôle ou os] = nomDePièce } (ex. { head = "body_geom" } pour le Roi Orc) ;
+--   options.Held = { [nomDePièce] = mode } : "left" / "right" (ArmeGauche / ArmeDroite),
+--     "nearest" (bras le plus proche), "torso" (Buste), ou directement un nom d'os.
+function Kit.rig(model: Model, options: { [string]: any }?): ()
+	assert(not model:FindFirstChild(Skeleton.Root), `{model.Name} a déjà un squelette (Kit.unrig d'abord)`)
+	local list, resolution = resolvePieces(model, options)
 	local parts: { [string]: BasePart } = {}
-	local named = if options and options.Parts then options.Parts else {}
-	for role, names in PART_NAMES do
-		local part = find(model, if named[role] then { named[role] } else names)
-		assert(part, `{model.Name} : pièce {role} introuvable ({table.concat(names, ", ")}) ; voir docs/ANIMATION_TOOLS.md`)
-		parts[role] = part
+	for boneName, index in resolution.anchors do
+		parts[boneName] = list[index]
 	end
-	local torso, leftArm, rightArm = parts.torso, parts.leftArm, parts.rightArm
+	local torso, leftArm, rightArm = parts.Buste, parts.BrasGauche, parts.BrasDroit
 	local right = ((rightArm.Position - leftArm.Position) * Vector3.new(1, 0, 1)).Unit
 	local look = Vector3.yAxis:Cross(right)
 	local center = model:GetBoundingBox().Position
@@ -194,50 +229,63 @@ function Kit.rig(model: Model, options: { Held: { [string]: string }?, Parts: { 
 		return Vector3.new(inner + (center - inner) * 0.4, mx.Y - inset, (mn.Z + mx.Z) / 2)
 	end
 
+	-- Pivots des os, dans le repère racine (mêmes pivots que l'ancien squelette par pièces).
 	local armInset = math.clamp(leftArm.Size.Y * 0.15, 0.3, 0.8)
-	local legInset = math.clamp(parts.leftLeg.Size.Y * 0.1, 0.2, 0.5)
-	joint("Racine", root, torso, middle(torso))
-	joint("EpauleGauche", torso, leftArm, shoulder(leftArm, armInset))
-	joint("EpauleDroite", torso, rightArm, shoulder(rightArm, armInset))
-	joint("HancheGauche", torso, parts.leftLeg, top(parts.leftLeg, legInset))
-	joint("HancheDroite", torso, parts.rightLeg, top(parts.rightLeg, legInset))
-	local hmn, hmx = bounds(parts.head, basis)
-	joint("Cou", torso, parts.head, Vector3.new((hmn.X + hmx.X) / 2, hmn.Y + 0.2, (hmn.Z + hmx.Z) / 2))
-
-	local used: { [BasePart]: boolean } = {}
-	for _, part in parts do
-		used[part] = true
+	local legInset = math.clamp(parts.JambeGauche.Size.Y * 0.1, 0.2, 0.5)
+	local hmn, hmx = bounds(parts.Tete, basis)
+	local pivots: { [string]: Vector3 } = {
+		Buste = middle(torso),
+		Tete = Vector3.new((hmn.X + hmx.X) / 2, hmn.Y + 0.2, (hmn.Z + hmx.Z) / 2),
+		BrasGauche = shoulder(leftArm, armInset),
+		BrasDroit = shoulder(rightArm, armInset),
+		JambeGauche = top(parts.JambeGauche, legInset),
+		JambeDroite = top(parts.JambeDroite, legInset),
+		ArmeGauche = hand(leftArm),
+		ArmeDroite = hand(rightArm),
+	}
+	local boneFolder = Instance.new("Folder")
+	boneFolder.Name = Skeleton.Folder
+	boneFolder.Parent = model
+	local bones: { [string]: BasePart } = { [Skeleton.Root] = root }
+	for _, bone in Skeleton.Bones do
+		local pivot = pivots[bone.Name]
+		assert(pivot, `pivot de l'os {bone.Name} non défini dans Kit.rig`)
+		local part = Instance.new("Part")
+		part.Name = bone.Name
+		part.Size = Vector3.one * BONE_SIZE
+		part.CFrame = basis * CFrame.new(pivot)
+		part.Transparency = 1
+		part.CanCollide, part.CanTouch, part.CanQuery = false, false, false
+		part.CastShadow = false
+		part.Massless = true
+		part.Parent = boneFolder
+		joint(bone.Joint, bones[bone.Parent], part, pivot)
+		bones[bone.Name] = part
 	end
-	local forced = if options and options.Held then options.Held else {}
-	local leftHand, rightHand = basis * hand(leftArm), basis * hand(rightArm)
-	local leftShoulder = basis * shoulder(leftArm, armInset)
-	local rightShoulder = basis * shoulder(rightArm, armInset)
+
+	-- Pièces visibles : accrochées à leur os. MainProche / BrasProche : côté le plus proche.
+	local function nearer(part: BasePart, leftName: string, rightName: string): string
+		local left, right = bones[leftName].Position, bones[rightName].Position
+		return if (part.Position - left).Magnitude < (part.Position - right).Magnitude then leftName else rightName
+	end
 	local summary: { string } = {}
-	for _, part in model:GetDescendants() do
-		if part:IsA("BasePart") and part ~= root and not used[part] then
-			local mode = forced[part.Name]
-			if not mode then
-				if isHeld(part) then
-					mode = if (part.Position - leftHand).Magnitude < (part.Position - rightHand).Magnitude then "left" else "right"
-				else
-					mode = "torso"
-				end
-			end
-			if mode == "nearest" then
-				mode = if (part.Position - leftShoulder).Magnitude < (part.Position - rightShoulder).Magnitude then "leftArm" else "rightArm"
-			end
-			local label = if mode == "left" then "main gauche" elseif mode == "right" then "main droite"
-				elseif mode == "leftArm" then "bras gauche" elseif mode == "rightArm" then "bras droit" else "buste"
-			table.insert(summary, `{part.Name} -> {label}`)
-			if mode == "leftArm" or mode == "rightArm" then
-				joint("Porte_" .. string.gsub(part.Name, "_geom$", ""), if mode == "leftArm" then leftArm else rightArm, part, middle(part))
-			elseif mode == "left" then
-				joint("Tenu_" .. string.gsub(part.Name, "_geom$", ""), leftArm, part, hand(leftArm))
-			elseif mode == "right" then
-				joint("Tenu_" .. string.gsub(part.Name, "_geom$", ""), rightArm, part, hand(rightArm))
-			else
-				joint(jointName(part), torso, part, middle(part))
-			end
+	for index, part in list do
+		local target = resolution.targets[index]
+		if target == Skeleton.NearestHand then
+			target = nearer(part, "ArmeGauche", "ArmeDroite")
+		elseif target == Skeleton.NearestArm then
+			target = nearer(part, "BrasGauche", "BrasDroit")
+		end
+		local bonePart = bones[target]
+		assert(bonePart, `{part.Name} : os inconnu {target}`)
+		local anchor = resolution.anchors[target] == index
+		local base = string.gsub(part.Name, "_geom$", "")
+		local prefix = if target == "ArmeGauche" or target == "ArmeDroite" then "Tenu_" else "Fixe_"
+		joint(prefix .. base, bonePart, part, pivots[target])
+		part:SetAttribute(Skeleton.BoneAttribute, target)
+		part:SetAttribute(Skeleton.AnchorAttribute, if anchor then true else nil)
+		if not anchor then
+			table.insert(summary, `{part.Name} -> {target}`)
 		end
 	end
 
@@ -247,11 +295,12 @@ function Kit.rig(model: Model, options: { Held: { [string]: string }?, Parts: { 
 			part.CanCollide = false
 		end
 	end
+	model:SetAttribute("Squelette", Skeleton.Name)
 	local controller = Instance.new("AnimationController")
 	controller.Parent = model
 	Instance.new("Animator").Parent = controller
 	table.sort(summary)
-	print(`[AnimationKit] {model.Name} : {table.concat(summary, " ; ")} (corriger avec Held si besoin)`)
+	print(`[AnimationKit] {model.Name} : {table.concat(summary, " ; ")} (corriger dans SkeletonConfig, par l'attribut Os ou Held)`)
 end
 
 -- Couvercles de bras : certains modèles IA (Roi Orc) ont des bras en coque, ouverts sur toute leur
@@ -273,6 +322,20 @@ function Kit.closeArms(model: Model, color: Color3, options: { Inset: number?, H
 	for _, motor in model:GetDescendants() do
 		if motor:IsA("Motor6D") and (motor.Name == "EpauleGauche" or motor.Name == "EpauleDroite") and motor.Part1 then
 			local arm = motor.Part1 :: BasePart
+			local boneName: string? = nil
+			if isBone(arm) then
+				-- Squelette commun : l'articulation tient l'os ; le couvercle suit la pièce du bras.
+				boneName = arm.Name
+				local piece: BasePart? = nil
+				for _, part in modelPieces(model) do
+					if part:GetAttribute(Skeleton.BoneAttribute) == boneName and part:GetAttribute(Skeleton.AnchorAttribute) == true then
+						piece = part
+						break
+					end
+				end
+				assert(piece, `{model.Name} : pièce du membre {boneName} introuvable (attribut OsAncre)`)
+				arm = piece
+			end
 			local name = "Couvercle_" .. motor.Name
 			local old = arm.Parent and arm.Parent:FindFirstChild(name)
 			if old then
@@ -296,6 +359,9 @@ function Kit.closeArms(model: Model, color: Color3, options: { Inset: number?, H
 			mesh.MeshType = Enum.MeshType.Sphere
 			mesh.Parent = cover
 			cover.Parent = arm.Parent
+			if boneName then
+				cover:SetAttribute(Skeleton.BoneAttribute, boneName) -- un nouveau rig le remet sur ce bras
+			end
 			local link = Instance.new("Motor6D")
 			link.Name = "Porte_" .. name
 			link.Part0, link.Part1 = arm, cover
@@ -307,17 +373,23 @@ function Kit.closeArms(model: Model, color: Color3, options: { Inset: number?, H
 end
 
 -- Retire le squelette posé par Kit.rig (modèle en pose de repos, mode Edit) pour le reposer
--- après une correction de l'outil. Les animations ne dépendent que des noms de pièces : elles restent valables.
+-- après une correction de l'outil ou de sa fiche. Les attributs Os / OsAncre des pièces sont gardés
+-- (le prochain rig les relit). Les animations ne dépendent que des noms d'os : elles restent valables.
+-- Un modèle de l'ancien squelette (Pose nommées d'après ses pièces) passe ainsi au squelette commun :
+-- Kit.unrig, Kit.rig, puis régénérer ses séquences (Kit.walk, Kit.attack...).
 function Kit.unrig(model: Model): ()
 	for _, item in model:GetDescendants() do
 		if item:IsA("Motor6D") or item:IsA("AnimationController") then
 			item:Destroy()
 		end
 	end
-	local root = model:FindFirstChild("HumanoidRootPart")
-	if root then
-		root:Destroy()
+	for _, name in { Skeleton.Root, Skeleton.Folder } do
+		local item = model:FindFirstChild(name)
+		if item then
+			item:Destroy()
+		end
 	end
+	model:SetAttribute("Squelette", nil)
 	for _, part in model:GetDescendants() do
 		if part:IsA("BasePart") then
 			part.Anchored = true
@@ -325,34 +397,63 @@ function Kit.unrig(model: Model): ()
 	end
 end
 
--- Arbre des articulations du modèle : partName -> { enfants }, depuis la racine.
-local function poseTree(model: Model): (string, { [string]: { string } }, { [string]: string })
+-- Arbre des articulations du modèle : partName -> { enfants }, depuis la racine, et nom de pièce -> os.
+-- Squelette commun : seuls les os entrent dans l'arbre (les Pose portent les noms communs, la séquence
+-- vaut pour tout modèle qui a ce squelette). Ancien squelette : Pose nommées d'après les pièces.
+local function poseTree(model: Model): (string, { [string]: { string } }, { [string]: any })
+	local common = model:GetAttribute("Squelette") == Skeleton.Name
 	local children: { [string]: { string } } = {}
-	local roles: { [string]: string } = {}
+	local byPart: { [string]: any } = {}
+	local partOf: { [string]: string } = {}
 	for _, motor in model:GetDescendants() do
 		if motor:IsA("Motor6D") and motor.Part0 and motor.Part1 then
+			local part1 = motor.Part1 :: BasePart
+			if common and not isBone(part1) then
+				continue
+			end
 			local parent = (motor.Part0 :: BasePart).Name
 			children[parent] = children[parent] or {}
-			table.insert(children[parent], (motor.Part1 :: BasePart).Name)
-			local role = JOINT_ROLES[motor.Name]
-			if role then
-				roles[role] = (motor.Part1 :: BasePart).Name
+			table.insert(children[parent], part1.Name)
+			local bone = Skeleton.boneOfJoint(motor.Name)
+			if bone then
+				byPart[part1.Name] = bone
+				partOf[bone.Name] = part1.Name
 			end
 		end
 	end
-	-- Armes : première pièce tenue (articulation Tenu_*) par chaque main.
-	for _, motor in model:GetDescendants() do
-		if motor:IsA("Motor6D") and string.sub(motor.Name, 1, 5) == "Tenu_" and motor.Part0 and motor.Part1 then
-			local holder = (motor.Part0 :: BasePart).Name
-			local role = if holder == roles.rightArm then "weaponRight" elseif holder == roles.leftArm then "weaponLeft" else nil
-			if role and not roles[role] then
-				roles[role] = (motor.Part1 :: BasePart).Name
+	-- Ancien squelette : arme = première pièce tenue (articulation Tenu_*) par chaque main.
+	if not common then
+		for _, motor in model:GetDescendants() do
+			if motor:IsA("Motor6D") and string.sub(motor.Name, 1, 5) == "Tenu_" and motor.Part0 and motor.Part1 then
+				local holder = (motor.Part0 :: BasePart).Name
+				local bone = if holder == partOf.BrasDroit then Skeleton.bone("ArmeDroite")
+					elseif holder == partOf.BrasGauche then Skeleton.bone("ArmeGauche") else nil
+				if bone and not partOf[bone.Name] then
+					byPart[(motor.Part1 :: BasePart).Name] = bone
+					partOf[bone.Name] = (motor.Part1 :: BasePart).Name
+				end
 			end
 		end
 	end
 	local root = model.PrimaryPart
 	assert(root, `{model.Name} n'a pas de squelette (lancer Kit.rig)`)
-	return root.Name, children, roles
+	return root.Name, children, byPart
+end
+
+-- Une séquence générée sur le squelette commun porte l'attribut Squelette : elle vaut pour tout
+-- modèle qui a ce squelette et peut entrer dans un jeu commun (Kit.share).
+local function markSkeleton(model: Model, sequence: KeyframeSequence)
+	if model:GetAttribute("Squelette") == Skeleton.Name then
+		sequence:SetAttribute("Squelette", Skeleton.Name)
+	end
+end
+
+-- Valeur d'une pose pour un os : clé de rôle (torso, weaponRight) ou nom d'os (Buste, ArmeDroite).
+local function poseValue(poses: { [string]: { number } }, bone: any): { number }?
+	if not bone then
+		return nil
+	end
+	return poses[bone.Role] or poses[bone.Name]
 end
 
 -- Valeurs de la marche à la phase phi (0..2π) : { [rôle] = { rx, ry, rz, y } }.
@@ -376,15 +477,12 @@ end
 function Kit.walk(model: Model, profile: any): KeyframeSequence
 	local p = if typeof(profile) == "string" then Kit.Profiles[profile] else profile
 	assert(p, `profil de marche inconnu : {profile}`)
-	local rootName, children, roles = poseTree(model)
-	local byPart: { [string]: string } = {}
-	for role, partName in roles do
-		byPart[partName] = role
-	end
+	local rootName, children, byPart = poseTree(model)
 	local sequence = Instance.new("KeyframeSequence")
 	sequence.Name = "Marche"
 	sequence.Loop = true
 	sequence.Priority = Enum.AnimationPriority.Movement
+	markSkeleton(model, sequence)
 	for i = 0, KEYS_PER_CYCLE do
 		local values = Kit.walkPose(p, 2 * math.pi * i / KEYS_PER_CYCLE)
 		local keyframe = Instance.new("Keyframe")
@@ -392,8 +490,7 @@ function Kit.walk(model: Model, profile: any): KeyframeSequence
 		local function add(parent: Instance, partName: string)
 			local pose = Instance.new("Pose")
 			pose.Name = partName
-			local role = byPart[partName]
-			local v = role and values[role]
+			local v = poseValue(values, byPart[partName])
 			if v then
 				pose.CFrame = CFrame.new(0, v[4] or 0, 0) * CFrame.Angles(math.rad(v[1]), math.rad(v[2]), math.rad(v[3]))
 			end
@@ -576,24 +673,20 @@ local EASING_DIRECTIONS = {
 function Kit.keyed(model: Model, name: string, style: any): KeyframeSequence
 	local s = if typeof(style) == "string" then Kit.Attacks[style] else style
 	assert(s, `style inconnu : {style}`)
-	local rootName, children, roles = poseTree(model)
-	local byPart: { [string]: string } = {}
-	for role, partName in roles do
-		byPart[partName] = role
-	end
+	local rootName, children, byPart = poseTree(model)
 	local sequence = Instance.new("KeyframeSequence")
 	sequence.Name = name
 	sequence.Loop = false
 	sequence.Priority = Enum.AnimationPriority.Action
 	sequence:SetAttribute("Impact", s.Impact)
+	markSkeleton(model, sequence)
 	for _, key in s.Keys do
 		local keyframe = Instance.new("Keyframe")
 		keyframe.Time = key.Time
 		local function add(parent: Instance, partName: string)
 			local pose = Instance.new("Pose")
 			pose.Name = partName
-			local role = byPart[partName]
-			local v = role and key.Poses[role]
+			local v = poseValue(key.Poses, byPart[partName])
 			if v then
 				pose.CFrame = CFrame.new(0, v[4] or 0, 0) * CFrame.Angles(math.rad(v[1]), math.rad(v[2]), math.rad(v[3]))
 			end
@@ -636,9 +729,9 @@ local function folder(parent: Instance, name: string, className: string?): Insta
 	return created
 end
 
--- Range une animation dans le jeu de combat (ReplicatedStorage.Assets.Animations.<Set>) et en copie
--- pour l'Animation Editor (ServerStorage.RBX_ANIMSAVES.<modèle>). Remplace une version précédente.
-function Kit.install(model: Model, set: string, sequence: KeyframeSequence): ()
+-- Range une séquence dans ReplicatedStorage.Assets.Animations.<set> et en copie pour l'Animation
+-- Editor (ServerStorage.RBX_ANIMSAVES.<modèle>). Remplace une version précédente.
+local function store(model: Model, set: string, sequence: KeyframeSequence): Instance
 	local assets = folder(ReplicatedStorage, "Assets")
 	local target = folder(folder(assets, "Animations"), set)
 	local old = target:FindFirstChild(sequence.Name)
@@ -656,22 +749,43 @@ function Kit.install(model: Model, set: string, sequence: KeyframeSequence): ()
 	link.Name = "AnimSaves"
 	;(link :: ObjectValue).Value = saves
 	link.Parent = model
+	return target
+end
+
+-- Range une animation propre au modèle dans son jeu de combat (Assets.Animations.<Set>).
+function Kit.install(model: Model, set: string, sequence: KeyframeSequence): ()
+	store(model, set, sequence)
 	model:SetAttribute("JeuAnimationsCombat", set)
 	if model:GetAttribute("JeuAnimations") == nil then
 		model:SetAttribute("JeuAnimations", set)
 	end
 end
 
+-- Range une animation du squelette commun dans un jeu partagé (ex. Squelette_Leger) et branche le
+-- modèle dessus (attribut JeuAnimationsCommun). Tout autre modèle au squelette commun peut ensuite
+-- utiliser ce jeu sans nouvelle séquence : il suffit de lui poser le même JeuAnimationsCommun.
+function Kit.share(model: Model, set: string, sequence: KeyframeSequence): ()
+	assert(sequence:GetAttribute("Squelette") == Skeleton.Name,
+		`{sequence.Name} n'est pas faite sur le squelette commun (Kit.unrig puis Kit.rig, puis régénérer)`)
+	local target = store(model, set, sequence)
+	target:SetAttribute("Squelette", Skeleton.Name)
+	model:SetAttribute("JeuAnimationsCommun", set)
+end
+
 -- Aperçu en boucle au Play : l'animation est copiée dans Assets.Animations.Apercu_<Set> sous le nom
 -- « Attente », que MonsterAnimationController joue sans jamais la couper.
 -- rest (s) : pause en pose neutre ajoutée après une animation non bouclée (attaque...), pour la voir
 -- se répéter à un rythme lisible. Par défaut 0,8 s pour une animation non bouclée, 0 sinon.
+-- L'animation est cherchée dans <Set>, puis dans les jeux du modèle (dont son jeu commun).
+-- Le jeu d'aperçu porte l'attribut Apercu : il n'est jamais complété par le jeu commun, ni lu en combat.
 function Kit.preview(model: Model, set: string, animationName: string, rest: number?): ()
 	local animations = folder(folder(ReplicatedStorage, "Assets"), "Animations")
-	local source = animations:FindFirstChild(set) and (animations :: any)[set]:FindFirstChild(animationName)
-	assert(source, `animation {set}.{animationName} introuvable`)
+	local own = animations:FindFirstChild(set)
+	local source = (own and own:FindFirstChild(animationName)) or AnimationSets.find(model, animationName, true)
+	assert(source and source:IsA("KeyframeSequence"), `animation {animationName} introuvable dans {set} ni dans les jeux du modèle`)
 	local preview = folder(animations, "Apercu_" .. set)
 	preview:SetAttribute("Note", "Aperçu uniquement (AtelierAnimation) : l'animation étudiée joue en boucle sous le nom Attente. Ne pas utiliser en combat.")
+	preview:SetAttribute("Apercu", true)
 	preview:ClearAllChildren()
 	local loop = source:Clone()
 	local pause = rest or (if source.Loop then 0 else 0.8)
@@ -755,21 +869,49 @@ function Kit.arrange(): ()
 	end
 end
 
--- Tout en un : copie, squelette, marche, rangement en jeu de combat, aperçu près du spawn.
---   options = { Source: Model, Set: string, Profile: string | table, Name: string?, Held: { [string]: string }?,
---               Attack: string | table ? (style de Kit.Attacks), Preview: string? (animation montrée, "Marche" par défaut),
---               CloseArms: Color3? (couvercles de bras couleur peau, voir Kit.closeArms) }
+-- Tout en un : copie, squelette commun, marche, attaque, ultime, rangement, aperçu près du spawn.
+--   options = { Source: Model, Set: string, Name: string?,
+--               Map: string | table ? (fiche SkeletonConfig.Models ; par défaut celle de Set),
+--               Profile: string | table ? (Kit.Profiles), Attack: string | table ?, Ultimate: string | table ?
+--                 (styles de Kit.Attacks), Shared: string | false ? (jeu commun de la marche),
+--               CloseArms: Color3? (couvercles de bras couleur peau, voir Kit.closeArms),
+--               Held / Parts (anciennes options, voir Kit.rig), Preview: string? ("Marche" par défaut) }
+-- Une option absente est lue dans la fiche (Profil, Attaque, Ultime, Commun, CouvercleBras).
+-- Avec un jeu commun, la marche y est rangée (Kit.share) ; attaque et ultime vont dans <Set>.
 function Kit.prepare(options: { [string]: any }): Model
+	local entry = options.Map
+	if entry == nil or typeof(entry) == "string" then
+		entry = SkeletonConfig.Models[entry or options.Set]
+		assert(entry or options.Map == nil, `fiche {options.Map} absente de SkeletonConfig.Models`)
+	end
+	entry = entry or {}
+	local profile = options.Profile or entry.Profil
+	assert(profile, `{options.Set} : profil de marche manquant (Profile, ou Profil dans SkeletonConfig)`)
+	local sharedSet = if options.Shared == false then nil else options.Shared or entry.Commun
+	local attack = options.Attack or entry.Attaque
+	local ultimate = options.Ultimate or entry.Ultime
+	local skin = options.CloseArms
+	if not skin and entry.CouvercleBras then
+		skin = Color3.fromRGB(entry.CouvercleBras[1], entry.CouvercleBras[2], entry.CouvercleBras[3])
+	end
 	local recording = ChangeHistoryService:TryBeginRecording("AnimationKit : " .. options.Set)
 	local ok, result = pcall(function()
 		local model = Kit.copy(options.Source, options.Name)
-		Kit.rig(model, { Held = options.Held, Parts = options.Parts })
-		if options.CloseArms then
-			Kit.closeArms(model, options.CloseArms)
+		Kit.rig(model, { Map = entry, Held = options.Held, Parts = options.Parts })
+		if skin then
+			Kit.closeArms(model, skin)
 		end
-		Kit.install(model, options.Set, Kit.walk(model, options.Profile))
-		if options.Attack then
-			Kit.install(model, options.Set, Kit.attack(model, options.Attack))
+		local walk = Kit.walk(model, profile)
+		if sharedSet then
+			Kit.share(model, sharedSet, walk)
+		else
+			Kit.install(model, options.Set, walk)
+		end
+		if attack then
+			Kit.install(model, options.Set, Kit.attack(model, attack))
+		end
+		if ultimate then
+			Kit.install(model, options.Set, Kit.ultimate(model, ultimate))
 		end
 		Kit.preview(model, options.Set, options.Preview or "Marche")
 		Kit.arrange()
@@ -783,7 +925,7 @@ function Kit.prepare(options: { [string]: any }): Model
 	if not ok then
 		error(result, 0)
 	end
-	print(`[AnimationKit] {result:GetFullName()} prêt : lancer Play pour voir la marche ({options.Profile}).`)
+	print(`[AnimationKit] {result:GetFullName()} prêt (squelette {Skeleton.Name}, jeu commun {sharedSet or "aucun"}) : lancer Play pour voir la marche.`)
 	return result
 end
 
