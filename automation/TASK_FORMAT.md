@@ -11,7 +11,8 @@ Identifiant technique unique. Ne jamais le réutiliser.
 Nom lisible de la créature.
 
 `type`
-Pour le moment : `monster` ou `boss`.
+Pour le moment : `monster`, `boss` ou `resource` (icône 2D, voir `docs/RESOURCES.md` : champs
+en plus `family` et `icon_hook`, catalogue `automation/catalogues/resources.json`).
 
 `brief_source`
 Chemin vers le brief. Le worker doit lire ce fichier avant toute création.
