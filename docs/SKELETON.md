@@ -11,7 +11,7 @@ sur tous les modèles branchés, sans être refaite pour chacun.
 | `src/shared/Config/SkeletonConfig.lua` | fiches des modèles (Écuyer du Rempart, Roi Orc) et jeux communs |
 | `src/shared/Animation/AnimationSets.lua` | recherche des séquences d'un modèle (jeu propre puis jeu commun), utilisée par les contrôleurs client |
 | `tools/animation/AnimationKit.luau` | outil Studio : pose le squelette, génère et range les animations (voir `ANIMATION_TOOLS.md`) |
-| `tools/test-skeleton.ps1` | tests du module pur avec les vraies fiches |
+| `tools/test-skeleton.ps1` | tests du module pur avec les vraies fiches, et d'`AnimationSets` avec des doubles d'Instance |
 
 ## Pourquoi
 
