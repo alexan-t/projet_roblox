@@ -50,12 +50,14 @@ local function animationId(sequence: KeyframeSequence): string?
 	return id
 end
 
-local function load(model: Model): { [string]: AnimationTrack }?
+-- combat = true (Play, appelé par le combat) : jeu de combat, jeu propre puis jeu commun ; un jeu
+-- d'aperçu (Apercu_*) n'est jamais lu. combat = false : démonstration d'atelier (tag ApercuAnimation).
+local function load(model: Model, combat: boolean): { [string]: AnimationTrack }?
 	local existing = tracks[model]
 	if existing then
 		return existing
 	end
-	local sequences = AnimationSets.sequences(model)
+	local sequences = AnimationSets.sequences(model, combat)
 	local controller = model:FindFirstChildOfClass("AnimationController")
 	local animator = controller and controller:FindFirstChildOfClass("Animator")
 	if not next(sequences) or not animator then
@@ -73,11 +75,19 @@ local function load(model: Model): { [string]: AnimationTrack }?
 		end
 	end
 	tracks[model] = loaded
+	-- Modèle détruit (fin de combat, mort) : ses pistes s'arrêtent et quittent le cache.
+	model.Destroying:Once(function()
+		for _, track in loaded do
+			track:Stop(0)
+			track:Destroy()
+		end
+		tracks[model] = nil
+	end)
 	return loaded
 end
 
 function MonsterAnimationController.Play(model: Model, name: string, fadeTime: number?): AnimationTrack?
-	local loaded = load(model)
+	local loaded = load(model, true)
 	local track = loaded and loaded[name]
 	if track then
 		track:Play(fadeTime or 0.15)
@@ -119,7 +129,7 @@ local function demoSpeed(model: Model): number
 end
 
 local function runDemo(model: Model)
-	local loaded = load(model)
+	local loaded = load(model, false)
 	if not loaded then
 		warn(`[MonsterAnimation] {model:GetFullName()} : squelette ou animations introuvables`)
 		return

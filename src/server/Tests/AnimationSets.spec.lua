@@ -23,14 +23,27 @@ return function(createAnimationSets: any, Skeleton: any)
 		local self: any = { ClassName = className, Name = name, Size = { Magnitude = 1 } }
 		local attrs = attributes or {}
 		local kids = children or {}
+		-- Parent suivi comme dans Roblox : un enfant re-parenté ailleurs disparaît de ce nœud.
+		for _, child in kids do
+			child.Parent = self
+		end
+		local function current(): { any }
+			local list = {}
+			for _, child in kids do
+				if child.Parent == self then
+					table.insert(list, child)
+				end
+			end
+			return list
+		end
 		function self:GetAttribute(key: string): any
 			return attrs[key]
 		end
 		function self:GetChildren(): { any }
-			return table.clone(kids)
+			return current()
 		end
 		function self:FindFirstChild(childName: string): any
-			for _, child in kids do
+			for _, child in current() do
 				if child.Name == childName then
 					return child
 				end
@@ -39,7 +52,7 @@ return function(createAnimationSets: any, Skeleton: any)
 		end
 		function self:GetDescendants(): { any }
 			local list = {}
-			for _, child in kids do
+			for _, child in current() do
 				table.insert(list, child)
 				for _, sub in child:GetDescendants() do
 					table.insert(list, sub)
@@ -162,6 +175,114 @@ return function(createAnimationSets: any, Skeleton: any)
 		assert(table.find(held, sword) and table.find(held, guard), "nested parts are found, the Model itself is not")
 		assert(#AnimationSets.pieces(rigged, "Tete") == 0)
 		assert(#AnimationSets.pieces(model({}, children), "ArmeDroite") == 0, "legacy rig: caller keeps its old search")
+	end)
+
+	-- Bug connu de la PR #56 : après migration, l'ancienne Marche du jeu propre masquait la commune.
+	local function migrationLibrary(): ({ any }, any, any, any, any)
+		local oldWalk = sequence("Marche") -- Marche_old : Pose de l'ancien squelette
+		local ownAttack = sequence("Attaque")
+		local sharedWalk = sequence("Marche") -- Marche_shared
+		local sharedAttack = sequence("Attaque")
+		local library = {
+			node("Folder", "EcuyerDuRempart", nil, { oldWalk, ownAttack, sequence("Ultime") }),
+			node("Folder", "Squelette_Leger", { Squelette = "Humanoide" }, { sharedWalk, sharedAttack }),
+			set("Apercu_EcuyerDuRempart", { Apercu = true }, { "Attente" }),
+			set("Gobelin", nil, { "Attente", "Marche", "Attaque", "Touche", "Mort" }),
+			set("RoiOrc", nil, { "Marche", "Attaque" }),
+		}
+		return library, oldWalk, sharedWalk, ownAttack, sharedAttack
+	end
+	local function migrated(): any
+		return model({ JeuAnimations = "EcuyerDuRempart", JeuAnimationsCombat = "EcuyerDuRempart",
+			JeuAnimationsCommun = "Squelette_Leger", Squelette = Skeleton.Name })
+	end
+
+	test("bug #56: before migration the old own Marche masks the shared one", function()
+		local library, oldWalk = migrationLibrary()
+		local AnimationSets = load(library)
+		assert(AnimationSets.find(migrated(), "Marche") == oldWalk, "reproduces the reported defect")
+	end)
+
+	test("migration: unshadow Marche -> find gives Marche_shared, old one archived", function()
+		local library, oldWalk, sharedWalk = migrationLibrary()
+		local AnimationSets = load(library)
+		local archive = node("Folder", "Archive")
+		local m = migrated()
+		local moved = AnimationSets.unshadow(m, "Marche", archive)
+		assert(#moved == 1 and moved[1] == oldWalk, "exactly the old own Marche is moved")
+		assert(oldWalk.Parent == archive and oldWalk.Name == "EcuyerDuRempart_Marche")
+		assert(AnimationSets.find(m, "Marche") == sharedWalk, "outside combat")
+		assert(AnimationSets.find(m, "Marche", true) == sharedWalk, "in combat")
+		assert(AnimationSets.sequences(m, true).Marche == sharedWalk)
+		assert(#AnimationSets.unshadow(m, "Marche", archive) == 0, "re-running is a no-op")
+	end)
+
+	test("migration: a truly specific Attaque stays first, unshadow only touches the given name", function()
+		local library, _, _, ownAttack, sharedAttack = migrationLibrary()
+		local AnimationSets = load(library)
+		local m = migrated()
+		AnimationSets.unshadow(m, "Marche", node("Folder", "Archive"))
+		assert(AnimationSets.find(m, "Attaque", true) == ownAttack, "own Attaque beats the shared one")
+		assert(AnimationSets.find(m, "Attaque", true) ~= sharedAttack)
+		assert(AnimationSets.find(m, "Ultime", true) == library[1]:FindFirstChild("Ultime"))
+	end)
+
+	test("migration: nothing moves without the common skeleton or without a shared sequence", function()
+		local library, oldWalk = migrationLibrary()
+		local AnimationSets = load(library)
+		local archive = node("Folder", "Archive")
+		local legacy = model({ JeuAnimations = "EcuyerDuRempart", JeuAnimationsCommun = "Squelette_Leger" })
+		assert(#AnimationSets.unshadow(legacy, "Marche", archive) == 0 and oldWalk.Parent == library[1])
+		assert(#AnimationSets.unshadow(migrated(), "Ultime", archive) == 0, "Ultime has no shared version: kept")
+		assert(library[1]:FindFirstChild("Ultime") ~= nil)
+	end)
+
+	test("migration: the preview set is never touched", function()
+		local library = migrationLibrary()
+		local AnimationSets = load(library)
+		local m = model({ JeuAnimations = "Apercu_EcuyerDuRempart", JeuAnimationsCombat = "EcuyerDuRempart",
+			JeuAnimationsCommun = "Squelette_Leger", Squelette = Skeleton.Name })
+		AnimationSets.unshadow(m, "Marche", node("Folder", "Archive"))
+		assert(library[3]:FindFirstChild("Attente") ~= nil, "preview Attente stays")
+		assert(names(AnimationSets.folders(m)) == "Apercu_EcuyerDuRempart", "preview still self-sufficient")
+		assert(names(AnimationSets.folders(m, true)) == "EcuyerDuRempart,Squelette_Leger", "combat never reads the preview")
+	end)
+
+	test("legacy rigs (Ecuyer, Gobelin, Roi Orc before migration): exactly their own set, as before", function()
+		local library = migrationLibrary()
+		local AnimationSets = load(library)
+		local cases = {
+			{ model({ JeuAnimations = "EcuyerDuRempart" }), library[1] },
+			{ model({ JeuAnimations = "Gobelin" }), library[4] },
+			{ model({ JeuAnimations = "RoiOrc", EffetAttaque = "Seisme" }), library[5] },
+		}
+		for _, case in cases do
+			local m, own = case[1], case[2]
+			assert(names(AnimationSets.folders(m)) == own.Name)
+			assert(names(AnimationSets.folders(m, true)) == own.Name)
+			local found = AnimationSets.sequences(m)
+			local count = 0
+			for seqName, seq in found do
+				count += 1
+				assert(seq == own:FindFirstChild(seqName))
+			end
+			assert(count == #own:GetChildren(), own.Name .. " keeps all its sequences")
+			assert(AnimationSets.find(m, "Marche", true) == own:FindFirstChild("Marche"))
+			assert(#AnimationSets.pieces(m, "ArmeDroite") == 0, "legacy weapon search stays in the caller")
+		end
+		-- Même si on lui pose un jeu commun par erreur, un ancien rig ne le lit pas.
+		local stray = model({ JeuAnimations = "RoiOrc", JeuAnimationsCommun = "Squelette_Leger" })
+		assert(names(AnimationSets.folders(stray, true)) == "RoiOrc")
+	end)
+
+	test("shared set alone, missing set, missing sequence", function()
+		local library, _, sharedWalk = migrationLibrary()
+		local AnimationSets = load(library)
+		local onlyShared = model({ JeuAnimationsCommun = "Squelette_Leger", Squelette = Skeleton.Name, JeuAnimations = "Absent" })
+		assert(AnimationSets.find(onlyShared, "Marche", true) == sharedWalk)
+		assert(AnimationSets.find(onlyShared, "Mort", true) == nil)
+		local missing = model({ JeuAnimations = "Absent", JeuAnimationsCommun = "AbsentAussi", Squelette = Skeleton.Name })
+		assert(#AnimationSets.folders(missing, true) == 0 and next(AnimationSets.sequences(missing, true)) == nil)
 	end)
 
 	print(`AnimationSets: {passed} passed, {failed} failed`)

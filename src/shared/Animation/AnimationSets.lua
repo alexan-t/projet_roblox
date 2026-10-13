@@ -72,6 +72,46 @@ function AnimationSets.find(model: Instance, name: string, combat: boolean?): Ke
 	return nil
 end
 
+-- Migration vers le jeu commun (appelée par AnimationKit.share, jamais en jeu). La recherche garde
+-- l'ordre « jeu propre, puis jeu commun » : une animation propre voulue (Attaque, Ultime...) reste
+-- prioritaire. Une animation qu'on décide de partager doit donc QUITTER les jeux propres du modèle,
+-- sinon l'ancienne version (Pose de l'ancien squelette) masque la commune.
+-- Déplace dans archive chaque séquence <name> des jeux propres (JeuAnimationsCombat, JeuAnimations,
+-- hors aperçu), renommée « <Jeu>_<name> », seulement si le modèle a le squelette commun et si son jeu
+-- commun contient <name>. Agit sur le jeu propre lui-même : tout autre modèle de ce jeu est concerné.
+-- Retourne les séquences déplacées.
+function AnimationSets.unshadow(model: Instance, name: string, archive: Instance): { KeyframeSequence }
+	local moved: { KeyframeSequence } = {}
+	local attributes = AnimationSets.attributes(model)
+	local sharedName = attributes.JeuAnimationsCommun
+	if attributes.Squelette ~= Skeleton.Name or typeof(sharedName) ~= "string" then
+		return moved
+	end
+	local folders = AnimationSets.folders(model, true)
+	local shared: Instance? = nil
+	for _, folder in folders do
+		if folder.Name == sharedName then
+			shared = folder
+		end
+	end
+	local common = shared and shared:FindFirstChild(name)
+	if not common or not common:IsA("KeyframeSequence") then
+		return moved
+	end
+	for _, folder in folders do
+		if folder == shared then
+			continue
+		end
+		local own = folder:FindFirstChild(name)
+		if own and own:IsA("KeyframeSequence") then
+			own.Name = `{folder.Name}_{name}`
+			own.Parent = archive
+			table.insert(moved, own)
+		end
+	end
+	return moved
+end
+
 -- Pièces visibles rattachées à un os (attribut Os posé par AnimationKit.rig).
 -- Sans squelette commun : liste vide (l'appelant garde son ancienne recherche).
 function AnimationSets.pieces(model: Instance, boneName: string): { BasePart }

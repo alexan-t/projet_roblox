@@ -34,6 +34,9 @@ local SkeletonConfig = require(shared.Config.SkeletonConfig) :: any
 local Kit = {}
 
 local ATELIER = "AtelierAnimation"
+-- Anciennes séquences retirées d'un jeu propre par Kit.share : jamais lues par le jeu (ServerStorage),
+-- gardées pour comparer ou revenir en arrière.
+local ARCHIVE = "AnimationKitArchive"
 local PREVIEW_TAG = "ApercuAnimation"
 local KEYS_PER_CYCLE = 16
 local BONE_SIZE = 0.2
@@ -150,7 +153,7 @@ end
 
 -- Montre, sans rien modifier, quelle pièce irait sur quel os (pour brancher un nouveau modèle).
 -- Les cibles MainProche / BrasProche sont tranchées par la géométrie au moment du rig.
-function Kit.inspect(model: Model, options: { [string]: any }?): ()
+function Kit.inspect(model: Model, options: { [string]: any }?): string
 	local list, resolution = resolvePieces(model, options)
 	local lines: { string } = {}
 	for index, part in list do
@@ -160,6 +163,7 @@ function Kit.inspect(model: Model, options: { [string]: any }?): ()
 	end
 	table.sort(lines)
 	print(`[AnimationKit] {model.Name} :\n  {table.concat(lines, "\n  ")}`)
+	return table.concat(lines, "\n")
 end
 
 -- Pose le squelette commun (docs/SKELETON.md) sur un modèle de pièces séparées (format IA : <membre>_geom).
@@ -296,6 +300,11 @@ function Kit.rig(model: Model, options: { [string]: any }?): ()
 		end
 	end
 	model:SetAttribute("Squelette", Skeleton.Name)
+	for _, old in model:GetChildren() do
+		if old:IsA("AnimationController") then
+			old:Destroy() -- un seul AnimationController par modèle
+		end
+	end
 	local controller = Instance.new("AnimationController")
 	controller.Parent = model
 	Instance.new("Animator").Parent = controller
@@ -339,7 +348,18 @@ function Kit.closeArms(model: Model, color: Color3, options: { Inset: number?, H
 			local name = "Couvercle_" .. motor.Name
 			local old = arm.Parent and arm.Parent:FindFirstChild(name)
 			if old then
+				-- Toute articulation qui le tenait part avec lui (Porte_ d'un closeArms précédent, ou
+				-- Fixe_ d'un Kit.rig qui l'avait pris pour une pièce du buste) : pas de Motor6D orphelin.
+				for _, motor in model:GetDescendants() do
+					if motor:IsA("Motor6D") and motor.Part1 == old then
+						motor:Destroy()
+					end
+				end
 				old:Destroy()
+			end
+			local oldLink = arm:FindFirstChild("Porte_" .. name)
+			if oldLink then
+				oldLink:Destroy() -- sinon un Motor6D sans Part1 s'accumule à chaque réexécution
 			end
 			local mn, mx = bounds(arm, basis)
 			local right = (mn.X + mx.X) / 2 > 0
@@ -736,7 +756,14 @@ local function store(model: Model, set: string, sequence: KeyframeSequence): Ins
 	local target = folder(folder(assets, "Animations"), set)
 	local old = target:FindFirstChild(sequence.Name)
 	if old then
-		old:Destroy()
+		-- Version remplacée gardée hors du jeu (ServerStorage), comme les séquences retirées par Kit.share.
+		local archive = folder(ServerStorage, ARCHIVE)
+		local previous = archive:FindFirstChild(`{set}_{sequence.Name}`)
+		if previous then
+			previous:Destroy()
+		end
+		old.Name = `{set}_{sequence.Name}`
+		old.Parent = archive
 	end
 	sequence.Parent = target
 	local saves = folder(folder(ServerStorage, "RBX_ANIMSAVES"), model.Name, "Model")
@@ -764,12 +791,19 @@ end
 -- Range une animation du squelette commun dans un jeu partagé (ex. Squelette_Leger) et branche le
 -- modèle dessus (attribut JeuAnimationsCommun). Tout autre modèle au squelette commun peut ensuite
 -- utiliser ce jeu sans nouvelle séquence : il suffit de lui poser le même JeuAnimationsCommun.
+-- La recherche lit le jeu propre avant le jeu commun : l'ancienne séquence du même nom dans les jeux
+-- propres du modèle (Marche de l'ancien squelette) est donc déplacée dans ServerStorage.AnimationKitArchive
+-- (AnimationSets.unshadow), sinon elle masquerait la commune. Tout modèle de ce jeu propre est concerné :
+-- remplacer aussi son asset de combat par la version migrée.
 function Kit.share(model: Model, set: string, sequence: KeyframeSequence): ()
 	assert(sequence:GetAttribute("Squelette") == Skeleton.Name,
 		`{sequence.Name} n'est pas faite sur le squelette commun (Kit.unrig puis Kit.rig, puis régénérer)`)
 	local target = store(model, set, sequence)
 	target:SetAttribute("Squelette", Skeleton.Name)
 	model:SetAttribute("JeuAnimationsCommun", set)
+	for _, old in AnimationSets.unshadow(model, sequence.Name, folder(ServerStorage, ARCHIVE)) do
+		print(`[AnimationKit] {old.Name} retirée du jeu propre (ServerStorage.{ARCHIVE}) : {sequence.Name} vient de {set}`)
+	end
 end
 
 -- Aperçu en boucle au Play : l'animation est copiée dans Assets.Animations.Apercu_<Set> sous le nom
@@ -875,7 +909,8 @@ end
 --               Profile: string | table ? (Kit.Profiles), Attack: string | table ?, Ultimate: string | table ?
 --                 (styles de Kit.Attacks), Shared: string | false ? (jeu commun de la marche),
 --               CloseArms: Color3? (couvercles de bras couleur peau, voir Kit.closeArms),
---               Held / Parts (anciennes options, voir Kit.rig), Preview: string? ("Marche" par défaut) }
+--               Held / Parts (anciennes options, voir Kit.rig), Preview: string? ("Marche" par défaut),
+--               Arrange: boolean? (false : ne pas ranger tout l'atelier avec Kit.arrange) }
 -- Une option absente est lue dans la fiche (Profil, Attaque, Ultime, Commun, CouvercleBras).
 -- Avec un jeu commun, la marche y est rangée (Kit.share) ; attaque et ultime vont dans <Set>.
 function Kit.prepare(options: { [string]: any }): Model
@@ -901,6 +936,9 @@ function Kit.prepare(options: { [string]: any }): Model
 		if skin then
 			Kit.closeArms(model, skin)
 		end
+		-- Jeu propre déclaré avant Kit.share : une ancienne Marche de <Set> doit en sortir (bug #56).
+		model:SetAttribute("JeuAnimations", options.Set)
+		model:SetAttribute("JeuAnimationsCombat", options.Set)
 		local walk = Kit.walk(model, profile)
 		if sharedSet then
 			Kit.share(model, sharedSet, walk)
@@ -914,7 +952,9 @@ function Kit.prepare(options: { [string]: any }): Model
 			Kit.install(model, options.Set, Kit.ultimate(model, ultimate))
 		end
 		Kit.preview(model, options.Set, options.Preview or "Marche")
-		Kit.arrange()
+		if options.Arrange ~= false then
+			Kit.arrange()
+		end
 		return model
 	end)
 	if recording then
