@@ -19,6 +19,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
+local AnimationSets = require(ReplicatedStorage.Shared.Animation.AnimationSets)
 local AudioController = require(script.Parent.AudioController)
 
 local TAG_APERCU = "ApercuAttaque"
@@ -45,12 +46,7 @@ local function effectPart(props: { [string]: any }): Part
 end
 
 local function attackSequence(model: Model): KeyframeSequence?
-	local setName = model:GetAttribute("JeuAnimationsCombat") or model:GetAttribute("JeuAnimations")
-	local assets = ReplicatedStorage:FindFirstChild("Assets")
-	local animations = assets and assets:FindFirstChild("Animations")
-	local set = if typeof(setName) == "string" and animations then animations:FindFirstChild(setName) else nil
-	local sequence = set and set:FindFirstChild("Attaque")
-	return if sequence and sequence:IsA("KeyframeSequence") then sequence else nil
+	return AnimationSets.find(model, "Attaque", true)
 end
 
 function AttackEffectController.ImpactOf(model: Model): number
@@ -59,8 +55,20 @@ function AttackEffectController.ImpactOf(model: Model): number
 	return if typeof(impact) == "number" then impact else 0
 end
 
--- Pièce tenue en main droite (articulation Tenu_* du bras droit), sinon la plus basse en main.
+-- Pièce tenue en main droite : os ArmeDroite (squelette commun), sinon ArmeGauche ;
+-- ancien squelette : articulation Tenu_* du bras droit, sinon la première pièce en main.
 local function weapon(model: Model): BasePart?
+	for _, bone in { "ArmeDroite", "ArmeGauche" } do
+		local longest: BasePart? = nil
+		for _, piece in AnimationSets.pieces(model, bone) do
+			if not longest or piece.Size.Magnitude > longest.Size.Magnitude then
+				longest = piece
+			end
+		end
+		if longest then
+			return longest
+		end
+	end
 	local fallback: BasePart? = nil
 	for _, motor in model:GetDescendants() do
 		if motor:IsA("Motor6D") and string.sub(motor.Name, 1, 5) == "Tenu_" and motor.Part1 then

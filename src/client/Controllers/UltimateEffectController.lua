@@ -20,6 +20,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
+local AnimationSets = require(ReplicatedStorage.Shared.Animation.AnimationSets)
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local AudioController = require(script.Parent.AudioController)
 
@@ -83,8 +84,13 @@ local function sparkEmitter(parent: Instance, size: number, speed: NumberRange):
 	})
 end
 
--- Point de départ de la lame : l'arme tenue en main droite, sinon le bras droit.
+-- Point de départ de la lame : l'arme tenue en main droite (os ArmeDroite du squelette commun,
+-- sinon d'après le nom de la pièce), sinon le bras droit.
 local function weaponPosition(caster: Model, fallback: Vector3): Vector3
+	local held = AnimationSets.pieces(caster, "ArmeDroite")
+	if #held > 0 then
+		return held[1].Position
+	end
 	for _, item in caster:GetDescendants() do
 		if item:IsA("BasePart") then
 			local name = string.lower(item.Name)
@@ -320,16 +326,12 @@ function UltimateEffectController.Play(caster: Model, center: Vector3, radius: n
 end
 
 -- Démonstration Studio : l'animation « Ultime » du jeu de combat du modèle (attribut
--- JeuAnimationsCombat, sinon JeuAnimations), enregistrée à la volée, puis l'effet.
+-- JeuAnimationsCombat, sinon JeuAnimations, puis jeu commun : AnimationSets), enregistrée à la volée, puis l'effet.
 local function demoTrack(model: Model): AnimationTrack?
-	local setName = model:GetAttribute("JeuAnimationsCombat") or model:GetAttribute("JeuAnimations")
-	local assets = ReplicatedStorage:FindFirstChild("Assets")
-	local animations = assets and assets:FindFirstChild("Animations")
-	local set = if typeof(setName) == "string" and animations then animations:FindFirstChild(setName) else nil
-	local sequence = set and set:FindFirstChild("Ultime")
+	local sequence = AnimationSets.find(model, "Ultime", true)
 	local controller = model:FindFirstChildOfClass("AnimationController")
 	local animator = controller and controller:FindFirstChildOfClass("Animator")
-	if not sequence or not sequence:IsA("KeyframeSequence") or not animator then
+	if not sequence or not animator then
 		warn(`[UltimateEffect] {model:GetFullName()} : animation Ultime ou Animator introuvable`)
 		return nil
 	end

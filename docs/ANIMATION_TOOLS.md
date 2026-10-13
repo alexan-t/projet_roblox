@@ -8,6 +8,13 @@ la montre en boucle à côté du spawn au prochain Play.
 synchronisé par Rojo et ne tourne jamais en partie. Il modifie des assets Studio (modèles,
 `KeyframeSequence`), comme un artiste le ferait à la main. Aucun script n'est ajouté au place.
 
+**Squelette commun** : `Kit.rig` pose désormais le squelette partagé par tous les héros et monstres
+(os `Buste`, `Tete`, `BrasGauche`... ; animations nommées d'après les os, jeux communs
+`Squelette_Leger` / `Squelette_Lourd`). Les os, les fiches de modèles (« cette pièce = tel os ») et
+la marche à suivre pour **brancher un nouveau héros ou monstre** sont dans
+[`SKELETON.md`](SKELETON.md). AnimationKit lit ces modules dans `ReplicatedStorage.Shared` : la
+place doit être synchronisée par Rojo.
+
 ## Utilisation
 
 Studio en mode **Edit**.
@@ -34,9 +41,9 @@ Un agent fait la même chose avec `execute_luau` (contenu du fichier, puis l'app
 | Étape | Fonction | Résultat |
 | --- | --- | --- |
 | Copie | `Kit.copy` | clone dans `Workspace.AtelierAnimation`. **Le modèle source n'est jamais modifié** (le Bestiaire contient les références de DA). |
-| Squelette | `Kit.rig` | `HumanoidRootPart` invisible et ancrée, `AnimationController` + `Animator`, articulations `Motor6D` |
-| Marche | `Kit.walk` | `KeyframeSequence` « Marche » en boucle, priorité `Movement` |
-| Rangement | `Kit.install` | `ReplicatedStorage.Assets.Animations.<Set>.Marche` (jeu de combat) + copie dans `ServerStorage.RBX_ANIMSAVES.<modèle>` pour l'Animation Editor |
+| Squelette | `Kit.rig` | `HumanoidRootPart` invisible et ancrée, os invisibles communs (dossier `Os`), `AnimationController` + `Animator`, articulations `Motor6D` ; attribut `Os` sur chaque pièce (voir `SKELETON.md`) |
+| Marche | `Kit.walk` | `KeyframeSequence` « Marche » en boucle, priorité `Movement`, `Pose` nommées d'après les os |
+| Rangement | `Kit.share` / `Kit.install` | marche dans le jeu commun de la fiche (`Assets.Animations.Squelette_Leger`...), attaque et ultime dans `Assets.Animations.<Set>` (jeu propre) ; copie dans `ServerStorage.RBX_ANIMSAVES.<modèle>` pour l'Animation Editor |
 | Aperçu | `Kit.preview` | jeu `Apercu_<Set>` + tag `ApercuAnimation` (voir plus bas) |
 | Placement | `Kit.arrange` | tous les modèles de l'atelier en ligne à 14 studs du spawn, tournés vers lui, pieds au sol, axe du spawn laissé libre |
 
@@ -57,9 +64,10 @@ Le format des modèles générés par l'IA de Studio : une pièce par membre, no
 - Le repère est déduit des bras : X = du bras gauche vers le bras droit, -Z = avant. Les pivots
   sont placés en haut des membres (épaules, hanches) et en bas de la tête.
 - **Autres pièces** : une pièce dont le nom évoque un objet tenu (`sword`, `weapon`, `spear`,
-  `buckler`, `staff`, `marteau`, `etendard`...) suit la main la plus proche (`Tenu_<nom>`). Tout le
-  reste est fixé au buste (`Fixe_<nom>` : cape, ceinture, cor, cristal...). Corriger un cas avec
-  `Held` :
+  `buckler`, `staff`, `marteau`, `etendard`...) suit la main la plus proche (os `ArmeGauche` /
+  `ArmeDroite`, `Tenu_<nom>`). Tout le reste est fixé au buste (`Fixe_<nom>` : cape, ceinture, cor,
+  cristal...). Corriger de préférence dans la fiche du modèle (`SkeletonConfig`, voir `SKELETON.md`)
+  ou par l'attribut `Os` de la pièce ; `Held` reste accepté pour un essai rapide :
 
   ```lua
   _G.AnimationKit.prepare({ Source = ..., Set = ..., Profile = "Leger",
@@ -142,21 +150,26 @@ Quand un personnage aura plusieurs animations (Attente, Attaque...), remettre so
 
 ## Attaque du Roi Orc (boss) et effet d'impact
 
-Préparé avec :
+Préparé à l'origine avec `Parts` / `Held` ; ces réglages sont maintenant la fiche
+`SkeletonConfig.Models.RoiOrc` (tête `body_geom`, bannière au buste, pics et crânes d'épaule au bras
+le plus proche, profil `Lourd`, attaque `Fendoir`, couvercles de bras). La DEV n'a pas de Roi Orc au
+Bestiaire : la source est une copie désarticulée de l'asset de combat (voir `SKELETON.md`, exemples).
 
 ```lua
-_G.AnimationKit.prepare({
-	Source = workspace.RoiOrc, Name = "RoiOrc", Set = "RoiOrc",
-	Profile = "Lourd", Attack = "Fendoir",
-	Parts = { head = "body_geom" },            -- sa tête s'appelle body_geom
-	Held = { Banniere = "torso", PicEpaule = "nearest", Crane_5 = "nearest", Crane_6 = "nearest" },
-})
+local source = game.ReplicatedStorage.Assets.Combat.Ennemi_RoiOrc:Clone()
+_G.AnimationKit.unrig(source)
+source.Name = "RoiOrc"
+_G.AnimationKit.prepare({ Source = source, Set = "RoiOrc", Name = "RoiOrc_Squelette", Arrange = false })
+source:Destroy()
 ```
 
-- `Parts` désigne une pièce de rôle au nom inhabituel ; `Held` accepte `"nearest"` pour une pièce
-  portée par le bras le plus proche (pics et crânes d'épaule).
-- Les styles peuvent animer l'**arme elle-même** (`weaponRight`, `weaponLeft` : première pièce tenue
-  par chaque main, pivot dans la main). L'angle de la lame est la somme bras + arme.
+`Kit.closeArms` peut être relancé : il remplace les couvercles et toutes les articulations qui les
+tenaient (aucun `Motor6D` orphelin).
+
+- `Membres` (ex-`Parts`) désigne la pièce d'un membre au nom inhabituel ; `BrasProche`
+  (ex-`"nearest"`) une pièce portée par le bras le plus proche. Voir `SKELETON.md`.
+- Les styles peuvent animer l'**arme elle-même** (`weaponRight`, `weaponLeft` : os `ArmeDroite`,
+  `ArmeGauche`, pivot dans la main). L'angle de la lame est la somme bras + arme.
 - `Fendoir` (1,4 s, impact 0,7 s) : armé lent, le bras lève la lance-hache au-dessus de la tête,
   court temps suspendu, puis l'abat devant lui ; la lame mord le sol. Demande `Kit.closeArms`.
 - **Effet d'impact** : poser l'attribut texte `EffetAttaque = "Seisme"` sur le modèle (asset). Au
@@ -203,30 +216,37 @@ supprimer l'attribut pour revenir en x1. En combat, la vitesse vient de `SpeedCh
 
 ## État actuel DEV
 
-Intégrés dans la DEV commune (« Projet Roblox - Alpha ») depuis la place « test 3 » :
+Après la migration pilote sur le squelette commun (Écuyer et Roi Orc, voir `SKELETON.md`) :
 
-| Jeu (`ReplicatedStorage.Assets.Animations`) | Séquences | `AssetId` |
-| --- | --- | --- |
-| `EcuyerDuRempart` | Marche, Attaque, Ultime | absent |
-| `TreantMasque` | Marche, Attaque (pas d'Ultime) | absent |
-| `RoiOrc` | Marche, Attaque (pas d'Ultime) | absent |
-| `Gobelin` (déjà présent) | Attente, Marche, Attaque, Touche, Mort | absent |
-| `Apercu_EcuyerDuRempart`, `Apercu_TreantMasque`, `Apercu_RoiOrc` | Attente (démonstration d'atelier, pas pour le combat) | absent |
+| Jeu (`ReplicatedStorage.Assets.Animations`) | Séquences | Squelette | `AssetId` |
+| --- | --- | --- | --- |
+| `EcuyerDuRempart` | Attaque, Ultime | commun | absent |
+| `RoiOrc` | Attaque (Fendoir) | commun | absent |
+| `Squelette_Leger` | Marche (Écuyer, futurs héros légers) | commun | absent |
+| `Squelette_Lourd` | Marche (Roi Orc, futurs modèles lourds) | commun | absent |
+| `Gobelin` | Attente, Marche, Attaque, Touche, Mort | ancien | absent |
+| `TreantMasque` | Marche, Attaque (pas d'Ultime) | ancien | absent |
+| `Apercu_EcuyerDuRempart`, `Apercu_TreantMasque`, `Apercu_RoiOrc` | Attente (démonstration d'atelier, pas pour le combat) | — | absent |
 
-`Workspace.AtelierAnimation` contient les modèles articulés qui jouent ces jeux : Écuyer du Rempart,
-Tréant masqué et Roi Orc. Les modèles du Bestiaire et de `ServerStorage.Assets.Heros` ne sont pas
-articulés. Bestiaire et atelier sont des références / outils de design, pas une source de vérité
-gameplay.
+Modèles de combat (`ReplicatedStorage.Assets.Combat`) : `Heros_EcuyerDuRempart` et `Ennemi_RoiOrc`
+sur le squelette commun ; `Ennemi_Gobelin` sur l'ancien squelette (les deux coexistent en combat).
+Les anciennes versions (assets et séquences) sont dans `ServerStorage.AnimationKitArchive`.
 
-- **Studio : fonctionnel.** Vérifié au Play : les trois modèles de l'atelier jouent leurs
-  animations, enregistrées à la volée.
+`Workspace.AtelierAnimation` : `EcuyerDuRempart_Squelette` et `RoiOrc_Squelette` (squelette commun,
+aperçu de la Marche) ; `Treant_Masque` (ancien squelette, inchangé) ; `EcuyerDuRempart` et `RoiOrc`,
+anciennes copies de l'ancien squelette, **obsolètes** (leurs jeux contiennent maintenant des séquences
+du squelette commun : à retirer de l'atelier). Les modèles du Bestiaire et de
+`ServerStorage.Assets.Heros` ne sont pas articulés. Bestiaire et atelier sont des références / outils
+de design, pas une source de vérité gameplay.
+
+- **Studio : fonctionnel.** Vérifié en combat réel (stages 1-1 et 1-5, x1 / x2) et au Play pour
+  l'atelier ; les séquences sont enregistrées à la volée.
 - **Production : `AssetId` requis.** Aucune `KeyframeSequence` n'a encore d'`AssetId` publié, pas
   même celles du Gobelin. Hors Studio, une séquence sans `AssetId` ne joue pas. Chaque séquence de
   combat doit être publiée **par le propriétaire de l'expérience** (sinon Roblox refuse de la jouer
   dans cette expérience), puis son identifiant mis dans l'attribut `AssetId` de la séquence.
-- Le combat actuel utilise encore les mannequins de `ReplicatedStorage.Assets.Combat`, sans jeu
-  d'animation : ces animations ne joueront en combat que sur des modèles articulés portant
-  `JeuAnimations`.
+- Avant publication : sortir `Workspace.AtelierAnimation` de la place jouée (aperçus en boucle,
+  voir `SKELETON.md` § « Atelier et publication »). Les jeux `Apercu_*` ne se publient pas.
 - Dans la DEV, deux `SpawnLocation` existent (`Lobby.Monde.SpawnLobby` actif, ancien
   `Workspace.SpawnLocation` de test désactivé). `Kit.arrange` prend le premier `SpawnLocation`
   trouvé : vérifier lequel avant de ranger l'atelier.
@@ -250,4 +270,5 @@ gameplay.
 - Les épaules des modèles IA sont des pièces creuses : un bras levé très haut ou très écarté laisse
   voir le dessous sombre de l'épaulière. Garder les bras sous ~80° (rx) et ~30° (rz). Le pivot
   d'épaule est placé près du bord intérieur du bras pour limiter l'effet ; `Kit.unrig` puis
-  `Kit.rig` reposent le squelette d'un modèle riggé avant cette correction.
+  `Kit.rig` reposent le squelette d'un modèle riggé (sur le squelette commun : régénérer ensuite
+  les séquences d'un modèle de l'ancien squelette).

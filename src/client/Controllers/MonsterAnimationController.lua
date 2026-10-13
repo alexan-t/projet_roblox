@@ -1,8 +1,10 @@
 --!strict
 -- Animations des monstres (purement visuelles, côté client).
--- Chaque monstre animé est un Model avec un squelette Motor6D, un AnimationController/Animator,
+-- Chaque monstre ou héros animé est un Model avec un squelette Motor6D, un AnimationController/Animator,
 -- et l'attribut "JeuAnimations" = nom du dossier ReplicatedStorage.Assets.Animations.<JeuAnimations>
 -- qui contient ses KeyframeSequence : Attente, Marche, Attaque, Touche, Mort.
+-- Squelette commun (docs/SKELETON.md) : l'attribut "JeuAnimationsCommun" désigne un jeu partagé,
+-- nommé d'après les os, qui fournit les animations absentes du jeu propre (AnimationSets).
 --   • Si la KeyframeSequence porte l'attribut "AssetId" (animation publiée), on l'utilise.
 --   • Sinon, dans Studio uniquement, on l'enregistre à la volée (aperçu avant publication).
 -- Tag "ApercuAnimation" (Model) : démonstration en boucle (Attente, puis Marche, Attaque,
@@ -15,6 +17,8 @@ local CollectionService = game:GetService("CollectionService")
 local KeyframeSequenceProvider = game:GetService("KeyframeSequenceProvider")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+
+local AnimationSets = require(ReplicatedStorage.Shared.Animation.AnimationSets)
 
 local TAG_APERCU = "ApercuAnimation"
 local ACTIONS = { "Marche", "Attaque", "Touche", "Mort" }
@@ -46,39 +50,44 @@ local function animationId(sequence: KeyframeSequence): string?
 	return id
 end
 
-local function load(model: Model): { [string]: AnimationTrack }?
+-- combat = true (Play, appelé par le combat) : jeu de combat, jeu propre puis jeu commun ; un jeu
+-- d'aperçu (Apercu_*) n'est jamais lu. combat = false : démonstration d'atelier (tag ApercuAnimation).
+local function load(model: Model, combat: boolean): { [string]: AnimationTrack }?
 	local existing = tracks[model]
 	if existing then
 		return existing
 	end
-	local setName = model:GetAttribute("JeuAnimations")
-	local assets = ReplicatedStorage:FindFirstChild("Assets")
-	local animations = assets and assets:FindFirstChild("Animations")
-	local folder = if typeof(setName) == "string" and animations then animations:FindFirstChild(setName) else nil
+	local sequences = AnimationSets.sequences(model, combat)
 	local controller = model:FindFirstChildOfClass("AnimationController")
 	local animator = controller and controller:FindFirstChildOfClass("Animator")
-	if not folder or not animator then
+	if not next(sequences) or not animator then
 		return nil
 	end
 	local loaded: { [string]: AnimationTrack } = {}
-	for _, sequence in folder:GetChildren() do
-		if sequence:IsA("KeyframeSequence") then
-			local id = animationId(sequence)
-			if id then
-				local animation = Instance.new("Animation")
-				animation.AnimationId = id
-				local track = (animator :: Animator):LoadAnimation(animation)
-				track.Looped = sequence.Loop
-				loaded[sequence.Name] = track
-			end
+	for name, sequence in sequences do
+		local id = animationId(sequence)
+		if id then
+			local animation = Instance.new("Animation")
+			animation.AnimationId = id
+			local track = (animator :: Animator):LoadAnimation(animation)
+			track.Looped = sequence.Loop
+			loaded[name] = track
 		end
 	end
 	tracks[model] = loaded
+	-- Modèle détruit (fin de combat, mort) : ses pistes s'arrêtent et quittent le cache.
+	model.Destroying:Once(function()
+		for _, track in loaded do
+			track:Stop(0)
+			track:Destroy()
+		end
+		tracks[model] = nil
+	end)
 	return loaded
 end
 
 function MonsterAnimationController.Play(model: Model, name: string, fadeTime: number?): AnimationTrack?
-	local loaded = load(model)
+	local loaded = load(model, true)
 	local track = loaded and loaded[name]
 	if track then
 		track:Play(fadeTime or 0.15)
@@ -120,7 +129,7 @@ local function demoSpeed(model: Model): number
 end
 
 local function runDemo(model: Model)
-	local loaded = load(model)
+	local loaded = load(model, false)
 	if not loaded then
 		warn(`[MonsterAnimation] {model:GetFullName()} : squelette ou animations introuvables`)
 		return
