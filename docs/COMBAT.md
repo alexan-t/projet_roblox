@@ -165,6 +165,10 @@ n'attend jamais une animation. Les modèles portent les attributs `UnitId`, `Tea
 
 Règle d'interface : une information qui peut s'afficher dans le monde n'a pas de HUD séparé.
 
+Mise en scène (entrée des ennemis depuis le décor, « Défendre la base », attaques et morts par famille,
+outro et sac de récompenses) : voir [COMBAT_PRESENTATION.md](COMBAT_PRESENTATION.md). Le moteur est
+seulement retenu pendant les entrées (`CombatConfig.Presentation`, événement `EntranceHold`).
+
 - `ArenaPlacementController` : pendant le combat, une pastille légère au-dessus de la hotbar
   (vague, **x1 / x2**, **X** pour quitter), une annonce brève à chaque vague ou au mini-boss,
   et le résultat. La hotbar reste visible, grisée : elle ne modifie plus la formation.

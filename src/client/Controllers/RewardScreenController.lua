@@ -37,7 +37,8 @@ local RAY_LENGTH = 230 -- px, du centre du titre au bout d'un rayon
 local SPARKS = 10
 
 export type Reward = { Kind: string, Amount: number, New: boolean? }
-export type ScreenData = { Result: string, FirstClear: boolean?, Rewards: { Reward }? }
+-- Silent : le son du résultat a déjà été joué (annonce « VICTOIRE ! » de l'outro de combat).
+export type ScreenData = { Result: string, FirstClear: boolean?, Rewards: { Reward }?, Silent: boolean? }
 
 local KINDS = {
 	Gold = { Label = "Or", Color = Colors.CurrencyGold },
@@ -408,7 +409,9 @@ function RewardScreenController.Show(data: ScreenData, onContinue: (() -> ())?)
 	RewardScreenController.Hide()
 	local player = Players.LocalPlayer
 	local victory = data.Result == "Victory"
-	AudioController.Play(if victory then "Victoire" else "Defaite") -- (#18)
+	if not data.Silent then
+		AudioController.Play(if victory then "Victoire" else "Defaite") -- (#18)
+	end
 	local rewards = data.Rewards or {}
 
 	local gui = Instance.new("ScreenGui")

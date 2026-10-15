@@ -141,8 +141,15 @@ local function stateOf(player: Player, message: string?): any
 	-- Numéro croissant par joueur : le client ignore un état plus ancien que celui qu'il a déjà
 	-- (la lecture initiale GetArenaState peut arriver après un ArenaState plus récent).
 	stateVersion[player] = (stateVersion[player] or 0) + 1
+	-- Première vague seule (EnemyId, Count) : ce que le client présente avant Prêt (mise en scène).
+	-- Sans position : les cases restent tirées par le moteur au lancement.
+	local firstWave = {}
+	local wave = stage and stage.Waves and stage.Waves[1]
+	for _, group in if wave then wave.Enemies else {} do
+		table.insert(firstWave, { EnemyId = group.EnemyId, Count = group.Count })
+	end
 	return { Version = stateVersion[player], Phase = if prep then prep.phase else "Closed", Formation = formation,
-		MaxHeroes = Config.MaxHeroes, Zone = zone, Stage = stageNumber,
+		MaxHeroes = Config.MaxHeroes, Zone = zone, Stage = stageNumber, FirstWave = firstWave,
 		Enemies = if stage then ArenaRules.summarize(stage) else {},
 		Stages = stagesOf(player), Available = context(player) ~= nil, Message = message }
 end

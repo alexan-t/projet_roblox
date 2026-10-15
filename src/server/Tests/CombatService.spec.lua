@@ -657,6 +657,56 @@ return function(createService: any, CombatEngine: any, combatConfig: any, _stage
 		assert(#victory == 1 and victory[1].Result == "Victory" and victory[1].FirstClear == false and #victory[1].Rewards == 0)
 	end)
 
+	-- Mise en scène (docs/COMBAT_PRESENTATION.md) : le moteur est retenu, jamais modifié.
+	local PRESENTATION = combatConfig.Presentation
+
+	test("presentation: StartHold announced at start, nobody moves or attacks during it", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		s:StartCombat(p, e.stages[p].Id, TEAM, e.context())
+		local holds = e.events(p, "EntranceHold")
+		assert(#holds == 1 and holds[1].Duration == PRESENTATION.StartHold, "one EntranceHold = StartHold")
+		e.tick(PRESENTATION.StartHold - 0.05, 0.05)
+		assert(#e.events(p, "MoveStarted") == 0 and #e.events(p, "Attack") == 0, "engine held")
+		e.tick(1, 0.05)
+		assert(#e.events(p, "MoveStarted") > 0, "engine resumes after the hold")
+	end)
+
+	test("presentation: next wave / mini-boss waits breather + longest entrance, without changing the outcome", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		s:StartCombat(p, e.stages[p].Id, TEAM, e.context())
+		assert(e.runUntilEnd(s, p, 300), "combat still ends")
+		local holds = e.events(p, "EntranceHold")
+		local expected = PRESENTATION.WaveBreather + (PRESENTATION.Entrance.Boss or PRESENTATION.DefaultEntrance)
+		assert(#holds == 2 and holds[2].Duration == expected, `boss hold {holds[2] and holds[2].Duration} vs {expected}`)
+		-- Rien ne se passe entre l'arrivée du boss et la fin de son entrée : pas d'attaque juste après MiniBossStarted.
+		local all = e.events(p)
+		local afterBoss, attacks = false, 0
+		for _, ev in all do
+			if ev.Type == "MiniBossStarted" then afterBoss = true
+			elseif afterBoss and ev.Type == "EntranceHold" then break
+			elseif afterBoss and ev.Type == "Attack" then attacks += 1 end
+		end
+		assert(attacks == 0, "no attack between MiniBossStarted and its EntranceHold")
+		local victory = e.events(p, "CombatEnded")
+		assert(#victory == 1 and victory[1].Result == "Victory")
+	end)
+
+	test("presentation: EntranceHold is client information only, never sent for a wave that is not new", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		s:StartCombat(p, e.stages[p].Id, TEAM, e.context())
+		e.tick(2)
+		assert(#e.events(p, "EntranceHold") == 1, "no hold while fighting wave 1")
+		for _, ev in e.events(p, "EntranceHold") do
+			assert(typeof(ev.Duration) == "number" and ev.Duration > 0 and ev.Duration < 5)
+		end
+	end)
+
 	print(`CombatService: {passed} passed, {failed} failed`)
 	if failed > 0 then
 		error(`{failed} CombatService test(s) failed`)
