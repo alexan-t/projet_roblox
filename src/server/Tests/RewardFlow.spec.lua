@@ -52,6 +52,7 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 			Utils = { Log = { debug = function() end, info = function() end,
 				warn = function(_s: string, m: string) table.insert(env.warnings, m) end } },
 			Types = { PlayerDataTypes = {} },
+			Quests = { QuestGuide = configs.QuestGuide }, -- cibles de guidage connues (QuestService)
 		} }
 		function replicated:FindFirstChild(name: string): any
 			for _, i in env.instances do if i.Name == name and i.Parent == replicated then return i end end

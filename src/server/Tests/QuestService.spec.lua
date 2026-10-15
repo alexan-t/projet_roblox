@@ -2,7 +2,7 @@
 -- Hors du dossier Services : jamais exécuté par le bootstrap.
 -- Exécute le vrai QuestService avec la vraie QuestConfig (ou une config de test) et un double de DataService.
 
-return function(createService: any, productionConfig: any)
+return function(createService: any, productionConfig: any, QuestGuide: any)
 	local function fixture(config: any?): any
 		local env: any = { data = {}, readyCallbacks = {}, warnings = {}, infos = {} }
 		local dataService: any = {}
@@ -33,7 +33,7 @@ return function(createService: any, productionConfig: any)
 			})
 		end
 		local replicated = inst("ReplicatedStorage")
-		replicated.Shared = { Utils = { Log = log }, Types = { PlayerDataTypes = {} } }
+		replicated.Shared = { Utils = { Log = log }, Types = { PlayerDataTypes = {} }, Quests = { QuestGuide = QuestGuide } }
 		env.replicated = replicated
 		env.Instance = { new = function(className: string): any
 			local i = inst(className)
@@ -416,6 +416,52 @@ return function(createService: any, productionConfig: any)
 		for _ = 1, 20 do if claim(p, "DefendDomain") == true then ok += 1 end end
 		assert(ok == 1 and data.Quests.DefendDomain.Claimed == true and data.Quests.DefendDomain.Progress == 1)
 		assert(s:HandleGameplayEvent(p, "StageCompleted", STAGE_1_1) == false, "no progress after the chain ended")
+	end)
+
+	-- Guidage (QuestGuide) ----------------------------------------------------------
+
+	test("guide: DefendDomain guides to StageSign while in progress, nothing once completed", function()
+		assert(productionConfig.Quests.DefendDomain.Guide.Target == "StageSign")
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		e.join(p)
+		local view = s:GetActiveQuest(p)
+		assert(view and view.GuideTarget == "StageSign", "in progress: guided")
+		s:HandleGameplayEvent(p, "StageCompleted", STAGE_1_1)
+		local done = s:GetActiveQuest(p)
+		assert(done and done.Completed and done.GuideTarget == nil, "completed: no more path")
+	end)
+
+	test("guide: every configured Guide.Target is a known QuestGuide target (production config)", function()
+		for id, quest in productionConfig.Quests do
+			if quest.Guide ~= nil then
+				assert(QuestGuide.isTarget(quest.Guide.Target), `{id} : cible {tostring(quest.Guide.Target)}`)
+			end
+		end
+	end)
+
+	test("guide: an unknown or malformed Guide.Target makes the config invalid (warning, quests disabled)", function()
+		for _, guide in { { Target = "PlotTravail" }, { Target = 5 }, "StageSign" } do
+			local e = fixture({
+				FirstQuestId = "A",
+				Quests = { A = { Title = "A", Objective = { Event = "X", Target = 1 }, Guide = guide } },
+			})
+			local s = e.start()
+			local p = e.player("A")
+			e.join(p)
+			assert(s:GetActiveQuest(p) == nil, "invalid guide: quests disabled")
+			assert(#e.warnings > 0, "a warning explains why")
+		end
+	end)
+
+	test("guide: a quest without Guide exposes no GuideTarget", function()
+		local e = fixture({ FirstQuestId = "A", Quests = { A = { Title = "A", Objective = { Event = "X", Target = 1 } } } })
+		local s = e.start()
+		local p = e.player("A")
+		e.join(p)
+		local view = s:GetActiveQuest(p)
+		assert(view and view.GuideTarget == nil)
 	end)
 
 	print(`QuestService: {passed} passed, {failed} failed`)

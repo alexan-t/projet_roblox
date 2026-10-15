@@ -20,6 +20,7 @@ Quests = {
 			Match = { Zone = 1, Stage = 1 }, -- champs que le payload doit avoir, à l'identique
 			Target = 1,                      -- nombre d'événements correspondants
 		},
+		Guide = { Target = "StageSign" },    -- optionnel : chemin lumineux jusqu'à l'objectif
 		NextQuestId = nil,                   -- quête suivante, nil = fin de la chaîne
 	},
 },
@@ -30,7 +31,8 @@ Quests = {
 - `Match` est facultatif : sans lui, tout événement du bon nom compte. Les valeurs sont
   comparées strictement (`1` ≠ `"1"`) ; les champs du payload absents de `Match` sont ignorés.
 - La config est vérifiée au démarrage : `Title`, `Objective.Event`, `Target` entier ≥ 1,
-  `Match` table, `NextQuestId` existant, `FirstQuestId` existant et aucune boucle.
+  `Match` table, `NextQuestId` existant, `FirstQuestId` existant, `Guide.Target` connu
+  (`Shared.Quests.QuestGuide`) et aucune boucle.
   En cas d'erreur, chaque problème est journalisé et les quêtes sont désactivées, sans crash.
 
 ## PlayerData
@@ -101,7 +103,7 @@ local ok, reason = QuestService:ClaimQuest(player, "DefendDomain")
 
 | Remote | Sens | Contenu |
 | --- | --- | --- |
-| `GetActiveQuest` (RemoteFunction) | client → serveur | vue `{ Id, Title, Progress, Target, Completed }` (copie) ou `nil` |
+| `GetActiveQuest` (RemoteFunction) | client → serveur | vue `{ Id, Title, Progress, Target, Completed, GuideTarget? }` (copie) ou `nil` |
 | `ClaimQuest` (RemoteFunction) | client → serveur | le client n'envoie que l'Id de quête (texte) ; réponse `(ok, raison?)`, tout est revérifié (`quête non terminée`, `déjà réclamée`, `quête inconnue`) |
 | `QuestChanged` (RemoteEvent) | serveur → le seul joueur | même vue, ou `nil` quand la chaîne est terminée ; envoyée à l'activation (join), à chaque progression et à la réclamation |
 
@@ -119,6 +121,33 @@ Jamais `PlayerData` : le client ne reçoit que la vue. La réclamation ne donne 
 Le suivi est en haut à gauche, sous la fenêtre de chat Roblox et sa barre de saisie quand elles y
 sont. Sans cela, le chat recouvre le suivi et capte le clic sur « Récupérer ».
 
+## Guidage (chemin lumineux)
+
+Le joueur doit pouvoir suivre le jeu presque sans lire : une quête qui demande d'aller quelque part
+porte `Guide = { Target = ... }`. La vue de la quête active expose alors `GuideTarget` (présentation
+seulement, rien de PlayerData), retiré dès que la quête est terminée.
+
+| Cible (`Shared.Quests.QuestGuide.Targets`) | Objet du plot du joueur | Arrivée (studs) |
+| --- | --- | --- |
+| `StageSign` | `Arene.PanneauStage` (chemin vers `Banniere`) | 10 |
+| `SummonPortal` | `PortailInvocation` | 12 |
+| `Kingdom` | `Royaume` | 14 |
+| `HeroPlacement` | `Arene.Emplacements.Heros` | 8 |
+
+`src/client/Controllers/QuestGuideController.lua` (visuel seulement) :
+- résout la cible dans le plot du joueur local (`PlotView`), jamais `PlotTravail` ni un autre plot ;
+- chemin `PathfindingService` (client) depuis `HumanoidRootPart`, recalculé seulement si la cible
+  change, si le joueur a bougé de 6 studs ou si le calcul a échoué (ligne droite en secours) ;
+- 12 chevrons dorés au plus devant le joueur (`UITheme.Colors.GoldLight`), tous les 3,5 studs, posés
+  au sol par un rayon (jamais flottants), avec une vague lumineuse qui avance vers la cible ;
+- cible : halo (`Highlight`, `Gold`) et petit marqueur « OBJECTIF » ;
+- masqué pendant le combat, l'intro des ennemis, le CTA, les écrans (récompenses, invocation,
+  stages) et une fois la quête terminée ; à la distance d'arrivée, le chemin s'efface, la cible reste
+  légèrement en évidence et l'interaction normale (E) prend le relais.
+
+Règles de visibilité et résolution : `QuestGuide.mode` et `QuestGuide.resolve`, purs et testés
+(`tools/test-presentation.ps1`, `tools/test-quests.ps1`).
+
 Aucun système d'événements générique n'existe encore dans le projet. Tant que les appelants
 sont peu nombreux, #7 appelle directement QuestService (puis RewardService) ; un bus
 d'événements serveur pourra être introduit si le nombre d'abonnés le justifie.
@@ -134,7 +163,8 @@ Tests locaux du vrai module avec un double de DataService (Luau CLI officiel) :
 Ils couvrent l'activation, la non-réinitialisation, les données absentes, les événements
 non correspondants, la progression bornée, la réclamation unique, le rejoin, deux joueurs
 indépendants, l'enchaînement `NextQuestId` (avec une config de test à deux quêtes),
-`NextQuestId = nil`, les configs invalides et l'absence d'effet sur le reste de PlayerData.
+`NextQuestId = nil`, les configs invalides, le guidage (`GuideTarget` tant que la quête est en cours,
+cible inconnue refusée) et l'absence d'effet sur le reste de PlayerData.
 
 En Studio, `ServerStorage.DebugData` (DebugService, Studio uniquement) simule ZoneService
 depuis la ligne de commande côté Serveur : `"GetActiveQuest"`,

@@ -4,7 +4,7 @@
 -- de la chaîne qui n'est pas encore réclamée. Aucun champ supplémentaire n'est sauvegardé.
 -- Les autres services signalent le gameplay avec HandleGameplayEvent.
 -- Remotes (lecture seule pour le client, le serveur décide tout) :
---   GetActiveQuest (RemoteFunction) -> vue de la quête active ({ Id, Title, Progress, Target, Completed }) ou nil ;
+--   GetActiveQuest (RemoteFunction) -> vue de la quête active ({ Id, Title, Progress, Target, Completed, GuideTarget? }) ou nil ;
 --   ClaimQuest (RemoteFunction)     -> (ok, raison?) : le client n'envoie que l'Id de quête, revérifié ici ;
 --   QuestChanged (RemoteEvent)      -> même vue (ou nil) à l'activation, à chaque progression et à la
 --                                      réclamation. Jamais PlayerData.
@@ -13,13 +13,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Log = require(ReplicatedStorage.Shared.Utils.Log)
 local PlayerDataTypes = require(ReplicatedStorage.Shared.Types.PlayerDataTypes)
+local QuestGuide = require(ReplicatedStorage.Shared.Quests.QuestGuide)
 local DataService = require(script.Parent.DataService)
 local QuestConfig = require(script.Parent.Parent.Config.QuestConfig)
 
 type PlayerData = PlayerDataTypes.PlayerData
 type QuestState = PlayerDataTypes.QuestState
 type Objective = { Event: string, Match: { [string]: any }?, Target: number }
-type Quest = { Title: string, Objective: Objective, NextQuestId: string? }
+type Quest = { Title: string, Objective: Objective, NextQuestId: string?, Guide: { Target: string }? }
 
 export type ActiveQuest = {
 	Id: string,
@@ -27,6 +28,8 @@ export type ActiveQuest = {
 	Progress: number,
 	Target: number,
 	Completed: boolean,
+	-- Présentation seulement : cible du chemin lumineux (QuestGuide), absente une fois la quête terminée.
+	GuideTarget: string?,
 }
 
 local SCOPE = "QuestService"
@@ -67,6 +70,8 @@ local function validate(config: any): { string }
 			table.insert(problems, `quête {id} : Objective.Match doit être une table`)
 		elseif quest.NextQuestId ~= nil and config.Quests[quest.NextQuestId] == nil then
 			table.insert(problems, `quête {id} : NextQuestId {quest.NextQuestId} inconnu`)
+		elseif quest.Guide ~= nil and (typeof(quest.Guide) ~= "table" or not QuestGuide.isTarget(quest.Guide.Target)) then
+			table.insert(problems, `quête {id} : Guide.Target inconnu ({if typeof(quest.Guide) == "table" then tostring(quest.Guide.Target) else "?"})`)
 		end
 	end
 	if typeof(config.FirstQuestId) ~= "string" or config.Quests[config.FirstQuestId] == nil then
@@ -181,12 +186,14 @@ function QuestService:GetActiveQuest(player: Player): ActiveQuest?
 	end
 	local quest = quests[id]
 	local state = data.Quests[id]
+	local completed = state.Progress >= quest.Objective.Target
 	return {
 		Id = id,
 		Title = quest.Title,
 		Progress = state.Progress,
 		Target = quest.Objective.Target,
-		Completed = state.Progress >= quest.Objective.Target,
+		Completed = completed,
+		GuideTarget = if quest.Guide and not completed then quest.Guide.Target else nil,
 	}
 end
 
