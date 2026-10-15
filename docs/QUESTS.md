@@ -21,6 +21,7 @@ Quests = {
 			Target = 1,                      -- nombre d'événements correspondants
 		},
 		Guide = { Target = "StageSign" },    -- optionnel : chemin lumineux jusqu'à l'objectif
+		Rewards = { { Kind = "SummonTicket", Amount = 1 } }, -- optionnel : donné une fois à la réclamation
 		NextQuestId = nil,                   -- quête suivante, nil = fin de la chaîne
 	},
 },
@@ -32,7 +33,8 @@ Quests = {
   comparées strictement (`1` ≠ `"1"`) ; les champs du payload absents de `Match` sont ignorés.
 - La config est vérifiée au démarrage : `Title`, `Objective.Event`, `Target` entier ≥ 1,
   `Match` table, `NextQuestId` existant, `FirstQuestId` existant, `Guide.Target` connu
-  (`Shared.Quests.QuestGuide`) et aucune boucle.
+  (`Shared.Quests.QuestGuide`), `Rewards` (Kind `Gold` / `Gems` / `SummonTicket`, Amount entier ≥ 1)
+  et aucune boucle.
   En cas d'erreur, chaque problème est journalisé et les quêtes sont désactivées, sans crash.
 
 ## PlayerData
@@ -104,11 +106,19 @@ local ok, reason = QuestService:ClaimQuest(player, "DefendDomain")
 | Remote | Sens | Contenu |
 | --- | --- | --- |
 | `GetActiveQuest` (RemoteFunction) | client → serveur | vue `{ Id, Title, Progress, Target, Completed, GuideTarget? }` (copie) ou `nil` |
-| `ClaimQuest` (RemoteFunction) | client → serveur | le client n'envoie que l'Id de quête (texte) ; réponse `(ok, raison?)`, tout est revérifié (`quête non terminée`, `déjà réclamée`, `quête inconnue`) |
+| `ClaimQuest` (RemoteFunction) | client → serveur | le client n'envoie que l'Id de quête (texte) ; réponse `(ok, raison?, récompenses?)`, tout est revérifié (`quête non terminée`, `déjà réclamée`, `quête inconnue`) ; les récompenses de la quête sont ajoutées une seule fois, sans yield |
 | `QuestChanged` (RemoteEvent) | serveur → le seul joueur | même vue, ou `nil` quand la chaîne est terminée ; envoyée à l'activation (join), à chaque progression et à la réclamation |
 
-Jamais `PlayerData` : le client ne reçoit que la vue. La réclamation ne donne aucune récompense
-(celles du stage viennent de RewardService).
+Jamais `PlayerData` : le client ne reçoit que la vue (avec `Rewards`, copie des récompenses annoncées).
+La réclamation ajoute les récompenses de `QuestConfig.Rewards` (première quête : 1 ticket
+d'invocation), une seule fois même si le client insiste ; celles du stage restent à RewardService.
+
+Révélation (`src/client/UI/Views/QuestRewardView.lua`) : « QUÊTE ACCOMPLIE ! » qui jaillit sur rayons
+dorés, chaque carte tombe, rebondit, tremble, éclate (flash, confettis aux couleurs de la map), se
+retourne sur l'objet (« x1 », nom), étoiles qui scintillent ; « Récupérer ! » (clic, toucher, Entrée)
+fait voler la carte jusqu'à son compteur du HUD, qui s'anime. Un ticket montre ensuite le portail.
+Tant qu'une récompense attend, la fenêtre de quête attire l'œil (contour doré qui pulse, rayons derrière
+le parchemin, bouton « Récupérer · Ticket x1 » qui respire, petit rebond régulier).
 
 `src/client/Controllers/QuestController.lua` :
 - au join, il appelle `GetActiveQuest` puis `QuestView.Show` ; ensuite, chaque `QuestChanged` met
@@ -138,8 +148,9 @@ seulement, rien de PlayerData), retiré dès que la quête est terminée.
 - résout la cible dans le plot du joueur local (`PlotView`), jamais `PlotTravail` ni un autre plot ;
 - chemin `PathfindingService` (client) depuis `HumanoidRootPart`, recalculé seulement si la cible
   change, si le joueur a bougé de 6 studs ou si le calcul a échoué (ligne droite en secours) ;
-- 12 chevrons dorés au plus devant le joueur (`UITheme.Colors.GoldLight`), tous les 3,5 studs, posés
-  au sol par un rayon (jamais flottants), avec une vague lumineuse qui avance vers la cible ;
+- 10 boules lumineuses au plus devant le joueur (asset Studio `ReplicatedStorage.Assets.Guide.OrbeGuide` :
+  cœur doré, halo, reflet, lumière douce ; boule simple si l'asset manque), tous les 4,5 studs, à 1,6 stud
+  au-dessus du sol trouvé par un rayon ; elles flottent doucement et une vague de lumière avance vers la cible ;
 - cible : halo (`Highlight`, `Gold`) et petit marqueur « OBJECTIF » ;
 - masqué pendant le combat (entrée des ennemis comprise), les écrans (récompenses, invocation,
   stages) et une fois la quête terminée ; à la distance d'arrivée, le chemin s'efface, la cible reste

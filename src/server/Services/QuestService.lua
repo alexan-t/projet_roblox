@@ -5,7 +5,9 @@
 -- Les autres services signalent le gameplay avec HandleGameplayEvent.
 -- Remotes (lecture seule pour le client, le serveur décide tout) :
 --   GetActiveQuest (RemoteFunction) -> vue de la quête active ({ Id, Title, Progress, Target, Completed, GuideTarget? }) ou nil ;
---   ClaimQuest (RemoteFunction)     -> (ok, raison?) : le client n'envoie que l'Id de quête, revérifié ici ;
+--   ClaimQuest (RemoteFunction)     -> (ok, raison?, récompenses?) : le client n'envoie que l'Id de quête,
+--                                      revérifié ici ; les récompenses de la quête (QuestConfig.Rewards)
+--                                      sont ajoutées UNE fois, sans yield, et renvoyées pour l'affichage ;
 --   QuestChanged (RemoteEvent)      -> même vue (ou nil) à l'activation, à chaque progression et à la
 --                                      réclamation. Jamais PlayerData.
 
@@ -20,7 +22,8 @@ local QuestConfig = require(script.Parent.Parent.Config.QuestConfig)
 type PlayerData = PlayerDataTypes.PlayerData
 type QuestState = PlayerDataTypes.QuestState
 type Objective = { Event: string, Match: { [string]: any }?, Target: number }
-type Quest = { Title: string, Objective: Objective, NextQuestId: string?, Guide: { Target: string }? }
+type Reward = { Kind: string, Amount: number }
+type Quest = { Title: string, Objective: Objective, NextQuestId: string?, Guide: { Target: string }?, Rewards: { Reward }? }
 
 export type ActiveQuest = {
 	Id: string,
@@ -30,6 +33,15 @@ export type ActiveQuest = {
 	Completed: boolean,
 	-- Présentation seulement : cible du chemin lumineux (QuestGuide), absente une fois la quête terminée.
 	GuideTarget: string?,
+	-- Récompenses annoncées (copie) : données à la réclamation.
+	Rewards: { Reward },
+}
+
+-- Récompenses de quête : type -> monnaie de PlayerData.Currencies.
+local REWARD_CURRENCY: { [string]: string } = {
+	Gold = "Gold",
+	Gems = "Gems",
+	SummonTicket = "SummonTickets",
 }
 
 local SCOPE = "QuestService"
@@ -72,6 +84,16 @@ local function validate(config: any): { string }
 			table.insert(problems, `quête {id} : NextQuestId {quest.NextQuestId} inconnu`)
 		elseif quest.Guide ~= nil and (typeof(quest.Guide) ~= "table" or not QuestGuide.isTarget(quest.Guide.Target)) then
 			table.insert(problems, `quête {id} : Guide.Target inconnu ({if typeof(quest.Guide) == "table" then tostring(quest.Guide.Target) else "?"})`)
+		elseif quest.Rewards ~= nil then
+			if typeof(quest.Rewards) ~= "table" then
+				table.insert(problems, `quête {id} : Rewards doit être une liste`)
+			else
+				for _, reward in quest.Rewards do
+					if typeof(reward) ~= "table" or REWARD_CURRENCY[reward.Kind] == nil or not isPositiveInteger(reward.Amount) then
+						table.insert(problems, `quête {id} : récompense invalide (Kind Gold / Gems / SummonTicket, Amount entier >= 1)`)
+					end
+				end
+			end
 		end
 	end
 	if typeof(config.FirstQuestId) ~= "string" or config.Quests[config.FirstQuestId] == nil then
@@ -162,9 +184,9 @@ function QuestService:Start()
 	-- Le client n'envoie que l'Id de la quête ; état, cible et réclamation sont revérifiés.
 	local claim = Instance.new("RemoteFunction")
 	claim.Name = "ClaimQuest"
-	claim.OnServerInvoke = function(player: Player, questId: any): (boolean, string?)
+	claim.OnServerInvoke = function(player: Player, questId: any): (boolean, string?, { Reward }?)
 		if typeof(questId) ~= "string" then
-			return false, "quête inconnue"
+			return false, "quête inconnue", nil
 		end
 		return QuestService:ClaimQuest(player, questId)
 	end
@@ -174,6 +196,15 @@ function QuestService:Start()
 		activeQuestId(data)
 		push(player)
 	end)
+end
+
+-- Copie des récompenses d'une quête (jamais la table de config).
+local function rewardsOf(quest: Quest): { Reward }
+	local list: { Reward } = {}
+	for _, reward in quest.Rewards or {} do
+		table.insert(list, { Kind = reward.Kind, Amount = reward.Amount })
+	end
+	return list
 end
 
 -- Quête en cours du joueur (copie, sans référence aux données), ou nil : données pas prêtes,
@@ -194,6 +225,7 @@ function QuestService:GetActiveQuest(player: Player): ActiveQuest?
 		Target = quest.Objective.Target,
 		Completed = completed,
 		GuideTarget = if quest.Guide and not completed then quest.Guide.Target else nil,
+		Rewards = rewardsOf(quest),
 	}
 end
 
@@ -226,30 +258,36 @@ end
 
 -- Marque une quête terminée comme réclamée, une seule fois, puis active la suivante (NextQuestId).
 -- N'attribue aucune récompense : voir docs/QUESTS.md. Renvoie false et la raison en cas de refus.
-function QuestService:ClaimQuest(player: Player, questId: string): (boolean, string?)
+function QuestService:ClaimQuest(player: Player, questId: string): (boolean, string?, { Reward }?)
 	local data = DataService:GetData(player)
 	local quest = quests[questId]
 	if not data then
-		return false, "données non chargées"
+		return false, "données non chargées", nil
 	end
 	if not quest then
-		return false, "quête inconnue"
+		return false, "quête inconnue", nil
 	end
 	local state = data.Quests[questId]
 	if not state then
-		return false, "quête non commencée"
+		return false, "quête non commencée", nil
 	end
 	if state.Claimed then
-		return false, "déjà réclamée"
+		return false, "déjà réclamée", nil
 	end
 	if state.Progress < quest.Objective.Target then
-		return false, "quête non terminée"
+		return false, "quête non terminée", nil
 	end
+	-- Section critique, sans yield : réclamée, puis récompenses ajoutées une seule fois.
 	state.Claimed = true
+	local granted = rewardsOf(quest)
+	for _, reward in granted do
+		local currency = REWARD_CURRENCY[reward.Kind]
+		data.Currencies[currency] = (data.Currencies[currency] or 0) + reward.Amount
+	end
 	local nextId = activeQuestId(data)
 	Log.info(SCOPE, `{questId} réclamée par {player.Name}{if nextId then `, quête suivante : {nextId}` else ""}`)
 	push(player)
-	return true, nil
+	return true, nil, granted
 end
 
 return QuestService

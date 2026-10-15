@@ -7,7 +7,9 @@
 --   Guide            : optionnel, guidage visuel du client jusqu'à l'objectif (chemin lumineux au sol).
 --     Guide.Target   : cible connue de Shared.Quests.QuestGuide (StageSign, SummonPortal, Kingdom,
 --                      HeroPlacement), toujours résolue dans le plot du joueur.
--- Aucune récompense ici : les récompenses de Stage / First Clear relèvent de RewardService (#9).
+--   Rewards          : optionnel, donné UNE fois à la réclamation (« Récupérer »), par le serveur :
+--                      { { Kind = "Gold" | "Gems" | "SummonTicket", Amount = entier >= 1 } }.
+-- Les récompenses de Stage / First Clear restent celles de RewardService (#9).
 
 local QuestConfig = {
 	FirstQuestId = "DefendDomain",
@@ -21,6 +23,8 @@ local QuestConfig = {
 			},
 			-- guidé jusqu'à la pancarte du stage de SON arène (lancer le 1-1)
 			Guide = { Target = "StageSign" },
+			-- première quête : un ticket d'invocation (le portail du plot devient la suite naturelle)
+			Rewards = { { Kind = "SummonTicket", Amount = 1 } },
 			NextQuestId = nil,
 		},
 	},

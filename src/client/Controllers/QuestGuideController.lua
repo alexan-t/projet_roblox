@@ -1,14 +1,15 @@
 --!strict
 -- Chemin lumineux de quête (voir docs/QUESTS.md § Guidage), purement visuel, côté client.
 -- La quête active (Remotes.GetActiveQuest / QuestChanged) peut porter GuideTarget (QuestConfig.Guide) :
---   joueur → chevrons dorés au sol, régulièrement espacés, orientés vers la cible, avec une vague qui
---   « avance » vers elle → cible mise en évidence (halo + petit marqueur « OBJECTIF »).
+--   joueur → boules lumineuses dorées (asset Assets.Guide.OrbeGuide) qui flottent un peu au-dessus du sol,
+--   régulièrement espacées, avec une vague de lumière qui « avance » vers la cible → cible mise en évidence
+--   (halo + petit marqueur « OBJECTIF »).
 -- La cible est toujours résolue dans le plot du joueur local (PlotView + Shared.Quests.QuestGuide),
 -- jamais Workspace.PlotTravail ni le plot d'un autre joueur.
 -- Masqué pendant le combat, l'intro des ennemis, le CTA, les écrans (récompenses, invocation, stages),
 -- quête terminée ; près de la cible le chemin s'efface et l'interaction normale (E) prend le relais.
 -- Chemin : PathfindingService (client), recalculé seulement si la cible change, si le joueur s'est assez
--- déplacé, ou si le chemin a échoué ; rayon vers le sol pour chaque chevron. 12 chevrons au plus.
+-- déplacé, ou si le chemin a échoué ; rayon vers le sol pour chaque boule. 10 boules au plus.
 
 local Players = game:GetService("Players")
 local PathfindingService = game:GetService("PathfindingService")
@@ -26,9 +27,11 @@ local UIKit = require(script.Parent.Parent.UI.UIKit)
 local QuestGuideController = {}
 
 local REFRESH = 0.2 -- s entre deux décisions (mode, cible)
-local MARKS = 12 -- chevrons visibles au plus, devant le joueur
-local SPACING = 3.5 -- studs entre deux chevrons
-local SKIP = 3 -- studs devant le joueur avant le premier chevron
+local MARKS = 10 -- boules visibles au plus, devant le joueur
+local SPACING = 4.5 -- studs entre deux boules
+local SKIP = 3.5 -- studs devant le joueur avant la première boule
+local HOVER = 1.6 -- hauteur des boules au-dessus du sol (studs)
+local BOB = 0.25 -- amplitude du flottement (studs)
 local REPATH_DISTANCE = 6 -- studs parcourus avant de recalculer le chemin
 local REPATH_RETRY = 3 -- s avant de réessayer un chemin qui a échoué
 local GOAL_OFFSET = 3.5 -- studs devant la cible (côté joueur) : point d'arrivée accessible
@@ -60,28 +63,38 @@ local function guideFolder(): Folder
 	return created
 end
 
--- Chevron chunky : deux barres en V, pointe vers l'avant (-Z), à plat sur le sol.
-local function chevron(): Model
-	local model = Instance.new("Model")
-	model.Name = "Chevron"
-	for _, side in { -1, 1 } do
-		local bar = Instance.new("Part")
-		bar.Name = if side < 0 then "Gauche" else "Droite"
-		bar.Size = Vector3.new(0.75, 0.16, 2.3)
-		bar.Color = UITheme.Colors.GoldLight
-		bar.Material = Enum.Material.Neon
-		bar.Transparency = 0.4
-		bar.Anchored = true
-		bar.CanCollide, bar.CanTouch, bar.CanQuery = false, false, false
-		bar.CastShadow = false
-		-- barre inclinée de 40° : les deux se rejoignent à la pointe, devant
-		bar.CFrame = CFrame.new(side * 0.7, 0, 0.15) * CFrame.Angles(0, math.rad(side * -40), 0)
-		bar.Parent = model
+-- Boule lumineuse : asset Studio Assets.Guide.OrbeGuide (cœur doré, halo, reflet, lumière douce) ;
+-- à défaut, une boule dorée simple (le guidage ne doit jamais disparaître faute d'asset).
+local function orb(): Model
+	local assets = ReplicatedStorage:FindFirstChild("Assets")
+	local guide = assets and assets:FindFirstChild("Guide")
+	local template = guide and guide:FindFirstChild("OrbeGuide")
+	local model: Model
+	if template and template:IsA("Model") then
+		model = template:Clone()
+	else
+		model = Instance.new("Model")
+		local core = Instance.new("Part")
+		core.Name = "Coeur"
+		core.Shape = Enum.PartType.Ball
+		core.Size = Vector3.one * 1.1
+		core.Color = UITheme.Colors.GoldLight
+		core.Material = Enum.Material.Neon
+		core.Parent = model
+		model.PrimaryPart = core
 	end
-	model.PrimaryPart = model:FindFirstChild("Gauche") :: BasePart
-	model.WorldPivot = CFrame.new()
+	model.Name = "Orbe"
+	for _, part in model:GetDescendants() do
+		if part:IsA("BasePart") then
+			part.Anchored = true
+			part.CanCollide, part.CanTouch, part.CanQuery = false, false, false
+			part.CastShadow = false
+		end
+	end
 	return model
 end
+
+local bases: { [Model]: Vector3 } = {}
 
 local function hideMarks()
 	for _, mark in marks do
@@ -94,6 +107,7 @@ local function clearMarks()
 		mark:Destroy()
 	end
 	table.clear(marks)
+	table.clear(bases)
 end
 
 local function buildOverlay()
@@ -234,17 +248,17 @@ local function placeMarks(from: Vector3)
 	for index, sample in samples do
 		local mark = marks[index]
 		if not mark then
-			mark = chevron()
+			mark = orb()
 			marks[index] = mark
 		end
 		local ground = groundAt(sample.position)
 		if ground then
-			local flat = Vector3.new(sample.direction.X, 0, sample.direction.Z)
-			local look = if flat.Magnitude > 1e-3 then flat.Unit else Vector3.new(0, 0, -1)
-			mark:PivotTo(CFrame.lookAt(ground + Vector3.new(0, 0.12, 0), ground + Vector3.new(0, 0.12, 0) + look))
+			local base = ground + Vector3.new(0, HOVER, 0)
+			bases[mark] = base
+			mark:PivotTo(CFrame.new(base))
 			mark.Parent = parent
 		else
-			mark.Parent = nil -- pas de sol sous ce point : pas de chevron flottant
+			mark.Parent = nil -- pas de sol sous ce point : pas de boule perdue dans le vide
 		end
 	end
 	for index = #samples + 1, #marks do
@@ -252,15 +266,20 @@ local function placeMarks(from: Vector3)
 	end
 end
 
--- Vague lumineuse qui avance vers la cible (chevrons plus loin = plus tard).
+-- Les boules flottent doucement ; une vague de lumière avance vers la cible (boules plus loin = plus tard).
 local function pulse(now: number)
 	for index, mark in marks do
-		if mark.Parent then
+		local base = bases[mark]
+		if mark.Parent and base then
 			local wave = 0.5 + 0.5 * math.sin(now * 4 - index * 0.7)
-			for _, bar in mark:GetChildren() do
-				if bar:IsA("BasePart") then
-					bar.Transparency = 0.55 - 0.3 * wave
-				end
+			mark:PivotTo(CFrame.new(base + Vector3.new(0, BOB * math.sin(now * 2.5 + index * 0.6), 0)))
+			local halo = mark:FindFirstChild("Halo")
+			if halo and halo:IsA("BasePart") then
+				halo.Transparency = 0.75 - 0.3 * wave
+			end
+			local light = mark:FindFirstChildWhichIsA("PointLight", true)
+			if light then
+				light.Brightness = 0.6 + 1.0 * wave
 			end
 		end
 	end

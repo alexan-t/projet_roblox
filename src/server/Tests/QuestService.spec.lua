@@ -318,7 +318,7 @@ return function(createService: any, productionConfig: any, QuestGuide: any)
 		end
 	end)
 
-	test("QuestService never touches currencies, first clears, tickets or other data", function()
+	test("QuestService touches nothing but Quests, plus the configured reward once at the claim", function()
 		local e = fixture()
 		local s = e.start()
 		local p = e.player("A")
@@ -332,11 +332,15 @@ return function(createService: any, productionConfig: any, QuestGuide: any)
 		local frozen = {}
 		for k, v in snapshot do frozen[k] = if type(v) == "table" then table.clone(v) else v end
 		s:HandleGameplayEvent(p, "StageCompleted", STAGE_1_1)
+		s:GetActiveQuest(p)
+		assert(deepEqual(withoutQuests(data), frozen), "progress alone changes only Quests")
 		s:ClaimQuest(p, "DefendDomain")
 		s:ClaimQuest(p, "DefendDomain")
 		s:GetActiveQuest(p)
-		assert(deepEqual(withoutQuests(data), frozen), "only Quests changed")
-		assert(data.Currencies.SummonTickets == 0 and next(data.Progression.FirstClears) == nil)
+		-- seule différence : le ticket de la première quête (QuestConfig.Rewards), une seule fois
+		frozen.Currencies.SummonTickets += 1
+		assert(deepEqual(withoutQuests(data), frozen), "only Quests and the configured reward changed")
+		assert(data.Currencies.SummonTickets == 1 and data.Currencies.Gold == 0 and next(data.Progression.FirstClears) == nil)
 	end)
 
 	-- Remotes (#11) ---------------------------------------------------------------
@@ -383,11 +387,14 @@ return function(createService: any, productionConfig: any, QuestGuide: any)
 			local okBad = claim(p, bad)
 			assert(okBad == false, tostring(bad))
 		end
+		assert(data.Currencies.SummonTickets == 0, "nothing before completion")
 		s:HandleGameplayEvent(p, "StageCompleted", STAGE_1_1)
-		assert(claim(p, "DefendDomain") == true and data.Quests.DefendDomain.Claimed == true)
-		local again, why2 = claim(p, "DefendDomain")
-		assert(again == false and why2 == "déjà réclamée")
-		assert(data.Currencies.Gold == 0 and data.Currencies.SummonTickets == 0, "no extra reward")
+		local okClaim, _, granted = claim(p, "DefendDomain")
+		assert(okClaim == true and data.Quests.DefendDomain.Claimed == true)
+		assert(granted and #granted == 1 and granted[1].Kind == "SummonTicket" and granted[1].Amount == 1, "granted rewards returned for display")
+		local again, why2, none = claim(p, "DefendDomain")
+		assert(again == false and why2 == "déjà réclamée" and none == nil)
+		assert(data.Currencies.Gold == 0 and data.Currencies.SummonTickets == 1, "exactly the configured ticket, no extra reward")
 	end)
 
 	test("two players: independent quests and QuestChanged to the right player only", function()
@@ -415,6 +422,7 @@ return function(createService: any, productionConfig: any, QuestGuide: any)
 		local ok = 0
 		for _ = 1, 20 do if claim(p, "DefendDomain") == true then ok += 1 end end
 		assert(ok == 1 and data.Quests.DefendDomain.Claimed == true and data.Quests.DefendDomain.Progress == 1)
+		assert(data.Currencies.SummonTickets == 1, "20 claims: the quest ticket is granted exactly once")
 		assert(s:HandleGameplayEvent(p, "StageCompleted", STAGE_1_1) == false, "no progress after the chain ended")
 	end)
 
@@ -452,6 +460,24 @@ return function(createService: any, productionConfig: any, QuestGuide: any)
 			e.join(p)
 			assert(s:GetActiveQuest(p) == nil, "invalid guide: quests disabled")
 			assert(#e.warnings > 0, "a warning explains why")
+		end
+	end)
+
+	test("rewards: shown in the view, invalid kinds or amounts make the config invalid", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		e.join(p)
+		local view = s:GetActiveQuest(p)
+		assert(view and #view.Rewards == 1 and view.Rewards[1].Kind == "SummonTicket" and view.Rewards[1].Amount == 1)
+		view.Rewards[1].Amount = 99
+		assert(s:GetActiveQuest(p).Rewards[1].Amount == 1, "a copy, never the config")
+		for _, rewards in { { { Kind = "Diamant", Amount = 1 } }, { { Kind = "Gold", Amount = 0 } }, { { Kind = "Gold", Amount = 1.5 } }, "Gold" } :: { any } do
+			local bad = fixture({ FirstQuestId = "A", Quests = { A = { Title = "A", Objective = { Event = "X", Target = 1 }, Rewards = rewards } } })
+			local service = bad.start()
+			local q = bad.player("A")
+			bad.join(q)
+			assert(service:GetActiveQuest(q) == nil and #bad.warnings > 0, "invalid rewards refused")
 		end
 	end)
 

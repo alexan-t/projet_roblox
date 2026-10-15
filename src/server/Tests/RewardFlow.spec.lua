@@ -380,7 +380,7 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 		for _, i in w.instances do
 			local name = string.lower(i.Name)
 			local rewardLike = name:find("reward") or name:find("claim") or name:find("collect") or name:find("give")
-			-- ClaimQuest marque la quête réclamée et ne donne aucune récompense (vérifié ci-dessous)
+			-- ClaimQuest marque la quête réclamée et donne UNE fois la récompense de QuestConfig (vérifié ci-dessous)
 			assert(not (rewardLike and i.OnServerInvoke) or i.Name == "ClaimQuest", "no client-invocable reward remote: " .. i.Name)
 		end
 		-- client falsifié : n'importe quoi sur les seules remotes du flux combat
@@ -392,9 +392,11 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 		local claim = remote(w, "ClaimQuest")
 		for _ = 1, 20 do pcall(claim.OnServerInvoke, p, "DefendDomain") end
 		local d = w.data[p]
-		assert(d.Currencies.Gold == 100 and d.Currencies.Gems == 10 and d.Currencies.SummonTickets == 1, "claiming the quest (spam) grants nothing")
+		-- 20 réclamations : le seul ticket de la quête, une fois ; rien d'autre
+		assert(d.Currencies.Gold == 100 and d.Currencies.Gems == 10 and d.Currencies.SummonTickets == 2, "claiming the quest (spam) grants its ticket exactly once")
 		assert(d.Quests.DefendDomain.Claimed == true)
 		d.Quests.DefendDomain.Claimed = false -- remis pour comparer le reste
+		d.Currencies.SummonTickets -= 1
 		assert(snapshot(d) == before, "rewards untouched")
 	end)
 

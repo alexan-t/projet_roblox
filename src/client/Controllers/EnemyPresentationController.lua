@@ -71,11 +71,32 @@ local function parts(model: Instance): { BasePart }
 	return list
 end
 
+-- Pièces qui arrivent APRÈS le masquage (streaming : un modèle répliqué reçoit ses pièces peu à peu) :
+-- masquées aussi tant que le modèle est caché, sinon une tête ou une arme flotte seule.
+local hiddenWatch: { [Instance]: RBXScriptConnection } = {}
+
 function EnemyPresentationController.SetHidden(model: Instance, hidden: boolean)
-	for _, d in model:GetDescendants() do
+	local function apply(d: Instance)
 		if (d:IsA("BasePart") and d.Name ~= Skeleton.Root) or d:IsA("Decal") then
 			(d :: any).LocalTransparencyModifier = if hidden then 1 else 0
 		end
+	end
+	for _, d in model:GetDescendants() do
+		apply(d)
+	end
+	local watch = hiddenWatch[model]
+	if hidden and not watch then
+		hiddenWatch[model] = model.DescendantAdded:Connect(apply)
+		model.Destroying:Once(function()
+			local connection = hiddenWatch[model]
+			if connection then
+				connection:Disconnect()
+				hiddenWatch[model] = nil
+			end
+		end)
+	elseif not hidden and watch then
+		watch:Disconnect()
+		hiddenWatch[model] = nil
 	end
 end
 

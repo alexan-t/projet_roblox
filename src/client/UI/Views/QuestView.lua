@@ -5,11 +5,14 @@
 --   Ligne = sous-panneau : icône parchemin, titre, barre Progress et compteur « 0/1 ».
 --   Progression : la barre avance (Count) et le compteur fait un pop.
 --   Terminée : annonce « Quête terminée ! », badge « Terminée » et bouton principal « Récupérer ».
+--   Récompense à récupérer : la fenêtre attire l'œil tant que le bouton est là (contour doré qui pulse,
+--   rayons dorés derrière le parchemin qui se dandine, bouton qui respire, petit rebond régulier).
 -- API : QuestView.Show(quest, options?) ; QuestView.Hide().
 --   quest = { Title: string, Progress: number, Target: number, Completed: boolean }
 --   options = { OnClaim: (() -> ())? } (sans OnClaim, pas de bouton)
 
 local GuiService = game:GetService("GuiService")
+local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TextChatService = game:GetService("TextChatService")
 
@@ -25,8 +28,12 @@ local WIDTH = 340
 local HEIGHT = 92
 local HEIGHT_DONE = 150
 local TOP = 72 -- sous la barre de Roblox (boutons du menu en haut à gauche) ; plus bas si le chat est là
+local BOUNCE_EVERY = 3.5 -- s entre deux petits rebonds de la fenêtre quand une récompense attend
 
-export type Quest = { Title: string, Progress: number, Target: number, Completed: boolean }
+export type Quest = { Title: string, Progress: number, Target: number, Completed: boolean, Rewards: { { Kind: string, Amount: number } }? }
+
+-- Nom court d'une récompense sur le bouton « Récupérer · Ticket x1 ».
+local REWARD_NAMES: { [string]: string } = { Gold = "Or", Gems = "Gemmes", SummonTicket = "Ticket" }
 export type Options = { OnClaim: (() -> ())? }
 
 local QuestView = {}
@@ -40,6 +47,8 @@ type Refs = {
 	badge: Frame?,
 	claim: UIKit.Button?,
 	quest: Quest?,
+	icon: Frame,
+	attention: { tweens: { Tween }, rays: Frame?, token: number }?,
 }
 
 local refs: Refs? = nil
@@ -106,7 +115,74 @@ local function build(): Refs
 	counter.Size = UDim2.fromOffset(52, 26)
 	placeBelowChat(screen, panel)
 	UIKit.open(panel)
-	return { screen = screen, panel = panel, title = title, bar = bar, counter = counter }
+	return { screen = screen, panel = panel, title = title, bar = bar, counter = counter, icon = icon }
+end
+
+local attentionToken = 0
+
+-- Arrête l'appel à l'attention (récompense récupérée, quête suivante, fenêtre fermée).
+local function stopAttention(r: Refs)
+	local attention = r.attention
+	if not attention then
+		return
+	end
+	r.attention = nil
+	attentionToken += 1
+	for _, tween in attention.tweens do
+		tween:Cancel()
+	end
+	if attention.rays then
+		attention.rays:Destroy()
+	end
+	local stroke = r.panel:FindFirstChildOfClass("UIStroke")
+	if stroke then
+		stroke.Color = Colors.Ink
+		stroke.Thickness = UITheme.Stroke.Thin
+	end
+	r.icon.Rotation = 0
+end
+
+-- « Une récompense t'attend » : tout reste dans la fenêtre, rien ne cache le jeu.
+local function startAttention(r: Refs, claim: UIKit.Button)
+	stopAttention(r)
+	attentionToken += 1
+	local token = attentionToken
+	local tweens: { Tween } = {}
+	local function loop(instance: Instance, goal: { [string]: any })
+		local tween = TweenService:Create(instance, UITheme.Animation.Pulse, goal)
+		tween:Play()
+		table.insert(tweens, tween)
+	end
+	local stroke = r.panel:FindFirstChildOfClass("UIStroke")
+	if stroke then
+		stroke.Color = Colors.Gold
+		loop(stroke, { Color = Colors.GoldLight, Thickness = UITheme.Stroke.Thick })
+	end
+	-- rayons dorés derrière le parchemin, qui se dandine
+	local rays = UIKit.rays(r.icon, 44, 10, Colors.GoldLight)
+	rays.Position = UDim2.fromScale(0.5, 0.5)
+	rays.ZIndex = 0
+	loop(r.icon, { Rotation = 7 })
+	r.icon.Rotation = -7
+	-- le bouton respire (après son apparition)
+	task.delay(UITheme.Animation.Toast.Time + 0.1, function()
+		if token ~= attentionToken or not claim.holder.Parent then
+			return
+		end
+		local scale = claim.holder:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
+		scale.Parent = claim.holder
+		loop(scale, { Scale = UITheme.Animation.Scale.Hover + 0.02 })
+	end)
+	-- petit rebond régulier de toute la fenêtre
+	task.spawn(function()
+		while token == attentionToken and r.panel.Parent do
+			task.wait(BOUNCE_EVERY)
+			if token == attentionToken and r.panel.Parent then
+				UIKit.pop(r.panel)
+			end
+		end
+	end)
+	r.attention = { tweens = tweens, rays = rays, token = token }
 end
 
 function QuestView.Show(quest: Quest, options: Options?)
@@ -140,17 +216,21 @@ function QuestView.Show(quest: Quest, options: Options?)
 		r.badge = nil
 	end
 	if r.claim then
+		stopAttention(r)
 		r.claim.holder:Destroy()
 		r.claim = nil
 	end
 	if completed and opts.OnClaim then
 		local onClaim = opts.OnClaim
-		local claim = UIKit.button(r.panel, "Récupérer", "Primary", UDim2.fromOffset(WIDTH - 2 * Spacing.M, 44 + UITheme.Shadow.ButtonLip), function()
+		local first = quest.Rewards and quest.Rewards[1]
+		local label = if first and REWARD_NAMES[first.Kind] then `Récupérer · {REWARD_NAMES[first.Kind]} x{first.Amount}` else "Récupérer"
+		local claim = UIKit.button(r.panel, label, "Primary", UDim2.fromOffset(WIDTH - 2 * Spacing.M, 44 + UITheme.Shadow.ButtonLip), function()
 			onClaim()
 		end)
 		claim.holder.Position = UDim2.new(0, Spacing.M, 0, HEIGHT - Spacing.XS)
 		UIKit.popIn(claim.holder, 0.1, 1.06)
 		r.claim = claim
+		startAttention(r, claim)
 	end
 end
 
@@ -160,6 +240,7 @@ function QuestView.Hide()
 		return
 	end
 	refs = nil
+	stopAttention(r)
 	UIKit.close(r.panel, nil, true, function()
 		r.screen:Destroy()
 	end)
