@@ -30,10 +30,8 @@ local HEIGHT_DONE = 150
 local TOP = 72 -- sous la barre de Roblox (boutons du menu en haut à gauche) ; plus bas si le chat est là
 local BOUNCE_EVERY = 3.5 -- s entre deux petits rebonds de la fenêtre quand une récompense attend
 
-export type Quest = { Title: string, Progress: number, Target: number, Completed: boolean, Rewards: { { Kind: string, Amount: number } }? }
-
--- Nom court d'une récompense sur le bouton « Récupérer · Ticket x1 ».
-local REWARD_NAMES: { [string]: string } = { Gold = "Or", Gems = "Gemmes", SummonTicket = "Ticket" }
+-- La récompense n'est jamais annoncée ici : elle reste une surprise, révélée à la réclamation (QuestRewardView).
+export type Quest = { Title: string, Progress: number, Target: number, Completed: boolean }
 export type Options = { OnClaim: (() -> ())? }
 
 local QuestView = {}
@@ -222,9 +220,7 @@ function QuestView.Show(quest: Quest, options: Options?)
 	end
 	if completed and opts.OnClaim then
 		local onClaim = opts.OnClaim
-		local first = quest.Rewards and quest.Rewards[1]
-		local label = if first and REWARD_NAMES[first.Kind] then `Récupérer · {REWARD_NAMES[first.Kind]} x{first.Amount}` else "Récupérer"
-		local claim = UIKit.button(r.panel, label, "Primary", UDim2.fromOffset(WIDTH - 2 * Spacing.M, 44 + UITheme.Shadow.ButtonLip), function()
+		local claim = UIKit.button(r.panel, "Récupérer", "Primary", UDim2.fromOffset(WIDTH - 2 * Spacing.M, 44 + UITheme.Shadow.ButtonLip), function()
 			onClaim()
 		end)
 		claim.holder.Position = UDim2.new(0, Spacing.M, 0, HEIGHT - Spacing.XS)

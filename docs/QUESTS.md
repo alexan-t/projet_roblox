@@ -118,7 +118,8 @@ dorés, chaque carte tombe, rebondit, tremble, éclate (flash, confettis aux cou
 retourne sur l'objet (« x1 », nom), étoiles qui scintillent ; « Récupérer ! » (clic, toucher, Entrée)
 fait voler la carte jusqu'à son compteur du HUD, qui s'anime. Un ticket montre ensuite le portail.
 Tant qu'une récompense attend, la fenêtre de quête attire l'œil (contour doré qui pulse, rayons derrière
-le parchemin, bouton « Récupérer · Ticket x1 » qui respire, petit rebond régulier).
+le parchemin, bouton « Récupérer » qui respire, petit rebond régulier). La récompense n'y est jamais
+nommée : c'est une surprise, révélée seulement à la réclamation.
 
 `src/client/Controllers/QuestController.lua` :
 - au join, il appelle `GetActiveQuest` puis `QuestView.Show` ; ensuite, chaque `QuestChanged` met
