@@ -10,6 +10,7 @@ local HeroService = require(script.Parent.HeroService)
 local ZoneService = require(script.Parent.ZoneService)
 local CombatService = require(script.Parent.CombatService)
 local StageConfig = require(script.Parent.Parent.Config.StageConfig)
+local CombatConfig = require(script.Parent.Parent.Config.CombatConfig)
 local ArenaService = {}
 local manager: ArenaPrep.Manager
 local contexts: { [Player]: any } = {}
@@ -334,8 +335,15 @@ function ArenaService:Start()
 	CombatService:OnCombatEnded(function(player, id)
 		-- Le résultat n'est annoncé que par l'écran de fin (RewardScreenController), pas par un message.
 		if manager:combatEnded(player, id) then
-			sync(player)
 			send(player)
+			-- Les modèles du combat restent le temps de l'outro du client (morts, sac, « VICTOIRE ! ») ;
+			-- l'équipe est ensuite reposée sur ses dalles. Un nouveau combat lancé entre-temps l'emporte.
+			task.delay(CombatConfig.Presentation.EndHold, function()
+				local prep = manager.preps[player]
+				if prep and prep.phase == "Placement" then
+					sync(player)
+				end
+			end)
 		end
 	end)
 	local function watch(player: Player)

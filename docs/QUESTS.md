@@ -141,7 +141,7 @@ seulement, rien de PlayerData), retiré dès que la quête est terminée.
 - 12 chevrons dorés au plus devant le joueur (`UITheme.Colors.GoldLight`), tous les 3,5 studs, posés
   au sol par un rayon (jamais flottants), avec une vague lumineuse qui avance vers la cible ;
 - cible : halo (`Highlight`, `Gold`) et petit marqueur « OBJECTIF » ;
-- masqué pendant le combat, l'intro des ennemis, le CTA, les écrans (récompenses, invocation,
+- masqué pendant le combat (entrée des ennemis comprise), les écrans (récompenses, invocation,
   stages) et une fois la quête terminée ; à la distance d'arrivée, le chemin s'efface, la cible reste
   légèrement en évidence et l'interaction normale (E) prend le relais.
 

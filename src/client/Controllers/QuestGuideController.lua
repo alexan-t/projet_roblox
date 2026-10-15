@@ -283,7 +283,6 @@ local function update()
 		target = if target then targetName else nil,
 		completed = view and view.Completed == true,
 		combat = ArenaStore.inCombat(),
-		presentation = ArenaStore.presentation,
 		screen = ScreenState.current(),
 		distance = distance,
 	})

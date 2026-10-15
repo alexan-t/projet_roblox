@@ -20,11 +20,6 @@ ArenaStore.placement = PlacementState.new()
 ArenaStore.changed = Instance.new("BindableEvent")
 -- Message bref à afficher (refus, résultat) : texte.
 ArenaStore.toast = Instance.new("BindableEvent")
--- « Lancer » (fenêtre des stages) : prépare la défense du stage (CombatPresentationController). Le combat
--- ne démarre qu'au « Défendre la base » (Ready, revérifié par le serveur).
-ArenaStore.defend = Instance.new("BindableEvent")
--- État de présentation (PresentationFlow) : pendant l'intro et le CTA, E appartient au CTA, pas aux prompts.
-ArenaStore.presentation = "Idle"
 -- Outro de fin de combat terminée (CombatPresentationController) : (combatId, victoire). L'écran de
 -- récompenses attend ce signal (OutroGate), avec un délai de sécurité.
 ArenaStore.outroFinished = Instance.new("BindableEvent")

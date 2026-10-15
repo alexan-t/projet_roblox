@@ -358,7 +358,9 @@ return function(createService: any, CombatEngine: any, combatConfig: any, _stage
 			local p = e.player("A")
 			s:SetSpeed(p, speed)
 			s:StartCombat(p, e.stages[p].Id, TEAM, e.context())
-			e.tick(4)
+			e.tick(e.events(p, "EntranceHold")[1].Duration) -- entrée de la 1re vague (mise en scène)
+			-- 3 s : la 1re vague reste en jeu aux deux vitesses (sinon x2 atteint la retenue d'entrée du boss)
+			e.tick(3)
 			return #e.events(p, "Attack")
 		end
 		local x1, x2 = progress(1), progress(2)
@@ -507,6 +509,7 @@ return function(createService: any, CombatEngine: any, combatConfig: any, _stage
 		s:StartCombat(p, e.stages[p].Id, { [1] = "Epeiste" }, e.context())
 		local model = e.spawned[1]
 		local height = model.pivot.Position.Y
+		e.tick(e.events(p, "EntranceHold")[1].Duration) -- entrée de la 1re vague (mise en scène)
 		e.tick(1)
 		assert(model.moves > 0, "melee hero walked toward the enemies")
 		assert(model.pivot.Position.Y == height and model.pivot.Position.Z < 0)
@@ -660,14 +663,16 @@ return function(createService: any, CombatEngine: any, combatConfig: any, _stage
 	-- Mise en scène (docs/COMBAT_PRESENTATION.md) : le moteur est retenu, jamais modifié.
 	local PRESENTATION = combatConfig.Presentation
 
-	test("presentation: StartHold announced at start, nobody moves or attacks during it", function()
+	test("presentation: wave 1 enters from the scenery before the engine starts (breather + longest entrance)", function()
 		local e = fixture()
 		local s = e.start()
 		local p = e.player("A")
 		s:StartCombat(p, e.stages[p].Id, TEAM, e.context())
 		local holds = e.events(p, "EntranceHold")
-		assert(#holds == 1 and holds[1].Duration == PRESENTATION.StartHold, "one EntranceHold = StartHold")
-		e.tick(PRESENTATION.StartHold - 0.05, 0.05)
+		-- MECHANICS : Slime + Gobelin en 1re vague
+		local expected = PRESENTATION.StartBreather + math.max(PRESENTATION.Entrance.Slime, PRESENTATION.Entrance.Gobelin)
+		assert(#holds == 1 and holds[1].Duration == expected and holds[1].Breather == PRESENTATION.StartBreather, `start hold {holds[1] and holds[1].Duration}`)
+		e.tick(expected - 0.05, 0.05)
 		assert(#e.events(p, "MoveStarted") == 0 and #e.events(p, "Attack") == 0, "engine held")
 		e.tick(1, 0.05)
 		assert(#e.events(p, "MoveStarted") > 0, "engine resumes after the hold")
@@ -693,6 +698,21 @@ return function(createService: any, CombatEngine: any, combatConfig: any, _stage
 		assert(attacks == 0, "no attack between MiniBossStarted and its EntranceHold")
 		local victory = e.events(p, "CombatEnded")
 		assert(#victory == 1 and victory[1].Result == "Victory")
+	end)
+
+	test("presentation: end of combat keeps the models EndHold seconds (outro), cancel removes them at once", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		s:StartCombat(p, e.stages[p].Id, TEAM, e.context())
+		assert(e.runUntilEnd(s, p, 300))
+		local alive = 0
+		for _, m in e.spawned do
+			if m.attributes.Alive ~= false and not m.destroyed then alive += 1 end
+		end
+		assert(alive > 0, "survivors still visible right after the end (no pop)")
+		for _, fn in e.delayed do fn() end -- EndHold écoulé
+		for _, m in e.spawned do assert(m.destroyed, "then everything is removed") end
 	end)
 
 	test("presentation: EntranceHold is client information only, never sent for a wave that is not new", function()

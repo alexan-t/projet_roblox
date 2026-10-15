@@ -1,10 +1,10 @@
 --!strict
 -- Jamais exécuté par le jeu : lancé par tools/test-presentation.ps1.
 -- Teste les modules purs de la mise en scène du combat (docs/COMBAT_PRESENTATION.md) : la vraie
--- EnemyPresentationConfig, l'état de présentation (PresentationFlow), la garde du sac (RewardBagGuard),
+-- EnemyPresentationConfig, la garde du sac (RewardBagGuard),
 -- l'outro de fin de combat (OutroGate) et le guidage de quête (QuestGuide).
 
-return function(Config: any, PresentationFlow: any, RewardBagGuard: any, OutroGate: any, QuestGuide: any, vector: any)
+return function(Config: any, RewardBagGuard: any, OutroGate: any, QuestGuide: any, vector: any)
 	local passed, failed = 0, 0
 	local function test(name: string, run: () -> ())
 		local ok, err = pcall(run)
@@ -78,73 +78,6 @@ return function(Config: any, PresentationFlow: any, RewardBagGuard: any, OutroGa
 		assert(Config.effectColor(nil, slime) == slime.EffectColor)
 		assert(Config.effectColor("bleu", slime) == slime.EffectColor, "a non-Color3 attribute is ignored")
 		assert(Config.effectColor(nil, Config.profile("Gobelin")) == Config.Palette.Water)
-	end)
-
-	------------------------------------------------------------------ état de présentation
-
-	test("flow: Lancer -> arena entry -> intro -> CTA -> one Ready -> combat -> reward -> idle", function()
-		local f = PresentationFlow.new()
-		assert(f.state == "Idle")
-		assert(f:arm("1-1") and f.state == "WaitingForArenaEntry")
-		assert(not f:canDefend(true, 1), "no CTA before the intro")
-		local g = f:enterArena()
-		assert(g and f.state == "EnemyIntro")
-		assert(f:enterArena() == nil, "no double intro")
-		assert(not f:canDefend(true, 1), "no CTA during the intro")
-		assert(f:introDone(g) and f.state == "AwaitingDefense")
-		assert(not f:canDefend(false, 1), "outside the arena: no CTA, nothing starts")
-		assert(not f:canDefend(true, 0), "empty team: no CTA")
-		assert(f:canDefend(true, 2))
-		assert(f:defend(true, 2), "E / click / touch")
-		assert(not f:defend(true, 2), "no double Ready while waiting for the server")
-		assert(not f:canDefend(true, 2), "CTA gone at launch")
-		f:defendResult(true)
-		assert(f.state == "Combat" and not f:canDefend(true, 2), "no CTA during combat")
-		assert(not f:arm("1-1"), "cannot re-arm during combat")
-		f:combatEnded()
-		assert(f.state == "Reward")
-		f:rewardClosed()
-		assert(f.state == "Idle")
-	end)
-
-	test("flow: a refused Ready brings the CTA back; arming twice the same stage does not replay the intro", function()
-		local f = PresentationFlow.new()
-		f:arm("1-3")
-		local g = f:enterArena()
-		f:introDone(g)
-		assert(f:defend(true, 1))
-		f:defendResult(false)
-		assert(f.state == "AwaitingDefense" and f:canDefend(true, 1), "CTA back after a refusal")
-		assert(not f:arm("1-3"), "same stage already presented")
-		assert(f.state == "AwaitingDefense")
-	end)
-
-	test("flow: stage change or Quit during the intro cancels it; its late completion is ignored", function()
-		local f = PresentationFlow.new()
-		f:arm("1-1")
-		local old = f:enterArena()
-		assert(f:stageChanged("1-2"), "stage changed during the intro")
-		assert(f.state == "Idle" and not f:current(old))
-		assert(not f:introDone(old), "stale intro cannot open the CTA")
-		assert(not f:canDefend(true, 1))
-		-- relance sur le nouveau stage : nouvelle génération
-		assert(f:arm("1-2"))
-		local fresh = f:enterArena()
-		assert(fresh ~= old and f:introDone(fresh))
-		assert(f:cancel() and f.state == "Idle", "Quit in AwaitingDefense")
-		assert(not f:cancel(), "nothing left to cancel")
-		assert(not f:stageChanged("1-4"), "idle: nothing to cancel")
-	end)
-
-	test("flow: a combat started by the server always wins (no CTA, no intro afterwards)", function()
-		local f = PresentationFlow.new()
-		f:arm("1-5")
-		f:enterArena()
-		f:combatStarted()
-		assert(f.state == "Combat" and not f:canDefend(true, 1))
-		assert(not f:stageChanged("1-1"), "stage change during combat is not a presentation cancel")
-		f:rewardClosed()
-		assert(f.state == "Idle" and f.stageKey == nil)
 	end)
 
 	------------------------------------------------------------------ sac
