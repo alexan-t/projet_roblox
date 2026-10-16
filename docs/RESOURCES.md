@@ -137,6 +137,8 @@ Nommage du fichier source : `<resource_id>.png` (ex. `resource_036.png`).
 4. Elle correspond à l'`icon_hook` et à la famille du catalogue.
 5. Aucune couleur de rareté, statistique ou quantité inventée dans l'image.
 
+Verdict : grille `VISUAL_QA.md` § 7, **PASS** ou **FIX**, sur captures réelles.
+
 ## 6. Vitrine et catalogue du code
 
 `tools/studio-resources-vitrine.luau`, relancé après chaque lot d'icônes, compare la vitrine à

@@ -136,6 +136,8 @@ Nommage du fichier source : `<item_id>.png` (ex. `item_037.png`).
 4. Elle correspond à l'`icon_hook` de sa tâche et au `SlotType` de `ItemConfig`.
 5. Aucune couleur de rareté ni statistique inventée dans l'image.
 
+Verdict : grille `VISUAL_QA.md` § 7, **PASS** ou **FIX**, sur captures réelles.
+
 ## 6. Vitrine et catalogue du code
 
 `tools/studio-items-vitrine.luau` (Studio EDIT, Rojo connecté, lecture seule) compare la vitrine à
