@@ -118,7 +118,8 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 				Currencies = { Gold = 0, Gems = 0, SummonTickets = 0 },
 				Progression = { CurrentZone = 1, HighestStage = 0, FirstClears = {} },
 				Heroes = {}, Team = {}, Hotbar = {}, Kingdom = { Level = 1, VisualState = 1 },
-				Quests = {}, Settings = { CombatSpeed = 1 },
+				-- compte neuf juste après l'invocation tutorielle de l'Écuyer : quête « Gagne la défense 1-1 »
+				Quests = { SummonStarter = { Progress = 1, Claimed = true } }, Settings = { CombatSpeed = 1 },
 			}
 			env.plots[p] = { Name = "Plot_" .. name }
 			services.QuestService:GetActiveQuest(p) -- quête active comme après le chargement
@@ -179,8 +180,10 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 		assert(tickets == 1)
 		local d = w.data[p]
 		assert(d.Progression.FirstClears["1-1"] == true and d.Currencies.SummonTickets == 1, "saved before display")
+		assert(d.Quests.DefendDomain.Progress == 1 and d.Quests.DefendDomain.Claimed == false, "QuestService progressed on the same StageCompleted")
 		local quest = w.services.QuestService:GetActiveQuest(p)
-		assert(quest and quest.Completed == true, "QuestService progressed on the same StageCompleted")
+		assert(quest and quest.Id == "DefendDomain" and quest.Completed == true, "waits for Récupérer (quest reward separate from the stage reward)")
+		assert(d.Currencies.Gold == 100, "victory alone: only the stage First Clear (RewardConfig)")
 	end)
 
 	test("new player loop: the starter alone wins the real Stage 1-1 -> First Clear and the first ticket", function()
@@ -380,7 +383,8 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 		for _, i in w.instances do
 			local name = string.lower(i.Name)
 			local rewardLike = name:find("reward") or name:find("claim") or name:find("collect") or name:find("give")
-			-- ClaimQuest marque la quête réclamée et donne UNE fois la récompense de QuestConfig (vérifié ci-dessous)
+			-- ClaimQuest marque la quête active terminée réclamée et donne UNE fois sa récompense de QuestConfig,
+			-- définie côté serveur (vérifié ci-dessous)
 			assert(not (rewardLike and i.OnServerInvoke) or i.Name == "ClaimQuest", "no client-invocable reward remote: " .. i.Name)
 		end
 		-- client falsifié : n'importe quoi sur les seules remotes du flux combat
@@ -390,14 +394,14 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 			end
 		end
 		local claim = remote(w, "ClaimQuest")
-		for _ = 1, 20 do pcall(claim.OnServerInvoke, p, "DefendDomain") end
+		for _ = 1, 20 do pcall(claim.OnServerInvoke, p, "DefendDomain", { Kind = "Gold", Amount = 1e9 }) end
 		local d = w.data[p]
-		-- 20 réclamations : le seul ticket de la quête, une fois ; rien d'autre
-		assert(d.Currencies.Gold == 100 and d.Currencies.Gems == 10 and d.Currencies.SummonTickets == 2, "claiming the quest (spam) grants its ticket exactly once")
+		-- 20 réclamations (avec montants falsifiés ignorés) : la récompense de la quête (50 Or), une seule fois
+		assert(d.Currencies.Gold == 150 and d.Currencies.Gems == 10 and d.Currencies.SummonTickets == 1, "First Clear + the quest reward exactly once")
 		assert(d.Quests.DefendDomain.Claimed == true)
 		d.Quests.DefendDomain.Claimed = false -- remis pour comparer le reste
-		d.Currencies.SummonTickets -= 1
-		assert(snapshot(d) == before, "rewards untouched")
+		d.Currencies.Gold -= 50
+		assert(snapshot(d) == before, "nothing else granted")
 	end)
 
 	test("#12 CombatSpeed: only 1 and 2; anything else refused, Settings and session speed unchanged", function()

@@ -7,9 +7,12 @@
 --   Terminée : annonce « Quête terminée ! », badge « Terminée » et bouton principal « Récupérer ».
 --   Récompense à récupérer : la fenêtre attire l'œil tant que le bouton est là (contour doré qui pulse,
 --   rayons dorés derrière le parchemin qui se dandine, bouton qui respire, petit rebond régulier).
--- API : QuestView.Show(quest, options?) ; QuestView.Hide().
+--   Quête réclamée automatiquement (AutoClaim, tutoriel) : Complete montre la quête terminée (barre pleine,
+--   badge « Terminée », annonce « Quête terminée ! », petit rebond), puis la suivante arrive d'elle-même.
+-- API : QuestView.Show(quest, options?) ; QuestView.Complete(title, target, after) ; QuestView.Hide().
 --   quest = { Title: string, Progress: number, Target: number, Completed: boolean }
 --   options = { OnClaim: (() -> ())? } (sans OnClaim, pas de bouton)
+--   after : appelé quand l'annonce est passée (montrer la quête suivante, ou Hide).
 
 local GuiService = game:GetService("GuiService")
 local TweenService = game:GetService("TweenService")
@@ -29,6 +32,7 @@ local HEIGHT = 92
 local HEIGHT_DONE = 150
 local TOP = 72 -- sous la barre de Roblox (boutons du menu en haut à gauche) ; plus bas si le chat est là
 local BOUNCE_EVERY = 3.5 -- s entre deux petits rebonds de la fenêtre quand une récompense attend
+local COMPLETE_HOLD = 1.8 -- s pendant lesquels la quête terminée reste affichée avant la suivante
 
 -- La récompense n'est jamais annoncée ici : elle reste une surprise, révélée à la réclamation (QuestRewardView).
 export type Quest = { Title: string, Progress: number, Target: number, Completed: boolean }
@@ -191,6 +195,9 @@ function QuestView.Show(quest: Quest, options: Options?)
 	local sameQuest = previous ~= nil and previous.Title == quest.Title
 	r.quest = quest
 	r.title.Text = quest.Title
+	if previous and not sameQuest then
+		UIKit.pop(r.panel) -- nouvelle quête : la fenêtre rebondit pour la présenter
+	end
 	local target = math.max(quest.Target, 1)
 	local progress = math.clamp(quest.Progress, 0, target)
 	r.counter.Text = `{progress}/{target}`
@@ -220,7 +227,16 @@ function QuestView.Show(quest: Quest, options: Options?)
 	end
 	if completed and opts.OnClaim then
 		local onClaim = opts.OnClaim
-		local claim = UIKit.button(r.panel, "Récupérer", "Primary", UDim2.fromOffset(WIDTH - 2 * Spacing.M, 44 + UITheme.Shadow.ButtonLip), function()
+		local claim: UIKit.Button
+		local pressed = false
+		claim = UIKit.button(r.panel, "Récupérer", "Primary", UDim2.fromOffset(WIDTH - 2 * Spacing.M, 44 + UITheme.Shadow.ButtonLip), function()
+			if pressed then
+				return -- un seul clic : le bouton est désactivé tout de suite (le serveur refuse de toute façon)
+			end
+			pressed = true
+			stopAttention(r)
+			UIKit.pop(claim.holder)
+			claim.setEnabled(false)
 			onClaim()
 		end)
 		claim.holder.Position = UDim2.new(0, Spacing.M, 0, HEIGHT - Spacing.XS)
@@ -228,6 +244,19 @@ function QuestView.Show(quest: Quest, options: Options?)
 		r.claim = claim
 		startAttention(r, claim)
 	end
+end
+
+-- Quête réclamée par le serveur (AutoClaim) : terminée à l'écran, annonce, puis after() (quête suivante).
+function QuestView.Complete(title: string, target: number, after: () -> ())
+	local shown = if refs then refs.quest else nil
+	local announced = shown ~= nil and shown.Title == title and not shown.Completed
+	QuestView.Show({ Title = title, Progress = target, Target = target, Completed = true })
+	local r = refs :: Refs
+	if not announced then
+		UIKit.announce(r.screen, "Quête terminée !", { Color = Colors.Success, Hold = 2 })
+	end
+	UIKit.pop(r.panel)
+	task.delay(COMPLETE_HOLD, after)
 end
 
 function QuestView.Hide()

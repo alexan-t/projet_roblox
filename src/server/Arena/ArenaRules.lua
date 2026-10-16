@@ -148,4 +148,41 @@ function ArenaRules.canInteract(position: Point?, zone: Zone?, pose: Point?, rea
 	return true, nil
 end
 
+-- Sélection du stage (pancarte, fenêtre Expédition). stages = ZoneService:ListStages (zone puis stage,
+-- avec Status et Cleared) ; aucune donnée sauvegardée : la sélection se déduit de la progression.
+export type StageEntry = { Zone: number, Stage: number, Status: string, Cleared: boolean }
+
+-- Stage proposé sans choix du joueur : le premier stage débloqué pas encore terminé, sinon le dernier
+-- stage débloqué (tout est terminé), sinon nil (aucun stage jouable).
+function ArenaRules.defaultStage(stages: { StageEntry }): (number?, number?)
+	local last: StageEntry? = nil
+	for _, entry in stages do
+		if entry.Status == "Unlocked" then
+			if not entry.Cleared then
+				return entry.Zone, entry.Stage
+			end
+			last = entry
+		end
+	end
+	if last then
+		return last.Zone, last.Stage
+	end
+	return nil, nil
+end
+
+-- Après une victoire sur (zone, stage) : le stage suivant de la liste s'il est débloqué (1-1 → 1-2 …),
+-- sinon le même (dernier stage : pas de 1-6). Ne lance jamais rien : seulement le stage sélectionné.
+function ArenaRules.nextStage(stages: { StageEntry }, zone: number, stage: number): (number, number)
+	for index, entry in stages do
+		if entry.Zone == zone and entry.Stage == stage then
+			local following = stages[index + 1]
+			if following and following.Status == "Unlocked" then
+				return following.Zone, following.Stage
+			end
+			break
+		end
+	end
+	return zone, stage
+end
+
 return ArenaRules

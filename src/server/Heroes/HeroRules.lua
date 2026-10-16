@@ -98,20 +98,6 @@ function HeroRules.owns(data: any, heroId: string): boolean
 	return false
 end
 
--- Héros de départ : chaque HeroId de `starter` absent de la collection est ajouté une fois.
--- Un nouveau joueur reçoit donc exactement un exemplaire de chacun ; un joueur qui les possède
--- déjà ne reçoit rien. Renvoie le nombre d'exemplaires créés.
-function HeroRules.grantStarter(data: any, starter: { string }, makeId: () -> string): number
-	local granted = 0
-	for _, heroId in starter do
-		if not HeroRules.owns(data, heroId) then
-			HeroRules.addHero(data, makeId(), heroId)
-			granted += 1
-		end
-	end
-	return granted
-end
-
 export type CombatHero = { HeroId: string, CombatProfile: string, CombatTemplate: string }
 
 -- Exemplaire réellement possédé, activé (catalogue HeroConfig.Heroes) et dont le profil de combat

@@ -21,7 +21,11 @@ Le tirage (quel héros, quelle rareté, doublon ou non) relève de HeroService (
    - en bas, « Tickets : n » (`Remotes.GetSummonState`), le coût, le bouton **Taux** (chances par
      rareté, en deux colonnes) et le bouton principal **Invoquer**. Sans ticket, « Invoquer » est
      désactivé et une aide indique d'en gagner en combattant.
-3. **Invoquer** : `RequestSummon(bannerId)`. En cas de refus, un message bref s'affiche. Sinon :
+   Invocation tutorielle (nouveau profil, quête « Invoque ton premier héros ») : même fenêtre, « Invocation
+   gratuite ! » et bouton **Invoquer · Gratuit** qui respire (`GetSummonState.Starter`). Le premier héros
+   est obtenu ici ; voir HEROES.md § Premier héros.
+3. **Invoquer** : `RequestSummon(bannerId)` (gratuit : `RequestStarterSummon()`, sans argument). En cas
+   de refus, un message bref s'affiche. Sinon :
    - **cinématique**, locale au joueur :
      - le personnage est caché et immobilisé, et le HUD est masqué ;
      - la caméra part d'un plan large de trois quarts et avance sur le portail pendant la charge ;

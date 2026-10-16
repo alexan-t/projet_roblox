@@ -1,28 +1,35 @@
 --!strict
--- Chemin lumineux de quête (voir docs/QUESTS.md § Guidage), purement visuel, côté client.
+-- Guidage du tutoriel (voir docs/QUESTS.md § Guidage), purement visuel, côté client.
 -- La quête active (Remotes.GetActiveQuest / QuestChanged) peut porter GuideTarget (QuestConfig.Guide) :
 --   joueur → boules lumineuses dorées (asset Assets.Guide.OrbeGuide) qui flottent un peu au-dessus du sol,
---   régulièrement espacées, avec une vague de lumière qui « avance » vers la cible → cible mise en évidence
---   (halo + petit marqueur « OBJECTIF »).
+--   régulièrement espacées, avec une vague de lumière qui « avance » vers la cible → la cible elle-même
+--   pulse (WorldPulse : voile doré qui respire, lumière, étincelles). Aucune pancarte « OBJECTIF ».
+-- GuidePlacement (quête DefendDomain) : tant qu'aucun héros n'est posé, une fois arrivé à l'arène, le
+--   guidage apprend la pose : le héros à prendre pulse dans la hotbar (ArenaStore.guide.hotbar) et la dalle
+--   ArenaConfig.PlacementSlot pulse ; le joueur pose lui-même (hotbar puis E). Un héros posé : la pancarte
+--   pulse de nouveau, la fenêtre Expédition et la pastille « F · Lancer » mettent « Lancer » en avant
+--   (ArenaStore.guide.expedition).
 -- La cible est toujours résolue dans le plot du joueur local (PlotView + Shared.Quests.QuestGuide),
 -- jamais Workspace.PlotTravail ni le plot d'un autre joueur.
--- Masqué pendant le combat, l'intro des ennemis, le CTA, les écrans (récompenses, invocation, stages),
--- quête terminée ; près de la cible le chemin s'efface et l'interaction normale (E) prend le relais.
+-- Masqué pendant le combat, l'outro, les écrans (récompenses, invocation, stages), quête terminée ; près
+-- de la cible le chemin s'efface (la cible pulse plus fort) et l'interaction normale (E) prend le relais.
 -- Chemin : PathfindingService (client), recalculé seulement si la cible change, si le joueur s'est assez
 -- déplacé, ou si le chemin a échoué ; rayon vers le sol pour chaque boule. 10 boules au plus.
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local PathfindingService = game:GetService("PathfindingService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
+local ArenaConfig = require(ReplicatedStorage.Shared.Config.ArenaConfig)
 local QuestGuide = require(ReplicatedStorage.Shared.Quests.QuestGuide)
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local ArenaStore = require(script.Parent.Parent.Arena.ArenaStore)
 local PlotView = require(script.Parent.Parent.Arena.PlotView)
 local ScreenState = require(script.Parent.Parent.UI.ScreenState)
-local UIKit = require(script.Parent.Parent.UI.UIKit)
+local WorldPulse = require(script.Parent.Parent.UI.WorldPulse)
 
 local QuestGuideController = {}
 
@@ -35,13 +42,15 @@ local BOB = 0.25 -- amplitude du flottement (studs)
 local REPATH_DISTANCE = 6 -- studs parcourus avant de recalculer le chemin
 local REPATH_RETRY = 3 -- s avant de réessayer un chemin qui a échoué
 local GOAL_OFFSET = 3.5 -- studs devant la cible (côté joueur) : point d'arrivée accessible
+local ARENA_NEAR = 30 -- studs autour de la dalle du tutoriel : le joueur est « à l'arène »
+local TAG_CASE = "CaseHeros"
 
 local quest: { [string]: any }? = nil
 local folder: Folder? = nil
 local marks: { Model } = {}
-local highlight: Highlight? = nil
-local label: BillboardGui? = nil
-local overlay: ScreenGui? = nil
+-- Cibles qui pulsent : la cible de la quête (portail, pancarte) et la dalle du tutoriel.
+local targetPulse: { instance: Instance, pulse: WorldPulse.Pulse }? = nil
+local slabPulse: { instance: Instance, pulse: WorldPulse.Pulse }? = nil
 local path: { Vector3 } = {}
 local pathOrigin: Vector3? = nil
 local pathTarget: Instance? = nil
@@ -110,50 +119,84 @@ local function clearMarks()
 	table.clear(bases)
 end
 
-local function buildOverlay()
-	local screen = Instance.new("ScreenGui")
-	screen.Name = "GuideQueteCible"
-	screen.ResetOnSpawn = false
-	screen.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
-	overlay = screen
-
-	local glow = Instance.new("Highlight")
-	glow.Name = "HaloObjectif"
-	glow.FillColor = UITheme.Colors.Gold
-	glow.FillTransparency = 0.85
-	glow.OutlineColor = UITheme.Colors.GoldLight
-	glow.OutlineTransparency = 0.2
-	glow.DepthMode = Enum.HighlightDepthMode.Occluded
-	glow.Enabled = false
-	glow.Parent = screen
-	highlight = glow
-
-	-- petit marqueur flottant « OBJECTIF » : pastille du design system, ne cache pas le décor
-	local gui = Instance.new("BillboardGui")
-	gui.Name = "MarqueurObjectif"
-	gui.Size = UDim2.fromOffset(128, 34)
-	gui.StudsOffsetWorldSpace = Vector3.new(0, 4.5, 0)
-	gui.AlwaysOnTop = true
-	gui.MaxDistance = 250
-	gui.Enabled = false
-	local pill = UIKit.panel(gui, UITheme.Transparency.HUD, UITheme.Radius.Pill, UITheme.Stroke.Regular)
-	pill.Size = UDim2.fromScale(1, 1)
-	UIKit.text(pill, "OBJECTIF", UITheme.Typography.Size.Label, UITheme.Colors.Gold)
-	gui.Parent = screen
-	label = gui
+-- Fait pulser `instance` (nil : plus rien) ; une seule cible par emplacement, recréée si elle change.
+local function setPulse(current: { instance: Instance, pulse: WorldPulse.Pulse }?, instance: Instance?, focus: Instance?): { instance: Instance, pulse: WorldPulse.Pulse }?
+	if current and current.instance == instance and instance and instance.Parent then
+		return current
+	end
+	if current then
+		current.pulse.stop()
+	end
+	if not instance then
+		return nil
+	end
+	return { instance = instance, pulse = WorldPulse.start(instance, focus) }
 end
 
 local function showTarget(target: Instance?, focus: Instance?, near: boolean)
-	local glow, gui = highlight, label
-	if glow then
-		glow.Adornee = target
-		glow.Enabled = target ~= nil
-		glow.OutlineTransparency = if near then 0.45 else 0.2 -- arrivé : la cible reste légèrement en évidence
+	targetPulse = setPulse(targetPulse, target, focus)
+	local current = targetPulse
+	if current then
+		current.pulse.setNear(near) -- arrivé : la cible respire plus fort, le chemin s'efface
 	end
-	if gui then
-		gui.Adornee = if focus and focus:IsA("BasePart") then focus else nil
-		gui.Enabled = focus ~= nil and focus:IsA("BasePart")
+end
+
+local function showSlab(slab: Instance?, pose: Instance?, held: boolean)
+	slabPulse = setPulse(slabPulse, slab, pose)
+	local current = slabPulse
+	if current then
+		current.pulse.setNear(true)
+		-- héros en main : la dalle a déjà sa lumière de placement, on garde la lueur et les étincelles
+		current.pulse.setHighlight(not held)
 	end
+end
+
+-- Dalle du tutoriel (ArenaConfig.PlacementSlot) de l'arène du joueur local, sinon la première dalle
+-- libre ; nil si l'arène n'est pas encore répliquée.
+local function tutorialSlab(): (Instance?, BasePart?)
+	local arena = PlotView.arena()
+	if not arena then
+		return nil, nil
+	end
+	local formation = ArenaStore.formation()
+	local best: Instance?, bestPose: BasePart?, bestSlot = nil, nil, math.huge
+	for _, case in CollectionService:GetTagged(TAG_CASE) do
+		local slot = case:GetAttribute("Slot")
+		local pose = case:FindFirstChild("PointDePose", true)
+		if case:IsDescendantOf(arena) and typeof(slot) == "number" and not formation[slot] and pose and pose:IsA("BasePart") then
+			local rank = if slot == ArenaConfig.PlacementSlot then 0 else slot
+			if rank < bestSlot then
+				best, bestPose, bestSlot = case, pose, rank
+			end
+		end
+	end
+	return best, bestPose
+end
+
+-- Distance horizontale entre le personnage et la dalle la plus proche de SON arène (math.huge sans arène).
+local function arenaDistance(root: BasePart): number
+	local arena = PlotView.arena()
+	local best = math.huge
+	if not arena then
+		return best
+	end
+	for _, case in CollectionService:GetTagged(TAG_CASE) do
+		local pose = case:FindFirstChild("PointDePose", true)
+		if case:IsDescendantOf(arena) and pose and pose:IsA("BasePart") then
+			best = math.min(best, ((pose.Position - root.Position) * Vector3.new(1, 0, 1)).Magnitude)
+		end
+	end
+	return best
+end
+
+-- Premier héros de la hotbar (celui à poser).
+local function heroToPlace(): string?
+	for _, id in ArenaStore.hotbar do
+		if id ~= "" and ArenaStore.heroes[id] then
+			return id
+		end
+	end
+	return nil
 end
 
 ------------------------------------------------------------------ chemin
@@ -301,21 +344,45 @@ local function update()
 	mode = QuestGuide.mode({
 		target = if target then targetName else nil,
 		completed = view and view.Completed == true,
-		combat = ArenaStore.inCombat(),
+		-- outro et écran de fin d'un combat qui vient de finir : rien par-dessus
+		combat = ArenaStore.inCombat() or ArenaStore.awaitingResult,
 		screen = ScreenState.current(),
 		distance = distance,
 	})
+	-- Apprendre la pose (GuidePlacement) : aucun héros posé, un héros à prendre dans la hotbar.
+	local teaching = view ~= nil and view.GuidePlacement == true and mode ~= "Hidden"
+	local hero = if teaching and ArenaStore.placedCount() == 0 then heroToPlace() else nil
+	local slab, pose = nil, nil
+	if hero and root then
+		slab, pose = tutorialSlab()
+		if not (mode == "Near" or arenaDistance(root) <= ARENA_NEAR) then
+			slab, pose = nil, nil -- encore loin : d'abord le chemin vers la pancarte, à l'entrée de l'arène
+		end
+	end
+	local held = ArenaStore.placement.held ~= nil
+	ArenaStore.setGuide(if slab and not held then hero else nil, teaching and ArenaStore.placedCount() >= 1)
 	if mode == "Hidden" then
 		hideMarks()
 		showTarget(nil, nil, false)
+		showSlab(nil, nil, false)
 		if not targetName or (view and view.Completed) then
 			clearMarks() -- quête terminée ou sans guidage : plus aucun objet
 			path, pathTarget = {}, nil
 		end
 		return
 	end
-	showTarget(target, focus, mode == "Near")
-	if mode == "Near" then
+	if slab then
+		-- à l'arène, aucun héros posé : une seule chose à faire, poser le héros (hotbar + dalle)
+		hideMarks()
+		showTarget(nil, nil, false)
+		showSlab(slab, pose, held)
+		return
+	end
+	showSlab(nil, nil, false)
+	-- un héros posé, déjà à l'arène : la pancarte pulse, pas de chemin dans l'arène (F lance aussi)
+	local inArena = teaching and root ~= nil and arenaDistance(root) <= ARENA_NEAR
+	showTarget(target, focus, mode == "Near" or inArena)
+	if mode == "Near" or inArena then
 		hideMarks() -- arrivé : le chemin s'efface, l'interaction normale (E) prend le relais
 		return
 	end
@@ -338,7 +405,6 @@ local function setQuest(view: any)
 end
 
 function QuestGuideController:Start()
-	buildOverlay()
 	local elapsed = 0
 	RunService.Heartbeat:Connect(function(dt: number)
 		elapsed += dt

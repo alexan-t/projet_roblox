@@ -6,21 +6,22 @@
 --
 -- Une cible = un chemin d'enfants depuis le modèle du plot (jamais Workspace.PlotTravail, jamais un autre
 -- plot) ; Focus = enfant de la cible vers lequel le chemin mène (sinon son pivot) ; Arrive = distance
--- (studs) à laquelle le chemin s'efface et l'interaction normale prend le relais.
+-- (studs) à laquelle le chemin s'efface et l'interaction normale prend le relais. Aucune pancarte : la
+-- cible elle-même pulse (WorldPulse).
 
-export type Target = { Path: { string }, Focus: string?, Arrive: number, Label: string }
+export type Target = { Path: { string }, Focus: string?, Arrive: number }
 
 local QuestGuide = {}
 
 QuestGuide.Targets = table.freeze({
 	-- Pancarte du stage, à l'entrée de l'arène (E : choisir un stage, lancer).
-	StageSign = table.freeze({ Path = table.freeze({ "Arene", "PanneauStage" }), Focus = "Banniere", Arrive = 10, Label = "OBJECTIF" }),
+	StageSign = table.freeze({ Path = table.freeze({ "Arene", "PanneauStage" }), Focus = "Banniere", Arrive = 10 }),
 	-- Portail d'invocation du plot.
-	SummonPortal = table.freeze({ Path = table.freeze({ "PortailInvocation" }), Arrive = 12, Label = "OBJECTIF" }),
+	SummonPortal = table.freeze({ Path = table.freeze({ "PortailInvocation" }), Arrive = 12 }),
 	-- Royaume du plot.
-	Kingdom = table.freeze({ Path = table.freeze({ "Royaume" }), Arrive = 14, Label = "OBJECTIF" }),
+	Kingdom = table.freeze({ Path = table.freeze({ "Royaume" }), Arrive = 14 }),
 	-- Dalles de placement des héros de l'arène.
-	HeroPlacement = table.freeze({ Path = table.freeze({ "Arene", "Emplacements", "Heros" }), Arrive = 8, Label = "OBJECTIF" }),
+	HeroPlacement = table.freeze({ Path = table.freeze({ "Arene", "Emplacements", "Heros" }), Arrive = 8 }),
 } :: { [string]: Target })
 
 function QuestGuide.isTarget(name: any): boolean

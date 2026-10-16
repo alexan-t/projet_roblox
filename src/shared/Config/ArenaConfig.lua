@@ -22,6 +22,9 @@ local ArenaConfig = {
 	SignDistance = 12,
 	-- Nombre maximum de héros posés sur le 3x3 (la hotbar en contient 10 : c'est voulu).
 	MaxHeroes = 4,
+	-- Dalle mise en avant par le tutoriel (première pose d'un héros, quête DefendDomain) : le centre,
+	-- où le héros de départ seul gagne le 1-1 (simulations de StageConfig).
+	PlacementSlot = 5,
 	-- Les héros eux-mêmes (noms, icônes, modèle de combat) sont dans HeroConfig.
 	HeroTemplate = "MannequinHeros",
 	-- Modèles ennemis de ReplicatedStorage.Assets.Combat, copiés des monstres validés du partenaire :

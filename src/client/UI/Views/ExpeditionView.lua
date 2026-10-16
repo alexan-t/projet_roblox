@@ -13,7 +13,9 @@
 --   options = { OnLaunch: ((zone: number, stage: number) -> ())?, OnClose: (() -> ())?,
 --               Selected: number? (stage choisi à l'ouverture), OnSelect: ((zone, stage) -> ())? (choix d'un
 --               stage débloqué), Team: { Placed: number, Max: number }? (« Lancer » exige 1 héros posé),
---               OnPrepare: (() -> ())? (bouton secondaire « Préparer l'équipe ») }
+--               OnPrepare: (() -> ())? (bouton secondaire « Préparer l'équipe »),
+--               Guide: boolean? (tutoriel : « Lancer » fait un petit rebond une fois si l'équipe est prête,
+--               sinon « Préparer l'équipe » rebondit doucement tant que la fenêtre est ouverte) }
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -40,6 +42,7 @@ export type Options = {
 	OnSelect: ((zone: number, stage: number) -> ())?,
 	Team: Team?,
 	OnPrepare: (() -> ())?,
+	Guide: boolean?,
 }
 
 local ExpeditionView = {}
@@ -172,6 +175,7 @@ function ExpeditionView.Show(data: Data, options: Options?)
 	launch.holder.Position = UDim2.new(0.5, 0, 1, 0)
 	launch.setEnabled(false)
 	local onPrepare = opts.OnPrepare
+	local prepareButton: UIKit.Button? = nil
 	if onPrepare then
 		-- Deux actions côte à côte : préparer (secondaire) à gauche, lancer (principale) à droite.
 		launch.holder.Position = UDim2.new(0.5, Spacing.S + 110, 1, 0)
@@ -181,6 +185,7 @@ function ExpeditionView.Show(data: Data, options: Options?)
 		end)
 		prepare.holder.AnchorPoint = Vector2.new(0.5, 1)
 		prepare.holder.Position = UDim2.new(0.5, -Spacing.S - 110, 1, 0)
+		prepareButton = prepare
 	end
 	local team = opts.Team
 	local teamReady = team == nil or team.Placed >= 1
@@ -231,6 +236,24 @@ function ExpeditionView.Show(data: Data, options: Options?)
 		select(default)
 	end
 	UIKit.open(panel, veil)
+	-- Tutoriel : la hiérarchie visuelle montre l'étape suivante, sans texte ni flèche.
+	if opts.Guide and default and default.Unlocked then
+		local window = current
+		task.delay(UITheme.Animation.Open.Time + 0.1, function()
+			if current ~= window then
+				return
+			end
+			if teamReady then
+				UIKit.pop(launch.holder) -- une fois
+				return
+			end
+			local prepare = prepareButton
+			while prepare and current == window and prepare.holder.Parent do
+				UIKit.pop(prepare.holder)
+				task.wait(2)
+			end
+		end)
+	end
 end
 
 function ExpeditionView.Hide()

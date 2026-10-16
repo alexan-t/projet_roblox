@@ -6,10 +6,13 @@
 -- ensuite lui-même sur une case de l'arène (ArenaPlacementController). Pendant un combat, la
 -- hotbar reste visible mais ne modifie plus la formation.
 -- Style : design system (UITheme via UIKit) ; légère, transparente, la map reste visible.
+-- Tutoriel : le raccourci du héros à prendre (ArenaStore.guide.hotbar) s'entoure d'une lueur dorée qui
+-- respire, jusqu'à ce que le héros soit en main ou posé.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterGui = game:GetService("StarterGui")
+local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local HeroConfig = require(ReplicatedStorage.Shared.Config.HeroConfig)
@@ -40,7 +43,7 @@ local KEYS = {
 
 -- portrait : vrai modèle du héros (UIKit.portrait) ; à défaut, monogramme provisoire.
 type SlotUI = { frame: TextButton, stroke: UIStroke, icon: TextLabel, placed: Frame, offset: number,
-	portrait: ViewportFrame?, portraitHero: string? }
+	portrait: ViewportFrame?, portraitHero: string?, guide: { frame: Frame, tween: Tween }? }
 type CardUI = { frame: TextButton, stroke: UIStroke, placed: Frame, shortcut: TextLabel, portrait: boolean }
 
 -- Onglets de la sacoche. Équipement et Ressources n'ont pas encore de données.
@@ -127,6 +130,42 @@ local function buildHotbar(screen: ScreenGui)
 	end
 end
 
+-- Lueur dorée qui respire autour d'un raccourci (guidage du tutoriel) ; nil = aucune.
+local function setGuided(slot: SlotUI, on: boolean)
+	local current = slot.guide
+	if (current ~= nil) == on then
+		return
+	end
+	if current then
+		current.tween:Cancel()
+		current.frame:Destroy()
+		slot.guide = nil
+		return
+	end
+	local glow = Instance.new("Frame")
+	glow.Name = "Guide"
+	glow.BackgroundColor3 = UITheme.World.Guide.Color
+	glow.BackgroundTransparency = 1
+	glow.Position = UDim2.fromOffset(-S.XS, -S.XS)
+	glow.Size = UDim2.new(1, 2 * S.XS, 1, 2 * S.XS)
+	glow.ZIndex = 5
+	glow.Active = false
+	glow.Parent = slot.frame
+	UIKit.corner(glow, UITheme.Radius.Medium)
+	local stroke = UIKit.stroke(glow, UITheme.Stroke.Thick)
+	stroke.Color = UITheme.World.Guide.Color
+	stroke.Transparency = UITheme.World.Guide.OutlineTo
+	local tween = TweenService:Create(glow, UITheme.Animation.Pulse, { BackgroundTransparency = UITheme.World.Guide.FillTo })
+	tween:Play()
+	local strokeTween = TweenService:Create(stroke, UITheme.Animation.Pulse, { Transparency = 0 })
+	strokeTween:Play()
+	slot.guide = { frame = glow, tween = tween }
+	glow.Destroying:Connect(function()
+		strokeTween:Cancel()
+	end)
+	UIKit.pop(slot.frame)
+end
+
 local function renderHotbar()
 	local held = heldId()
 	local placed = placedSet()
@@ -157,6 +196,7 @@ local function renderHotbar()
 		slot.stroke.Thickness = if selected then UITheme.Stroke.Thick else UITheme.Stroke.Regular
 		slot.frame.Position = UDim2.fromOffset(slot.offset, if selected then S.M - 8 else S.M)
 		slot.placed.Visible = info ~= nil and placed[id] == true
+		setGuided(slot, id ~= "" and id == ArenaStore.guide.hotbar and not held and not locked and not placed[id])
 	end
 end
 

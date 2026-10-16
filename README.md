@@ -162,9 +162,10 @@ sans action « réclamer ». Voir [la config, le flux et les garanties](docs/REW
 
 ## Héros et invocation (HeroService)
 
-Starter unique (`ecuyer_du_rempart`), hotbar de 10 raccourcis sauvegardée, invocation au portail de
+Le premier héros est obtenu pendant l'invocation tutorielle (`Remotes.RequestStarterSummon`, gratuite,
+une seule fois : `ecuyer_du_rempart`). Hotbar de 10 raccourcis sauvegardée, invocation au portail de
 son plot (`Remotes.RequestSummon`, un `SummonTicket`, première invocation garantie
-`tireuse_des_faubourgs`), `Remotes.HeroObtained`, migration des anciens profils en DataVersion 2.
+`tireuse_des_faubourgs`), `Remotes.HeroObtained`, migrations des anciens profils (DataVersion 2, 3).
 HeroId réel ≠ profil de combat temporaire : voir [les données, les règles et l'API](docs/HEROES.md).
 
 ## Items 2D (ItemConfig)

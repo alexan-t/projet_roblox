@@ -12,7 +12,9 @@
 -- API : SummonView.Show(data, options) ; SummonView.Reveal(hero, options) ; SummonView.Hide().
 --   Reveal cède la main le temps du retournement (≈ 0,3 s) : l'appeler dans un task.spawn au besoin.
 --   data = { Tickets, Cost?, Banners?: { { Id, Name, Subtitle?, Featured: { { Name, Rarity, Model? } } } },
---            Rates?: { { Id, Name, Percent } }, Selected?: string (Id de bannière) }
+--            Rates?: { { Id, Name, Percent } }, Selected?: string (Id de bannière),
+--            Free?: boolean (invocation tutorielle : « Invocation gratuite ! », bouton « Invoquer · Gratuit »
+--            actif sans ticket et qui respire ; le serveur décide toujours du héros) }
 --   options (Show) = { OnSummon: ((bannerId: string?) -> ())?, OnClose: (() -> ())? }
 --   hero = { Name: string, Model: Model?, ClassId: string?, New: boolean?, Rarity: string? }
 --   options (Reveal) = { OnContinue: (() -> ())? }
@@ -40,7 +42,7 @@ local FLIP = 0.3 -- s : la carte se retourne
 export type FeaturedHero = { Name: string, Rarity: string, Model: Model? }
 export type BannerView = { Id: string, Name: string, Subtitle: string?, Featured: { FeaturedHero } }
 export type Rate = { Id: string, Name: string, Percent: string }
-export type Data = { Tickets: number, Cost: number?, Banners: { BannerView }?, Rates: { Rate }?, Selected: string? }
+export type Data = { Tickets: number, Cost: number?, Banners: { BannerView }?, Rates: { Rate }?, Selected: string?, Free: boolean? }
 export type ShowOptions = { OnSummon: ((bannerId: string?) -> ())?, OnClose: (() -> ())? }
 export type Hero = { Name: string, Model: Model?, ClassId: string?, New: boolean?, Rarity: string? }
 export type RevealOptions = { OnContinue: (() -> ())? }
@@ -133,7 +135,18 @@ local function ratesPanel(parent: Instance, rates: { Rate }): Frame
 	return panel
 end
 
+-- Invocation tutorielle : le bouton principal respire tant que la fenêtre est ouverte.
+local function breathe(button: UIKit.Button)
+	task.delay(UITheme.Animation.Open.Time + 0.1, function()
+		while button.holder.Parent do
+			UIKit.pop(button.holder)
+			task.wait(1.6)
+		end
+	end)
+end
+
 local function showBanners(content: Frame, data: Data, opts: ShowOptions, cost: number, enough: boolean)
+	local free = data.Free == true
 	local banners = data.Banners :: { BannerView }
 	local selected = banners[1]
 	for _, banner in banners do
@@ -227,14 +240,16 @@ local function showBanners(content: Frame, data: Data, opts: ShowOptions, cost: 
 	ticket.Size = UDim2.fromOffset(64, 56)
 	ticket.Parent = bottom
 	Icons.viewport(ticket, "Ticket")
-	local count = UIKit.text(bottom, `Tickets : {data.Tickets}`, Typography.Size.Heading, { Color = if enough then Colors.TextLight else Colors.Warning, Align = Enum.TextXAlignment.Left })
+	local count = UIKit.text(bottom, if free then "Invocation gratuite !" else `Tickets : {data.Tickets}`, Typography.Size.Heading,
+		{ Color = if free then Colors.Success elseif enough then Colors.TextLight else Colors.Warning, Align = Enum.TextXAlignment.Left })
 	count.Position = UDim2.fromOffset(72, 0)
-	count.Size = UDim2.fromOffset(220, 32)
-	local hint = UIKit.text(bottom, if enough then `Coût : {costText(cost)}` else "Gagne des tickets en combattant", Typography.Size.Caption, { Color = Colors.TextMuted, Align = Enum.TextXAlignment.Left })
+	count.Size = UDim2.fromOffset(260, 32)
+	local hint = UIKit.text(bottom, if free then "Ton premier héros t'attend" elseif enough then `Coût : {costText(cost)}` else "Gagne des tickets en combattant",
+		Typography.Size.Caption, { Color = Colors.TextMuted, Align = Enum.TextXAlignment.Left })
 	hint.Position = UDim2.fromOffset(72, 32)
 	hint.Size = UDim2.fromOffset(260, 22)
 
-	local summon = UIKit.button(bottom, "Invoquer", "Primary", UDim2.fromOffset(240, 56 + UITheme.Shadow.ButtonLip), function()
+	local summon = UIKit.button(bottom, if free then "Invoquer · Gratuit" else "Invoquer", "Primary", UDim2.fromOffset(240, 56 + UITheme.Shadow.ButtonLip), function()
 		if enough and opts.OnSummon then
 			local onSummon = opts.OnSummon
 			local bannerId = selected.Id
@@ -245,6 +260,9 @@ local function showBanners(content: Frame, data: Data, opts: ShowOptions, cost: 
 	summon.setEnabled(enough and opts.OnSummon ~= nil)
 	summon.holder.AnchorPoint = Vector2.new(1, 0)
 	summon.holder.Position = UDim2.fromScale(1, 0)
+	if free then
+		breathe(summon)
+	end
 	if data.Rates then
 		local rateList = data.Rates
 		local toggle: UIKit.Button
@@ -275,14 +293,16 @@ local function showSimple(content: Frame, data: Data, opts: ShowOptions, cost: n
 	ticket.Parent = content
 	Icons.viewport(ticket, "Ticket")
 
-	local count = UIKit.text(content, `Tickets : {data.Tickets}`, Typography.Size.Heading, { Color = if enough then Colors.TextLight else Colors.Warning })
+	local free = data.Free == true
+	local count = UIKit.text(content, if free then "Invocation gratuite !" else `Tickets : {data.Tickets}`, Typography.Size.Heading,
+		{ Color = if free then Colors.Success elseif enough then Colors.TextLight else Colors.Warning })
 	count.Position = UDim2.fromOffset(0, 112)
 	count.Size = UDim2.new(1, 0, 0, 30)
-	local price = UIKit.text(content, `Coût : {costText(cost)}`, Typography.Size.Label, { Color = Colors.TextMuted })
+	local price = UIKit.text(content, if free then "Ton premier héros t'attend" else `Coût : {costText(cost)}`, Typography.Size.Label, { Color = Colors.TextMuted })
 	price.Position = UDim2.fromOffset(0, 144)
 	price.Size = UDim2.new(1, 0, 0, 22)
 
-	local summon = UIKit.button(content, "Invoquer", "Primary", UDim2.fromOffset(240, 56 + UITheme.Shadow.ButtonLip), function()
+	local summon = UIKit.button(content, if free then "Invoquer · Gratuit" else "Invoquer", "Primary", UDim2.fromOffset(240, 56 + UITheme.Shadow.ButtonLip), function()
 		if enough and opts.OnSummon then
 			local onSummon = opts.OnSummon
 			SummonView.Hide()
@@ -292,6 +312,9 @@ local function showSimple(content: Frame, data: Data, opts: ShowOptions, cost: n
 	summon.setEnabled(enough and opts.OnSummon ~= nil)
 	summon.holder.AnchorPoint = Vector2.new(0.5, 1)
 	summon.holder.Position = UDim2.new(0.5, 0, 1, -(if enough then 0 else 26))
+	if free then
+		breathe(summon)
+	end
 	if not enough then
 		local hint = UIKit.text(content, "Gagne des tickets en combattant", Typography.Size.Caption, { Color = Colors.TextMuted })
 		hint.AnchorPoint = Vector2.new(0.5, 1)
@@ -304,7 +327,7 @@ function SummonView.Show(data: Data, options: ShowOptions?)
 	SummonView.Hide()
 	local opts: ShowOptions = options or {}
 	local cost = data.Cost or 1
-	local enough = data.Tickets >= cost
+	local enough = data.Free == true or data.Tickets >= cost
 	local withBanners = data.Banners ~= nil and #(data.Banners :: { BannerView }) > 0
 	local screen = UIKit.screen("Invocation", 10)
 	local veil = UIKit.overlay(screen)

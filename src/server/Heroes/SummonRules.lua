@@ -83,6 +83,12 @@ function SummonRules.configProblems(config: any, catalog: { [string]: any }, tie
 	if not catalog[config.FirstSummon] then
 		table.insert(problems, `FirstSummon inconnu : {tostring(config.FirstSummon)}`)
 	end
+	local starter = config.Starter
+	if typeof(starter) ~= "table" or not catalog[starter.HeroId] then
+		table.insert(problems, `Starter.HeroId inconnu : {tostring(if typeof(starter) == "table" then starter.HeroId else nil)}`)
+	elseif typeof(starter.QuestId) ~= "string" or typeof(starter.Event) ~= "string" then
+		table.insert(problems, "Starter : QuestId et Event requis")
+	end
 	if tiers then
 		local known: { [string]: boolean } = {}
 		for _, tier in tiers do
@@ -182,6 +188,35 @@ function SummonRules.summon(data: any, config: any, makeId: () -> string, pick: 
 		Slot = slot,
 		First = first,
 		KingdomChanged = kingdomChanged,
+	}, nil
+end
+
+-- Invocation tutorielle encore possible ? Jamais si le profil possède déjà le héros de départ.
+-- (La quête du tutoriel est vérifiée par HeroService avec QuestService.)
+function SummonRules.canStarter(data: any, starter: any): (boolean, string?)
+	if HeroRules.owns(data, starter.HeroId) then
+		return false, "premier héros déjà obtenu"
+	end
+	return true, nil
+end
+
+-- Invocation tutorielle, synchrone : le héros de départ, gratuit et garanti. Aucun ticket débité,
+-- Summons.Total inchangé (la première vraie invocation garde FirstSummon), royaume inchangé.
+-- Renvoie le résultat, ou nil et la raison sans rien modifier.
+function SummonRules.starter(data: any, starter: any, makeId: () -> string): (Result?, string?)
+	local ok, why = SummonRules.canStarter(data, starter)
+	if not ok then
+		return nil, why
+	end
+	local instanceId = makeId() -- prêt AVANT la première mutation
+	local slot = HeroRules.addHero(data, instanceId, starter.HeroId)
+	return {
+		InstanceId = instanceId,
+		HeroId = starter.HeroId,
+		New = true,
+		Slot = slot,
+		First = false,
+		KingdomChanged = false,
 	}, nil
 end
 

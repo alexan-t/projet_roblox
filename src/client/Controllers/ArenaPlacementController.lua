@@ -8,12 +8,15 @@
 --     E près de la pancarte : fenêtre des stages (ExpeditionView) → choisir un stage (SelectStage),
 --     « Préparer l'équipe » (dalles mises en évidence) ou « Lancer » (Ready, 1 à 4 héros posés).
 --   • Dans l'arène, équipe posée : pastille « F · Lancer le combat » (touche F, clic ou toucher) → Ready.
+--     Tutoriel (ArenaStore.guide.expedition) : la pastille respire, et la fenêtre Expédition met en avant
+--     « Préparer l'équipe » (aucun héros posé) ou « Lancer ».
 --     Les ennemis sortent alors du décor (CombatPresentationController) et le combat démarre seul.
 --   • Combat : pastille légère (vague, x1/x2, X) ; PV et énergie sont dans le monde
 --     (CombatViewController). Les ultimes sont automatiques.
 -- Le client n'envoie que des intentions (Place / Remove / SelectStage / Ready) ; ArenaService valide tout.
 
 local CollectionService = game:GetService("CollectionService")
+local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -66,7 +69,8 @@ local signPrompt: ProximityPrompt? = nil -- E près de la pancarte : fenêtre de
 local prepMode = false -- « Préparer l'équipe » : dalles mises en évidence
 local render: () -> () -- défini plus bas (rendu complet : panneau, statut, dalles)
 local launch: () -> () -- défini plus bas (F / clic : Ready depuis l'arène)
-local awaitingResult = false -- combat fini, outro en cours : pas de relance avant l'écran de fin
+-- Combat fini, outro en cours (ArenaStore.awaitingResult) : pas de relance avant l'écran de fin.
+local launchGuide: { stroke: UIStroke, tween: Tween }? = nil -- pastille « F · Lancer » qui respire (tutoriel)
 
 ------------------------------------------------------------------ arène du plot
 
@@ -399,6 +403,7 @@ local function openStageMenu()
 	end
 	ExpeditionView.Show({ Zone = zone, Title = title, Stages = stages }, {
 		OnClose = closed,
+		Guide = ArenaStore.guide.expedition,
 		Selected = state.Stage,
 		Team = { Placed = ArenaStore.placedCount(), Max = state.MaxHeroes or ArenaConfig.MaxHeroes },
 		OnSelect = function(z: number, stage: number)
@@ -576,8 +581,26 @@ function render()
 	end
 	-- Lancer depuis l'arène (F, clic, toucher) : équipe posée, rien en main, aucun écran ouvert.
 	local launchable = inArena and phase == "Placement" and count >= 1 and not held and state.Available ~= false
-		and ScreenState.free() and not awaitingResult
+		and ScreenState.free() and not ArenaStore.awaitingResult
 	ui.launch.Visible = launchable
+	-- tutoriel : la pastille respire (contour doré) tant qu'elle attend le premier lancement
+	local guided = launchable and ArenaStore.guide.expedition
+	local current = launchGuide
+	if guided and not current then
+		local stroke = ui.launch:FindFirstChildOfClass("UIStroke")
+		if stroke then
+			stroke.Color = UITheme.World.Guide.Color
+			local tween = TweenService:Create(stroke, UITheme.Animation.Pulse, { Thickness = UITheme.Stroke.Thick + 2 })
+			tween:Play()
+			launchGuide = { stroke = stroke, tween = tween }
+			UIKit.pop(ui.launch)
+		end
+	elseif not guided and current then
+		current.tween:Cancel()
+		current.stroke.Color = UITheme.Stroke.Color
+		current.stroke.Thickness = UITheme.Stroke.Regular
+		launchGuide = nil
+	end
 	ui.launchText.Text = `F · Lancer le combat  ·  Stage {state.Zone or "?"}-{state.Stage or "?"}`
 	renderCases()
 end
@@ -610,7 +633,7 @@ end
 local resultGate = OutroGate.new()
 
 local function showResult(event: { [string]: any }, silent: boolean)
-	awaitingResult = false
+	ArenaStore.awaitingResult = false
 	local rewards: { any }? = if typeof(event.Rewards) == "table" then event.Rewards else nil
 	local ticket = false
 	for _, reward in rewards or {} do
@@ -653,7 +676,7 @@ local function onCombatEvents(combatId: number, events: { { [string]: any } })
 			ui.x2.setSelected(event.Speed == 2)
 		elseif event.Type == "CombatEnded" then
 			-- gardé jusqu'à la fin de l'outro (ou le délai de sécurité)
-			awaitingResult = true
+			ArenaStore.awaitingResult = true
 			render()
 			local ready = resultGate:ended(combatId, event, os.clock())
 			if ready then

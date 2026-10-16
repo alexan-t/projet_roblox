@@ -5,6 +5,7 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $testBuild = Join-Path $repoRoot 'build'
 New-Item -ItemType Directory -Force -Path $testBuild | Out-Null
 $configSource = Get-Content -LiteralPath (Join-Path $repoRoot 'src/server/Config/QuestConfig.lua') -Raw
+$arenaSource = Get-Content -LiteralPath (Join-Path $repoRoot 'src/shared/Config/ArenaConfig.lua') -Raw -Encoding UTF8
 $serviceSource = Get-Content -LiteralPath (Join-Path $repoRoot 'src/server/Services/QuestService.lua') -Raw
 $testSource = Get-Content -LiteralPath (Join-Path $repoRoot 'src/server/Tests/QuestService.spec.lua') -Raw
 $guideSource = Get-Content -LiteralPath (Join-Path $repoRoot 'src/shared/Quests/QuestGuide.lua') -Raw -Encoding UTF8
@@ -15,7 +16,7 @@ $guideSource = Get-Content -LiteralPath (Join-Path $repoRoot 'src/shared/Quests/
 $runnerSource = "local config = (function()`n" + $configSource + "`nend)()`n" + "local QuestGuide = (function()`n" + $guideSource + "`nend)()`n" + @'
 local function createService(env)
     local game, script, require, Instance = env.game, env.script, env.require, env.Instance
-'@ + "`n" + $serviceSource + "`nend`nlocal runTests = (function()`n" + $testSource + "`nend)()`nrunTests(createService, config, QuestGuide)`n"
+'@ + "`n" + $serviceSource + "`nend`nlocal runTests = (function()`n" + $testSource + "`nend)()`nlocal arenaConfig = (function()`n" + $arenaSource + "`nend)()`nrunTests(createService, config, QuestGuide, arenaConfig)`n"
 $runnerPath = Join-Path $testBuild 'quest-service-tests.luau'
 [System.IO.File]::WriteAllText($runnerPath, $runnerSource, [System.Text.UTF8Encoding]::new($false))
 & $LuauPath $runnerPath

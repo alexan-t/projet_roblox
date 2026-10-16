@@ -80,18 +80,25 @@ HeroConfig) et déterministe :
 2. sinon un exemplaire `Epeiste` existe → **le même `HeroInstanceId`** devient `ecuyer_du_rempart`
    (niveau et raccourci conservés) ;
 3. sinon l'exemplaire legacy au plus petit identifiant devient `ecuyer_du_rempart` ;
-4. sinon (aucun legacy) rien n'est converti ; HeroService donne le starter au chargement.
+4. sinon (aucun legacy) rien n'est converti.
 
 Puis tous les autres exemplaires legacy sont retirés ; les cases de `Hotbar` qui les visaient
 deviennent `""` (même taille) et `Team` est recompactée. Les vrais `HeroId` déjà présents, les
 devises, tickets, `FirstClears`, quêtes, royaume et réglages ne sont pas touchés.
 
-## Héros de départ
+## Premier héros : invocation tutorielle
 
-`HeroConfig.StarterHeroes = { "ecuyer_du_rempart" }`. Chaque HeroId de départ absent de la
-collection est ajouté une fois au chargement (`HeroRules.grantStarter`). Un nouveau joueur a donc
-**exactement 1 héros** (l'Écuyer, raccourci 1) ; un joueur qui le possède déjà ne reçoit rien
-(rejoin). Un Écuyer retiré à la main (debug) est redonné au chargement suivant.
+Un nouveau profil n'a **aucun héros** (hotbar et équipe vides) : le premier héros est obtenu pendant
+l'invocation tutorielle. Rien n'est donné au chargement.
+
+`Remotes.RequestStarterSummon` (RemoteFunction, aucun argument), config `SummonConfig.Starter`
+(`HeroId = "ecuyer_du_rempart"`, `QuestId = "SummonStarter"`, `Event = "StarterHeroSummoned"`).
+Le serveur vérifie : données chargées, plot, SON portail, distance, aucune invocation en cours, quête
+`SummonStarter` active et pas terminée, Écuyer jamais obtenu. Puis, sans yield
+(`SummonRules.starter`) : exemplaire créé (raccourci 1), **sans ticket, sans `Summons.Total`, sans
+évolution du royaume** ; ensuite `KingdomService:Refresh`, `HeroesChanged`, `HeroObtained` et l'événement
+de quête. La première vraie invocation (avec ticket) reste donc la garantie `FirstSummon` (Tireuse) et
+fait évoluer le royaume. Impossible deux fois. Les anciens profils gardent leurs héros (migration v3).
 
 ## Invocation
 

@@ -67,27 +67,19 @@ return function(HeroRules: any, heroConfig: any, combatConfig: any)
 		end
 	end
 
-	test("new player: exactly one starter, ecuyer_du_rempart, in shortcut 1; never twice", function()
+	test("no hero given for free: HeroConfig has no starter list, HeroRules no grant (tutorial summon instead)", function()
+		assert(heroConfig.StarterHeroes == nil and HeroRules.grantStarter == nil)
 		local d = data()
-		assert(#heroConfig.StarterHeroes == 1 and heroConfig.StarterHeroes[1] == "ecuyer_du_rempart")
-		assert(HeroRules.grantStarter(d, heroConfig.StarterHeroes, ids()) == 1)
-		local count = 0
-		for _, hero in d.Heroes do
-			count += 1
-			assert(hero.HeroId == "ecuyer_du_rempart" and hero.Level == 1)
-		end
-		assert(count == 1)
-		assert(d.Hotbar[1] ~= "" and d.Heroes[d.Hotbar[1]])
-		for i = 2, SIZE do assert(d.Hotbar[i] == "", "shortcut " .. i .. " empty") end
-		assert(HeroRules.grantStarter(d, heroConfig.StarterHeroes, ids()) == 0, "never twice (rejoin)")
+		assert(next(d.Heroes) == nil and not HeroRules.owns(d, "ecuyer_du_rempart"))
 	end)
 
-	test("starter guaranteed by HeroId: a profile owning other heroes but no starter receives it once", function()
+	test("first hero added to an empty profile goes to shortcut 1, the rest stays empty; owns() by HeroId", function()
 		local d = data()
-		HeroRules.addHero(d, "T1", "tireuse_des_faubourgs")
-		assert(HeroRules.grantStarter(d, heroConfig.StarterHeroes, ids()) == 1)
-		assert(HeroRules.owns(d, "ecuyer_du_rempart") and d.Hotbar[1] == "T1" and d.Hotbar[2] ~= "")
-		assert(HeroRules.grantStarter(d, heroConfig.StarterHeroes, ids()) == 0)
+		local make = ids()
+		assert(HeroRules.addHero(d, make(), "ecuyer_du_rempart") == 1)
+		assert(d.Heroes[d.Hotbar[1]].HeroId == "ecuyer_du_rempart" and d.Heroes[d.Hotbar[1]].Level == 1)
+		for i = 2, SIZE do assert(d.Hotbar[i] == "", "shortcut " .. i .. " empty") end
+		assert(HeroRules.owns(d, "ecuyer_du_rempart") and not HeroRules.owns(d, "tireuse_des_faubourgs"))
 	end)
 
 	test("catalog: 60 heroes, real HeroId != combat profile; stats, rarity, optional dedicated template", function()

@@ -114,6 +114,24 @@ local World = {
 		Selected = { Fill = Colors.Selected, FillT = 0.65, Outline = Colors.Selected, OutlineT = 0 },
 		Invalid = { Fill = Colors.Error, FillT = 0.75, Outline = Colors.Error, OutlineT = 0.2 },
 	},
+	-- Cible du tutoriel « vivante » (portail, pancarte, dalle) : même langage partout, sans pancarte ni
+	-- gros contour permanent. Respiration douce : léger voile doré (Highlight), lumière qui pulse et
+	-- quelques étincelles. Fill / Outline = transparences au creux (From) et au sommet (To) du battement.
+	Guide = {
+		Color = Colors.GoldLight,
+		FillFrom = 0.95,
+		FillTo = 0.72,
+		OutlineFrom = 1, -- aucun contour au creux
+		OutlineTo = 0.55, -- contour léger au sommet seulement
+		Period = 1.4, -- s par battement
+		LightRange = 14, -- studs
+		LightFrom = 0.2,
+		LightTo = 1.6,
+		Sparkles = 3, -- étincelles par seconde
+		SparkleSize = 0.35, -- studs
+		HotbarScale = 1.08, -- raccourci de hotbar à prendre : léger gonflement
+		Near = 0.6, -- arrivé près de la cible : battement plus marqué (part du sommet ajoutée au creux)
+	},
 }
 
 -- Fredoka One : titres, boutons, onglets, noms, compteurs, labels courts.
@@ -215,6 +233,7 @@ local UITheme = {
 			Selected = table.freeze(World.Case.Selected),
 			Invalid = table.freeze(World.Case.Invalid),
 		}),
+		Guide = table.freeze(World.Guide),
 	}),
 	Typography = table.freeze({
 		Display = Typography.Display,

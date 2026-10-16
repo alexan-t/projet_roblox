@@ -16,6 +16,14 @@ local SummonConfig = {
 	-- La première invocation fait passer le royaume de cet état à l'état suivant, une seule fois.
 	KingdomFrom = 1,
 	KingdomTo = 2,
+	-- Invocation tutorielle (onboarding) : le premier héros d'un nouveau profil. Gratuite, garantie,
+	-- une seule fois, seulement pendant la quête QuestId : ni ticket, ni Summons.Total (la première
+	-- vraie invocation reste celle de FirstSummon), ni évolution du royaume. Signale Event à QuestService.
+	Starter = table.freeze({
+		HeroId = "ecuyer_du_rempart",
+		QuestId = "SummonStarter",
+		Event = "StarterHeroSummoned",
+	}),
 }
 
 return table.freeze(SummonConfig)

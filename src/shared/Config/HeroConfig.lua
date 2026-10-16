@@ -130,11 +130,9 @@ hero("elyria_qui_marche_hors_du_temps", "Elyria, qui Marche hors du Temps", "Tra
 local HeroConfig = {
 	-- Nombre de raccourcis de la hotbar (touches 1 à 9 puis 0).
 	HotbarSize = 10,
-	-- Héros activés (tous invocables).
+	-- Héros activés (tous invocables). Un nouveau joueur n'en possède aucun : le premier héros est
+	-- obtenu pendant l'invocation tutorielle (SummonConfig.Starter).
 	Heroes = table.freeze(Heroes),
-	-- Héros de départ : chaque HeroId listé est garanti au moins une fois (un nouveau joueur en reçoit
-	-- exactement un exemplaire chacun).
-	StarterHeroes = table.freeze({ "ecuyer_du_rempart" }),
 }
 
 return table.freeze(HeroConfig)

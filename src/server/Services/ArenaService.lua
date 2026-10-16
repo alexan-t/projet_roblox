@@ -18,12 +18,19 @@ local worlds: { [Player]: any } = {}
 local stateEvent: RemoteEvent
 local lastAction: { [Player]: number } = {}
 local stateVersion: { [Player]: number } = {}
--- Stage choisi sur la pancarte (sinon celui de ArenaConfig) : utilisé au prochain lancement de session.
+-- Stage sélectionné (pancarte, fenêtre Expédition) : utilisé au prochain lancement de session. Sans
+-- choix, il se déduit de la progression (premier stage débloqué non terminé : 1-2 après le 1-1 au
+-- rejoin) ; après une victoire, il passe au stage suivant (1-1 → 1-2 … 1-5, pas de 1-6). Jamais lancé
+-- automatiquement : seulement sélectionné / affiché.
 local chosen: { [Player]: { zone: number, stage: number } } = {}
 
 local function chosenOf(player: Player): (number, number)
 	local c = chosen[player]
-	return if c then c.zone else Config.Zone, if c then c.stage else Config.Stage
+	if c then
+		return c.zone, c.stage
+	end
+	local zone, stage = ArenaRules.defaultStage(ZoneService:ListStages(player) :: any)
+	return zone or Config.Zone, stage or Config.Stage
 end
 
 local function context(player: Player): any
@@ -260,6 +267,8 @@ function ArenaService:Init()
 	manager = ArenaPrep.new({ maxHeroes = Config.MaxHeroes, name = function(p) return p.Name end,
 		startStage = function(player)
 			local zone, stage = chosenOf(player)
+			-- figé au lancement : la fin du combat sait quel stage vient d'être joué
+			chosen[player] = { zone = zone, stage = stage }
 			local session, reason = ZoneService:StartStage(player, zone, stage)
 			return if session then session.Id else nil, reason
 		end,
@@ -332,7 +341,15 @@ function ArenaService:Start()
 	end
 	action.Parent = remotes
 	PlotService:OnPlotAssigned(setup)
-	CombatService:OnCombatEnded(function(player, id)
+	CombatService:OnCombatEnded(function(player, id, result)
+		-- Victoire : le stage suivant (débloqué par le First Clear, déjà enregistré) devient le stage
+		-- sélectionné, AVANT la nouvelle session de placement. Jamais relancé automatiquement.
+		local prep = manager.preps[player]
+		if result == "Victory" and prep and prep.combatId == id then
+			local zone, stage = chosenOf(player)
+			local nextZone, nextStage = ArenaRules.nextStage(ZoneService:ListStages(player) :: any, zone, stage)
+			chosen[player] = { zone = nextZone, stage = nextStage }
+		end
 		-- Le résultat n'est annoncé que par l'écran de fin (RewardScreenController), pas par un message.
 		if manager:combatEnded(player, id) then
 			send(player)
