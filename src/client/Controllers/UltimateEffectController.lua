@@ -10,7 +10,8 @@
 -- de dégâts et la disparition des ennemis touchés pour qu'ils tombent avec l'anneau.
 -- API : UltimateEffectController.Play(caster, center, radius, speed?) ; ImpactDelay(speed?) : instant
 -- réel où l'anneau éclate (IMPACT_DELAY à x1, divisé par la vitesse du combat).
--- Tag "ApercuUltime" (Model riggé, Studio) : démonstration en boucle, cible à 10 studs devant lui.
+-- Tag "ApercuUltime" (Model riggé, Studio) : démonstration en boucle (annonce « ULTIME ! » + onde),
+--   cible à 10 studs devant lui.
 --   Attribut optionnel ApercuPause (s entre deux ultimes).
 
 local CollectionService = game:GetService("CollectionService")
@@ -365,6 +366,8 @@ local function runDemo(model: Model)
 		end
 		local box, size = model:GetBoundingBox()
 		local feet = Vector3.new(box.Position.X, box.Position.Y - size.Y / 2, box.Position.Z)
+		-- comme en combat (CombatViewController, UltimateUsed) : annonce sur le lanceur, puis l'onde
+		UltimateEffectController.Announce(model, speed)
 		UltimateEffectController.Play(model, feet + root.CFrame.LookVector * 10, DEFAULT_RADIUS, speed)
 		task.wait(1 / speed)
 	end
