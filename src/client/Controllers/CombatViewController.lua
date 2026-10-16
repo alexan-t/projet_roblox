@@ -140,7 +140,7 @@ local function attachIcon(model: Model)
 	chip.Parent = gui
 	UIKit.corner(chip, UITheme.Radius.Pill)
 	UIKit.stroke(chip, UITheme.Stroke.Thin)
-	Icons.viewport(chip, classId)
+	Icons.icon(chip, classId)
 	icons[model] = gui
 	placeIcon(model)
 	gui.Parent = iconFolder()

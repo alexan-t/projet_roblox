@@ -170,14 +170,17 @@ local function setBag(open: boolean)
 end
 
 local function buildBag(screen: ScreenGui)
-	-- Bouton sacoche, à gauche de la hotbar (libellé texte en attendant l'icône dessinée).
-	local toggle = UIKit.button(screen, "Sac", "Secondary", UDim2.fromOffset(SLOT, SLOT + UITheme.Shadow.ButtonLip), function()
+	-- Bouton sacoche, à gauche de la hotbar : icône Sacoche (§ 7), sans libellé.
+	local toggle = UIKit.button(screen, "", "Secondary", UDim2.fromOffset(SLOT, SLOT + UITheme.Shadow.ButtonLip), function()
 		setBag(not ui.bag.Visible)
 	end)
 	toggle.holder.Name = "BoutonSacoche"
 	toggle.holder.AnchorPoint = Vector2.new(1, 1)
 	toggle.holder.Position = UDim2.new(0.5, -(ui.bar.Size.X.Offset / 2) - S.M, 1, -S.ScreenMargin - S.M)
-	toggle.label.TextSize = UITheme.Typography.Size.Label
+	local bagIcon = Icons.icon(toggle.face, "Sacoche")
+	bagIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+	bagIcon.Position = UDim2.fromScale(0.5, 0.5)
+	bagIcon.Size = UDim2.fromScale(0.8, 0.8)
 
 	-- Panneau à gauche, transparent : la map reste visible.
 	local bag = UIKit.panel(screen, T.Panel)
