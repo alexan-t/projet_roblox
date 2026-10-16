@@ -110,8 +110,9 @@ SummonEffectController.Duration(rarity?) -> number -- secondes jusqu'à la rév�
   AnimationKit, car le pivot des modèles générés est arbitraire.
 - `Keep` : secondes avant de retirer la copie après la révélation (4 par défaut). Avec `0`, la copie
   reste et l'appelant la détruit lui-même.
-- `src/client/UI/RarityStyle.lua` : couleur, libellé, badge et prisme qui tourne d'une rareté
-  (partagé par la fenêtre et l'effet).
+- `src/client/UI/RarityStyle.lua` : couleur, libellé, badge, prisme qui tourne et repère de
+  forme d'une rareté (`UITheme.RarityMark`, voir `docs/UI_DESIGN_SYSTEM.md` § 2 ; partagé par la
+  fenêtre et l'effet).
 
 **Contrat HeroService** :
 
