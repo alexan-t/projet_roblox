@@ -124,7 +124,7 @@ function CollectionView.Show(heroes: { HeroEntry }, options: Options?)
 			chip.Parent = card
 			UIKit.corner(chip, UITheme.Radius.Pill)
 			UIKit.stroke(chip, UITheme.Stroke.Thin)
-			Icons.viewport(chip, hero.ClassId)
+			Icons.icon(chip, hero.ClassId)
 		end
 		local count = hero.Count or 1
 		if count > 1 then

@@ -63,7 +63,7 @@ local function stageCard(parent: Instance, zone: number, stage: Stage): (Frame, 
 	art.Size = UDim2.new(1, -2 * Spacing.S, 0.62, 0)
 	art.Parent = frame
 	UIKit.corner(art, UITheme.Radius.Small)
-	local icon = Icons.viewport(art, if stage.Unlocked then "Combat" else "Cadenas")
+	local icon = Icons.icon(art, if stage.Unlocked then "Combat" else "Cadenas")
 	icon.Size = UDim2.fromScale(0.85, 0.85)
 	icon.AnchorPoint = Vector2.new(0.5, 0.5)
 	icon.Position = UDim2.fromScale(0.5, 0.5)

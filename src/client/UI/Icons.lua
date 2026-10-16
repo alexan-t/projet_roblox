@@ -7,11 +7,17 @@
 --   Magicien (bâton), Tireur (cible).
 --   Objets : Parchemin (quête), Or (pièce), Gemmes, Ticket (invocation), Combat (épées croisées),
 --   Cadenas (verrouillé).
--- API : Icons.viewport(parent, id) -> ViewportFrame ; Icons.model(id) -> Model.
+--   Navigation et états : Collection (grimoire), Royaume (tour), Carte (carte des zones),
+--   Parametres (roue en bois), Coche, Ultime (éclat doré), Sacoche.
+-- Le § 7 veut des PNG à contour Ink cuit : une fois livré (IconConfig.Image), Icons.icon l'affiche en
+-- ImageLabel. Les modèles 3D ci-dessous restent l'affichage provisoire et la base du rendu du PNG.
+-- API : Icons.icon(parent, id) -> ImageLabel | ViewportFrame (à utiliser dans les écrans) ;
+-- Icons.viewport(parent, id) -> ViewportFrame ; Icons.model(id) -> Model.
 -- Identifiant inconnu : petit losange doré neutre.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local IconConfig = require(ReplicatedStorage.Shared.Config.IconConfig)
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 
 local Colors = UITheme.Colors
@@ -139,6 +145,74 @@ local SHAPES: { [string]: (part: (Props) -> Part) -> () } = {
 		part({ Size = Vector3.new(1.28, 0.28, 0.3), Color = Colors.StoneGrey, CFrame = CFrame.new(0, 1.0, 0) })
 		part({ Size = Vector3.new(0.26, 0.42, 0.56), Color = Colors.WoodDeep, CFrame = CFrame.new(0, -0.35, 0) })
 	end,
+	-- collection de héros : grimoire relié de bois, tranche crème, coins et médaillon dorés
+	Collection = function(part)
+		local tilt = CFrame.Angles(0, 0, math.rad(-10))
+		part({ Size = Vector3.new(1.75, 2.15, 0.36), Color = Colors.Cream, CFrame = tilt * CFrame.new(-0.08, 0, 0.06) })
+		part({ Size = Vector3.new(1.8, 2.3, 0.3), Color = Colors.Wood, CFrame = tilt * CFrame.new(0.05, 0, -0.08) })
+		part({ Size = Vector3.new(0.3, 2.3, 0.4), Color = Colors.WoodDark, CFrame = tilt * CFrame.new(0.9, 0, 0) })
+		for _, y in { 0.95, -0.95 } do
+			part({ Size = Vector3.new(0.36, 0.36, 0.34), Color = Colors.Gold, CFrame = tilt * CFrame.new(-0.78, y, -0.1) })
+		end
+		part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.2, 0.95, 0.95), Color = Colors.Gold, CFrame = tilt * CFrame.new(0, 0, -0.22) * FACE })
+		part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.24, 0.6, 0.6), Color = Colors.Cream, CFrame = tilt * CFrame.new(0, 0, -0.24) * FACE })
+	end,
+	-- royaume : tour crème crénelée, porte bois, drapeau rouge
+	Royaume = function(part)
+		part({ Size = Vector3.new(1.3, 1.8, 1.0), Color = Colors.Cream, CFrame = CFrame.new(0, -0.35, 0) })
+		part({ Size = Vector3.new(1.6, 0.3, 1.2), Color = Colors.Stone, CFrame = CFrame.new(0, 0.65, 0) })
+		for _, x in { -0.6, 0, 0.6 } do
+			part({ Size = Vector3.new(0.38, 0.38, 1.2), Color = Colors.Stone, CFrame = CFrame.new(x, 0.98, 0) })
+		end
+		part({ Size = Vector3.new(0.5, 0.75, 0.2), Color = Colors.WoodDark, CFrame = CFrame.new(0, -0.9, -0.45) })
+		part({ Size = Vector3.new(0.1, 0.9, 0.1), Color = Colors.WoodDark, CFrame = CFrame.new(0, 1.55, 0) })
+		part({ Size = Vector3.new(0.6, 0.38, 0.1), Color = Colors.RoyalRed, CFrame = CFrame.new(-0.33, 1.78, 0) })
+	end,
+	-- carte des zones : parchemin plié en trois volets, chemin doré, repère rouge
+	Carte = function(part)
+		local tilt = CFrame.Angles(0, 0, math.rad(8))
+		for i, x in { 0.75, 0, -0.75 } do
+			part({ Size = Vector3.new(0.78, 1.9, 0.1), Color = if i == 2 then Colors.Sand else Colors.Cream, CFrame = tilt * CFrame.new(x, 0, 0) * CFrame.Angles(0, math.rad(if i == 2 then 0 else 12), 0) })
+		end
+		part({ Size = Vector3.new(0.9, 0.16, 0.14), Color = Colors.SandGold, CFrame = tilt * CFrame.new(0.4, -0.35, -0.08) * CFrame.Angles(0, 0, math.rad(25)) })
+		part({ Size = Vector3.new(0.8, 0.16, 0.14), Color = Colors.SandGold, CFrame = tilt * CFrame.new(-0.3, 0.05, -0.08) * CFrame.Angles(0, 0, math.rad(-20)) })
+		part({ Shape = Enum.PartType.Ball, Size = Vector3.one * 0.5, Color = Colors.RoyalRed, CFrame = tilt * CFrame.new(-0.7, 0.3, -0.2) })
+	end,
+	-- paramètres : roue dentée en bois, moyeu doré
+	Parametres = function(part)
+		part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.4, 1.7, 1.7), Color = Colors.Wood, CFrame = FACE })
+		for i = 0, 7 do
+			local a = math.rad(i * 45)
+			part({ Size = Vector3.new(0.5, 0.46, 0.38), Color = Colors.Wood, CFrame = CFrame.Angles(0, 0, a) * CFrame.new(0, 0.95, 0) })
+		end
+		part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.5, 0.7, 0.7), Color = Colors.Gold, CFrame = FACE })
+		part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.54, 0.3, 0.3), Color = Colors.WoodDeep, CFrame = FACE })
+	end,
+	-- coche : deux barres épaisses vert Success
+	Coche = function(part)
+		part({ Size = Vector3.new(0.5, 1.0, 0.4), Color = Colors.Success, CFrame = CFrame.new(0.55, -0.25, 0) * CFrame.Angles(0, 0, math.rad(40)) })
+		part({ Size = Vector3.new(0.5, 2.1, 0.4), Color = Colors.Success, CFrame = CFrame.new(-0.3, 0.15, 0) * CFrame.Angles(0, 0, math.rad(-35)) })
+	end,
+	-- ultime : éclat doré à quatre branches, cœur clair
+	Ultime = function(part)
+		part({ Size = Vector3.new(0.45, 2.5, 0.3), Color = Colors.Gold })
+		part({ Size = Vector3.new(2.5, 0.45, 0.3), Color = Colors.Gold })
+		for _, angle in { 45, -45 } do
+			part({ Size = Vector3.new(0.26, 1.5, 0.26), Color = Colors.GoldLight, CFrame = CFrame.Angles(0, 0, math.rad(angle)) })
+		end
+		part({ Size = Vector3.new(0.9, 0.9, 0.4), Color = Colors.GoldLight, CFrame = CFrame.Angles(0, 0, math.rad(45)) })
+		part({ Shape = Enum.PartType.Ball, Size = Vector3.one * 0.5, Color = Colors.Foam, CFrame = CFrame.new(0, 0, -0.2) })
+	end,
+	-- sacoche : sac de cuir brun, rabat foncé, boucle dorée, anse
+	Sacoche = function(part)
+		part({ Size = Vector3.new(1.9, 1.5, 0.8), Color = Colors.Wood, CFrame = CFrame.new(0, -0.35, 0) })
+		part({ Size = Vector3.new(1.95, 0.75, 0.2), Color = Colors.WoodDark, CFrame = CFrame.new(0, 0.12, -0.42) })
+		part({ Size = Vector3.new(0.4, 0.36, 0.14), Color = Colors.Gold, CFrame = CFrame.new(0, -0.22, -0.54) })
+		for _, x in { -0.75, 0.75 } do
+			part({ Size = Vector3.new(0.2, 0.7, 0.2), Color = Colors.WoodDark, CFrame = CFrame.new(x, 0.75, 0) })
+		end
+		part({ Size = Vector3.new(1.7, 0.2, 0.2), Color = Colors.WoodDark, CFrame = CFrame.new(0, 1.1, 0) })
+	end,
 }
 
 local function fallback(part: (Props) -> Part)
@@ -196,6 +270,23 @@ function Icons.viewport(parent: Instance, id: string): ViewportFrame
 	camera.Parent = viewport
 	viewport.CurrentCamera = camera
 	return viewport
+end
+
+-- Icône à afficher dans l'interface : le PNG livré (IconConfig, contour Ink cuit) en ImageLabel,
+-- sinon le modèle 3D provisoire. Même taille, même nom, même ImageTransparency dans les deux cas.
+function Icons.icon(parent: Instance, id: string): ImageLabel | ViewportFrame
+	local image = IconConfig.image(id)
+	if not image then
+		return Icons.viewport(parent, id)
+	end
+	local label = Instance.new("ImageLabel")
+	label.Name = "Icone"
+	label.BackgroundTransparency = 1
+	label.Size = UDim2.fromScale(1, 1)
+	label.ScaleType = Enum.ScaleType.Fit
+	label.Image = image
+	label.Parent = parent
+	return label
 end
 
 return Icons

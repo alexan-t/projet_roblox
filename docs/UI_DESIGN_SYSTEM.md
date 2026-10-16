@@ -241,7 +241,61 @@ existant : tonneau, pièce, parchemin, tour), le rendre de trois quarts sur fond
 
 Icônes à produire en priorité : pièce d'or, gemme, ticket d'invocation, collection de héros,
 quêtes (parchemin), royaume (tour), carte des zones, combat (épées croisées), paramètres
-(roue en bois), cadenas, coche, ultime (éclat doré), icône de chaque classe de héros.
+(roue en bois), cadenas, coche, ultime (éclat doré), sacoche, icône de chaque classe de héros.
+
+### Catalogue et état
+
+Catalogue : `src/shared/Config/IconConfig.lua` (identifiant, objet à rendre, `Image` = rbxassetid du
+PNG livré). Chaque identifiant a aussi un **modèle 3D provisoire** dans `src/client/UI/Icons.lua`
+(Parts + silhouette Ink, dans un ViewportFrame) : il s'affiche tant que le PNG n'est pas livré et
+sert de base au rendu. Les écrans appellent toujours `Icons.icon(parent, id)`, qui choisit seul
+entre le PNG (`ImageLabel`) et le modèle provisoire : livrer une icône ne demande aucun changement
+d'écran.
+
+| Icône | Identifiant | Objet à rendre | Utilisée par |
+| --- | --- | --- | --- |
+| Archer | `Archer` | arc en bois courbé, corde crème | combat, collection, invocation |
+| Épéiste | `Epeiste` | épée en biais, lame pierre claire, garde et pommeau dorés | idem |
+| Barbare | `Barbare` | hache, manche bois, fer en éventail | idem |
+| Paladin | `Paladin` | bouclier rond bleu royal, cerclage et bosse dorés | idem |
+| Magicien | `Magicien` | bâton de bois, cristal cyan au sommet | idem |
+| Tireur | `Tireur` | cible, anneaux rouge royal et crème | idem |
+| Or | `Or` | pièce d'or épaisse, liseré foncé, centre clair | `CurrencyView` |
+| Gemmes | `Gemmes` | gemme cyan posée sur la pointe | `CurrencyView` |
+| Ticket d'invocation | `Ticket` | ticket de toile rouge sur cadre doré, sceau crème | `CurrencyView`, `SummonView` |
+| Quêtes | `Parchemin` | parchemin entre deux rouleaux de bois, ruban rouge | `QuestView` |
+| Combat | `Combat` | deux épées croisées | `ExpeditionView` |
+| Verrouillé | `Cadenas` | cadenas doré, anse de pierre | `ExpeditionView` |
+| Collection de héros | `Collection` | grimoire relié de bois, coins et médaillon dorés | navigation (à venir) |
+| Royaume | `Royaume` | tour crème crénelée, porte de bois, drapeau rouge | navigation (à venir) |
+| Carte des zones | `Carte` | carte de parchemin dépliée, chemin doré, repère rouge | navigation (à venir) |
+| Paramètres | `Parametres` | roue dentée en bois épais, moyeu doré | navigation (à venir) |
+| Validé | `Coche` | coche épaisse vert `Success`, de biais | états (à venir) |
+| Ultime | `Ultime` | éclat doré à quatre branches, cœur clair | combat (à venir) |
+| Sacoche | `Sacoche` | sacoche de cuir brun, rabat et boucle dorée | bouton de la sacoche (`HeroBarController`) |
+
+Les sept dernières sont celles qui manquaient (revue « Design et expérience » du 16 octobre).
+Aucune icône n'est encore livrée en PNG : toutes s'affichent avec leur modèle provisoire.
+
+Tests : `node tests/icons.test.mjs` (sans Luau ni Studio : `IconConfig` ↔ modèles d'`Icons.lua` ↔
+ce tableau ↔ appels `Icons.icon` des écrans) et `./tools/test-icons.ps1 -LuauPath <chemin-vers-luau.exe>`.
+
+### Produire et livrer une icône PNG
+
+1. **Modèle** : `tools/studio-icons-atelier.luau` (Studio EDIT) pose les modèles provisoires
+   d'`Icons.lua` dans `Workspace.AtelierIcones`, en grand, une étape Ctrl+Z. Les retravailler
+   là (matières de la map, arrondis, volumes) ou réduire un prop existant ; ne jamais modifier
+   le Bestiaire.
+2. **Rendu** : de trois quarts, lumière chaude d'en haut à gauche, fond transparent,
+   **512 × 512** (256 minimum), objet sur environ 80 % du cadre.
+3. **Contour** : `Ink` `#1F1A17` cuit dans l'image, environ 6 % de la taille (≈ 30 px à 512).
+4. **Fichier** : `<Id>.png` (ex. `Parametres.png`), importé dans Roblox (Asset Manager).
+5. **Livraison** : reporter l'`rbxassetid://…` en cinquième argument de sa ligne `icon(...)`
+   dans `IconConfig.lua`, dans une PR `feature/*`. Ne pas supprimer le modèle provisoire
+   d'`Icons.lua` (repli si l'image ne charge pas encore, base d'un futur rendu).
+6. **Contrôle** : capture réelle de l'écran qui l'utilise à 32 px et à sa taille normale, sur
+   fond clair et fond sombre, puis `VISUAL_QA.md` (PASS ou FIX). Elle doit avoir le même rendu
+   que ses voisines : contour, lumière, saturation, taille de l'objet.
 
 ## 8. Animations
 
@@ -368,13 +422,15 @@ eux plutôt qu'à la main.
 Une seule `UIScale` par élément : ouverture, pop et survol partagent la même (Roblox n'en
 applique qu'une).
 
-Icônes (§ 7) : `src/client/UI/Icons.lua`, petits objets 3D avec silhouette Ink, dans un
+Icônes (§ 7) : `Icons.icon(parent, id)` (`src/client/UI/Icons.lua`) affiche le PNG livré de
+`IconConfig` en `ImageLabel`, sinon un petit objet 3D provisoire avec silhouette Ink, dans un
 ViewportFrame. Classes de combat (`Archer` arc, `Epeiste` épée, `Barbare` hache, `Paladin`
 bouclier, `Magicien` bâton, `Tireur` cible) : ce sont les `CombatProfile` de `HeroConfig`
 (icône de classe au-dessus des unités). Héros dans la hotbar et la sacoche : **portrait 3D du vrai
 modèle** (`UIKit.portrait` sur `Icons.heroModel(HeroId)`, modèles de `ReplicatedStorage.Assets.Heros`),
 le monogramme provisoire (`PlaceholderIcon`) ne sert plus qu'en attendant la réplication.
-Objets : `Parchemin`, `Or`, `Gemmes`, `Ticket`, `Combat`, `Cadenas`.
+Objets : `Parchemin`, `Or`, `Gemmes`, `Ticket`, `Combat`, `Cadenas`. Navigation et états :
+`Collection`, `Royaume`, `Carte`, `Parametres`, `Coche`, `Ultime`, `Sacoche` (bouton de la sacoche).
 
 ### Écrans
 

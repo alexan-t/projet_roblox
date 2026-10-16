@@ -71,7 +71,7 @@ local function build()
 		icon.Size = UDim2.fromOffset(ICON, ICON)
 		icon.ZIndex = 2
 		icon.Parent = pill
-		Icons.viewport(icon, kind.Icon)
+		Icons.icon(icon, kind.Icon)
 		local amount = UIKit.text(pill, "0", Typography.Size.Label, { Align = Enum.TextXAlignment.Right })
 		amount.Position = UDim2.fromOffset(0, 0)
 		amount.Size = UDim2.new(1, -Spacing.L, 1, 0)

@@ -226,7 +226,7 @@ local function showBanners(content: Frame, data: Data, opts: ShowOptions, cost: 
 	ticket.BackgroundTransparency = 1
 	ticket.Size = UDim2.fromOffset(64, 56)
 	ticket.Parent = bottom
-	Icons.viewport(ticket, "Ticket")
+	Icons.icon(ticket, "Ticket")
 	local count = UIKit.text(bottom, `Tickets : {data.Tickets}`, Typography.Size.Heading, { Color = if enough then Colors.TextLight else Colors.Warning, Align = Enum.TextXAlignment.Left })
 	count.Position = UDim2.fromOffset(72, 0)
 	count.Size = UDim2.fromOffset(220, 32)
@@ -273,7 +273,7 @@ local function showSimple(content: Frame, data: Data, opts: ShowOptions, cost: n
 	ticket.Position = UDim2.new(0.5, 0, 0, Spacing.S)
 	ticket.Size = UDim2.fromOffset(120, 100)
 	ticket.Parent = content
-	Icons.viewport(ticket, "Ticket")
+	Icons.icon(ticket, "Ticket")
 
 	local count = UIKit.text(content, `Tickets : {data.Tickets}`, Typography.Size.Heading, { Color = if enough then Colors.TextLight else Colors.Warning })
 	count.Position = UDim2.fromOffset(0, 112)
@@ -393,7 +393,7 @@ function SummonView.Reveal(hero: Hero, options: RevealOptions?)
 		chip.Parent = card
 		UIKit.corner(chip, UITheme.Radius.Pill)
 		UIKit.stroke(chip, UITheme.Stroke.Thin)
-		Icons.viewport(chip, hero.ClassId)
+		Icons.icon(chip, hero.ClassId)
 	end
 	local name = UIKit.text(card, hero.Name, Typography.Size.Heading, { Color = Colors.InkSoft, Stroke = false })
 	name.Position = UDim2.new(0, Spacing.S, 0.78, Spacing.XS)

@@ -88,7 +88,7 @@ local function build(): Refs
 	icon.Position = UDim2.fromOffset(Spacing.S, Spacing.S)
 	icon.Size = UDim2.fromOffset(56, 56)
 	icon.Parent = panel
-	Icons.viewport(icon, "Parchemin")
+	Icons.icon(icon, "Parchemin")
 	local caption = UIKit.text(panel, "Quête", Typography.Size.Caption, { Color = Colors.TextMuted, Align = Enum.TextXAlignment.Left })
 	caption.Position = UDim2.fromOffset(72, Spacing.S)
 	caption.Size = UDim2.new(1, -84, 0, 18)
