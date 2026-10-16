@@ -2,7 +2,8 @@
 // Lecture seule. Compare src/shared/Config/ItemConfig.lua :
 //   - à la répartition du tableau de docs/ITEMS.md § 2 (lue dans le document lui-même) ;
 //   - aux paliers de src/shared/Config/RarityConfig.lua, et leurs couleurs (UITheme.Rarity) au tableau
-//     des couleurs de rareté de docs/ITEMS.md § 2 ;
+//     des couleurs de rareté de docs/ITEMS.md § 2 ; RarityPrism, Transparency.RarityTint et
+//     RarityStyle.itemCard à la décision du § 2 et à docs/UI_DESIGN_SYSTEM.md ;
 //   - CONTRÔLE HISTORIQUE : aux 100 cartes Item_NNN de la vitrine Workspace.Bestiaire.Inventaire du
 //     snapshot versionné studio/sandbox/partner_sandbox_v4.rbxl (format binaire lu ici : chunks LZ4,
 //     INST, PROP, PRNT), d'où le catalogue a été relevé. Ne prouve pas l'état de la DEV Studio
@@ -274,6 +275,52 @@ test('UITheme.Rarity: one color per RarityConfig tier, same hex as the ITEMS.md 
 		assert(docColors.get(tier.name) === theme.get(tier.id), `${tier.name} : ITEMS.md ${docColors.get(tier.name)}, UITheme ${theme.get(tier.id)}`);
 	}
 	assert(/RarityTint = [\d.]+/.test(themeSource), 'Transparency.RarityTint absent');
+});
+
+const themeSource = read('src/shared/Config/UITheme.lua').toString('utf8').replace(/\r\n/g, '\n');
+const designDoc = read('docs/UI_DESIGN_SYSTEM.md').toString('utf8');
+const decimal = (text) => Number(text.replace(',', '.'));
+
+test('UITheme.Transcendant: fallback hex is in RarityPrism and matches ITEMS.md § 2', () => {
+	const fallback = themeSource.match(/^\tTranscendant = hex\("(#[0-9A-F]{6})"\)/m)?.[1];
+	const prism = themeSource.match(/^local RarityPrism = \{(.*)\}$/m)?.[1];
+	assert(fallback && prism, 'Rarity.Transcendant ou RarityPrism absent');
+	assert(prism.includes(`hex("${fallback}")`), `${fallback} absent de RarityPrism`);
+	assert(/^\tRarityPrism = table\.freeze\(RarityPrism\),$/m.test(themeSource), 'RarityPrism non exporté');
+	const docFallback = itemsDoc.match(/^\| Transcendant \| .*RarityPrism.*\(fond : `(#[0-9A-F]{6})`\) \|\r?$/m)?.[1];
+	assert(docFallback === fallback, `ITEMS.md ${docFallback}, UITheme ${fallback}`);
+});
+
+test('Transparency.RarityTint: same value in UITheme, ITEMS.md § 2 and UI_DESIGN_SYSTEM.md § 3', () => {
+	const tint = Number(themeSource.match(/^\tRarityTint = ([\d.]+),/m)?.[1]);
+	assert(tint > 0 && tint < 1, `RarityTint = ${tint}`);
+	const inItems = decimal(itemsDoc.match(/`Transparency\.RarityTint` \(([\d,]+)\)/)?.[1] ?? '');
+	const inDesign = decimal(designDoc.match(/^\| `RarityTint` \| ([\d,]+) \|/m)?.[1] ?? '');
+	assert(inItems === tint, `ITEMS.md ${inItems}, UITheme ${tint}`);
+	assert(inDesign === tint, `UI_DESIGN_SYSTEM.md ${inDesign}, UITheme ${tint}`);
+});
+
+test('RarityStyle.itemCard: colors the Illustration of UIKit.card with tokens only, never the outer frame', () => {
+	const style = read('src/client/UI/RarityStyle.lua').toString('utf8').replace(/\r\n/g, '\n');
+	const body = style.match(/^function RarityStyle\.itemCard\(card: Instance, id: string\?\)\n([\s\S]*?)^end$/m)?.[1];
+	assert(body, 'RarityStyle.itemCard absent');
+	const art = body.match(/FindFirstChild\("(\w+)"\)/)?.[1];
+	const uikit = read('src/client/UI/UIKit.lua').toString('utf8');
+	assert(art && uikit.includes(`art.Name = "${art}"`), `UIKit.card ne crée pas « ${art} »`);
+	assert(body.includes('UITheme.Transparency.RarityTint'), 'RarityTint non utilisé');
+	assert(body.includes('UITheme.Stroke.Regular'), 'Stroke.Regular non utilisé');
+	assert(/RarityStyle\.paint\(stroke, id\)/.test(body), 'contour non peint (prisme Transcendant perdu)');
+	assert(!/hex\(|Color3\.(new|fromRGB|fromHex)|Selected|UIKit\.stroke\(card/.test(body), 'couleur en dur ou cadre extérieur touché');
+});
+
+test('Docs and ItemConfig: no leftover "rarity colors undefined / neutral item card" rule', () => {
+	const itemConfigHeader = itemSource.split('\n').slice(0, 20).join('\n');
+	for (const [where, text] of [['ITEMS.md', itemsDoc], ['UI_DESIGN_SYSTEM.md', designDoc], ['ItemConfig.lua', itemConfigHeader]]) {
+		assert(!/pas encore définies|ajouter une couleur de rareté|cadre neutre `Ink`, comme les héros/.test(text), `${where} : ancienne règle encore présente`);
+	}
+	assert(itemConfigHeader.includes('RarityStyle.itemCard'), 'ItemConfig.lua ne renvoie pas à RarityStyle.itemCard');
+	assert(/Ressources 2D.*aucune rareté/.test(designDoc), 'UI_DESIGN_SYSTEM.md : ressources sans rareté perdu');
+	assert(/aucune couleur de rareté \*\*dans l'icône\*\*/.test(itemsDoc), "ITEMS.md : interdit « pas de couleur dans l'icône » perdu");
 });
 
 test(`Snapshot historique (${SNAPSHOT}): exactly Item_001..Item_100 under Emplacements`, () => {
