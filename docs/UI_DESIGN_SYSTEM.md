@@ -109,7 +109,8 @@ Usage :
 
 Toute nouvelle vue qui affiche une rareté (inventaire, équipement, Bestiaire…) passe par ces
 fonctions : pas de pastille de couleur seule. Test : `./tools/test-ui-theme.ps1 -LuauPath
-<chemin-vers-luau.exe>` (un repère unique par palier de `RarityConfig`).
+<chemin-vers-luau.exe>` (un repère unique par palier de `RarityConfig`, formes dessinées par
+`RarityStyle`, ce tableau aligné sur `UITheme.RarityMark`).
 
 Rendu commun : `src/client/UI/RarityStyle.lua`. Hors invocation, le cadre des cartes reste
 neutre (`Ink`). Les **monstres n'ont aucune rareté**.
