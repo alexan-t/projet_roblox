@@ -1,7 +1,8 @@
 // Contrôle hors Studio du catalogue des items (docs/ITEMS.md), sans Luau : `node tests/items-vitrine.test.mjs`.
 // Lecture seule. Compare src/shared/Config/ItemConfig.lua :
 //   - à la répartition du tableau de docs/ITEMS.md § 2 (lue dans le document lui-même) ;
-//   - aux paliers de src/shared/Config/RarityConfig.lua ;
+//   - aux paliers de src/shared/Config/RarityConfig.lua, et leurs couleurs (UITheme.Rarity) au tableau
+//     des couleurs de rareté de docs/ITEMS.md § 2 ;
 //   - CONTRÔLE HISTORIQUE : aux 100 cartes Item_NNN de la vitrine Workspace.Bestiaire.Inventaire du
 //     snapshot versionné studio/sandbox/partner_sandbox_v4.rbxl (format binaire lu ici : chunks LZ4,
 //     INST, PROP, PRNT), d'où le catalogue a été relevé. Ne prouve pas l'état de la DEV Studio
@@ -258,6 +259,21 @@ test('ItemConfig: names unique and trimmed, icons nil or rbxassetid', () => {
 		seen.add(info.name);
 		assert(info.icon === undefined || /^rbxassetid:\/\/\d+$/.test(info.icon), `${info.id} : icône ${info.icon}`);
 	}
+});
+
+test('UITheme.Rarity: one color per RarityConfig tier, same hex as the ITEMS.md § 2 color table', () => {
+	const themeSource = read('src/shared/Config/UITheme.lua').toString('utf8').replace(/\r\n/g, '\n');
+	const block = themeSource.match(/^local Rarity = \{\n([\s\S]*?)^\}/m);
+	assert(block, 'local Rarity absent de UITheme.lua');
+	const theme = new Map([...block[1].matchAll(/^\t(\w+) = hex\("(#[0-9A-F]{6})"\)/gm)].map((m) => [m[1], m[2]]));
+	assert(theme.size === tiers.length, `${theme.size} couleurs pour ${tiers.length} paliers`);
+	const docColors = new Map([...itemsDoc.matchAll(/^\| ([^|]+?) \| `(#[0-9A-F]{6})` \|\r?$/gm)].map((m) => [m[1], m[2]]));
+	for (const tier of tiers) {
+		assert(theme.has(tier.id), `UITheme.Rarity.${tier.id} absent`);
+		if (tier.id === 'Transcendant') continue; // dégradé RarityPrism, pas une couleur
+		assert(docColors.get(tier.name) === theme.get(tier.id), `${tier.name} : ITEMS.md ${docColors.get(tier.name)}, UITheme ${theme.get(tier.id)}`);
+	}
+	assert(/RarityTint = [\d.]+/.test(themeSource), 'Transparency.RarityTint absent');
 });
 
 test(`Snapshot historique (${SNAPSHOT}): exactly Item_001..Item_100 under Emplacements`, () => {
