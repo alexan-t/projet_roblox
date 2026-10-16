@@ -1,6 +1,7 @@
 --!strict
--- Rendu d'une rareté de héros côté client (RarityConfig + couleurs UITheme.Rarity) : couleur, libellé,
--- badge, et le dégradé qui tourne de Transcendant. Les monstres n'ont aucune rareté.
+-- Rendu d'une rareté de héros ou d'item côté client (RarityConfig + couleurs UITheme.Rarity) : couleur,
+-- libellé, badge, carte d'item, et le dégradé qui tourne de Transcendant. Les monstres et les
+-- ressources n'ont aucune rareté.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -98,6 +99,20 @@ function RarityStyle.edgeBadge(parent: Instance, id: string?): Frame
 	badge.Name = "Rarete"
 	RarityStyle.paint(badge, id)
 	return badge
+end
+
+-- Rareté d'une carte d'item (UIKit.card) : zone d'illustration teintée à RarityTint et cerclée de la
+-- couleur de rareté. Le cadre extérieur reste Ink (Selected = équipé) et le badge du haut reste l'état.
+function RarityStyle.itemCard(card: Instance, id: string?)
+	local art = card:FindFirstChild("Illustration")
+	if not (art and art:IsA("GuiObject")) then
+		return
+	end
+	art.BackgroundColor3 = RarityStyle.color(id) -- Transcendant : teinte de repli, le prisme est sur le contour
+	art.BackgroundTransparency = UITheme.Transparency.RarityTint
+	local stroke = UIKit.stroke(art, UITheme.Stroke.Regular)
+	stroke.Name = "Rarete"
+	RarityStyle.paint(stroke, id)
 end
 
 return RarityStyle
