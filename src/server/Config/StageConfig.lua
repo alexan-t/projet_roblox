@@ -9,8 +9,9 @@
 --
 -- Convention de progression d'une zone Alpha : X-1 à X-4 = ennemis communs, X-5 = boss de zone.
 -- Zone 1 : boss = "Boss" (modèle Ennemi_RoiOrc, le Roi Orc). Simulations (CombatEngine + CombatConfig,
--- 20 tirages) : 1-1 gagné par l'Écuyer seul ; 1-1 à 1-5 gagnés par l'Écuyer + la Tireuse (équipe garantie
--- après la première invocation). PV ennemis totaux : 280, 340, 480, 520, 650.
+-- 20 tirages) : 1-1 gagné par l'Écuyer seul ; 1-1 à 1-5 gagnés par l'Écuyer + n'importe quel héros n°2
+-- (chaque profil de combat ; aucun héros n'est garanti après l'Écuyer). PV ennemis totaux : 280, 340,
+-- 480, 520, 650.
 
 local StageConfig = {
 	Zones = {

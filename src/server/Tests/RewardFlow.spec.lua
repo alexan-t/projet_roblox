@@ -444,7 +444,7 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 
 	-- Zone 1 complète (#13) : chemin réel 1-1 → 1-5 ---------------------------------------------
 
-	local PAIR = { [2] = "Epeiste", [8] = "Tireur" } -- équipe garantie : Écuyer (Epeiste) + Tireuse (Tireur)
+	local PAIR = { [2] = "Epeiste", [8] = "Tireur" } -- un exemple d'équipe : Écuyer (Epeiste) + un héros n°2 tiré (ici un Tireur ; aucun n'est garanti)
 
 	-- Événements envoyés à p à partir de l'indice `from` de w.fired.
 	local function eventsSince(w: any, p: any, from: number, kind: string): { any }
@@ -458,7 +458,7 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 		return out
 	end
 
-	test("#13 Zone 1 chain on a new account: 1-1 alone, then 1-2..1-5 with the guaranteed pair; boss only on 1-5", function()
+	test("#13 Zone 1 chain on a new account: 1-1 alone, then 1-2..1-5 with the Ecuyer + a rolled hero #2; boss only on 1-5", function()
 		local w = world()
 		local p = w.player("A")
 		local zone = w.services.ZoneService

@@ -97,8 +97,12 @@ Le serveur vérifie : données chargées, plot, SON portail, distance, aucune in
 `SummonStarter` active et pas terminée, Écuyer jamais obtenu. Puis, sans yield
 (`SummonRules.starter`) : exemplaire créé (raccourci 1), **sans ticket, sans `Summons.Total`, sans
 évolution du royaume** ; ensuite `KingdomService:Refresh`, `HeroesChanged`, `HeroObtained` et l'événement
-de quête. La première vraie invocation (avec ticket) reste donc la garantie `FirstSummon` (Tireuse) et
-fait évoluer le royaume. Impossible deux fois. Les anciens profils gardent leurs héros (migration v3).
+de quête. La première vraie invocation (avec ticket) est un tirage normal et fait évoluer le royaume.
+Impossible deux fois. Les anciens profils gardent leurs héros (migration v3).
+
+Présentation : `GetSummonState.Starter = { Active, HeroId, Name, Rarity }` (lecture seule) pour la bannière
+spéciale « Premier héros » de la fenêtre d'invocation (voir SUMMON.md). Le client ne choisit jamais le
+héros : `RequestStarterSummon` n'a aucun argument.
 
 ## Invocation
 
@@ -128,11 +132,13 @@ réussite, un seul héros, ticket final 0. Ensuite : `KingdomService:Refresh`, `
 
 **Tirage** :
 
-- toute première invocation du profil (`Summons.Total == 0`) → **`tireuse_des_faubourgs`**, toujours
-  (différente du starter). Un profil qui la possède déjà (test, migration) la reçoit quand même :
-  c'est un doublon, `New = false` ;
-- invocations suivantes → une rareté selon les chances (§ Raretés), puis un héros de cette rareté
-  (mise en avant de la bannière, § Bannières). `SummonRules.roll`, pur et testé.
+- **toute** invocation payante, première comprise → une rareté selon les chances (§ Raretés), puis un
+  héros de cette rareté (mise en avant de la bannière, § Bannières). `SummonRules.roll`, pur et testé.
+  **Aucun héros garanti** après l'Écuyer tutoriel : la Tireuse reste dans le pool et peut sortir comme
+  les autres. `Summons.Total` compte les invocations payantes ; à 0 (première invocation payante,
+  `firstPaid`), il ne décide que de l'évolution du royaume (1 → 2), jamais du héros.
+- équilibrage vérifié (tests #13, CombatEngine) : l'Écuyer + n'importe quel profil de combat comme
+  deuxième héros gagne 1-1 à 1-5 (20 tirages chacun) — aucun tirage bloquant.
 
 **Royaume** : `VisualState` 1 → 2 une seule fois (première invocation), jamais au-delà dans #10.
 `Kingdom.Level` n'a pas encore de règle et n'est pas modifié. Les héros apparaissent sur les

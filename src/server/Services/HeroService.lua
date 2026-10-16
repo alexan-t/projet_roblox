@@ -10,7 +10,8 @@
 --                                     (validé) : héros, rareté, coût et résultat sont décidés ici ;
 --   HeroObtained (RemoteEvent)     -> { InstanceId, HeroId, Name, New, Rarity } au seul joueur concerné ;
 --   GetSummonState (RemoteFunction) -> { Tickets, Cost, Starter } pour la fenêtre d'invocation (lecture
---                                     seule ; Starter = invocation tutorielle gratuite disponible) ;
+--                                     seule ; Starter = { Active, HeroId, Name, Rarity } : invocation
+--                                     tutorielle disponible et héros présenté, sinon { Active = false }) ;
 --   RequestStarterSummon (RemoteFunction) -> invocation tutorielle (onboarding) : aucun argument, le
 --                                     serveur revérifie tout et donne SummonConfig.Starter.HeroId, gratuit,
 --                                     une seule fois, pendant la quête SummonConfig.Starter.QuestId.
@@ -409,7 +410,13 @@ function HeroService:Start()
 		if not data then
 			return nil
 		end
-		return { Tickets = data.Currencies.SummonTickets, Cost = SummonConfig.Cost, Starter = (starterOpen(player, data)) }
+		local starter: any = { Active = false }
+		if starterOpen(player, data) then
+			local heroId = SummonConfig.Starter.HeroId
+			local info = HeroConfig.Heroes[heroId]
+			starter = { Active = true, HeroId = heroId, Name = info.Name, Rarity = info.Rarity }
+		end
+		return { Tickets = data.Currencies.SummonTickets, Cost = SummonConfig.Cost, Starter = starter }
 	end
 	state.Parent = remotes
 	Players.PlayerRemoving:Connect(function(player)

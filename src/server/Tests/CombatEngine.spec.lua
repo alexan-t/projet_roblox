@@ -514,7 +514,7 @@ return function(CombatEngine: any, combatConfig: any, stageConfig: any)
 		assert(s.time == time and CombatEngine.advance(s, 0.25, 2) == 0)
 	end)
 
-	test("#13 Zone 1 balance (20 seeds each): starter alone wins 1-1; starter + Tireuse win 1-1..1-5; boss only on 1-5", function()
+	test("#13 Zone 1 balance (20 seeds each): Ecuyer alone wins 1-1; Ecuyer + ANY hero #2 (every combat profile) wins 1-1..1-5; boss only on 1-5", function()
 		local stages = stageConfig.Zones[1].Stages
 		assert(#stages == 5, "Zone 1 = 1-1..1-5")
 		local function run(stage: any, allies: { any }, seed: number): (string?, boolean, number)
@@ -534,21 +534,25 @@ return function(CombatEngine: any, combatConfig: any, stageConfig: any)
 			return s.result, boss, ultimates
 		end
 		local starter = { { TypeId = "Epeiste", Slot = 5, Position = { x = 10, z = 9 } } }
-		local pair = {
-			{ TypeId = "Epeiste", Slot = 2, Position = { x = 10, z = 0 } },
-			{ TypeId = "Tireur", Slot = 8, Position = { x = 10, z = 18 } },
-		}
 		for seed = 1, 20 do
 			assert(run(stages[1], starter, seed) == "Victory", `1-1 starter alone, seed {seed}`)
 		end
-		for index, stage in stages do
-			local isBoss = index == 5
-			assert((stage.MiniBoss ~= nil) == isBoss, `boss only on 1-5 (1-{index})`)
-			for seed = 1, 20 do
-				local result, boss, ultimates = run(stage, pair, seed)
-				assert(result == "Victory", `1-{index} pair, seed {seed}: {result}`)
-				assert(boss == isBoss, `1-{index} boss fought: {boss}`)
-				assert(ultimates >= 1, `1-{index}: at least one automatic ultimate`)
+		-- Plus de héros n°2 garanti : la première invocation payante tire au hasard. Chaque profil de
+		-- combat possible doit permettre de finir la zone avec l'Écuyer (pas de tirage bloquant).
+		for profile in combatConfig.Heroes do
+			local pair = {
+				{ TypeId = "Epeiste", Slot = 2, Position = { x = 10, z = 0 } },
+				{ TypeId = profile, Slot = 8, Position = { x = 10, z = 18 } },
+			}
+			for index, stage in stages do
+				local isBoss = index == 5
+				assert((stage.MiniBoss ~= nil) == isBoss, `boss only on 1-5 (1-{index})`)
+				for seed = 1, 20 do
+					local result, boss, ultimates = run(stage, pair, seed)
+					assert(result == "Victory", `1-{index} Ecuyer + {profile}, seed {seed}: {result}`)
+					assert(boss == isBoss, `1-{index} boss fought: {boss}`)
+					assert(ultimates >= 1, `1-{index}: at least one automatic ultimate`)
+				end
 			end
 		end
 		assert(stages[5].MiniBoss.EnemyId == "Boss" and combatConfig.Enemies.Boss, "the zone boss has combat stats")

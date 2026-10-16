@@ -2,9 +2,10 @@
 -- Jamais exécuté par le jeu : lancé par tools/test-presentation.ps1.
 -- Teste les modules purs de la mise en scène du combat (docs/COMBAT_PRESENTATION.md) : la vraie
 -- EnemyPresentationConfig, la garde du sac (RewardBagGuard),
--- l'outro de fin de combat (OutroGate) et le guidage de quête (QuestGuide).
+-- l'outro de fin de combat (OutroGate), le guidage de quête (QuestGuide) et la pose du héros invoqué
+-- (SummonLanding).
 
-return function(Config: any, RewardBagGuard: any, OutroGate: any, QuestGuide: any, vector: any)
+return function(Config: any, RewardBagGuard: any, OutroGate: any, QuestGuide: any, vector: any, SummonLanding: any, OnboardingView: any)
 	local passed, failed = 0, 0
 	local function test(name: string, run: () -> ())
 		local ok, err = pcall(run)
@@ -259,6 +260,52 @@ return function(Config: any, RewardBagGuard: any, OutroGate: any, QuestGuide: an
 		assert(marks[4].position.Z == 1 and marks[4].direction.Z == 1, "turns the corner")
 		local short = QuestGuide.sample({ vector(0, 0, 0), vector(4, 0, 0) }, 3, 2, 12)
 		assert(#short == 1, "short path: few marks")
+	end)
+
+	------------------------------------------------------------------ invocation : pose au sol
+
+	test("summoned hero sits above the pad surface: feet = pad top + tiny clearance (0.03..0.08)", function()
+		local pad = SummonLanding.Pad
+		for _, groundY in { 0, 3.6, 4.38, -12.5 } do
+			local stoneTop = groundY + pad.StoneLift + pad.StoneThickness / 2
+			local rimTop = groundY + pad.RimLift + pad.RimThickness / 2
+			local top = SummonLanding.padTop(groundY)
+			assert(math.abs(top - math.max(stoneTop, rimTop)) < 1e-9, "pad top = highest visible disc")
+			local feet = SummonLanding.feetY(groundY)
+			assert(feet > top and feet - top >= 0.03 and feet - top <= 0.08, `feet just above the pad ({feet - top})`)
+		end
+	end)
+
+	test("summon ground: walkable visible surfaces stop the ray (portal steps), effects / invisible parts do not", function()
+		assert(SummonLanding.isGround({ CanCollide = true, Transparency = 0 }), "portal step marche_1")
+		assert(not SummonLanding.isGround({ CanCollide = false, Transparency = 0 }), "orbiting stone, effect")
+		assert(not SummonLanding.isGround({ CanCollide = true, Transparency = 1 }), "invisible collider")
+		-- cas réel mesuré en Studio : sol sous la marche 3,60, dessus de la marche 4,38
+		assert(SummonLanding.feetY(4.38) > 4.38 and SummonLanding.feetY(4.38) - SummonLanding.feetY(3.6) > 0.7,
+			"the hero now stands on the step instead of 0.78 stud inside it")
+	end)
+
+	------------------------------------------------------------------ onboarding : caméra du premier spawn
+
+	test("onboarding camera: only during the onboarding quest, once per session (no replay after reset / death)", function()
+		local onboarding = { Id = "SummonStarter", Onboarding = true, Completed = false }
+		assert(OnboardingView.shouldPlay(onboarding, false) == true, "first spawn of a new player")
+		assert(OnboardingView.shouldPlay(onboarding, true) == false, "reset / death: already played")
+		assert(OnboardingView.shouldPlay({ Id = "DefendDomain", Onboarding = false }, false) == false, "tutorial already advanced")
+		assert(OnboardingView.shouldPlay(nil, false) == false, "no quest (old player, chain over)")
+		assert(OnboardingView.shouldPlay({ Onboarding = true, Completed = true }, false) == false)
+		assert(OnboardingView.Duration >= 0.4 and OnboardingView.Duration <= 0.8, "short placement")
+	end)
+
+	test("onboarding camera: behind and above the character, looking toward its own arena", function()
+		local root = vector(100, 5, 50)
+		local arena = vector(100, 0, 0) -- arène au nord (-Z)
+		local dir = OnboardingView.facing(root, arena)
+		assert(dir and math.abs(dir.Z + 1) < 1e-9 and math.abs(dir.X) < 1e-9 and dir.Y == 0, "flat direction to the arena")
+		local eye, look = OnboardingView.frame(root, dir)
+		assert(eye.Z > root.Z and eye.Y > root.Y, "camera behind (away from the arena) and above")
+		assert(look.Z < root.Z, "looks past the character toward the arena")
+		assert(OnboardingView.facing(root, vector(100.1, 9, 50.1)) == nil, "target on the character: no direction")
 	end)
 
 	print(`CombatPresentation: {passed} passed, {failed} failed`)

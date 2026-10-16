@@ -11,7 +11,7 @@ export type Result = {
 	HeroId: string,
 	New: boolean, -- premier exemplaire de ce HeroId pour le joueur
 	Slot: number?, -- raccourci de hotbar utilisé, nil si la hotbar était pleine
-	First: boolean, -- toute première invocation du profil
+	First: boolean, -- première invocation payante du profil (Summons.Total était 0) ; ne décide pas du héros
 	KingdomChanged: boolean, -- Kingdom.VisualState vient de passer de KingdomFrom à KingdomTo
 }
 
@@ -79,9 +79,6 @@ function SummonRules.configProblems(config: any, catalog: { [string]: any }, tie
 	local problems: { string } = {}
 	if typeof(config.Cost) ~= "number" or config.Cost < 1 or config.Cost % 1 ~= 0 then
 		table.insert(problems, "Cost doit être un entier >= 1")
-	end
-	if not catalog[config.FirstSummon] then
-		table.insert(problems, `FirstSummon inconnu : {tostring(config.FirstSummon)}`)
 	end
 	local starter = config.Starter
 	if typeof(starter) ~= "table" or not catalog[starter.HeroId] then
@@ -155,10 +152,10 @@ function SummonRules.roll(pool: Pool, banner: Banner?, pick: (number) -> number)
 	return heroes[math.clamp(pick(#heroes), 1, #heroes)]
 end
 
--- Transaction complète, synchrone : revérifie le ticket, choisit le héros, prépare l'identifiant, crée
--- l'exemplaire (hotbar si une case est libre), débite, compte l'invocation et, à la toute première,
--- fait évoluer le royaume une seule fois. La toute première invocation donne toujours FirstSummon ;
--- les suivantes tirent dans `pool` (bannière facultative).
+-- Transaction complète, synchrone : revérifie le ticket, tire le héros dans `pool` (bannière
+-- facultative), prépare l'identifiant, crée l'exemplaire (hotbar si une case est libre), débite, compte
+-- l'invocation et, à la première invocation payante, fait évoluer le royaume une seule fois. Aucun héros
+-- garanti : la première invocation payante tire comme toutes les autres.
 -- Renvoie le résultat, ou nil et la raison sans rien modifier.
 function SummonRules.summon(data: any, config: any, makeId: () -> string, pick: (number) -> number, pool: Pool, banner: Banner?): (Result?, string?)
 	if not SummonRules.canPay(data, config) then
@@ -166,8 +163,8 @@ function SummonRules.summon(data: any, config: any, makeId: () -> string, pick: 
 	end
 	local summons = data.Summons
 	local total = if typeof(summons) == "table" and typeof(summons.Total) == "number" then summons.Total else 0
-	local first = total == 0
-	local heroId = if first then config.FirstSummon else SummonRules.roll(pool, banner, pick)
+	local firstPaid = total == 0
+	local heroId = SummonRules.roll(pool, banner, pick)
 	local new = not HeroRules.owns(data, heroId)
 	-- Tout ce qui peut échouer (identifiant, tirage) est prêt AVANT la première mutation : une
 	-- erreur ici laisse le ticket intact. Ensuite le héros est ajouté puis le ticket débité.
@@ -177,7 +174,7 @@ function SummonRules.summon(data: any, config: any, makeId: () -> string, pick: 
 	data.Currencies.SummonTickets -= config.Cost
 	data.Summons = { Total = total + 1 }
 	local kingdomChanged = false
-	if first and data.Kingdom.VisualState == config.KingdomFrom then
+	if firstPaid and data.Kingdom.VisualState == config.KingdomFrom then
 		data.Kingdom.VisualState = config.KingdomTo
 		kingdomChanged = true
 	end
@@ -186,7 +183,7 @@ function SummonRules.summon(data: any, config: any, makeId: () -> string, pick: 
 		HeroId = heroId,
 		New = new,
 		Slot = slot,
-		First = first,
+		First = firstPaid,
 		KingdomChanged = kingdomChanged,
 	}, nil
 end
@@ -201,7 +198,7 @@ function SummonRules.canStarter(data: any, starter: any): (boolean, string?)
 end
 
 -- Invocation tutorielle, synchrone : le héros de départ, gratuit et garanti. Aucun ticket débité,
--- Summons.Total inchangé (la première vraie invocation garde FirstSummon), royaume inchangé.
+-- Summons.Total inchangé (compteur des invocations payantes), royaume inchangé.
 -- Renvoie le résultat, ou nil et la raison sans rien modifier.
 function SummonRules.starter(data: any, starter: any, makeId: () -> string): (Result?, string?)
 	local ok, why = SummonRules.canStarter(data, starter)

@@ -14,7 +14,10 @@
 --   data = { Tickets, Cost?, Banners?: { { Id, Name, Subtitle?, Featured: { { Name, Rarity, Model? } } } },
 --            Rates?: { { Id, Name, Percent } }, Selected?: string (Id de bannière),
 --            Free?: boolean (invocation tutorielle : « Invocation gratuite ! », bouton « Invoquer · Gratuit »
---            actif sans ticket et qui respire ; le serveur décide toujours du héros) }
+--            actif sans ticket et qui respire ; le serveur décide toujours du héros),
+--            Starter?: { Name, Rarity, Model? } (invocation tutorielle : bannière spéciale « Premier héros »
+--            sélectionnée avec ce héros, vraies bannières visibles mais grisées et non cliquables, « Taux »
+--            masqué : il n'y a aucun tirage. Présentation seule, venue de GetSummonState) }
 --   options (Show) = { OnSummon: ((bannerId: string?) -> ())?, OnClose: (() -> ())? }
 --   hero = { Name: string, Model: Model?, ClassId: string?, New: boolean?, Rarity: string? }
 --   options (Reveal) = { OnContinue: (() -> ())? }
@@ -42,7 +45,8 @@ local FLIP = 0.3 -- s : la carte se retourne
 export type FeaturedHero = { Name: string, Rarity: string, Model: Model? }
 export type BannerView = { Id: string, Name: string, Subtitle: string?, Featured: { FeaturedHero } }
 export type Rate = { Id: string, Name: string, Percent: string }
-export type Data = { Tickets: number, Cost: number?, Banners: { BannerView }?, Rates: { Rate }?, Selected: string?, Free: boolean? }
+export type StarterHero = { Name: string, Rarity: string, Model: Model? }
+export type Data = { Tickets: number, Cost: number?, Banners: { BannerView }?, Rates: { Rate }?, Selected: string?, Free: boolean?, Starter: StarterHero? }
 export type ShowOptions = { OnSummon: ((bannerId: string?) -> ())?, OnClose: (() -> ())? }
 export type Hero = { Name: string, Model: Model?, ClassId: string?, New: boolean?, Rarity: string? }
 export type RevealOptions = { OnContinue: (() -> ())? }
@@ -154,6 +158,17 @@ local function showBanners(content: Frame, data: Data, opts: ShowOptions, cost: 
 			selected = banner
 		end
 	end
+	-- Invocation tutorielle : une bannière spéciale, seule sélectionnable, avec le héros de départ.
+	local starter = data.Starter
+	local starterBanner: BannerView? = if starter then {
+		Id = "PremierHeros",
+		Name = "Premier héros",
+		Subtitle = "Ton premier défenseur rejoint ton royaume.",
+		Featured = { { Name = starter.Name, Rarity = starter.Rarity, Model = starter.Model } },
+	} else nil
+	if starterBanner then
+		selected = starterBanner
+	end
 
 	-- onglets
 	local tabs = Instance.new("Frame")
@@ -210,8 +225,22 @@ local function showBanners(content: Frame, data: Data, opts: ShowOptions, cost: 
 	end
 
 	local tabButtons: { [string]: UIKit.Button } = {}
+	if starterBanner then
+		local special = UIKit.button(tabs, starterBanner.Name, "Tab", UDim2.new(1, 0, 0, 56 + UITheme.Shadow.ButtonLip), function() end)
+		special.holder.LayoutOrder = 0
+		special.label.TextSize = Typography.Size.Label
+		special.setSelected(true)
+		local locked = UIKit.text(tabs, "Disponible après ton premier héros", Typography.Size.Caption, { Color = Colors.TextMuted })
+		locked.Name = "Verrouillees"
+		locked.LayoutOrder = 1
+		locked.Size = UDim2.new(1, 0, 0, 18)
+		locked.TextWrapped = true
+	end
 	for index, banner in banners do
 		local tab = UIKit.button(tabs, banner.Name, "Tab", UDim2.new(1, 0, 0, 56 + UITheme.Shadow.ButtonLip), function()
+			if starterBanner then
+				return -- invocation tutorielle : les vraies bannières ne sont pas encore disponibles
+			end
 			if selected ~= banner then
 				render(banner)
 				for id, button in tabButtons do
@@ -219,10 +248,13 @@ local function showBanners(content: Frame, data: Data, opts: ShowOptions, cost: 
 				end
 			end
 		end)
-		tab.holder.LayoutOrder = index
+		tab.holder.LayoutOrder = index + 1
 		tab.label.TextSize = Typography.Size.Label
 		tab.label.TextWrapped = true
 		tab.setSelected(banner == selected)
+		if starterBanner then
+			tab.setEnabled(false) -- grisée, sans effet au clic
+		end
 		tabButtons[banner.Id] = tab
 	end
 	render(selected)
@@ -263,7 +295,7 @@ local function showBanners(content: Frame, data: Data, opts: ShowOptions, cost: 
 	if free then
 		breathe(summon)
 	end
-	if data.Rates then
+	if data.Rates and not starterBanner then -- aucun tirage pendant l'invocation tutorielle : pas de taux
 		local rateList = data.Rates
 		local toggle: UIKit.Button
 		toggle = UIKit.button(bottom, "Taux", "Secondary", UDim2.fromOffset(120, 56 + UITheme.Shadow.ButtonLip), function()

@@ -9,8 +9,10 @@
 --     puis montre la carte du héros (SummonView.Reveal). « Continuer » rend tout au joueur.
 --   • Pas de spoil : la collection mise à jour (hotbar, sacoche) n'est montrée qu'à « Continuer »
 --     (ArenaStore.holdHeroes / releaseHeroes).
---   • Invocation tutorielle (GetSummonState.Starter, nouveau profil) : la même fenêtre en mode gratuit
---     (« Invoquer · Gratuit »), puis RequestStarterSummon (aucun argument) ; même cinématique, même carte.
+--   • Invocation tutorielle (GetSummonState.Starter.Active, nouveau profil) : la même fenêtre avec la
+--     bannière spéciale « Premier héros » (le héros décrit par le serveur, vrais modèles), les vraies
+--     bannières grisées, sans taux, « Invoquer · Gratuit » ; puis RequestStarterSummon (aucun argument :
+--     le serveur décide du héros). Même cinématique, même carte.
 -- Refus du serveur (pas de ticket, trop loin…) : message bref (ArenaStore.toast).
 
 local Players = game:GetService("Players")
@@ -309,7 +311,9 @@ local function open()
 		return
 	end
 	local state: any = response
-	local free = state.Starter == true -- invocation tutorielle (le serveur revérifie tout)
+	-- Invocation tutorielle : présentation seulement, le serveur revérifie tout et choisit le héros.
+	local starter: any = if typeof(state.Starter) == "table" and state.Starter.Active == true then state.Starter else nil
+	local free = starter ~= nil
 	SummonView.Show({
 		Tickets = state.Tickets,
 		Cost = state.Cost,
@@ -317,6 +321,11 @@ local function open()
 		Rates = rates(),
 		Selected = lastBanner,
 		Free = free,
+		Starter = if starter then {
+			Name = tostring(starter.Name),
+			Rarity = tostring(starter.Rarity),
+			Model = if typeof(starter.HeroId) == "string" then Icons.heroModel(starter.HeroId) else nil,
+		} else nil,
 	}, {
 		OnSummon = function(bannerId: string?)
 			task.spawn(summon, bannerId, free)

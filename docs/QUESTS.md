@@ -173,6 +173,16 @@ lumineux vers la pancarte, stage suivant déjà sélectionné (voir ARENA_PROTOT
 Le suivi est en haut à gauche, sous la fenêtre de chat Roblox et sa barre de saisie quand elles y
 sont. Sans cela, le chat recouvre le suivi et capte le clic sur « Récupérer ».
 
+## Onboarding : premier spawn
+
+`src/client/Controllers/OnboardingCameraController.lua` (+ `Arena/OnboardingView.lua`, pur et testé).
+Quand la quête active a `Onboarding = true` (`SummonStarter`), une fois le plot attribué et le personnage
+posé sur SON `PointApparition` : le personnage est tourné vers SON arène et la caméra glisse en 0,6 s
+derrière lui, légèrement au-dessus, regard vers l'arène (centre de `Arene` du plot du joueur, sinon sa
+`PanneauStage`). Puis `CameraType = Custom`, `CameraSubject = Humanoid` : la caméra est rendue tout de
+suite. Une seule fois par session (pas après un reset ni une mort) et jamais pour un profil sorti de
+`SummonStarter`. Les 8 `PointApparition` regardent déjà leur propre arène (audit Studio : écart 0°).
+
 ## Guidage (chemin lumineux)
 
 Le joueur doit pouvoir suivre le jeu presque sans lire : une quête qui demande d'aller quelque part

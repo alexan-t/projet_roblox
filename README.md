@@ -151,7 +151,8 @@ E = Placer / Reprendre, pancarte du stage → Lancer).
 
 **Progression Alpha** : dans chaque zone, X-1 à X-4 sont des combats d'ennemis communs et X-5 est le
 boss de zone. Zone 1 : 1-1 à 1-5, boss = Roi Orc. Le Stage 1-1 se gagne avec le seul héros de départ ;
-l'Écuyer + la Tireuse (première invocation) terminent la zone. Voir [la Zone 1](docs/ZONES.md).
+l'Écuyer + n'importe quel deuxième héros (premier tirage payant, aucun garanti) terminent la zone.
+Voir [la Zone 1](docs/ZONES.md).
 
 ## Récompenses et First Clear (RewardService)
 
@@ -164,8 +165,9 @@ sans action « réclamer ». Voir [la config, le flux et les garanties](docs/REW
 
 Le premier héros est obtenu pendant l'invocation tutorielle (`Remotes.RequestStarterSummon`, gratuite,
 une seule fois : `ecuyer_du_rempart`). Hotbar de 10 raccourcis sauvegardée, invocation au portail de
-son plot (`Remotes.RequestSummon`, un `SummonTicket`, première invocation garantie
-`tireuse_des_faubourgs`), `Remotes.HeroObtained`, migrations des anciens profils (DataVersion 2, 3).
+son plot (`Remotes.RequestSummon`, un `SummonTicket`, tirage par rareté et bannière dès la première
+invocation payante : aucun héros garanti après l'Écuyer), `Remotes.HeroObtained`, migrations des
+anciens profils (DataVersion 2, 3).
 HeroId réel ≠ profil de combat temporaire : voir [les données, les règles et l'API](docs/HEROES.md).
 
 ## Items 2D (ItemConfig)

@@ -334,7 +334,7 @@ return function(createService: any, modules: any)
 		assert(s:RequestStarterSummon(b), "B summons at its own portal")
 	end)
 
-	test("tutorial then first paid summon: still the guaranteed Tireuse, Summons.Total = 1, kingdom 1 -> 2", function()
+	test("tutorial then first paid summon: rolled (whatever the RNG gives), Summons.Total = 1, kingdom 1 -> 2", function()
 		local e = fixture()
 		local s = e.start()
 		local p = e.player("A", { fresh = true })
@@ -344,23 +344,61 @@ return function(createService: any, modules: any)
 		e.data[p].Currencies.SummonTickets = 1 -- First Clear 1-1
 		local got = s:RequestSummon(p)
 		local d = e.data[p]
-		assert(got and got.HeroId == SummonConfig.FirstSummon and got.HeroId == "tireuse_des_faubourgs")
-		assert(d.Summons.Total == 1 and d.Currencies.SummonTickets == 0 and d.Kingdom.VisualState == 2)
+		assert(SummonConfig.FirstSummon == nil, "no guaranteed hero any more")
+		assert(got and HeroConfig.Heroes[got.HeroId], "a real hero from the pool")
+		assert(d.Summons.Total == 1 and d.Currencies.SummonTickets == 0 and d.Kingdom.VisualState == 2, "first paid summon still evolves the kingdom")
 		assert(count(d.Heroes) == 2 and d.Hotbar[2] == got.InstanceId)
 	end)
 
-	test("GetSummonState: Starter true only during the tutorial quest, before the Ecuyer", function()
+	test("GetSummonState: Starter presentation (Active, server HeroId / Name / Rarity) only during the tutorial", function()
 		local e = fixture()
 		local s = e.start()
 		local get = e.remote("GetSummonState").OnServerInvoke
 		local p = e.player("A", { fresh = true })
-		assert(get(p).Starter == true and get(p).Tickets == 0)
+		local starter = get(p).Starter
+		local info = HeroConfig.Heroes[SummonConfig.Starter.HeroId]
+		assert(starter.Active == true and starter.HeroId == "ecuyer_du_rempart" and starter.Name == info.Name and starter.Rarity == info.Rarity)
+		assert(get(p).Tickets == 0)
 		s:RequestStarterSummon(p)
-		assert(get(p).Starter == false)
-		assert(get(e.player("B")).Starter == false, "existing player")
+		assert(get(p).Starter.Active == false and get(p).Starter.HeroId == nil)
+		assert(get(e.player("B")).Starter.Active == false, "existing player")
 	end)
 
-	test("summon refused without ticket; accepted with 1 -> ticket 0, first roll tireuse_des_faubourgs", function()
+	test("first paid summon uses the normal roll: Summons.Total == 0 never forces a HeroId (deterministic)", function()
+		local SummonRules = modules.SummonRules
+		local pool = SummonRules.buildPool(modules.RarityConfig.Tiers, HeroConfig.Heroes)
+		local banners = modules.SummonBannerConfig.Banners
+		local seen: { [string]: boolean } = {}
+		local rarities: { [string]: boolean } = {}
+		for tierValue = 1, 10000 do
+			for heroValue = 1, 3 do
+				for _, banner in banners do
+					-- même suite de tirages pour la règle de référence (roll) et pour la vraie transaction
+					local function picker(): (number) -> number
+						local calls = 0
+						return function(n: number): number
+							calls += 1
+							return if calls == 1 then math.min(tierValue, n) else math.clamp(heroValue, 1, n)
+						end
+					end
+					local expected = SummonRules.roll(pool, banner, picker())
+					local data = { Currencies = { SummonTickets = 1 }, Summons = { Total = 0 }, Kingdom = { VisualState = 1 },
+						Heroes = {}, Hotbar = table.create(HeroConfig.HotbarSize, "") }
+					local result = SummonRules.summon(data, SummonConfig, function() return "X" end, picker(), pool, banner)
+					assert(result and result.HeroId == expected, `first paid summon = normal roll ({tierValue}, {heroValue}, {banner.Id})`)
+					assert(result.First == true and data.Summons.Total == 1 and data.Kingdom.VisualState == 2)
+					seen[result.HeroId] = true
+					rarities[HeroConfig.Heroes[result.HeroId].Rarity] = true
+				end
+			end
+		end
+		local distinct, tiers = 0, 0
+		for _ in seen do distinct += 1 end
+		for _ in rarities do tiers += 1 end
+		assert(distinct > 10 and tiers == #modules.RarityConfig.Tiers, `many heroes and every rarity possible on the first paid summon ({distinct} heroes, {tiers} rarities)`)
+	end)
+
+	test("summon refused without ticket; accepted with 1 -> ticket 0, rolled hero saved (test RNG gives tireuse)", function()
 		local e = fixture()
 		local s = e.start()
 		local p = e.player("A")
@@ -405,7 +443,7 @@ return function(createService: any, modules: any)
 		end
 		assert(first.New == true)
 		for i = 2, #results do
-			assert(results[i].New == false, "every later roll is a hero already owned (starter or tireuse)")
+			assert(results[i].New == false, "with the test RNG, every later roll is a hero already owned (starter or tireuse)")
 		end
 		assert(count(e.data[p].Heroes) == 5 and e.data[p].Currencies.SummonTickets == 0)
 		local known = HeroConfig.Heroes

@@ -21,9 +21,12 @@ Le tirage (quel héros, quelle rareté, doublon ou non) relève de HeroService (
    - en bas, « Tickets : n » (`Remotes.GetSummonState`), le coût, le bouton **Taux** (chances par
      rareté, en deux colonnes) et le bouton principal **Invoquer**. Sans ticket, « Invoquer » est
      désactivé et une aide indique d'en gagner en combattant.
-   Invocation tutorielle (nouveau profil, quête « Invoque ton premier héros ») : même fenêtre, « Invocation
-   gratuite ! » et bouton **Invoquer · Gratuit** qui respire (`GetSummonState.Starter`). Le premier héros
-   est obtenu ici ; voir HEROES.md § Premier héros.
+   Invocation tutorielle (nouveau profil, quête « Invoque ton premier héros », `GetSummonState.Starter`) :
+   bannière spéciale **Premier héros** sélectionnée (« Ton premier défenseur rejoint ton royaume. », le
+   héros présenté par le serveur avec son vrai modèle et sa rareté) ; les vraies bannières restent
+   visibles mais grisées et sans effet au clic (« Disponible après ton premier héros ») ; pas de
+   **Taux** (aucun tirage) ; « Invocation gratuite ! » et **Invoquer · Gratuit** qui respire. Le premier
+   héros est obtenu ici ; voir HEROES.md § Premier héros.
 3. **Invoquer** : `RequestSummon(bannerId)` (gratuit : `RequestStarterSummon()`, sans argument). En cas
    de refus, un message bref s'affiche. Sinon :
    - **cinématique**, locale au joueur :
@@ -77,7 +80,7 @@ Tous les rangs suivent la même base :
 | --- | --- |
 | 0 → charge | **Charge** : le vortex s'illumine de la couleur de la rareté, des étincelles convergent vers le voile, la lumière monte. La charge dure 1,2 s, plus 0,2 s par rang. |
 | charge | **Éclat** : pic de lumière, gerbe d'étincelles, ondes au sol |
-| + 0,45 s | Le héros **jaillit du voile** en silhouette colorée et se pose à 7 studs devant le portail |
+| + 0,45 s | Le héros **jaillit du voile** en silhouette colorée et se pose à 7 studs devant le portail, pieds sur le dessus de la place d'invocation |
 | + 0,6 s | Poussière, la silhouette s'efface et révèle le héros. Son nom et sa rareté s'affichent au-dessus, avec « Nouveau ». |
 
 Plus la rareté est haute, plus l'effet marque le joueur :
@@ -100,6 +103,21 @@ Mythique, Suprême).
 
 Le portail n'est pas modifié (les attributs `Anim*` de `PortalAmbientController` ne sont pas
 touchés) ; seuls des objets temporaires sont ajoutés puis détruits.
+
+## Pose au sol du héros invoqué
+
+`src/client/Summon/SummonLanding.lua` (pur, testé par `tools/test-presentation.ps1`) :
+sol praticable → dessus visible de la place d'invocation → pieds du héros.
+
+- **Sol** : rayon vers le bas 7 studs devant le voile. Il s'arrête sur une surface collidable et
+  visible (`isGround`) : le dessus des marches / du socle du portail compte ; effets, pierres en
+  orbite, cristaux, pièces invisibles et personnages sont traversés. Avant, tout le portail était
+  ignoré : le rayon traversait le socle et le héros se posait sur le terrain en dessous, enfoncé
+  d'environ 2 studs dans le socle (mesuré en Studio).
+- **Place d'invocation** : deux disques posés sur ce sol (`SummonLanding.Pad`), dessus = `padTop`.
+- **Pieds** : le bas de la boîte du modèle (vérifié sur les 60 héros : égal au bas de la pièce visible
+  la plus basse) est posé sur `feetY` = dessus de la place + `FootClearance` (0,05 stud, sans
+  z-fighting). Les clones restent ancrés, sans collision ni requête. Aucun décalage par héros.
 
 ## API
 
