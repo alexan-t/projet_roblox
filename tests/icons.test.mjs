@@ -2,7 +2,9 @@
 // `node tests/icons.test.mjs`. Lecture seule. Compare src/shared/Config/IconConfig.lua :
 //   - aux modèles provisoires de src/client/UI/Icons.lua (SHAPES) ;
 //   - au tableau « Catalogue et état » de docs/UI_DESIGN_SYSTEM.md § 7 ;
-//   - aux identifiants littéraux passés à Icons.icon dans src/client.
+//   - aux identifiants littéraux passés à Icons.icon dans src/client, aux profils de HeroConfig
+//     (icônes de classe) et aux monnaies de CurrencyView ;
+//   - aux couleurs d'UITheme, au bouton sacoche et à tools/studio-icons-atelier.luau.
 // Complète src/server/Tests/IconConfig.spec.lua (tools/test-icons.ps1), qui demande luau.exe.
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
@@ -89,6 +91,54 @@ test('screens use Icons.icon with known ids, never Icons.viewport directly', () 
 		assert(!/Icons\.viewport\(/.test(text), `${rel}: Icons.viewport au lieu d'Icons.icon`);
 		for (const m of text.matchAll(/Icons\.icon\([^,]+, "(\w+)"\)/g)) assert(ids.has(m[1]), `${rel}: icône inconnue ${m[1]}`);
 	}
+});
+
+const theme = read('src/shared/Config/UITheme.lua');
+const themeColors = new Set([...theme.match(/^local Colors = \{\n([\s\S]*?)\n\}/m)[1].matchAll(/^\t(\w+) = hex\(/gm)].map((m) => m[1]));
+
+test('Icons.lua: every Colors.X exists in UITheme.Colors', () => {
+	assert(themeColors.size > 0, 'UITheme.Colors illisible');
+	for (const m of iconsModule.matchAll(/\bColors\.(\w+)/g)) assert(themeColors.has(m[1]), `Colors.${m[1]} absent d'UITheme`);
+});
+
+test('Icons.lua: no model is painted Ink (the atelier strips Ink parts as the silhouette)', () => {
+	const shapesBody = iconsModule.match(/^local SHAPES[\s\S]*?^\}$/m)[0];
+	assert(!/Colors\.Ink\b/.test(shapesBody), 'une pièce Colors.Ink serait détruite par tools/studio-icons-atelier.luau');
+	assert(/^local Stroke = \{\n\tColor = Colors\.Ink,/m.test(theme), 'UITheme.Stroke.Color n\'est plus Ink');
+});
+
+test('dynamic ids: every hero CombatProfile and CurrencyView icon is catalogued', () => {
+	const heroes = read('src/shared/Config/HeroConfig.lua');
+	const profiles = new Set([...heroes.matchAll(/^hero\("[^"]+", "[^"]+", "[^"]+", "(\w+)"/gm)].map((m) => m[1]));
+	const classes = new Set(icons.filter((info) => info.group === 'Classe').map((info) => info.id));
+	assert(profiles.size > 0, 'HeroConfig illisible');
+	for (const id of profiles) assert(classes.has(id), `profil ${id} sans icône de classe`);
+	for (const id of classes) assert(profiles.has(id), `icône de classe ${id} sans profil HeroConfig`);
+	const currencies = [...read('src/client/UI/Views/CurrencyView.lua').matchAll(/\{ Key = "\w+", Icon = "(\w+)" \}/g)].map((m) => m[1]);
+	assert(currencies.length === 3, `${currencies.length} monnaies lues`);
+	for (const id of currencies) assert(ids.has(id), `CurrencyView: icône inconnue ${id}`);
+});
+
+test('UI_DESIGN_SYSTEM.md § 7: delivery state agrees with IconConfig.Image', () => {
+	const delivered = icons.filter((info) => info.image !== undefined).length;
+	const saysNone = doc.includes('Aucune icône n\'est encore livrée en PNG');
+	assert(saysNone === (delivered === 0), `doc « aucune livrée » = ${saysNone}, ${delivered} PNG dans IconConfig`);
+});
+
+test('HeroBarController: bag button shows the Sacoche icon, no text label', () => {
+	const bar = read('src/client/Controllers/HeroBarController.lua');
+	assert(/UIKit\.button\(screen, "", "Secondary"/.test(bar), 'bouton sacoche avec libellé');
+	assert(/Icons\.icon\(toggle\.face, "Sacoche"\)/.test(bar), 'icône Sacoche absente du bouton');
+	assert(!/"Sac"/.test(bar), 'libellé « Sac » encore présent');
+});
+
+test('studio-icons-atelier.luau: one Ctrl+Z step, relative to Bestiaire, never edits it', () => {
+	const tool = read('tools/studio-icons-atelier.luau');
+	assert((tool.match(/TryBeginRecording\(/g) ?? []).length === 1 && /FinishRecording\(recording, Enum\.FinishRecordingOperation\.Commit\)/.test(tool), 'étape ChangeHistoryService');
+	assert(/workspace\.Bestiaire:GetPivot\(\)/.test(tool), 'placement non relatif au Bestiaire');
+	assert(!/Bestiaire[\w.:]*(?:Destroy|Parent\s*=|PivotTo|ScaleTo)/.test(tool), 'le Bestiaire est modifié');
+	assert(/IconConfig\.Ordered/.test(tool) && /Icons\.model\(info\.Id\)/.test(tool), 'ne parcourt pas le catalogue');
+	assert(!/\.Source\s*=/.test(tool), 'écrit un Source de script');
 });
 
 console.log(`Icons: ${passed} passed, ${failed} failed`);
