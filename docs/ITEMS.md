@@ -62,8 +62,40 @@ Types d'emplacement (`slot_type`) : arme `weapon` 26, relique `relic` 21, access
 `accessory` 17, armure `armor` 15, casque `helmet` 14, bottes `boots` 5, gants `gloves` 2.
 
 La rareté des items est **celle du catalogue**. On ne l'invente pas et on ne la modifie pas.
-Ses couleurs ne sont pas encore définies dans `UITheme` : ne pas en créer dans les icônes ni
-dans les cartes (cadre neutre `Ink`, comme les héros).
+
+### Couleurs de rareté (décision du 16 octobre)
+
+Les items reprennent **les mêmes couleurs que les héros** : `UITheme.Rarity` (et
+`UITheme.RarityPrism` pour Transcendant), détaillées dans `docs/UI_DESIGN_SYSTEM.md` § 2. Mêmes
+paliers (`RarityConfig`), même lecture d'un écran à l'autre : pas de seconde palette.
+
+| Rareté | Couleur |
+| --- | --- |
+| Commun | `#B9B0A3` |
+| Peu commun | `#6CC04A` |
+| Rare | `#46A2EC` |
+| Épique | `#A45BE0` |
+| Légendaire | `#F5C542` |
+| Mythique | `#FF5A8A` |
+| Maudit | `#7B2FA8` |
+| Suprême | `#EAF3FF` |
+| Calamité | `#D2321E` |
+| Transcendant | dégradé `RarityPrism` qui tourne (fond : `#7FF7E8`) |
+
+Où va la couleur sur une carte d'item (`RarityStyle.itemCard`, après `UIKit.card`) :
+
+- **zone d'illustration** teintée de la couleur de rareté à `Transparency.RarityTint` (0,6),
+  au lieu du `Sand` neutre ;
+- **contour de cette zone** dans la couleur de rareté, épaisseur `Stroke.Regular` (prisme qui
+  tourne pour Transcendant) ;
+- le **cadre extérieur reste `Ink`**. Il ne prend `Selected` que pour un item équipé, avec le badge
+  « Équipé ». Comme Légendaire et `Selected` ont le même or (`#F5C542`), la rareté ne touche jamais
+  le cadre extérieur : on les distingue par leur place ;
+- le **badge du haut reste l'état** (Nouveau, Équipé…). Le nom de la rareté va dans
+  l'infobulle ou la fiche, avec `RarityStyle.badge`.
+
+Interdits : aucune couleur de rareté **dans l'icône** (§ 4 et § 5), aucune rareté pour les
+ressources ni pour les monstres.
 
 ## 3. Où poser les items créés (directives pour le worker)
 
@@ -100,7 +132,8 @@ Chaque `Item_NNN` est une carte standard de la Sacoche :
 | attributs `ItemId`, `Index`, `Rarete`, `SlotType` | remplis | rien |
 
 Interdits : déplacer, renommer, supprimer ou réordonner un emplacement ; poser un item dans
-l'emplacement d'un autre ; changer la taille des cartes ; ajouter une couleur de rareté. Si un
+l'emplacement d'un autre ; changer la taille des cartes ; toucher à la couleur de rareté de la
+carte (posée une fois pour toutes sur les 100 emplacements selon le § 2, pas par le worker). Si un
 item est refait, remplacer seulement `Icone.Image` et `AssetId` ; l'ancienne icône reste
 référencée dans la tâche (`notes`).
 
