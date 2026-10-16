@@ -80,6 +80,26 @@ local Rarity = {
 }
 local RarityPrism = { hex("#FF7A7A"), hex("#FFD36B"), hex("#7FF7A0"), hex("#7FF7E8"), hex("#8FA8FF"), hex("#E08CFF") }
 
+-- Second repère de rareté, lisible sans la couleur (daltonisme) : une forme claire contourée Ink,
+-- répétée Count fois. Chaque couple (Shape, Count) est unique. Formes : Circle (rond), Diamond
+-- (losange), Cross (croix en X), Ring (anneau), Burst (éclat à six branches), Star (étoile à huit
+-- branches). Rendu : RarityStyle.mark / RarityStyle.chip.
+local RarityMark = {
+	Commun = { Shape = "Circle", Count = 1 },
+	PeuCommun = { Shape = "Circle", Count = 2 },
+	Rare = { Shape = "Circle", Count = 3 },
+	Epique = { Shape = "Diamond", Count = 1 },
+	Legendaire = { Shape = "Diamond", Count = 2 },
+	Mythique = { Shape = "Diamond", Count = 3 },
+	Maudit = { Shape = "Cross", Count = 1 }, -- ≠ Épique (losange) malgré deux violets proches
+	Supreme = { Shape = "Ring", Count = 1 },
+	Calamite = { Shape = "Burst", Count = 1 }, -- ≠ Error (aucun repère) malgré deux rouges proches
+	Transcendant = { Shape = "Star", Count = 1 },
+}
+for _, mark in RarityMark do
+	table.freeze(mark)
+end
+
 -- Transparence de fond (BackgroundTransparency : 0 = opaque). Le monde reste visible derrière.
 local Transparency = {
 	Panel = 0.25, -- grand panneau, fenêtre
@@ -202,6 +222,7 @@ local UITheme = {
 	Colors = table.freeze(Colors),
 	Rarity = table.freeze(Rarity),
 	RarityPrism = table.freeze(RarityPrism),
+	RarityMark = table.freeze(RarityMark),
 	Transparency = table.freeze(Transparency),
 	World = table.freeze({
 		GridHidden = World.GridHidden,
