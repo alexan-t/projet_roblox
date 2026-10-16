@@ -1,8 +1,9 @@
-param([switch]$Strict)
+param([switch]$Strict, [string]$UiDir)
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$uiDir = Join-Path $repoRoot 'docs/references/ui'
+# -UiDir : autre dossier à contrôler (jeux d'essai de tests/ui-captures.test.mjs).
+$uiDir = if ($UiDir) { $UiDir } else { Join-Path $repoRoot 'docs/references/ui' }
 $screensDir = Join-Path $uiDir 'ecrans'
 
 # Inventaire des écrans (docs/references/ui/README.md § 3) contre les fichiers de docs/references/ui/ecrans.

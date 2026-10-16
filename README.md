@@ -134,7 +134,7 @@ l'interface, sans commande développeur. Voir [les états UI et la correspondanc
 #11](docs/UI_DESIGN_SYSTEM.md#13-états-ui-et-branchement-de-la-vertical-slice-issue-11).
 Captures de référence de chaque écran réel (remplacent la maquette `maquette_v1.jpg`, périmée) :
 [inventaire, procédure de capture et rangement](docs/references/ui/README.md), contrôle
-`tools/test-ui-captures.ps1`.
+`tools/test-ui-captures.ps1` et `node tests/ui-captures.test.mjs`.
 
 ## Zones et stages (ZoneService)
 

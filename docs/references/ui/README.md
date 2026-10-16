@@ -36,7 +36,9 @@ Format : PNG, fenêtre de jeu seule (sans barres de Studio ni notification Rojo)
    (`docs/MONSTER_PRODUCTION.md`, Outils § A), sinon l'utilisateur perd le clic droit et le clic
    molette. Arrêter le Play.
 7. Mettre à jour la colonne « État » du tableau § 3 (`à capturer` → `capturé AAAA-MM-JJ`), puis
-   lancer `tools/test-ui-captures.ps1`. Commit sur une branche `docs/*` → PR vers `develop`.
+   lancer `tools/test-ui-captures.ps1` et `node tests/ui-captures.test.mjs` (inventaire confronté
+   au code : contrôleurs, démos et commandes DebugData cités ; tout contrôleur qui dessine une
+   interface doit avoir sa ligne). Commit sur une branche `docs/*` → PR vers `develop`.
 
 Commandes de test, côté **Serveur** dans la ligne de commande de Studio (`DebugService`, Studio
 uniquement), avec `local p = game.Players:GetPlayers()[1]` :
