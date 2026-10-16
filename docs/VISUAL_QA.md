@@ -11,6 +11,8 @@ Protocole commun à **tout ce qui se voit** : monstres, boss, futurs personnages
 
 Pour tous : le verdict suit § 3 (**PASS** ou **FIX**, rien d'autre), un FIX se rédige selon § 4, et **pas de PASS sans capture**. Un livrable qui en touche plusieurs (ex. l'écran d'invocation : fenêtre + effet 3D + icônes) passe **chaque** grille concernée.
 
+Après une modification de ce document : `node tests/visual-qa.test.mjs` (sans Luau ni Studio) vérifie que chaque grille est complète et que les tokens, contrôleurs, démonstrations et sections cités existent. Il ne remplace pas le contrôle sur captures.
+
 ## 1. Captures obligatoires (créatures)
 
 | # | Vue | Distance (petit / boss) | But |
