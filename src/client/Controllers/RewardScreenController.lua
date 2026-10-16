@@ -23,6 +23,7 @@ local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
+local Effects = UITheme.Effects.Reward
 local AudioController = require(script.Parent.AudioController)
 
 local Colors = UITheme.Colors
@@ -31,7 +32,7 @@ local Animation = UITheme.Animation
 local Spacing = UITheme.Spacing
 
 local CARD_SIZE = Vector2.new(132, 164)
-local CASCADE = 0.05 -- décalage entre deux cartes (design system)
+local CASCADE = Effects.Cascade -- décalage entre deux cartes (design system)
 local RAY_COUNT = 12
 local RAY_LENGTH = 230 -- px, du centre du titre au bout d'un rayon
 local SPARKS = 10
@@ -95,10 +96,10 @@ local function popIn(object: GuiObject, delay: number, peak: number?)
 		if not scale.Parent then
 			return
 		end
-		local up = tween(scale, TweenInfo.new(Animation.Toast.Time * 0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = peak or Animation.Scale.Pop })
+		local up = tween(scale, TweenInfo.new(Effects.PopUp, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = peak or Animation.Scale.Pop })
 		up.Completed:Wait()
 		if scale.Parent then
-			tween(scale, TweenInfo.new(Animation.Toast.Time * 0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1 })
+			tween(scale, TweenInfo.new(Effects.PopDown, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1 })
 		end
 	end)
 end
@@ -153,7 +154,7 @@ local function icon(parent: Instance, kind: string): (ViewportFrame, Model)
 	viewport.BackgroundTransparency = 1
 	viewport.Size = UDim2.fromScale(1, 1)
 	viewport.Ambient = Colors.Cream
-	viewport.LightColor = Color3.new(1, 1, 1)
+	viewport.LightColor = Colors.TextLight
 	viewport.LightDirection = Vector3.new(1, -1, 1) -- lumière chaude d'en haut à gauche
 	viewport.Parent = parent
 	local model = iconModel(kind)
@@ -242,9 +243,9 @@ local function card(parent: Instance, reward: Reward, index: number, start: numb
 			if viewport.Parent then
 				local s = Instance.new("UIScale")
 				s.Parent = viewport
-				local up = tween(s, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = Animation.Scale.Pop })
+				local up = tween(s, TweenInfo.new(Effects.IconPopUp, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = Animation.Scale.Pop })
 				up.Completed:Connect(function()
-					tween(s, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1 })
+					tween(s, TweenInfo.new(Effects.IconPopDown, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1 })
 				end)
 			end
 		end)
@@ -270,7 +271,7 @@ local function primaryButton(parent: Instance, text: string, onClick: () -> ()):
 	face.AutoButtonColor = false
 	face.Text = ""
 	face.Size = UDim2.new(1, 0, 1, -UITheme.Shadow.ButtonLip)
-	face.BackgroundColor3 = Color3.new(1, 1, 1)
+	face.BackgroundColor3 = Colors.TextLight
 	face.Parent = holder
 	corner(face, UITheme.Radius.Medium)
 	stroke(face, UITheme.Stroke.Regular)
@@ -352,15 +353,15 @@ local function sparkles(parent: Instance, delay: number)
 		local scale = Instance.new("UIScale")
 		scale.Scale = 0
 		scale.Parent = spark
-		task.delay(delay + random:NextNumber(0, 0.5), function()
+		task.delay(delay + random:NextNumber(0, Effects.SparkSpread), function()
 			if not scale.Parent then
 				return
 			end
-			local up = tween(scale, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
+			local up = tween(scale, TweenInfo.new(Effects.SparkAppear, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
 			up.Completed:Wait()
-			task.wait(0.1)
+			task.wait(Effects.SparkHold)
 			if scale.Parent then
-				tween(scale, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Scale = 0 })
+				tween(scale, TweenInfo.new(Effects.SparkFade, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Scale = 0 })
 			end
 		end)
 	end
@@ -398,7 +399,7 @@ function RewardScreenController.Hide()
 	if veil then
 		tween(veil, Animation.Close, { BackgroundTransparency = 1 })
 	end
-	task.delay(Animation.Close.Time + 0.05, function()
+	task.delay(Animation.Close.Time + Effects.CleanupMargin, function()
 		gui:Destroy()
 	end)
 end
@@ -452,12 +453,12 @@ function RewardScreenController.Show(data: ScreenData, onContinue: (() -> ())?)
 	if victory then
 		local r = rays(root)
 		r.Position = UDim2.fromOffset(380, titleY)
-		popIn(r, 0.05, 1)
-		local spin = tween(r, TweenInfo.new(14, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { Rotation = 360 })
+		popIn(r, Effects.RaysDelay, 1)
+		local spin = tween(r, TweenInfo.new(Effects.RaysPeriod, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { Rotation = 360 })
 		gui.Destroying:Connect(function()
 			spin:Cancel()
 		end)
-		sparkles(root, 0.25)
+		sparkles(root, Effects.SparksDelay)
 	end
 	local titleFrame = Instance.new("Frame")
 	titleFrame.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -468,13 +469,13 @@ function RewardScreenController.Show(data: ScreenData, onContinue: (() -> ())?)
 	titleFrame.Parent = root
 	local title = label(titleFrame, if victory then "Victoire !" else "Défaite…", Typography.Size.Hero, if victory then Colors.Gold else Colors.Error, Typography.TextStroke.Large)
 	title.ZIndex = 3
-	popIn(titleFrame, 0.1)
+	popIn(titleFrame, Effects.TitleDelay)
 
 	if victory and data.FirstClear then
 		local first = badge(root, "Première victoire", Colors.RoyalRed)
 		first.Size = UDim2.fromOffset(170, 30)
 		first.Position = UDim2.fromOffset(380, titleY + 58)
-		popIn(first, 0.35)
+		popIn(first, Effects.FirstClearDelay)
 	end
 
 	-- cartes de récompense en cascade
@@ -492,7 +493,7 @@ function RewardScreenController.Show(data: ScreenData, onContinue: (() -> ())?)
 	layout.Padding = UDim.new(0, Spacing.XL)
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = cards
-	local cardsStart = 0.45
+	local cardsStart = Effects.CardsDelay
 	for index, reward in rewards do
 		card(cards, reward, index, cardsStart, spins)
 	end
@@ -500,7 +501,7 @@ function RewardScreenController.Show(data: ScreenData, onContinue: (() -> ())?)
 	-- objets 3D qui tournent doucement dans leurs cartes
 	local spinStart = os.clock()
 	local spinner = RunService.RenderStepped:Connect(function()
-		local angle = (os.clock() - spinStart) * 0.9
+		local angle = (os.clock() - spinStart) * Effects.IconAngularSpeed
 		for i, model in spins do
 			model:PivotTo(CFrame.Angles(0, math.sin(angle + i) * 0.6, 0))
 		end
@@ -519,7 +520,7 @@ function RewardScreenController.Show(data: ScreenData, onContinue: (() -> ())?)
 	end)
 	-- sans récompense (défaite, ou avant RewardService #9), le bouton remonte sous le titre
 	button.Position = UDim2.fromOffset(380, titleY + 95 + (if #rewards > 0 then CARD_SIZE.Y + 50 else 20))
-	popIn(button, if #rewards > 0 then buttonDelay else 0.45, 1.06)
+	popIn(button, if #rewards > 0 then buttonDelay else Effects.CardsDelay, 1.06)
 
 	gui.Parent = player:WaitForChild("PlayerGui")
 end
@@ -542,9 +543,9 @@ local function runDemo()
 			closed = true
 		end)
 		while not closed and Workspace:GetAttribute("ApercuEcranRecompenses") == true do
-			task.wait(0.2)
+			task.wait(Effects.DemoPoll)
 		end
-		task.wait(2)
+		task.wait(Effects.DemoPause)
 	end
 	RewardScreenController.Hide()
 end
@@ -558,7 +559,7 @@ function RewardScreenController:Start()
 		if Workspace:GetAttribute("ApercuEcranRecompenses") == true and not running then
 			running = true
 			task.spawn(function()
-				task.wait(1.5)
+				task.wait(Effects.DemoStart)
 				runDemo()
 				running = false
 			end)
