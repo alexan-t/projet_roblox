@@ -18,14 +18,17 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
+local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
+local Effects = UITheme.Effects.CombatIntro
+
 local TAG_ARENE = "AreneCombat"
 local TAG_CASE = "CaseHeros"
 local TAG_BUISSON = "BuissonEmbuscade"
 local TAG_APERCU = "ApercuStudio"
-local BOUCLE_DELAI = 12
+local BOUCLE_DELAI = Effects.DemoPause
 
-local OR = Color3.fromRGB(255, 205, 80)
-local ROUGE = Color3.fromRGB(230, 90, 70)
+local OR = UITheme.Colors.Gold
+local ROUGE = UITheme.Colors.RoyalRed
 
 type Wave = { { type: string, mode: string } }
 
@@ -258,7 +261,7 @@ local function shakeBushes(parent: Instance, center: Vector3, duration: number)
 	end
 	local eyes = {}
 	for _, s in { -1, 1 } do
-		table.insert(eyes, effectPart(parent, { Shape = Enum.PartType.Ball, Color = Color3.fromRGB(255, 230, 90), Size = Vector3.one * 0.35, Position = center + Vector3.new(s * 0.35, 1.2, 0), Transparency = 1 }))
+		table.insert(eyes, effectPart(parent, { Shape = Enum.PartType.Ball, Color = UITheme.Colors.GoldLight, Size = Vector3.one * 0.35, Position = center + Vector3.new(s * 0.35, 1.2, 0), Transparency = 1 }))
 	end
 	run(duration, function(a)
 		for _, b in near do
@@ -327,14 +330,14 @@ local function spawnBanner(arena: Instance, stage: Folder, speed: number): Model
 	local target = CFrame.new(point.Position) * point.CFrame.Rotation
 	banner:PivotTo(target + Vector3.new(0, 45, 0))
 	banner.Parent = stage
-	run(0.45 / speed, function(a)
+	run(Effects.BannerFall / speed, function(a)
 		banner:PivotTo(target * CFrame.Angles(0, 0, math.rad(12 * (1 - a))) + Vector3.new(0, 45 * (1 - a * a), 0))
 	end)
 	for _, p in debris do
 		p.LocalTransparencyModifier = 0
 	end
-	shockwave(stage, point.Position, 26, OR, 0.7 / speed)
-	burst(stage, point.Position, Color3.fromRGB(210, 190, 150), 10, 5, 0.6 / speed)
+	shockwave(stage, point.Position, 26, OR, Effects.Shockwave / speed)
+	burst(stage, point.Position, UITheme.Colors.Sand, 10, 5, Effects.Dust / speed)
 	for _, d in flutter do
 		CollectionService:AddTag(d, "DrapeauFlotte")
 	end
@@ -369,7 +372,7 @@ local function spawnHeroes(arena: Instance, stage: Folder, speed: number, facing
 					d.Transparency = 1
 				end
 				local beam = effectPart(stage, { Shape = Enum.PartType.Cylinder, Color = OR, Transparency = 0.4 })
-				run(0.3 / speed, function(a)
+				run(Effects.Appear / speed, function(a)
 					placeActor(actor, feet + Vector3.new(0, -1.2 * (1 - a), 0), feet + facing)
 					setVisible(actor.model, a)
 					beam.Size = Vector3.new(9, 3 * (1 - a) + 0.3, 3 * (1 - a) + 0.3)
@@ -377,7 +380,7 @@ local function spawnHeroes(arena: Instance, stage: Folder, speed: number, facing
 					beam.Transparency = 0.4 + 0.6 * a
 				end)
 				beam:Destroy()
-				run(0.45 / speed, function(a)
+				run(Effects.Materialize / speed, function(a)
 					for _, l in looks do
 						l.part.Color = OR:Lerp(l.color, a)
 					end
@@ -390,7 +393,7 @@ local function spawnHeroes(arena: Instance, stage: Folder, speed: number, facing
 					d.Transparency = 0
 				end
 			end)
-			task.wait(0.15 / speed)
+			task.wait(Effects.Stagger / speed)
 		end
 	end
 end
@@ -410,43 +413,43 @@ local function enemyEntrance(stage: Folder, source: BasePart, typ: string, dest:
 	if mode == "SautMare" then
 		setVisible(actor.model, 1)
 		placeActor(actor, start - Vector3.new(0, 4, 0), dest)
-		burst(stage, start, Color3.fromRGB(150, 215, 250), 9, 3, 0.6 / speed)
-		run(0.2 / speed, function(a)
+		burst(stage, start, UITheme.Colors.RiverLight, 9, 3, Effects.Splash / speed)
+		run(Effects.EnemyAppear / speed, function(a)
 			placeActor(actor, start - Vector3.new(0, 4 * (1 - a), 0), dest)
 		end)
-		jump(actor, start, dest, 6, 0.75 / speed, facing)
+		jump(actor, start, dest, 6, Effects.PondJump / speed, facing)
 	elseif mode == "SautPlateau" then
 		setVisible(actor.model, 0)
 		placeActor(actor, start, dest)
-		run(0.2 / speed, function(a)
+		run(Effects.EnemyAppear / speed, function(a)
 			setVisible(actor.model, a)
 		end)
-		task.wait(0.15 / speed)
-		jump(actor, start, dest, 5, 0.8 / speed, facing)
-		burst(stage, dest, Color3.fromRGB(210, 190, 150), 6, 2, 0.4 / speed)
+		task.wait(Effects.Stagger / speed)
+		jump(actor, start, dest, 5, Effects.PlateauJump / speed, facing)
+		burst(stage, dest, UITheme.Colors.Sand, 6, 2, Effects.LandingDust / speed)
 	elseif mode == "SortieBuisson" then
 		setVisible(actor.model, 0)
-		shakeBushes(stage, start, 0.7 / speed)
+		shakeBushes(stage, start, Effects.BushShake / speed)
 		placeActor(actor, start, dest)
 		setVisible(actor.model, 1)
-		jump(actor, start, dest, 3, 0.6 / speed, facing)
+		jump(actor, start, dest, 3, Effects.BushJump / speed, facing)
 	elseif mode == "SautTour" then
 		setVisible(actor.model, 0)
 		placeActor(actor, start, dest)
-		run(0.3 / speed, function(a)
+		run(Effects.Appear / speed, function(a)
 			setVisible(actor.model, a)
 		end)
-		task.wait(0.4 / speed)
-		jump(actor, start, dest, 10, 1.1 / speed, facing)
-		shockwave(stage, dest, 16, ROUGE, 0.6 / speed)
-		burst(stage, dest, Color3.fromRGB(210, 190, 150), 12, 4, 0.6 / speed)
+		task.wait(Effects.BossHold / speed)
+		jump(actor, start, dest, 10, Effects.BossJump / speed, facing)
+		shockwave(stage, dest, 16, ROUGE, Effects.BossShockwave / speed)
+		burst(stage, dest, UITheme.Colors.Sand, 12, 4, Effects.Dust / speed)
 	else -- DescenteRampe, SortieTente, et tout mode inconnu : apparaît puis marche
 		setVisible(actor.model, 0)
 		placeActor(actor, start, path[2] or dest)
-		run(0.25 / speed, function(a)
+		run(Effects.WalkAppear / speed, function(a)
 			setVisible(actor.model, a)
 		end)
-		walk(actor, path, 16 * speed, facing)
+		walk(actor, path, Effects.WalkSpeed * speed, facing)
 	end
 	placeActor(actor, dest, facing)
 end
@@ -489,7 +492,7 @@ local function spawnEnemies(arena: Instance, stage: Folder, speed: number, facin
 				enemyEntrance(stage, source, entry.type, dest, facing, speed)
 				pending -= 1
 			end)
-			task.wait((if entry.type == "Boss" then 0.6 else 0.3) / speed)
+			task.wait((if entry.type == "Boss" then Effects.BossStagger else Effects.EnemyStagger) / speed)
 		end
 	end
 	-- attend que tous les ennemis soient en place
@@ -507,8 +510,8 @@ local function removeBanner(banner: Model?, stage: Folder, speed: number)
 		CollectionService:RemoveTag(d, "DrapeauFlotte") -- sinon le tissu resterait accroché à sa position d'ondulation
 	end
 	local base = banner:GetPivot()
-	burst(stage, base.Position, Color3.fromRGB(210, 190, 150), 8, 3, 0.5 / speed)
-	run(0.6 / speed, function(a)
+	burst(stage, base.Position, UITheme.Colors.Sand, 8, 3, Effects.RemoveDust / speed)
+	run(Effects.BannerRemove / speed, function(a)
 		banner:PivotTo(base - Vector3.new(0, 4 * a * a, 0))
 		for _, p in parts(banner) do
 			p.LocalTransparencyModifier = a
@@ -547,11 +550,11 @@ function CombatIntroController:Play(arena: Instance)
 	local enemiesFace = if n > 0 then sum / n elseif bannerPoint and bannerPoint:IsA("BasePart") then bannerPoint.Position else Vector3.zero
 
 	local banner = spawnBanner(arena, stage, speed)
-	task.wait(0.15 / speed)
+	task.wait(Effects.Stagger / speed)
 	spawnHeroes(arena, stage, speed, heroesFace)
-	task.wait(0.5 / speed)
+	task.wait(Effects.PhasePause / speed)
 	spawnEnemies(arena, stage, speed, enemiesFace)
-	task.wait(0.5 / speed)
+	task.wait(Effects.PhasePause / speed)
 	removeBanner(banner, stage, speed)
 end
 
@@ -570,7 +573,7 @@ local function watch(arena: Instance)
 					task.spawn(CombatIntroController.Play, CombatIntroController, arena)
 					task.wait(BOUCLE_DELAI / speedOf(arena))
 				else
-					task.wait(1)
+					task.wait(Effects.DemoPoll)
 				end
 			end
 		end)

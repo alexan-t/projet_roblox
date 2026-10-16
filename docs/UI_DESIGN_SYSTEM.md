@@ -441,3 +441,41 @@ Le client ne reçoit que des **vues en lecture seule**, jamais `PlayerData`. L'i
 | KingdomController | Pas d'action joueur : KingdomService (serveur) place les héros et l'état du royaume ; `KingdomChangeController` et `KingdomAmbientController` animent côté client. Pas de nouveau contrôleur. |
 | Collection | La sacoche et la hotbar (`HeroBarController`) servent de collection ; le nouveau héros y apparaît via `HeroesChanged` après sa carte. `CollectionView` reste une vue de design non branchée. |
 | QuestController, CurrencyController, SummonController | Créés (#11, #50), voir le tableau ci-dessus. |
+
+
+## 14. Tokens des effets de combat et d'invocation
+
+`UITheme.Effects` regroupe les durées des quatre mises en scène client, dans des tables
+figées `CombatIntro`, `Ultimate`, `Reward` et `Summon`. Les couleurs viennent de
+`UITheme.Colors` ; l'invocation conserve `UITheme.Rarity` et `RarityStyle` pour les héros.
+Les couleurs originales des modèles restent restaurées après leur silhouette temporaire.
+
+Les durées sont en secondes à x1. Les contrôleurs conservent leur adaptation à la vitesse
+du combat. `WalkSpeed` est en studs/s, `IconAngularSpeed` en rad/s ; `AuraFadeStart` et
+`DiscRatio` sont des ratios. Les délais de démonstration Studio sont également centralisés.
+Les dimensions, trajectoires et seuils de rareté restent dans les contrôleurs.
+
+- `Ultimate.AnimationImpact + Ultimate.Travel` définit `ImpactDelay` (0,45 s à x1,
+  0,225 s à x2). Garder l'impact calé sur le coup de l'animation AnimationKit.
+- `Summon.Charge + Summon.ChargePerRank * (rang - 1)` pilote aussi la caméra via `Charge`.
+  `Duration` y ajoute `Flight + Reveal` ; `OnRevealed` suit toujours la fin de `Reveal`.
+- `Reward.RaysPeriod` (14 s) est une rotation décorative répétée, sans attente imposée
+  au joueur. Le bouton Continuer suit les tokens de cascade, Toast et Count.
+
+### Validation Studio à effectuer après synchronisation Rojo
+
+Aucun contrôle visuel n'est validé par la seule lecture du code. Capturer réellement les
+quatre effets et appliquer `docs/VISUAL_QA.md` avec verdict PASS ou FIX :
+
+1. Intro : changer `IntroDemo` sur une arène `AreneCombat`, à x1 puis x2 ; vérifier or,
+   rouge, poussière sable, eau et restauration des couleurs des modèles.
+2. Ultime : héros tagué `ApercuUltime`, à x1 puis x2 ; vérifier que l'anneau coïncide
+   avec les dégâts et les disparitions, et que les effets disparaissent correctement.
+3. Récompenses : `Workspace.ApercuEcranRecompenses = true`, puis victoire, défaite et
+   First Clear ; vérifier les icônes éclairées, les dégradés et Continuer sans attendre
+   un tour complet des rayons.
+4. Invocation : démonstration `ApercuInvocation`, du Commun au Transcendant ; vérifier
+   caméra, révélation/carte, Maudit, Calamité, prisme et nettoyage des effets.
+
+Archiver les captures et le verdict, puis réinitialiser la caméra Studio selon le guide.
+Cette validation reste à réaliser : aucun outil Studio n'était accessible dans la mission.

@@ -37,14 +37,15 @@ local Workspace = game:GetService("Workspace")
 
 local RarityConfig = require(ReplicatedStorage.Shared.Config.RarityConfig)
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
+local Effects = UITheme.Effects.Summon
 local RarityStyle = require(script.Parent.Parent.UI.RarityStyle)
 local UIKit = require(script.Parent.Parent.UI.UIKit)
 local AudioController = require(script.Parent.AudioController)
 
 local TAG_APERCU = "ApercuInvocation"
-local CHARGE = 1.2 -- montée en puissance avant l'éclat (Commun) ; +0,2 s par rang
-local FLIGHT = 0.45 -- sortie du voile jusqu'au sol
-local REVEAL = 0.6 -- la silhouette colorée s'efface
+local CHARGE = Effects.Charge -- montée en puissance avant l'éclat (Commun) ; +0,2 s par rang
+local FLIGHT = Effects.Flight -- sortie du voile jusqu'au sol
+local REVEAL = Effects.Reveal -- la silhouette colorée s'efface
 local LANDING_DISTANCE = 7 -- studs devant le voile
 local PAD_RADIUS = 4 -- rayon de la place d'invocation (studs), un peu plus grande pour une rareté haute
 local PILLAR_HEIGHT = 160 -- colonne de lumière vers le ciel (Rare et plus)
@@ -76,7 +77,7 @@ local function rankOf(rarity: string?): number
 end
 
 local function chargeOf(rank: number): number
-	return CHARGE + 0.2 * (rank - 1)
+	return CHARGE + Effects.ChargePerRank * (rank - 1)
 end
 
 function SummonEffectController.Duration(rarity: string?): number
@@ -174,7 +175,7 @@ local function ring(center: Vector3, radius: number, color: Color3, duration: nu
 	end
 	local floor = center + Vector3.new(0, 0.12, 0)
 	local start = os.clock()
-	local length = duration or 0.5
+	local length = duration or Effects.Ring
 	local connection: RBXScriptConnection
 	connection = RunService.RenderStepped:Connect(function()
 		local progress = math.clamp((os.clock() - start) / length, 0, 1)
@@ -214,14 +215,14 @@ local function jackpot(portal: Instance, duration: number)
 	end
 	local halo = kit:FindFirstChild("HaloSol")
 	if halo and halo:IsA("BasePart") then
-		tween(halo, TweenInfo.new(0.3), { Transparency = 0.35 })
+		tween(halo, TweenInfo.new(Effects.JackpotAppear), { Transparency = 0.35 })
 	end
 	task.delay(duration, function()
 		for _, item in touched do
 			(item :: any).Enabled = false
 		end
 		if halo and halo:IsA("BasePart") then
-			tween(halo, TweenInfo.new(0.5), { Transparency = 1 })
+			tween(halo, TweenInfo.new(Effects.JackpotFade), { Transparency = 1 })
 		end
 	end)
 end
@@ -241,10 +242,10 @@ local function pillar(base: Vector3, rank: number, paint: ((Color3) -> ()) -> ()
 	paint(function(color: Color3)
 		column.Color = if cursed then color:Lerp(Colors.Ink, 0.55) else color
 	end)
-	tween(column, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = Vector3.new(PILLAR_HEIGHT, width, width) })
+	tween(column, TweenInfo.new(Effects.PillarAppear, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = Vector3.new(PILLAR_HEIGHT, width, width) })
 	task.delay(hold, function()
-		tween(column, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Size = Vector3.new(PILLAR_HEIGHT, 0.1, 0.1), Transparency = 1 })
-		task.delay(0.9, function()
+		tween(column, TweenInfo.new(Effects.PillarFade, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Size = Vector3.new(PILLAR_HEIGHT, 0.1, 0.1), Transparency = 1 })
+		task.delay(Effects.PillarCleanup, function()
 			column:Destroy()
 		end)
 	end)
@@ -288,15 +289,15 @@ local function announce(rarity: string, rank: number, paint: ((Color3) -> ()) ->
 				flash.BackgroundColor3 = color
 			end)
 		end
-		tween(flash, TweenInfo.new(if rarity == "Maudit" then 1.6 else 0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 1 })
+		tween(flash, TweenInfo.new(if rarity == "Maudit" then Effects.CursedFlash else Effects.Flash, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 1 })
 	end
 	local label = UIKit.announce(screen, `{RarityStyle.name(rarity)} !`, {
 		Size = if rank >= 6 then UITheme.Typography.Size.Hero else UITheme.Typography.Size.Title,
-		Hold = 1.5 + rank * 0.15,
+		Hold = Effects.AnnounceHold + rank * Effects.AnnouncePerRank,
 		Y = 150,
 	})
 	RarityStyle.paint(label, rarity)
-	task.delay(5, function()
+	task.delay(Effects.AnnounceCleanup, function()
 		screen:Destroy()
 	end)
 end
@@ -420,7 +421,7 @@ local function pad(landing: Vector3, rank: number, paint: ((Color3) -> ()) -> ()
 		Size = Vector3.new(0.14, radius * 2 - 0.8, radius * 2 - 0.8),
 		CFrame = CFrame.new(landing + Vector3.new(0, 0.08, 0)) * flat,
 	})
-	local appear = TweenInfo.new(math.min(charge, 1), Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	local appear = TweenInfo.new(math.min(charge, Effects.PadAppearMax), Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 	tween(rim, appear, { Transparency = 0.15 })
 	tween(stone, appear, { Transparency = 0.1 })
 	local removed = false
@@ -429,10 +430,10 @@ local function pad(landing: Vector3, rank: number, paint: ((Color3) -> ()) -> ()
 			return
 		end
 		removed = true
-		local fade = TweenInfo.new(0.4)
+		local fade = TweenInfo.new(Effects.PadFade)
 		tween(rim, fade, { Transparency = 1 })
 		tween(stone, fade, { Transparency = 1 })
-		task.delay(0.45, function()
+		task.delay(Effects.PadCleanup, function()
 			rim:Destroy()
 			stone:Destroy()
 		end)
@@ -472,7 +473,7 @@ function SummonEffectController.Play(portal: Model, heroTemplate: Model, options
 		ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface,
 		Color = if rarity then RarityStyle.sequence(rarity) else ColorSequence.new(Colors.GoldLight),
 		Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(0.5, 0.6 + rank * 0.05), NumberSequenceKeypoint.new(1, 0) }),
-		Lifetime = NumberRange.new(0.5, 0.7),
+		Lifetime = NumberRange.new(Effects.InwardMin, Effects.InwardMax),
 		Speed = NumberRange.new(8, 10 + rank),
 		LightEmission = 1,
 		Rate = 70 + 30 * (rank - 1),
@@ -496,20 +497,20 @@ function SummonEffectController.Play(portal: Model, heroTemplate: Model, options
 			Color = if cursed then ColorSequence.new(Colors.Ink, RarityStyle.color("Maudit")) else ColorSequence.new(RarityStyle.color("Calamite"), Colors.Torch),
 			Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1.5), NumberSequenceKeypoint.new(1, 4) }),
 			Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1) }),
-			Lifetime = NumberRange.new(1, 1.6),
+			Lifetime = NumberRange.new(Effects.SmokeMin, Effects.SmokeMax),
 			Speed = NumberRange.new(2, 5),
 			Acceleration = Vector3.new(0, 4, 0),
 			LightEmission = if cursed then 0 else 0.8,
 			Rate = 40,
 		})
 		smoke.Enabled = true
-		task.delay(charge + 1, function()
+		task.delay(charge + Effects.SmokeTail, function()
 			smoke.Enabled = false
 		end)
 	end
 	-- kit doré du portail : seulement pour les raretés lumineuses (pas Maudit, Calamité ni le prisme)
 	if opts.Jackpot or rarity == "Legendaire" or rarity == "Mythique" or rarity == "Supreme" then
-		jackpot(portal, charge + FLIGHT + REVEAL + 1.5)
+		jackpot(portal, charge + FLIGHT + REVEAL + Effects.JackpotTail)
 	end
 
 	-- le héros, caché jusqu'à l'éclat
@@ -560,13 +561,13 @@ function SummonEffectController.Play(portal: Model, heroTemplate: Model, options
 			AudioController.Play("Seisme", { Position = center })
 		end
 		light.Brightness = 6 + rank
-		tween(light, TweenInfo.new(0.8 + rank * 0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Brightness = 0 })
-		tween(glow, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { FillTransparency = 1, OutlineTransparency = 1 })
+		tween(light, TweenInfo.new(Effects.LightFade + rank * Effects.LightFadePerRank, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Brightness = 0 })
+		tween(glow, TweenInfo.new(Effects.GlowFade, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { FillTransparency = 1, OutlineTransparency = 1 })
 		emitter(core, {
 			Texture = SPARK_TEXTURE,
 			Color = if rarity then RarityStyle.sequence(rarity) else ColorSequence.new(Colors.GoldLight, Colors.TextLight),
 			Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.8 + rank * 0.05), NumberSequenceKeypoint.new(1, 0) }),
-			Lifetime = NumberRange.new(0.4, 0.8 + rank * 0.05),
+			Lifetime = NumberRange.new(Effects.SparkMin, Effects.SparkMax + rank * Effects.SparkPerRank),
 			Speed = NumberRange.new(10, 18 + rank * 2),
 			SpreadAngle = Vector2.new(180, 180),
 			Drag = 3,
@@ -575,15 +576,15 @@ function SummonEffectController.Play(portal: Model, heroTemplate: Model, options
 		-- ondes : 1 (Commun à Rare), 2 (Épique à Mythique), 3 (Maudit à Calamité), 4 (Transcendant)
 		local rings = if rank >= 10 then 4 elseif rank >= 7 then 3 elseif rank >= 4 then 2 else 1
 		for i = 1, rings do
-			task.delay((i - 1) * 0.18, function()
-				ring(portalGround, 9 + (i - 1) * 4 + rank * 0.4, colorAt(os.clock()), 0.5 + (i - 1) * 0.12)
+			task.delay((i - 1) * Effects.RingStagger, function()
+				ring(portalGround, 9 + (i - 1) * 4 + rank * 0.4, colorAt(os.clock()), Effects.Ring + (i - 1) * Effects.RingIncrement)
 			end)
 		end
 		if rank >= 3 then
-			pillar(portalGround, rank, paint, FLIGHT + REVEAL + 0.6 + rank * 0.15, rarity == "Maudit")
+			pillar(portalGround, rank, paint, FLIGHT + REVEAL + Effects.PillarHold + rank * Effects.PillarPerRank, rarity == "Maudit")
 		end
 		if rank >= 5 then
-			shake(0.12 * (rank - 4) + (if rarity == "Calamite" then 0.35 else 0), 0.5 + rank * 0.06)
+			shake(0.12 * (rank - 4) + (if rarity == "Calamite" then 0.35 else 0), Effects.Shake + rank * Effects.ShakePerRank)
 		end
 		if rarity and rank >= 3 then
 			announce(rarity, rank, paint)
@@ -621,12 +622,12 @@ function SummonEffectController.Play(portal: Model, heroTemplate: Model, options
 					Color = ColorSequence.new(Colors.Sand),
 					Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 2.4) }),
 					Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 1) }),
-					Lifetime = NumberRange.new(0.5, 0.8),
+					Lifetime = NumberRange.new(Effects.DustMin, Effects.DustMax),
 					Speed = NumberRange.new(2, 4),
 					SpreadAngle = Vector2.new(80, 80),
 					Drag = 3,
 				}):Emit(14)
-				task.delay(1.2, function()
+				task.delay(Effects.DustCleanup, function()
 					puff:Destroy()
 				end)
 				tween(silhouette, TweenInfo.new(REVEAL, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { FillTransparency = 1, OutlineTransparency = 1 })
@@ -639,14 +640,14 @@ function SummonEffectController.Play(portal: Model, heroTemplate: Model, options
 		end)
 	end)
 
-	task.delay(charge + 1.5, function()
+	task.delay(charge + Effects.CoreCleanup, function()
 		core:Destroy()
 		glow:Destroy()
 	end)
 	-- la place d'invocation s'efface avec le héros
 	hero.Destroying:Connect(removePad)
-	local keep = opts.Keep or 4
-	task.delay(charge + FLIGHT + REVEAL + math.max(keep, 2), stopPalette)
+	local keep = opts.Keep or Effects.Keep
+	task.delay(charge + FLIGHT + REVEAL + math.max(keep, Effects.PaletteMinKeep), stopPalette)
 	if keep > 0 then
 		task.delay(charge + FLIGHT + REVEAL + keep, function()
 			hero:Destroy()
@@ -663,7 +664,7 @@ local function runDemo(folder: Instance)
 	local shown: Model? = nil
 	while folder.Parent and CollectionService:HasTag(folder, TAG_APERCU) do
 		local pause = folder:GetAttribute("ApercuPause")
-		task.wait(if typeof(pause) == "number" then math.max(pause, 4) else 6)
+		task.wait(if typeof(pause) == "number" then math.max(pause, Effects.DemoMinPause) else Effects.DemoPause)
 		local link = folder:FindFirstChild("Portail")
 		local portal = if link and link:IsA("ObjectValue") then link.Value else nil
 		local heroes: { Model } = {}
