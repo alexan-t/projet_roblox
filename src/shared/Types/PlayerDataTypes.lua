@@ -42,6 +42,11 @@ export type Settings = {
 	CombatSpeed: number,
 }
 
+-- Drapeaux « vu une fois » du guidage (TutorialConfig.Flags) : clé = drapeau, valeur = true.
+export type Tutorial = {
+	Seen: { [string]: boolean },
+}
+
 export type PlayerData = {
 	DataVersion: number,
 	Currencies: Currencies,
@@ -58,6 +63,8 @@ export type PlayerData = {
 	-- Clé = identifiant de quête.
 	Quests: { [string]: QuestState },
 	Settings: Settings,
+	-- Ajouté aux anciens profils par Reconcile (aucune migration) : vide = aucun guidage déjà vu.
+	Tutorial: Tutorial,
 }
 
 return {}
