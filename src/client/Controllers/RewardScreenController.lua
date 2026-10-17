@@ -50,7 +50,7 @@ export type Reward = { Kind: string, Amount: number, New: boolean? }
 export type HeroProgress = { InstanceId: string, HeroId: string, XPGranted: number, LevelBefore: number, LevelAfter: number, XP: number, XPToNext: number, MaxLevel: number }
 export type ScreenData = { Result: string, FirstClear: boolean?, Rewards: { Reward }?, Silent: boolean?, Heroes: { HeroProgress }? }
 
-local HERO_CHIP = Vector2.new(220, 96)
+local HERO_CHIP = Vector2.new(300, 120)
 local HEROES_HEIGHT = 30 + HERO_CHIP.Y -- titre « Héros » + une ligne de héros
 
 local KINDS = {
@@ -438,25 +438,25 @@ local function heroChip(parent: Instance, entry: HeroProgress, index: number, st
 		UIKit.portrait(art, model)
 	end
 	local left = HERO_CHIP.Y + Spacing.XS
-	local name = UIKit.text(chip, if info then info.Name else entry.HeroId, Typography.Size.Caption, { Align = Enum.TextXAlignment.Left })
+	local name = UIKit.text(chip, if info then info.Name else entry.HeroId, Typography.Size.Label, { Align = Enum.TextXAlignment.Left })
 	name.Position = UDim2.fromOffset(left, Spacing.S)
-	name.Size = UDim2.new(1, -left - Spacing.S, 0, 18)
+	name.Size = UDim2.new(1, -left - Spacing.S, 0, 22)
 	name.TextTruncate = Enum.TextTruncate.AtEnd
-	local level = UIKit.text(chip, `Nv.{entry.LevelBefore}`, Typography.Size.Label, { Align = Enum.TextXAlignment.Left })
-	level.Position = UDim2.fromOffset(left, 28)
-	level.Size = UDim2.fromOffset(80, 22)
-	local gain = UIKit.text(chip, `+{entry.XPGranted} XP`, Typography.Size.Label, { Color = Colors.GoldLight, Align = Enum.TextXAlignment.Right })
-	gain.Position = UDim2.new(1, -Spacing.S - 90, 0, 28)
-	gain.Size = UDim2.fromOffset(90, 22)
-	local bar = UIKit.bar(chip, { Color = Colors.Progress, Size = UDim2.new(1, -left - Spacing.S, 0, 10) })
-	bar.Frame.Position = UDim2.fromOffset(left, 56)
+	local level = UIKit.text(chip, `Nv.{entry.LevelBefore}`, Typography.Size.Heading, { Align = Enum.TextXAlignment.Left })
+	level.Position = UDim2.fromOffset(left, 34)
+	level.Size = UDim2.fromOffset(90, 28)
+	local gain = UIKit.text(chip, `+{entry.XPGranted} XP`, Typography.Size.Heading, { Color = Colors.GoldLight, Align = Enum.TextXAlignment.Right })
+	gain.Position = UDim2.new(1, -Spacing.S - 110, 0, 34)
+	gain.Size = UDim2.fromOffset(110, 28)
+	local bar = UIKit.bar(chip, { Color = Colors.Progress, Size = UDim2.new(1, -left - Spacing.S, 0, 14) })
+	bar.Frame.Position = UDim2.fromOffset(left, 70)
 	local need = entry.XPToNext
 	local maxed = entry.LevelAfter >= entry.MaxLevel
 	local ratio = if maxed then 1 elseif need > 0 then entry.XP / need else 0
 	local before = if levelUp or maxed or need <= 0 then 0 else math.max(entry.XP - entry.XPGranted, 0) / need
 	bar.Set(before)
 	local note = UIKit.text(chip, if maxed then "Niveau max" else `{entry.XP} / {need} XP`, Typography.Size.Caption, { Color = Colors.TextMuted, Align = Enum.TextXAlignment.Left })
-	note.Position = UDim2.fromOffset(left, 70)
+	note.Position = UDim2.fromOffset(left, 90)
 	note.Size = UDim2.new(1, -left - Spacing.S, 0, 18)
 	popIn(chip, start + (index - 1) * CASCADE)
 	task.delay(start + (index - 1) * CASCADE + Animation.Toast.Time, function()
@@ -476,7 +476,7 @@ local function heroChip(parent: Instance, entry: HeroProgress, index: number, st
 		bar.Set(0)
 		bar.Set(ratio, true)
 		level.Text = `Nv.{entry.LevelBefore} → Nv.{entry.LevelAfter}`
-		level.Size = UDim2.fromOffset(120, 22)
+		level.Size = UDim2.fromOffset(170, 28)
 		level.TextColor3 = Colors.GoldLight
 		gain.Visible = false
 		local up = UIKit.badge(chip, "NIVEAU SUPÉRIEUR !", Colors.Gold)
@@ -663,6 +663,10 @@ local DEMO = {
 		{ Kind = "Gold", Amount = 120 },
 		{ Kind = "Gems", Amount = 15 },
 		{ Kind = "SummonTicket", Amount = 1, New = true },
+	},
+	Heroes = {
+		{ InstanceId = "Demo1", HeroId = "ecuyer_du_rempart", XPGranted = 35, LevelBefore = 1, LevelAfter = 2, XP = 10, XPToNext = 125, MaxLevel = 20 },
+		{ InstanceId = "Demo2", HeroId = "tireuse_des_faubourgs", XPGranted = 35, LevelBefore = 1, LevelAfter = 1, XP = 60, XPToNext = 100, MaxLevel = 20 },
 	},
 }
 
