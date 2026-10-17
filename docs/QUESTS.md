@@ -183,7 +183,7 @@ derrière lui, légèrement au-dessus, regard vers l'arène (centre de `Arene` d
 suite. Une seule fois par session (pas après un reset ni une mort) et jamais pour un profil sorti de
 `SummonStarter`. Les 8 `PointApparition` regardent déjà leur propre arène (audit Studio : écart 0°).
 
-## Guidage (chemin lumineux)
+## Guidage (flèches au sol)
 
 Le joueur doit pouvoir suivre le jeu presque sans lire : une quête qui demande d'aller quelque part
 porte `Guide = { Target = ... }`. La vue de la quête active expose alors `GuideTarget` (présentation
@@ -192,7 +192,8 @@ seulement, rien de PlayerData), retiré dès que la quête est terminée.
 | Cible (`Shared.Quests.QuestGuide.Targets`) | Objet du plot du joueur | Arrivée (studs) |
 | --- | --- | --- |
 | `StageSign` | `Arene.PanneauStage` (chemin vers `Banniere`) | 10 |
-| `SummonPortal` | `PortailInvocation` | 12 |
+| `SummonPortal` | `PortailInvocation` (focus `Structure`) | 12 |
+| `Arena` | `Arene` (focus `Emplacements`) | 25 |
 | `Kingdom` | `Royaume` | 14 |
 | `HeroPlacement` | `Arene.Emplacements.Heros` | 8 |
 
@@ -200,9 +201,11 @@ seulement, rien de PlayerData), retiré dès que la quête est terminée.
 - résout la cible dans le plot du joueur local (`PlotView`), jamais `PlotTravail` ni un autre plot ;
 - chemin `PathfindingService` (client) depuis `HumanoidRootPart`, recalculé seulement si la cible
   change, si le joueur a bougé de 6 studs ou si le calcul a échoué (ligne droite en secours) ;
-- 10 boules lumineuses au plus devant le joueur (asset Studio `ReplicatedStorage.Assets.Guide.OrbeGuide` :
-  cœur doré, halo, reflet, lumière douce ; boule simple si l'asset manque), tous les 4,5 studs, à 1,6 stud
-  au-dessus du sol trouvé par un rayon ; elles flottent doucement et une vague de lumière avance vers la cible ;
+- 10 flèches dorées au plus devant le joueur (`UI/GuideArrows`, même flèche chunky que la flèche UI, en
+  pièces simples, sans asset), couchées au sol tous les 4,5 studs et tournées vers la suite du chemin ; une
+  vague avance vers la cible (la flèche au passage se soulève, les autres s'estompent un peu) ;
+- une grosse flèche 3D rebondit au-dessus de la cible (pancarte, portail, puis dalle pendant
+  l'apprentissage de la pose), toujours tournée vers la caméra ;
 - cible : elle-même « vivante » (`UI/WorldPulse`, valeurs `UITheme.World.Guide`) : léger voile doré qui
   respire, sans contour au creux, lumière qui pulse et quelques étincelles ; aucune pancarte « OBJECTIF » ;
 - `Guide.Placement` (1-1) : à l'arène, tant qu'aucun héros n'est posé, le héros à prendre luit dans la
@@ -213,7 +216,8 @@ seulement, rien de PlayerData), retiré dès que la quête est terminée.
   légèrement en évidence et l'interaction normale (E) prend le relais.
 
 Règles de visibilité et résolution : `QuestGuide.mode` et `QuestGuide.resolve`, purs et testés
-(`tools/test-presentation.ps1`, `tools/test-quests.ps1`).
+(`tools/test-presentation.ps1`, `tools/test-quests.ps1`). Côté interface (flèche UI vers le raccourci à
+prendre, « Lancer », « Invoquer ») : voir `docs/TUTORIAL_GUIDANCE.md`.
 
 Aucun système d'événements générique n'existe encore dans le projet. Tant que les appelants
 sont peu nombreux, #7 appelle directement QuestService (puis RewardService) ; un bus

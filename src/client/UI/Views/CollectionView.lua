@@ -6,15 +6,19 @@
 --   cascade. Badges : « Nouveau » (RoyalRed) ou « Équipé » (Gold + contour Selected). Plusieurs
 --   exemplaires : « ×2 » en bas à droite. Collection vide : invitation à invoquer au portail.
 --   Cadre neutre : pas de couleur de rareté tant que #10 ne l'a pas définie.
+--   Index (menu) : Locked = héros pas encore découvert (carte estompée, « ??? », cadenas, sans modèle :
+--   aucun spoil) ; Header remplace le compteur (« 3 / 60 découverts »).
 -- API : CollectionView.Show(heroes, options?) ; CollectionView.Hide().
---   heroes = { { Name: string, Model: Model?, ClassId: string?, Count: number?, New: boolean?, Equipped: boolean? } }
---   options = { OnClose: (() -> ())?, OnSelect: ((index: number) -> ())? }
+--   heroes = { { Name: string, Model: Model?, ClassId: string?, Count: number?, New: boolean?, Equipped: boolean?, Locked: boolean? } }
+--   options = { OnClose: (() -> ())?, OnSelect: ((index: number) -> ())?, Title: string?, Header: string?,
+--               Guide: string? (drapeau de guidage signalé à l'ouverture, ex. "Index" : cible « Index.Counter ») }
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local Icons = require(script.Parent.Parent.Icons)
 local UIKit = require(script.Parent.Parent.UIKit)
+local GuideTargets = require(script.Parent.Parent.GuideTargets)
 
 local Colors = UITheme.Colors
 local Typography = UITheme.Typography
@@ -23,12 +27,12 @@ local Spacing = UITheme.Spacing
 local WINDOW = Vector2.new(820, 560)
 local CARD = Vector2.new(132, 168)
 
-export type HeroEntry = { Name: string, Model: Model?, ClassId: string?, Count: number?, New: boolean?, Equipped: boolean? }
-export type Options = { OnClose: (() -> ())?, OnSelect: ((index: number) -> ())? }
+export type HeroEntry = { Name: string, Model: Model?, ClassId: string?, Count: number?, New: boolean?, Equipped: boolean?, Locked: boolean? }
+export type Options = { OnClose: (() -> ())?, OnSelect: ((index: number) -> ())?, Title: string?, Header: string?, Guide: string? }
 
 local CollectionView = {}
 
-local current: { screen: ScreenGui, panel: Frame, veil: GuiObject }? = nil
+local current: { screen: ScreenGui, panel: Frame, veil: GuiObject, guide: string? }? = nil
 
 function CollectionView.Hide()
 	local c = current
@@ -36,6 +40,9 @@ function CollectionView.Hide()
 		return
 	end
 	current = nil
+	if c.guide then
+		GuideTargets.close(c.guide)
+	end
 	UIKit.close(c.panel, c.veil, true, function()
 		c.screen:Destroy()
 	end)
@@ -53,18 +60,23 @@ function CollectionView.Show(heroes: { HeroEntry }, options: Options?)
 		end
 	end
 	veil.Activated:Connect(close)
-	local panel, content = UIKit.window(screen, { Size = WINDOW, Title = "Collection", OnClose = close })
+	local panel, content = UIKit.window(screen, { Size = WINDOW, Title = opts.Title or "Collection", OnClose = close })
 	panel.AnchorPoint = Vector2.new(0.5, 0.5)
 	panel.Position = UDim2.fromScale(0.5, 0.5)
-	current = { screen = screen, panel = panel, veil = veil }
+	current = { screen = screen, panel = panel, veil = veil, guide = opts.Guide }
 
 	local total = 0
 	for _, hero in heroes do
-		total += hero.Count or 1
+		total += if hero.Locked then 0 else hero.Count or 1
 	end
-	local header = UIKit.text(content, `{total} héros`, Typography.Size.Label, { Align = Enum.TextXAlignment.Left, Color = Colors.TextMuted })
+	local header = UIKit.text(content, opts.Header or `{total} héros`, Typography.Size.Label, { Align = Enum.TextXAlignment.Left, Color = Colors.TextMuted })
 	header.Position = UDim2.fromOffset(Spacing.S, Spacing.S)
-	header.Size = UDim2.new(1, 0, 0, 24)
+	header.AutomaticSize = Enum.AutomaticSize.X
+	header.Size = UDim2.fromOffset(0, 24)
+	if opts.Guide then
+		GuideTargets.register(`{opts.Guide}.Counter`, header)
+		GuideTargets.open(opts.Guide)
+	end
 
 	if #heroes == 0 then
 		local empty = UIKit.subPanel(content, UDim2.new(1, -2 * Spacing.XL, 0, 80))
@@ -108,12 +120,27 @@ function CollectionView.Show(heroes: { HeroEntry }, options: Options?)
 		local badge = if hero.New then "Nouveau" elseif hero.Equipped then "Équipé" else nil
 		local card = UIKit.card(holder, {
 			Size = CARD,
-			Name = hero.Name,
-			Model = hero.Model,
+			Name = if hero.Locked then "???" else hero.Name,
+			Model = if hero.Locked then nil else hero.Model,
 			Badge = badge,
 			BadgeColor = if hero.New then Colors.RoyalRed else Colors.Gold,
 			Selected = hero.Equipped,
+			Locked = hero.Locked,
 		})
+		if hero.Locked then
+			-- pas encore découvert : un cadenas à la place du portrait
+			local art = card:FindFirstChild("Illustration")
+			if art then
+				local lock = Instance.new("Frame")
+				lock.BackgroundTransparency = 1
+				lock.AnchorPoint = Vector2.new(0.5, 0.5)
+				lock.Position = UDim2.fromScale(0.5, 0.5)
+				lock.Size = UDim2.fromOffset(64, 64)
+				lock.Parent = art
+				local icon = Icons.viewport(lock, "Cadenas")
+				icon.ImageTransparency = 0.35
+			end
+		end
 		if hero.ClassId then
 			local chip = Instance.new("Frame")
 			chip.BackgroundColor3 = Colors.Cream

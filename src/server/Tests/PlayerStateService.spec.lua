@@ -58,6 +58,7 @@ return function(createService: any)
 			s:Start()
 			local remotes = replicated:FindFirstChild("Remotes")
 			env.get = remotes and remotes:FindFirstChild("GetCurrencies")
+			env.stats = remotes and remotes:FindFirstChild("GetPlayerStats")
 			return s
 		end
 		return env
@@ -110,6 +111,37 @@ return function(createService: any)
 		assert(va.Gold == 100 and va.SummonTickets == 0 and vb.Gold == 0 and vb.SummonTickets == 3)
 	end)
 
+	test("GetPlayerStats: counts read from the server data, nothing else", function()
+		local e = fixture()
+		e.start()
+		local p = e.player("A")
+		local data = e.data[p]
+		data.Heroes = {
+			H1 = { HeroId = "ecuyer_du_rempart", Level = 4 },
+			H2 = { HeroId = "ecuyer_du_rempart", Level = 2 },
+			H3 = { HeroId = "tireuse_des_faubourgs", Level = 7 },
+		}
+		data.Progression.FirstClears = { ["1-1"] = true, ["1-2"] = true }
+		data.Progression.EliteFirstClears = { ["1-1"] = true }
+		data.Summons = { Total = 5 }
+		data.Kingdom.Level = 3
+		local s = e.stats.OnServerInvoke(p)
+		assert(s.Heroes == 3 and s.UniqueHeroes == 2 and s.HighestLevel == 7, "heroes")
+		assert(s.StagesCleared == 2 and s.EliteCleared == 1, "clears")
+		assert(s.Summons == 5 and s.KingdomLevel == 3, "summons, kingdom")
+		assert(s.Currencies == nil and s.Quests == nil, "never PlayerData")
+	end)
+
+	test("GetPlayerStats: old profile without Elite clears or Summons, and nil before data", function()
+		local e = fixture()
+		e.start()
+		local p = e.player("A")
+		local s = e.stats.OnServerInvoke(p)
+		assert(s.EliteCleared == 0 and s.Summons == 0 and s.StagesCleared == 1 and s.HighestLevel == 1)
+		p.attributes.DataLoaded = nil
+		assert(e.stats.OnServerInvoke(p) == nil)
+	end)
+
 	test("#12 read-only: the service exposes no remote that changes a currency", function()
 		local e = fixture()
 		e.start()
@@ -117,10 +149,12 @@ return function(createService: any)
 		local remotes = e.get.Parent
 		local names = {}
 		for _, r in remotes.children do table.insert(names, r.Name) end
-		assert(#names == 1 and names[1] == "GetCurrencies", "only the getter: " .. table.concat(names, ","))
+		table.sort(names)
+		assert(#names == 2 and names[1] == "GetCurrencies" and names[2] == "GetPlayerStats", "only the getters: " .. table.concat(names, ","))
 		for _, args in { { "Gold", 1e9 }, { { Gold = 1e9 } }, { 0 / 0 } } :: { any } do
 			e.get.OnServerInvoke(p, table.unpack(args))
 		end
+		e.stats.OnServerInvoke(p, "Gold", 1e9)
 		local c = e.data[p].Currencies
 		assert(c.Gold == 7 and c.Gems == 3 and c.SummonTickets == 1, "arguments are ignored")
 	end)

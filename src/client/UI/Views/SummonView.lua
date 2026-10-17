@@ -28,6 +28,7 @@ local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local Icons = require(script.Parent.Parent.Icons)
 local RarityStyle = require(script.Parent.Parent.RarityStyle)
 local UIKit = require(script.Parent.Parent.UIKit)
+local GuideTargets = require(script.Parent.Parent.GuideTargets)
 local AudioController = require(script.Parent.Parent.Parent.Controllers.AudioController)
 
 local Colors = UITheme.Colors
@@ -61,6 +62,8 @@ function SummonView.Hide()
 		return
 	end
 	current = nil
+	GuideTargets.close("Summon")
+	GuideTargets.close("SummonBanners")
 	UIKit.close(c.panel, c.veil, true, function()
 		c.screen:Destroy()
 	end)
@@ -258,6 +261,7 @@ local function showBanners(content: Frame, data: Data, opts: ShowOptions, cost: 
 		tabButtons[banner.Id] = tab
 	end
 	render(selected)
+	GuideTargets.register("Summon.Banners", tabs) -- guidage : colonne des bannières
 
 	-- barre du bas : tickets, taux, invoquer
 	local bottom = Instance.new("Frame")
@@ -276,6 +280,7 @@ local function showBanners(content: Frame, data: Data, opts: ShowOptions, cost: 
 		{ Color = if free then Colors.Success elseif enough then Colors.TextLight else Colors.Warning, Align = Enum.TextXAlignment.Left })
 	count.Position = UDim2.fromOffset(72, 0)
 	count.Size = UDim2.fromOffset(260, 32)
+	GuideTargets.register("Summon.Tickets", count)
 	local hint = UIKit.text(bottom, if free then "Ton premier héros t'attend" elseif enough then `Coût : {costText(cost)}` else "Gagne des tickets en combattant",
 		Typography.Size.Caption, { Color = Colors.TextMuted, Align = Enum.TextXAlignment.Left })
 	hint.Position = UDim2.fromOffset(72, 32)
@@ -292,6 +297,7 @@ local function showBanners(content: Frame, data: Data, opts: ShowOptions, cost: 
 	summon.setEnabled(enough and opts.OnSummon ~= nil)
 	summon.holder.AnchorPoint = Vector2.new(1, 0)
 	summon.holder.Position = UDim2.fromScale(1, 0)
+	GuideTargets.register("Summon.Invoke", summon.holder)
 	if free then
 		breathe(summon)
 	end
@@ -344,6 +350,7 @@ local function showSimple(content: Frame, data: Data, opts: ShowOptions, cost: n
 	summon.setEnabled(enough and opts.OnSummon ~= nil)
 	summon.holder.AnchorPoint = Vector2.new(0.5, 1)
 	summon.holder.Position = UDim2.new(0.5, 0, 1, -(if enough then 0 else 26))
+	GuideTargets.register("Summon.Invoke", summon.holder)
 	if free then
 		breathe(summon)
 	end
@@ -380,6 +387,8 @@ function SummonView.Show(data: Data, options: ShowOptions?)
 		showSimple(content, data, opts, cost, enough)
 	end
 	UIKit.open(panel, veil)
+	-- guidage de première ouverture : l'invocation tutorielle, puis les vraies bannières
+	GuideTargets.open(if data.Starter or data.Free then "Summon" elseif withBanners then "SummonBanners" else "Summon")
 end
 
 -- Reveal : à afficher quand l'effet 3D du portail a révélé le héros.

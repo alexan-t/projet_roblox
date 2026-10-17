@@ -3,6 +3,8 @@
 -- Présentation seulement : les montants viennent de PlayerData.Currencies (serveur).
 --   Une pastille HUD par monnaie, l'icône 3D déborde à gauche, montant en Label.
 --   Gain : le montant défile (Count, 0,4 s) et l'icône fait un pop. Perte : défile sans pop.
+--   Guidage : chaque pastille est la cible « Currency.<Clé> » ; un gain d'or signale « Currencies »
+--   (TutorialController : la toute première fois, une flèche montre la pastille d'or).
 -- API : CurrencyView.Set(currencies, animate?) ; CurrencyView.Hide().
 --   currencies = { Gold: number?, Gems: number?, SummonTickets: number? } (monnaie absente : inchangée)
 
@@ -11,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local Icons = require(script.Parent.Parent.Icons)
 local UIKit = require(script.Parent.Parent.UIKit)
+local GuideTargets = require(script.Parent.Parent.GuideTargets)
 
 local Typography = UITheme.Typography
 local Spacing = UITheme.Spacing
@@ -63,6 +66,7 @@ local function build()
 		local pill = UIKit.pill(row, PILL)
 		pill.Name = kind.Key
 		pill.LayoutOrder = index
+		GuideTargets.register(`Currency.{kind.Key}`, pill) -- guidage : Currency.Gold, Currency.Gems...
 		local icon = Instance.new("Frame")
 		icon.Name = "Icone"
 		icon.BackgroundTransparency = 1
@@ -96,6 +100,9 @@ function CurrencyView.Set(currencies: Currencies, animate: boolean?)
 				UIKit.tween(entry.value, UITheme.Animation.Count, { Value = target })
 				if gain then
 					UIKit.pop(entry.icon)
+					if key == "Gold" then
+						GuideTargets.open("Currencies")
+					end
 				end
 			else
 				entry.value.Value = target

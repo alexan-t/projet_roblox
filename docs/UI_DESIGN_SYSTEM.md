@@ -267,6 +267,12 @@ battement), lumière douce (`LightFrom` → `LightTo`), quelques étincelles ; b
 joueur est arrivé (`Near`). Le même langage s'applique à l'interface : raccourci de hotbar à prendre
 (lueur dorée qui respire), pastille « F · Lancer » (contour doré), bouton « Récupérer » d'une quête
 (contour doré qui pulse, bouton qui respire, petit rebond régulier ; au clic : pop puis désactivé).
+Flèches du tutoriel (`docs/TUTORIAL_GUIDANCE.md`) : une flèche dorée chunky (icône 3D `Fleche`), au sol en
+chaîne, au-dessus de la cible dans le monde, ou en flèche UI (`UI/GuidePointer`, une seule à la fois) qui
+rebondit vers un élément et l'entoure d'une lueur dorée, avec une légende de 2 à 4 mots au plus.
+Menu de navigation (`MenuView`) : boutons carrés chunky (face Cream → Sand sur lèvre WoodDark, rayon Large),
+icône 3D maison qui déborde, nom dessous ; sélectionné : face dorée et contour Selected ; badge « ! »
+RoyalRed qui rebondit doucement.
 
 ## 9. Tokens Roblox
 

@@ -39,6 +39,10 @@ local DefaultPlayerData: PlayerDataTypes.PlayerData = {
 	Settings = {
 		CombatSpeed = 1,
 	},
+	-- Guidage du tutoriel (TutorialService) : drapeaux « vu une fois » de TutorialConfig.Flags.
+	Tutorial = {
+		Seen = {},
+	},
 }
 
 return DefaultPlayerData

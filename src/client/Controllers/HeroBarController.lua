@@ -7,7 +7,10 @@
 -- hotbar reste visible mais ne modifie plus la formation.
 -- Style : design system (UITheme via UIKit) ; légère, transparente, la map reste visible.
 -- Tutoriel : le raccourci du héros à prendre (ArenaStore.guide.hotbar) s'entoure d'une lueur dorée qui
--- respire, jusqu'à ce que le héros soit en main ou posé.
+-- respire, jusqu'à ce que le héros soit en main ou posé ; il est aussi la cible « Hotbar.Guide » de la
+-- flèche UI. La sacoche est la cible des guidages « Bag.* » (GuideTargets) et signale son ouverture
+-- (drapeau « Bag »). Elle s'ouvre depuis le menu de navigation (MenuController, bouton Sac) :
+-- HeroBarController.SetBag(open), HeroBarController.IsBagOpen(), HeroBarController.bagChanged.
 -- Niveaux (#68) : « Nv. n » discret sur chaque raccourci et chaque carte (par exemplaire : deux doublons
 -- peuvent avoir des niveaux différents) ; la carte choisie montre son XP (« 40 / 150 XP » et une barre).
 -- Valeurs reçues du serveur (HeroesChanged), jamais calculées ici.
@@ -24,6 +27,7 @@ local ArenaStore = require(script.Parent.Parent.Arena.ArenaStore)
 local PlacementState = require(script.Parent.Parent.Arena.PlacementState)
 local UIKit = require(script.Parent.Parent.UI.UIKit)
 local Icons = require(script.Parent.Parent.UI.Icons)
+local GuideTargets = require(script.Parent.Parent.UI.GuideTargets)
 
 local Drag = require(script.Parent.Parent.UI.HeroDrag)
 
@@ -37,6 +41,8 @@ local T = UITheme.Transparency
 local S = UITheme.Spacing
 
 local HeroBarController = {}
+-- Sacoche ouverte / fermée (true / false) : le menu met son bouton Sac en « sélectionné ».
+HeroBarController.bagChanged = Instance.new("BindableEvent")
 
 local SLOT = 64 -- taille d'un raccourci (px), au-dessus de la zone tactile minimale
 local KEYS = {
@@ -151,6 +157,7 @@ local function setGuided(slot: SlotUI, on: boolean)
 		current.tween:Cancel()
 		current.frame:Destroy()
 		slot.guide = nil
+		GuideTargets.unregister("Hotbar.Guide", slot.frame)
 		return
 	end
 	local glow = Instance.new("Frame")
@@ -175,6 +182,7 @@ local function setGuided(slot: SlotUI, on: boolean)
 		strokeTween:Cancel()
 	end)
 	UIKit.pop(slot.frame)
+	GuideTargets.register("Hotbar.Guide", slot.frame)
 end
 
 local function renderHotbar()
@@ -216,27 +224,33 @@ end
 ------------------------------------------------------------------ sacoche
 
 local function setBag(open: boolean)
+	if not ui.bag or ui.bag.Visible == open then
+		return
+	end
 	ui.bag.Visible = open
 	if open then
 		UIKit.pop(ui.bag)
+		GuideTargets.open("Bag")
+	else
+		GuideTargets.close("Bag")
 	end
+	HeroBarController.bagChanged:Fire(open)
+end
+
+function HeroBarController.SetBag(open: boolean)
+	setBag(open)
+end
+
+function HeroBarController.IsBagOpen(): boolean
+	return ui.bag ~= nil and ui.bag.Visible
 end
 
 local function buildBag(screen: ScreenGui)
-	-- Bouton sacoche, à gauche de la hotbar (libellé texte en attendant l'icône dessinée).
-	local toggle = UIKit.button(screen, "Sac", "Secondary", UDim2.fromOffset(SLOT, SLOT + UITheme.Shadow.ButtonLip), function()
-		setBag(not ui.bag.Visible)
-	end)
-	toggle.holder.Name = "BoutonSacoche"
-	toggle.holder.AnchorPoint = Vector2.new(1, 1)
-	toggle.holder.Position = UDim2.new(0.5, -(ui.bar.Size.X.Offset / 2) - S.M, 1, -S.ScreenMargin - S.M)
-	toggle.label.TextSize = UITheme.Typography.Size.Label
-
-	-- Panneau à gauche, transparent : la map reste visible.
+	-- Panneau à gauche, à côté du menu de navigation (bouton Sac), transparent : la map reste visible.
 	local bag = UIKit.panel(screen, T.Panel)
 	bag.Name = "Sacoche"
 	bag.AnchorPoint = Vector2.new(0, 0.5)
-	bag.Position = UDim2.new(0, S.ScreenMargin, 0.5, -40)
+	bag.Position = UDim2.new(0, S.ScreenMargin + S.MenuColumn, 0.5, -40)
 	bag.Size = UDim2.fromOffset(372, 620)
 	bag.Visible = false
 	ui.bag = bag
@@ -244,6 +258,9 @@ local function buildBag(screen: ScreenGui)
 	scale.Parent = bag
 	local function resize()
 		scale.Scale = math.min(1, math.max(0.5, (screen.AbsoluteSize.Y - 130) / 620))
+		-- le menu (UIKit.screen) suit l'échelle de l'écran de référence : la sacoche s'ouvre juste à côté
+		local menuScale = math.clamp(screen.AbsoluteSize.Y / 1080, 0.7, 1.25)
+		bag.Position = UDim2.new(0, S.ScreenMargin + S.MenuColumn * menuScale, 0.5, -40)
 	end
 	screen:GetPropertyChangedSignal("AbsoluteSize"):Connect(resize)
 	task.defer(resize)
@@ -336,6 +353,7 @@ local function buildBag(screen: ScreenGui)
 	place.holder.AnchorPoint = Vector2.new(0, 1)
 	place.holder.Position = UDim2.new(0, S.L, 1, -168)
 	ui.place = place
+	GuideTargets.register("Bag.Place", place.holder)
 	local chooser = UIKit.panel(bag, T.PanelStrong)
 	chooser.Name = "ChoixRaccourci"
 	chooser.Position = UDim2.new(0, S.L, 1, -76)
@@ -459,8 +477,13 @@ local function renderBag()
 	if chosen and not ArenaStore.heroes[chosen] then
 		chosen = nil
 	end
+	-- guidage : la première carte de la grille (ordre du catalogue) est la cible « Bag.FirstHero »
+	local first: CardUI? = nil
 	for id, hero in ArenaStore.heroes do
 		local entry = card(hero)
+		if not first or entry.frame.LayoutOrder < first.frame.LayoutOrder then
+			first = entry
+		end
 		local selected = id == chosen
 		entry.stroke.Color = if selected then C.Selected else UITheme.Stroke.Color
 		entry.stroke.Thickness = if selected then UITheme.Stroke.Thick else UITheme.Stroke.Regular
@@ -478,6 +501,9 @@ local function renderBag()
 		else
 			entry.shortcut.Text = if slot then `Raccourci {slot % 10}` else "Collection"
 		end
+	end
+	if first then
+		GuideTargets.register("Bag.FirstHero", first.frame)
 	end
 	ui.place.setEnabled(chosen ~= nil and not ArenaStore.inCombat())
 	local heroes = currentTab == "Heroes"
