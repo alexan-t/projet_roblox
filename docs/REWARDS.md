@@ -43,6 +43,13 @@ Au démarrage (`Init`), chaque entrée est validée. Une entrée est refusée, a
 
 Une entrée refusée ne donne **rien**, pas même le First Clear. Les autres stages restent utilisables.
 
+**Mode Élite (#69)** : `RewardConfig.EliteStages`, même format et même clé `"<zone>-<stage>"`, lu quand
+ZoneService termine une session Élite (`HandleStageCompleted(..., mode = "Elite")`). Son First Clear est
+enregistré dans `Progression.EliteFirstClears` (il débloque le stage Élite suivant), jamais dans
+`FirstClears` ; les deux progressions sont indépendantes. Les listes Élite sont **vides** pour l'instant
+(ALPHA 0.0.2 PROVISOIRE) : l'économie Élite (équipements, ressources) sera définie dans ses propres issues,
+sans dupliquer RewardService. Les récompenses Normales sont inchangées.
+
 ## Flux
 
 ```

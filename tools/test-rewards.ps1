@@ -20,6 +20,8 @@ $runner = "local RewardRules = $(Module 'src/server/Rewards/RewardRules.lua')`n"
 	"    QuestConfig = $(Module 'src/server/Config/QuestConfig.lua'),`n" +
 	"    CombatConfig = $(Module 'src/server/Config/CombatConfig.lua'),`n" +
 	"    QuestGuide = $(Module 'src/shared/Quests/QuestGuide.lua'),`n" +
+	"    EliteConfig = $(Module 'src/server/Config/EliteConfig.lua'),`n" +
+	"    Difficulty = $(Module 'src/server/Combat/Difficulty.lua'),`n" +
 	"}`n" +
 	"local CombatEngine = $(Module 'src/server/Combat/CombatEngine.lua')`n" +
 	"local factories = {`n" +

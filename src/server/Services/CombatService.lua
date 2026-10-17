@@ -13,6 +13,7 @@ local RunService = game:GetService("RunService")
 local Log = require(ReplicatedStorage.Shared.Utils.Log)
 local CombatConfig = require(script.Parent.Parent.Config.CombatConfig)
 local CombatEngine = require(script.Parent.Parent.Combat.CombatEngine)
+local Difficulty = require(script.Parent.Parent.Combat.Difficulty)
 local DataService = require(script.Parent.DataService)
 local ZoneService = require(script.Parent.ZoneService)
 
@@ -27,11 +28,12 @@ export type ArenaContext = {
 	EnemyPositions: { [number]: Vector3 }, -- case 1..9 -> pieds
 	SpawnUnit: (unit: { UnitId: number, Team: string, TypeId: string, Slot: number? }, feet: Vector3, lookAt: Vector3) -> Model?,
 	Roster: { [number]: RosterEntry }?,
-	GrantXP: ((participants: { string }, zone: number, stage: number) -> { any })?,
+	GrantXP: ((participants: { string }, zone: number, stage: number, mode: string) -> { any })?,
 }
 export type CombatView = {
 	Id: number,
 	ZoneSessionId: number,
+	Mode: string,
 	Zone: number,
 	Stage: number,
 	Wave: number,
@@ -43,6 +45,7 @@ type Session = {
 	id: number,
 	player: Player,
 	zoneSessionId: number,
+	mode: string, -- "Normal" | "Elite" (session de stage de ZoneService)
 	zone: number,
 	stage: number,
 	speed: number,
@@ -198,7 +201,7 @@ local function finalize(session: Session)
 	local progression = {}
 	local grant = session.context.GrantXP
 	if victory and completed and grant and #session.participants > 0 then
-		local ok, views = pcall(grant, table.clone(session.participants), session.zone, session.stage)
+		local ok, views = pcall(grant, table.clone(session.participants), session.zone, session.stage, session.mode)
 		if ok and typeof(views) == "table" then
 			progression = views
 		elseif not ok then
@@ -336,18 +339,22 @@ function CombatService:StartCombat(player: Player, zoneSessionId: number, format
 	end
 
 	local savedSpeed = data.Settings.CombatSpeed
+	-- Élite (#69) : stats ennemies de CETTE session (MaxHealth / AttackDamage multipliées, EnemyId inchangés) ;
+	-- Normal : CombatConfig.Enemies tel quel.
+	local enemies = if stage.Difficulty then Difficulty.enemies(CombatConfig.Enemies, stage.Difficulty) else CombatConfig.Enemies
 	nextCombatId += 1
 	local session: Session = {
 		id = nextCombatId,
 		player = player,
 		zoneSessionId = zoneSessionId,
+		mode = stage.Mode or "Normal",
 		zone = stage.Zone,
 		stage = stage.Stage,
 		speed = if isSpeed(savedSpeed) then savedSpeed else 1,
 		state = CombatEngine.new({
 			Stage = config,
 			Heroes = CombatConfig.Heroes,
-			Enemies = CombatConfig.Enemies,
+			Enemies = enemies,
 			UltimateRadius = CombatConfig.Ultimate.Radius,
 			Allies = allies,
 			EnemyCells = cells,
@@ -398,6 +405,7 @@ function CombatService:GetCombat(player: Player): CombatView?
 	return {
 		Id = session.id,
 		ZoneSessionId = session.zoneSessionId,
+		Mode = session.mode,
 		Zone = session.zone,
 		Stage = session.stage,
 		Wave = session.state.waveIndex,

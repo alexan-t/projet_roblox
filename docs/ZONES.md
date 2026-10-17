@@ -54,6 +54,42 @@ Zones = {
     les autres restent jouables. Pas de crash.
 - La config est copiée et gelée au démarrage : ni une session ni un appelant ne peut la modifier.
 
+## Mode Élite (#69) — ALPHA 0.0.2 PROVISOIRE
+
+Après le **Roi Orc** (First Clear Normal de 1-5), la Zone 1 se rejoue en **Élite** : 1-1E → 1-2E → 1-3E →
+1-4E → 1-5E (pas de 1-6E). Même map, mêmes stages (`StageConfig`), mêmes ennemis et `EnemyId`, mêmes
+entrées depuis le décor, même CombatEngine, même ArenaService. Seule la difficulté change, côté serveur.
+
+- **Identité** : une session de stage porte `Mode` (`"Normal"` / `"Elite"`), `Zone`, `Stage` ;
+  `ZoneService:StartStage(player, zone, stage, mode)`, `CanStartStage`, `ListStages(player, mode)`,
+  `IsEliteUnlocked(player, zone)`. Mode absent = Normal (comportement existant inchangé).
+- **Config** : `src/server/Config/EliteConfig.lua` : `UnlockAfter = "1-5"` et, par stage, les
+  multiplicateurs ennemis (seulement `MaxHealth` et `AttackDamage`) :
+
+  | Stage | PV | ATK |
+  | --- | --- | --- |
+  | 1-1E | ×1,50 | ×1,25 |
+  | 1-2E | ×1,65 | ×1,30 |
+  | 1-3E | ×1,80 | ×1,35 |
+  | 1-4E | ×2,00 | ×1,40 |
+  | 1-5E | ×2,25 | ×1,50 |
+
+- **Progression** : `Progression.EliteFirstClears` (même format que `FirstClears`, indépendante). Vide pour
+  tout profil, nouveau ou ancien : aucun clear Élite rétroactif. Ajoutée aux anciens profils par
+  `Profile:Reconcile()` (clé fixe de `Progression`) : **pas de migration**, DataVersion reste 4.
+  Un stage Élite n'est jouable qu'après le First Clear Élite du précédent ; le premier, dès 1-5 Normal.
+- **Fin** : une victoire Élite émet `EliteStageCompleted` pour les quêtes (jamais `StageCompleted` : une
+  quête Normale ne progresse pas par accident), puis RewardService en mode Élite (`REWARDS.md`).
+- **Sélection** : le stage choisi porte son mode ; après une victoire Élite, le stage Élite suivant est
+  sélectionné (1-5E reste 1-5E). Au join / rejoin, la sélection repart en Normal (aucune préférence
+  sauvegardée) ; l'onglet Élite propose son premier stage débloqué non terminé.
+- **Sécurité** : le client n'envoie que des entiers et un nom de mode (`SelectStage`, `RequestStartStage`) ;
+  mode inconnu, Élite verrouillée, stage Élite précédent non terminé, stage ou zone inconnus (1-6E) :
+  refusés. Aucune stat, aucun multiplicateur, aucune récompense ne vient du client.
+- **Interface** : fenêtre Expédition avec onglets **Normal** / **Élite** (« Élite · verrouillé » avant 1-5,
+  cartes Élite consultables, « Termine 1-5 pour débloquer l'Élite ») ; cartes Élite marquées « Élite »,
+  titre en rouge royal ; pancarte « Stage 1-3 » + pastille « Élite », pastille « F · Lancer … · ÉLITE ».
+
 ## Règles d'accès
 
 `CanStartStage(player, zone, stage)` refuse, dans cet ordre :

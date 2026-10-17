@@ -19,6 +19,8 @@ local DefaultPlayerData: PlayerDataTypes.PlayerData = {
 		CurrentZone = 1,
 		HighestStage = 0,
 		FirstClears = {},
+		-- Mode Élite (#69) : vide pour tout profil, nouveau ou ancien (aucun clear Élite rétroactif).
+		EliteFirstClears = {},
 	},
 	-- Aucun héros : le premier est obtenu pendant l'invocation tutorielle (quête SummonStarter).
 	Heroes = {},

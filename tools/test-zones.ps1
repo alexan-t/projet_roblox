@@ -6,14 +6,18 @@ $testBuild = Join-Path $repoRoot 'build'
 New-Item -ItemType Directory -Force -Path $testBuild | Out-Null
 $configSource = Get-Content -LiteralPath (Join-Path $repoRoot 'src/server/Config/StageConfig.lua') -Raw
 $serviceSource = Get-Content -LiteralPath (Join-Path $repoRoot 'src/server/Services/ZoneService.lua') -Raw
+$eliteSource = Get-Content -LiteralPath (Join-Path $repoRoot 'src/server/Config/EliteConfig.lua') -Raw
+$difficultySource = Get-Content -LiteralPath (Join-Path $repoRoot 'src/server/Combat/Difficulty.lua') -Raw
 $testSource = Get-Content -LiteralPath (Join-Path $repoRoot 'src/server/Tests/ZoneService.spec.lua') -Raw
 
 # Le vrai module (et la vraie config) est execute avec des doubles explicites
 # de DataService, PlotService, QuestService et des API moteur utilisees.
-$runnerSource = "local config = (function()`n" + $configSource + "`nend)()`n" + @'
+$runnerSource = "local config = (function()`n" + $configSource + "`nend)()`n" +
+	"local eliteConfig = (function()`n" + $eliteSource + "`nend)()`n" +
+	"local Difficulty = (function()`n" + $difficultySource + "`nend)()`n" + @'
 local function createService(env)
     local game, script, require, Instance = env.game, env.script, env.require, env.Instance
-'@ + "`n" + $serviceSource + "`nend`nlocal runTests = (function()`n" + $testSource + "`nend)()`nrunTests(createService, config)`n"
+'@ + "`n" + $serviceSource + "`nend`nlocal runTests = (function()`n" + $testSource + "`nend)()`nrunTests(createService, config, eliteConfig, Difficulty)`n"
 $runnerPath = Join-Path $testBuild 'zone-service-tests.luau'
 [System.IO.File]::WriteAllText($runnerPath, $runnerSource, [System.Text.UTF8Encoding]::new($false))
 & $LuauPath $runnerPath

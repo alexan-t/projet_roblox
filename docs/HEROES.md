@@ -100,7 +100,11 @@ ont chacun leur niveau. `HeroId` (catalogue) ≠ `HeroInstanceId` (exemplaire) �
 - **Gain (provisoire)** : **victoire seulement**, par stage (`HeroProgressionConfig.StageXP`) :
   1-1 = 25, 1-2 = 35, 1-3 = 50, 1-4 = 70, 1-5 = 100. Défaite = 0. Chaque héros **réellement posé et
   engagé** dans le combat gagne le montant complet ; un héros de la collection ou de la hotbar non posé
-  ne gagne rien. Un futur mode (Élite, #69) aura sa propre table dans la même config.
+  ne gagne rien.
+- **Gain Élite (#69, ALPHA 0.0.2 PROVISOIRE)** : table distincte `EliteStageXP` : 1-1E = 60, 1-2E = 80,
+  1-3E = 110, 1-4E = 150, 1-5E = 220 ; victoire seulement. Le gain dépend de **Mode + Zone + Stage**
+  (`HeroProgressionRules.stageXP(zone, stage, config, mode)`, `HeroService:GrantCombatXP(..., mode)`) :
+  1-3 Élite ne donne jamais l'XP de 1-3 Normal. Les stats de niveau des héros sont les mêmes en Élite.
 - **Stats** : `MaxHealth` et `AttackDamage` × `1 + (Level - 1) × 0,05`, arrondies (Lv1 = stats actuelles,
   Lv2 = 105 %, Lv10 = 145 %, Lv20 = 195 %). **Aucune autre stat ne progresse** (cadence, portée, vitesse,
   énergie, dégâts de l'ultime).

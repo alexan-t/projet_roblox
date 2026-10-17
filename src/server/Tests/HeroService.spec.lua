@@ -937,6 +937,21 @@ return function(createService: any, modules: any)
 		assert(#s:GrantCombatXP(ghost, { "x" }, 1, 1) == 0)
 	end)
 
+	test("#69 GrantCombatXP in Elite: Elite table (1-1E = 60), Normal unchanged (1-1 = 25), level stats identical", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		local starter = e.data[p].Hotbar[1]
+		heroOf(e, p, "N", "ecuyer_du_rempart", 1, 0)
+		local elite = s:GrantCombatXP(p, { starter }, 1, 1, "Elite")
+		local normal = s:GrantCombatXP(p, { "N" }, 1, 1, "Normal")
+		assert(elite[1].XPGranted == 60 and e.data[p].Heroes[starter].XP == 60)
+		assert(normal[1].XPGranted == 25 and e.data[p].Heroes.N.XP == 25)
+		e.data[p].Heroes[starter].Level = 2
+		local roster = s:GetCombatRoster(p, { [5] = starter })
+		assert(roster and roster[5].Stats.MaxHealth == 158, "a Lv2 hero has the same stats in Elite and Normal (roster ignores the mode)")
+	end)
+
 	test("#68 no client remote can grant XP or levels", function()
 		local e = fixture()
 		e.start()
