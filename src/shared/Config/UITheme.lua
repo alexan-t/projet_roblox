@@ -188,6 +188,8 @@ local Spacing = {
 	XXL = 32,
 	ScreenMargin = 16, -- marge minimale au bord de l'écran (mobile compris)
 	TouchTarget = 44, -- taille minimale d'une zone tactile
+	MenuButton = 72, -- bouton du menu de navigation (colonne à gauche)
+	MenuColumn = 104, -- largeur réservée à cette colonne (bouton, marge) : la sacoche s'ouvre à côté
 }
 
 local Shadow = {

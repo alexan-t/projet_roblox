@@ -23,6 +23,7 @@ local ArenaConfig = require(ReplicatedStorage.Shared.Config.ArenaConfig)
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local Icons = require(script.Parent.Parent.Icons)
 local UIKit = require(script.Parent.Parent.UIKit)
+local GuideTargets = require(script.Parent.Parent.GuideTargets)
 
 local Colors = UITheme.Colors
 local Typography = UITheme.Typography
@@ -185,6 +186,7 @@ function ExpeditionView.Show(data: Data, options: Options?)
 	launch.holder.AnchorPoint = Vector2.new(0.5, 1)
 	launch.holder.Position = UDim2.new(0.5, 0, 1, 0)
 	launch.setEnabled(false)
+	GuideTargets.register("Expedition.Launch", launch.holder)
 	local onPrepare = opts.OnPrepare
 	local prepareButton: UIKit.Button? = nil
 	if onPrepare then
@@ -197,9 +199,16 @@ function ExpeditionView.Show(data: Data, options: Options?)
 		prepare.holder.AnchorPoint = Vector2.new(0.5, 1)
 		prepare.holder.Position = UDim2.new(0.5, -Spacing.S - 110, 1, 0)
 		prepareButton = prepare
+		GuideTargets.register("Expedition.Prepare", prepare.holder)
 	end
 	local team = opts.Team
 	local teamReady = team == nil or team.Placed >= 1
+	-- guidage : l'action possible maintenant (lancer si l'équipe est prête, sinon la préparer)
+	if teamReady or not prepareButton then
+		GuideTargets.register("Expedition.Next", launch.holder, "Lance le combat")
+	else
+		GuideTargets.register("Expedition.Next", (prepareButton :: UIKit.Button).holder, "Pose un héros d'abord")
+	end
 
 	-- Mode affiché (Normal / Élite, #69) : ses cartes, avec SA progression ; changer de mode reconstruit
 	-- les cartes, la sélection et le détail. Le mode choisi est toujours visible (onglet, titre, badges).
@@ -238,9 +247,11 @@ function ExpeditionView.Show(data: Data, options: Options?)
 		table.clear(borders)
 		selected = nil
 		local list = stagesOf(m)
+		local frames: { [Stage]: Frame } = {}
 		for index, stage in list do
 			local frame, border, touch = stageCard(row, data.Zone, stage, m == "Elite")
 			borders[stage.Stage] = border
+			frames[stage] = frame
 			UIKit.popIn(frame, 0.05 + (index - 1) * 0.05) -- cascade de 0,05 s par carte
 			touch.Activated:Connect(function()
 				if selected == stage then
@@ -271,6 +282,9 @@ function ExpeditionView.Show(data: Data, options: Options?)
 			tab.setSelected(id == m)
 		end
 		local first = default
+		if first and frames[first] then
+			GuideTargets.register("Expedition.Stage", frames[first]) -- guidage : le stage proposé
+		end
 		if first then
 			select(first)
 		else
@@ -295,6 +309,7 @@ function ExpeditionView.Show(data: Data, options: Options?)
 	end
 	showMode(mode, opts.Selected)
 	UIKit.open(panel, veil)
+	GuideTargets.open("Expedition")
 	-- Tutoriel : la hiérarchie visuelle montre l'étape suivante, sans texte ni flèche.
 	if opts.Guide and default and default.Unlocked then
 		local window = current
@@ -321,6 +336,7 @@ function ExpeditionView.Hide()
 		return
 	end
 	current = nil
+	GuideTargets.close("Expedition")
 	UIKit.close(c.panel, c.veil, true, function()
 		c.screen:Destroy()
 	end)
