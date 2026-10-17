@@ -14,6 +14,8 @@ Nom lisible de la créature.
 `monster`, `boss`, `item` ou `resource`.
 - `monster`, `boss` : créature 3D (`docs/MONSTER_PRODUCTION.md`).
 - `item` : icône 2D d'équipement, voir `docs/ITEMS.md` (emplacement `Item_NNN` de la vitrine).
+  Champs en plus : `slot_type` (emplacement de `ItemConfig`) et `icon_hook` (idée principale de
+  l'icône). Catalogue des tâches : `automation/catalogues/items.json`.
 - `resource` : icône 2D de ressource, voir `docs/RESOURCES.md`. Champs en plus : `family`
   (famille de `ResourceConfig`) et `icon_hook` (idée principale de l'icône). Catalogue des
   tâches : `automation/catalogues/resources.json`.

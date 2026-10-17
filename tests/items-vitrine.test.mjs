@@ -2,6 +2,7 @@
 // Lecture seule. Compare src/shared/Config/ItemConfig.lua :
 //   - à la répartition du tableau de docs/ITEMS.md § 2 (lue dans le document lui-même) ;
 //   - aux paliers de src/shared/Config/RarityConfig.lua ;
+//   - au catalogue de production automation/catalogues/items.json (une tâche par icône restante) ;
 //   - CONTRÔLE HISTORIQUE : aux 100 cartes Item_NNN de la vitrine Workspace.Bestiaire.Inventaire du
 //     snapshot versionné studio/sandbox/partner_sandbox_v4.rbxl (format binaire lu ici : chunks LZ4,
 //     INST, PROP, PRNT), d'où le catalogue a été relevé. Ne prouve pas l'état de la DEV Studio
@@ -300,6 +301,79 @@ test(`Snapshot historique (${SNAPSHOT}): every card has Illustration.Icone; Asse
 		if ((info.icon ?? '') !== assetId) problems.push(`${slotName} AssetId = ${assetId}, ItemConfig.Icon = ${info.icon}`);
 	}
 	assert(problems.length === 0, `${problems.length} écart(s) : ${problems.slice(0, 5).join(' ; ')}`);
+});
+
+// --- Catalogue de production automation/catalogues/items.json (icônes restant à produire) ---
+
+const catalogue = JSON.parse(read('automation/catalogues/items.json').toString('utf8'));
+// Icônes fournies par le partenaire (PR #74) : elles n'ont pas de tâche.
+const partnerDelivered = (index) => (index >= 35 && index <= 44) || index >= 53;
+
+test('items.json: one task per item outside the partner delivery (001-034, 045-052), same id, name, slot type and order', () => {
+	const expected = items.filter((info) => !partnerDelivered(info.index));
+	const queue = catalogue.queue;
+	assert(queue.length === 42 && expected.length === 42, `${queue.length} tâches, ${expected.length} attendues`);
+	queue.forEach((task, i) => {
+		const info = expected[i];
+		assert(task.id === info.id && task.name === info.name && task.slot_type === info.slotType, `${task.id} ≠ ${info.id}`);
+		assert(info.icon === undefined, `${task.id} : icône déjà livrée dans ItemConfig, tâche à retirer`);
+	});
+});
+
+test('items.json: tasks follow TASK_FORMAT and target their Items #NNN [Rareté] slot', () => {
+	assert(catalogue.schema_version === 1, `schema_version ${catalogue.schema_version}`);
+	assert(new Set(catalogue.queue.map((task) => task.id)).size === catalogue.queue.length, 'identifiants en double');
+	const byId = new Map(items.map((info) => [info.id, info]));
+	for (const task of catalogue.queue) {
+		assert(task.type === 'item' && task.brief_source === 'docs/ITEMS.md', `${task.id}: type ou brief_source`);
+		assert(typeof task.icon_hook === 'string' && task.icon_hook.length >= 30, `${task.id}: icon_hook`);
+		const expected = `Items #${task.id.slice(-3)} [${rarityName.get(byId.get(task.id).rarity)}]`;
+		assert(task.target_studio_slot === expected, `${task.id}: ${task.target_studio_slot}`);
+		assert(task.status === 'todo' && task.iteration === 0 && task.max_iterations > 0, `${task.id}: état`);
+		assert(task.worker === 'windows' && Number.isInteger(task.priority), `${task.id}: worker ou priority`);
+		assert(Array.isArray(task.screenshots) && task.screenshots.length === 0, `${task.id}: screenshots`);
+		assert(task.latest_review === null && typeof task.notes === 'string', `${task.id}: latest_review ou notes`);
+		assert(!('rarity' in task), `${task.id}: champ de rareté (elle vient de ItemConfig)`);
+	}
+});
+
+test('items.json: exactly the TASK_FORMAT fields of an item task, one distinct icon_hook per task', () => {
+	const fields = [
+		'id', 'name', 'type', 'slot_type', 'icon_hook', 'brief_source', 'target_studio_slot', 'worker', 'status',
+		'iteration', 'max_iterations', 'priority', 'reference_priority', 'screenshots', 'latest_review', 'notes',
+	].sort().join(',');
+	const hooks = new Map();
+	for (const task of catalogue.queue) {
+		assert(Object.keys(task).sort().join(',') === fields, `${task.id}: champs ${Object.keys(task).join(',')}`);
+		const hook = task.icon_hook.trim().toLowerCase();
+		assert(!hooks.has(hook), `${task.id}: même icon_hook que ${hooks.get(hook)}`);
+		hooks.set(hook, task.id);
+	}
+});
+
+test('items.json: references are the four main validated creatures (CLAUDE.md, ART_DIRECTION § 1)', () => {
+	const art = read('docs/ART_DIRECTION.md').toString('utf8');
+	const main = ['KingTreant', 'Treant_Masque', 'KingSlime', 'RoiOrc'];
+	for (const id of main) assert(art.includes(`\`${id}\``), `${id} absent de ART_DIRECTION.md`);
+	for (const task of catalogue.queue) {
+		assert(JSON.stringify(task.reference_priority) === JSON.stringify(main), `${task.id}: reference_priority`);
+	}
+});
+
+test('items.json: icon hooks stay in the DA (no rarity, emoji, futuristic or chrome look)', () => {
+	const banned = /rar(e|eté)|légendaire|épique|commun[e]?\b|emoji|futuris|néon|chrom|holograph|photoréal/i;
+	const emoji = /\p{Extended_Pictographic}/u;
+	for (const task of catalogue.queue) {
+		const hit = task.icon_hook.match(banned);
+		assert(!hit, `${task.id}: « ${hit?.[0]} » dans icon_hook`);
+		assert(!emoji.test(task.icon_hook), `${task.id}: emoji`);
+	}
+});
+
+test('docs: ITEMS.md, TASK_FORMAT and README point to items.json', () => {
+	for (const path of ['docs/ITEMS.md', 'automation/TASK_FORMAT.md', 'README.md']) {
+		assert(read(path).toString('utf8').includes('automation/catalogues/items.json'), path);
+	}
 });
 
 console.log(`Items: ${passed} passed, ${failed} failed`);
