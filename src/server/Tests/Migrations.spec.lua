@@ -48,10 +48,10 @@ return function(Migrations: any, HeroRules: any, hotbarSize: number)
 		for _, hero in d.Heroes do assert(not table.find(LEGACY, hero.HeroId), "legacy left: " .. hero.HeroId) end
 	end
 
-	test("version: CURRENT_VERSION is 3 and v1 / v2 profiles migrate", function()
-		assert(Migrations.CURRENT_VERSION == 3)
+	test("version: CURRENT_VERSION is 4 and v1 / v2 / v3 profiles migrate", function()
+		assert(Migrations.CURRENT_VERSION == 4)
 		local d = v1({ A = "Archer" })
-		assert(Migrations.run(d) == "Ok" and d.DataVersion == 3)
+		assert(Migrations.run(d) == "Ok" and d.DataVersion == 4)
 	end)
 
 	test("v1 six legacy classes -> one ecuyer_du_rempart, no legacy left", function()
@@ -152,7 +152,7 @@ return function(Migrations: any, HeroRules: any, hotbarSize: number)
 			DataVersion = 2,
 			Currencies = { Gold = 250, Gems = 25, SummonTickets = 2 },
 			Progression = { CurrentZone = 1, HighestStage = 0, FirstClears = { ["1-1"] = true, ["1-2"] = true } },
-			Heroes = { E = { HeroId = "ecuyer_du_rempart", Level = 1 }, T = { HeroId = "tireuse_des_faubourgs", Level = 2 } },
+			Heroes = { E = { HeroId = "ecuyer_du_rempart", Level = 1, XP = 0 }, T = { HeroId = "tireuse_des_faubourgs", Level = 2, XP = 0 } },
 			Team = { "E", "T" },
 			Hotbar = bar,
 			Summons = { Total = 3 },
@@ -181,7 +181,7 @@ return function(Migrations: any, HeroRules: any, hotbarSize: number)
 	test("v2 -> v3: existing player skips SummonStarter (done + claimed), nothing else changes", function()
 		local d = v2()
 		local before = v2()
-		assert(Migrations.run(d) == "Ok" and d.DataVersion == 3)
+		assert(Migrations.run(d) == "Ok" and d.DataVersion == 4)
 		assert(d.Quests.SummonStarter and d.Quests.SummonStarter.Progress == 1 and d.Quests.SummonStarter.Claimed == true)
 		assert(d.Quests.DefendStage12 and d.Quests.DefendStage12.Progress == 1 and d.Quests.DefendStage12.Claimed == true, "1-2 already won: its quest is done")
 		d.Quests.SummonStarter = nil
@@ -203,7 +203,7 @@ return function(Migrations: any, HeroRules: any, hotbarSize: number)
 		empty.Heroes, empty.Team = {}, {}
 		for i = 1, hotbarSize do empty.Hotbar[i] = "" end
 		Migrations.run(empty)
-		assert(empty.Quests.SummonStarter == nil and empty.DataVersion == 3)
+		assert(empty.Quests.SummonStarter == nil and empty.DataVersion == 4)
 		local started = v2()
 		started.Quests.SummonStarter = { Progress = 0, Claimed = false }
 		Migrations.run(started)
@@ -238,6 +238,46 @@ return function(Migrations: any, HeroRules: any, hotbarSize: number)
 		local snapshot = dump(d)
 		Migrations.steps[2](d)
 		assert(Migrations.run(d) == "Ok" and dump(d) == snapshot)
+	end)
+
+	-- Profil v3 réel (Alpha 0.0.1) : héros sans XP, un Level conservé.
+	local function v3(): any
+		local d = v2()
+		d.DataVersion = 3
+		d.Heroes = { E = { HeroId = "ecuyer_du_rempart", Level = 1 }, T = { HeroId = "tireuse_des_faubourgs", Level = 4 },
+			D = { HeroId = "ecuyer_du_rempart", Level = 1 } }
+		d.Quests.SummonStarter = { Progress = 1, Claimed = true }
+		return d
+	end
+
+	test("v3 -> v4: every hero gets XP = 0, valid Level kept, nothing else touched", function()
+		local d = v3()
+		local before = v3()
+		assert(Migrations.run(d) == "Ok" and d.DataVersion == 4)
+		assert(count(d.Heroes) == 3, "no hero removed")
+		for id, hero in d.Heroes do
+			assert(hero.XP == 0, id .. " XP added")
+			assert(hero.Level == before.Heroes[id].Level and hero.HeroId == before.Heroes[id].HeroId, id .. " Level / HeroId kept")
+		end
+		for _, hero in d.Heroes do hero.XP = nil end
+		d.DataVersion = 3
+		assert(dump(d) == dump(before), "hotbar, team, currencies, FirstClears, summons, kingdom, quests untouched")
+	end)
+
+	test("v3 -> v4: invalid Level -> 1, invalid XP -> 0, existing valid XP kept; idempotent", function()
+		local d = v3()
+		d.Heroes.E.Level = 0
+		d.Heroes.T.Level = 2.5
+		d.Heroes.D.Level = "3"
+		d.Heroes.E.XP = -4
+		d.Heroes.T.XP = 0 / 0
+		d.Heroes.D.XP = 40
+		Migrations.run(d)
+		assert(d.Heroes.E.Level == 1 and d.Heroes.T.Level == 1 and d.Heroes.D.Level == 1)
+		assert(d.Heroes.E.XP == 0 and d.Heroes.T.XP == 0 and d.Heroes.D.XP == 40)
+		local snapshot = dump(d)
+		Migrations.steps[3](d)
+		assert(dump(d) == snapshot, "replayed step changes nothing")
 	end)
 
 	test("missing Heroes / Hotbar / Team tables do not crash", function()

@@ -504,6 +504,23 @@ return function(CombatEngine: any, combatConfig: any, stageConfig: any)
 		assert(#events == 0 and next(moved2) == nil)
 	end)
 
+	test("#68 ally Stats override (hero level); absent -> Heroes[TypeId] (existing behaviour)", function()
+		local base = stats({ MaxHealth = 100, AttackDamage = 10 })
+		local s = CombatEngine.new({
+			Stage = { Waves = { { Enemies = { { EnemyId = "E", Count = 1 } } } } },
+			Heroes = { H = base }, Enemies = { E = stats() }, UltimateRadius = 8,
+			Allies = {
+				{ TypeId = "H", Slot = 1, Position = { x = 0, z = 0 }, Stats = stats({ MaxHealth = 195, AttackDamage = 20 }) },
+				{ TypeId = "H", Slot = 2, Position = { x = 10, z = 0 } },
+			},
+			EnemyCells = cells(), Random = first(), TickRate = 20, MaxFrameTime = 0.25,
+		})
+		local bySlot = {}
+		for _, u in s.units do if u.Team == "Ally" then bySlot[u.Slot] = u end end
+		assert(bySlot[1].MaxHealth == 195 and bySlot[1].stats.AttackDamage == 20 and bySlot[1].TypeId == "H")
+		assert(bySlot[2].MaxHealth == 100 and bySlot[2].stats.AttackDamage == 10, "fallback: profile stats")
+	end)
+
 	test("small frames accumulate into fixed steps; nothing runs after the end", function()
 		local s = engine({ enemy = { MaxHealth = 100000, MoveSpeed = 0, AttackRange = 1 } })
 		assert(CombatEngine.advance(s, 0.03, 1) == 0, "0.03 s < one step")

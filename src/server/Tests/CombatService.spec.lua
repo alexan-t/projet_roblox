@@ -660,6 +660,110 @@ return function(createService: any, CombatEngine: any, combatConfig: any, _stage
 		assert(#victory == 1 and victory[1].Result == "Victory" and victory[1].FirstClear == false and #victory[1].Rewards == 0)
 	end)
 
+	-- Niveaux et XP (#68) : roster figé, XP après une victoire acceptée, une seule fois ---------------
+
+	-- Contexte avec roster (comme ArenaService) et GrantXP qui enregistre ses appels.
+	local function rosterContext(e: any, team: { [number]: string }, stats: { [number]: any }?): (any, { any })
+		local ctx = e.context()
+		local calls = {}
+		ctx.Roster = {}
+		for slot, profile in team do
+			ctx.Roster[slot] = { HeroInstanceId = `I{slot}`, CombatProfile = profile,
+				Stats = (stats and stats[slot]) or combatConfig.Heroes[profile] }
+		end
+		ctx.GrantXP = function(participants: { string }, zone: number, stage: number): { any }
+			table.insert(calls, { participants = participants, zone = zone, stage = stage, completions = #e.completions })
+			local views = {}
+			for _, id in participants do table.insert(views, { InstanceId = id, XPGranted = 25, LevelBefore = 1, LevelAfter = 1 }) end
+			return views
+		end
+		return ctx, calls
+	end
+
+	test("#68 victory: GrantXP once, after CompleteStage accepted, with the frozen participants; HeroProgression sent", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		local ctx, calls = rosterContext(e, TEAM)
+		s:StartCombat(p, e.stages[p].Id, TEAM, ctx)
+		ctx.Roster[1].HeroInstanceId = "Change" -- un changement après le lancement n'a aucun effet
+		assert(e.runUntilEnd(s, p, 300))
+		assert(#calls == 1 and calls[1].completions == 1, "XP granted once, after ZoneService accepted the end")
+		assert(calls[1].zone == 1 and calls[1].stage == 1)
+		table.sort(calls[1].participants)
+		assert(table.concat(calls[1].participants, ",") == "I1,I2,I7,I9", table.concat(calls[1].participants, ","))
+		local ended = e.events(p, "CombatEnded")
+		assert(#ended == 1 and #ended[1].HeroProgression == 4)
+		e.tick(10)
+		for _, fn in e.delayed do fn() end
+		assert(#calls == 1, "finalize never grants twice")
+	end)
+
+	test("#68 defeat, refused completion, no roster: no XP, empty HeroProgression", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		local ctx, calls = rosterContext(e, { [5] = "Magicien" })
+		s:StartCombat(p, e.stages[p].Id, { [5] = "Magicien" }, ctx)
+		assert(e.runUntilEnd(s, p, 300))
+		assert(#calls == 0 and #e.events(p, "CombatEnded")[1].HeroProgression == 0, "defeat = 0 XP")
+
+		local f = fixture()
+		local s2 = f.start()
+		local q = f.player("B")
+		local ctx2, calls2 = rosterContext(f, TEAM)
+		s2:StartCombat(q, f.stages[q].Id, TEAM, ctx2)
+		f.stages[q] = { Id = -1, Zone = 1, Stage = 1, Config = MECHANICS } -- ZoneService refusera cette fin
+		f.runUntilEnd(s2, q, 300)
+		assert(#calls2 == 0, "no XP when ZoneService did not accept the end of THIS session")
+
+		local g = fixture()
+		local s3 = g.start()
+		local r = g.player("C")
+		s3:StartCombat(r, g.stages[r].Id, TEAM, g.context())
+		assert(g.runUntilEnd(s3, r, 300))
+		assert(#g.events(r, "CombatEnded")[1].HeroProgression == 0, "no roster: nobody to reward")
+	end)
+
+	test("#68 x1 and x2: same participants, same single grant", function()
+		local function play(speed: number): (number, string)
+			local e = fixture()
+			local s = e.start()
+			local p = e.player("A")
+			e.data[p].Settings.CombatSpeed = speed
+			local ctx, calls = rosterContext(e, TEAM)
+			s:StartCombat(p, e.stages[p].Id, TEAM, ctx)
+			assert(e.runUntilEnd(s, p, 300))
+			local ids = calls[1] and table.clone(calls[1].participants) or {}
+			table.sort(ids)
+			return #calls, table.concat(ids, ",")
+		end
+		local n1, ids1 = play(1)
+		local n2, ids2 = play(2)
+		assert(n1 == 1 and n2 == 1 and ids1 == ids2)
+	end)
+
+	test("#68 roster stats are the unit's stats (level); roster must match the formation", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		local strong = table.clone(combatConfig.Heroes.Epeiste)
+		strong.MaxHealth, strong.AttackDamage = 293, 31
+		local ctx = rosterContext(e, { [5] = "Epeiste" }, { [5] = strong })
+		s:StartCombat(p, e.stages[p].Id, { [5] = "Epeiste" }, ctx)
+		local view = s:GetCombat(p)
+		local ally
+		for _, u in view.Units do if u.Team == "Ally" then ally = u end end
+		assert(ally and ally.MaxHealth == 293 and ally.TypeId == "Epeiste", "level stats used, TypeId stays the profile")
+		s:CancelCombat(p)
+		local f = fixture()
+		local s2 = f.start()
+		local q = f.player("B")
+		local bad = rosterContext(f, { [5] = "Paladin" })
+		local id, why = s2:StartCombat(q, f.stages[q].Id, { [5] = "Epeiste" }, bad)
+		assert(id == nil and why == "équipe modifiée")
+	end)
+
 	-- Mise en scène (docs/COMBAT_PRESENTATION.md) : le moteur est retenu, jamais modifié.
 	local PRESENTATION = combatConfig.Presentation
 

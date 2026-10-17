@@ -174,8 +174,8 @@ return function(createService: any, modules: any)
 			return true
 		end
 		env.script = { Parent = { DataService = dataService, PlotService = plotService, KingdomService = kingdomService, QuestService = questService,
-			Parent = { Config = { CombatConfig = modules.CombatConfig, SummonConfig = SummonConfig },
-				Heroes = { HeroRules = modules.HeroRules, SummonRules = modules.SummonRules } } } }
+			Parent = { Config = { CombatConfig = modules.CombatConfig, SummonConfig = SummonConfig, HeroProgressionConfig = modules.HeroProgressionConfig },
+				Heroes = { HeroRules = modules.HeroRules, SummonRules = modules.SummonRules, HeroProgressionRules = modules.HeroProgressionRules } } } }
 		env.require = function(m: any): any return m end
 
 		-- Plot avec portail : pivot du portail = position donnée.
@@ -195,7 +195,7 @@ return function(createService: any, modules: any)
 			character:add(inst("Humanoid", "Humanoid", { Health = 100 }))
 			p.Character = character
 			env.data[p] = {
-				DataVersion = 3,
+				DataVersion = 4,
 				Currencies = { Gold = 0, Gems = 0, SummonTickets = opts.tickets or 0 },
 				Progression = { CurrentZone = 1, HighestStage = 0, FirstClears = {} },
 				Heroes = {}, Team = {}, Hotbar = table.create(HeroConfig.HotbarSize, ""),
@@ -208,7 +208,7 @@ return function(createService: any, modules: any)
 			else
 				-- profil existant : l'Écuyer reçu avant la refonte (identifiant horodaté le plus ancien)
 				local id = string.format("H_T%010d%04d_%s", 1, 0, "ecuyer" .. name)
-				env.data[p].Heroes[id] = { HeroId = "ecuyer_du_rempart", Level = 1 }
+				env.data[p].Heroes[id] = { HeroId = "ecuyer_du_rempart", Level = 1, XP = 0 }
 				env.data[p].Hotbar[1] = id
 				env.quest[p] = "DefendDomain"
 			end
@@ -861,6 +861,93 @@ return function(createService: any, modules: any)
 		e.onGuid = nil
 		assert(got ~= nil and inner and inner[1] == nil and inner[2] == "invocation déjà en cours", tostring(inner and inner[2]))
 		assert(e.data[p].Currencies.SummonTickets == 1 and e.data[p].Summons.Total == 1, "one summon only")
+	end)
+
+	-- Niveaux et XP (#68) -----------------------------------------------------------------
+
+	local function heroOf(e: any, p: any, id: string, heroId: string, level: number, xp: number)
+		e.data[p].Heroes[id] = { HeroId = heroId, Level = level, XP = xp }
+	end
+
+	test("#68 combat roster: frozen per slot (InstanceId, HeroId, profile, Level, level stats); duplicates independent", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		local starter = e.data[p].Hotbar[1]
+		e.data[p].Heroes[starter].Level, e.data[p].Heroes[starter].XP = 3, 40
+		heroOf(e, p, "D", "ecuyer_du_rempart", 1, 0)
+		local roster = s:GetCombatRoster(p, { [5] = starter, [2] = "D" })
+		assert(roster and roster[5].HeroInstanceId == starter and roster[5].HeroId == "ecuyer_du_rempart" and roster[5].CombatProfile == "Epeiste")
+		assert(roster[5].Level == 3 and roster[5].Stats.MaxHealth == 165 and roster[5].Stats.AttackDamage == 18, "Lv3: +10 %")
+		assert(roster[2].Level == 1 and roster[2].Stats.MaxHealth == 150 and roster[2].Stats.AttackDamage == 16, "same HeroId, Lv1: base stats")
+		assert(roster[5].Stats.UltimateDamage == modules.CombatConfig.Heroes.Epeiste.UltimateDamage, "ultimate unchanged")
+		local none, why = s:GetCombatRoster(p, { [1] = "Fantome" })
+		assert(none == nil and why == "héros inconnu")
+	end)
+
+	test("#68 GrantCombatXP: only the given participants (placed heroes), collection hero 0, HeroesChanged with XP", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		local starter = e.data[p].Hotbar[1]
+		heroOf(e, p, "B", "tireuse_des_faubourgs", 1, 0)
+		heroOf(e, p, "C", "barde_de_fer", 1, 0) -- reste dans la collection
+		local pushed = #e.events(p, "HeroesChanged")
+		local views = s:GrantCombatXP(p, { starter, "B" }, 1, 1)
+		assert(#views == 2)
+		for _, v in views do
+			assert(v.XPGranted == 25 and v.LevelBefore == 1 and v.LevelAfter == 1 and v.XP == 25 and v.XPToNext == 100 and v.MaxLevel == 20)
+		end
+		assert(e.data[p].Heroes[starter].XP == 25 and e.data[p].Heroes.B.XP == 25 and e.data[p].Heroes.C.XP == 0, "collection hero: nothing")
+		local changed = e.events(p, "HeroesChanged")
+		assert(#changed == pushed + 1, "HeroesChanged pushed after the mutation")
+		local last = changed[#changed]
+		local found = false
+		for _, hero in last.Heroes do
+			if hero.Id == starter then found = hero.XP == 25 and hero.XPToNext == 100 and hero.MaxLevel == 20 end
+		end
+		assert(found, "view carries Level / XP / XPToNext")
+	end)
+
+	test("#68 GrantCombatXP: level up reported (LevelBefore -> LevelAfter), duplicate ids once, removed hero skipped", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		local starter = e.data[p].Hotbar[1]
+		e.data[p].Heroes[starter].XP = 90
+		local views = s:GrantCombatXP(p, { starter, starter, "Disparu" }, 1, 2) -- 1-2 : 35 XP
+		assert(#views == 1 and views[1].LevelBefore == 1 and views[1].LevelAfter == 2 and views[1].XP == 25 and views[1].XPToNext == 125)
+		assert(e.data[p].Heroes[starter].Level == 2 and e.data[p].Heroes[starter].XP == 25)
+	end)
+
+	test("#68 GrantCombatXP: two players independent; unknown stage gives 0 XP; no data -> nothing", function()
+		local e = fixture()
+		local s = e.start()
+		local a, b = e.player("A"), e.player("B")
+		local ia, ib = e.data[a].Hotbar[1], e.data[b].Hotbar[1]
+		s:GrantCombatXP(a, { ia }, 1, 5)
+		assert(e.data[a].Heroes[ia].Level == 2 and e.data[b].Heroes[ib].Level == 1 and (e.data[b].Heroes[ib].XP or 0) == 0, `1-5 = 100 XP to A only (exactly Lv2): {e.data[a].Heroes[ia].Level}/{e.data[a].Heroes[ia].XP} {e.data[b].Heroes[ib].Level}/{tostring(e.data[b].Heroes[ib].XP)}`)
+		assert(e.data[a].Heroes[ia].Level == 2 and e.data[a].Heroes[ia].XP == 0)
+		s:GrantCombatXP(b, { ia }, 1, 1)
+		assert(e.data[a].Heroes[ia].Level == 2 and e.data[a].Heroes[ia].XP == 0 and e.data[b].Heroes[ib].XP == 0, "B cannot grant XP to A's instance")
+		local zero = s:GrantCombatXP(b, { ib }, 9, 9)
+		assert(#zero == 1 and zero[1].XPGranted == 0 and e.data[b].Heroes[ib].XP == 0)
+		local ghost = e.player("G")
+		e.data[ghost] = nil
+		assert(#s:GrantCombatXP(ghost, { "x" }, 1, 1) == 0)
+	end)
+
+	test("#68 no client remote can grant XP or levels", function()
+		local e = fixture()
+		e.start()
+		for _, folder in e.replicated:GetChildren() do
+			if folder.Name == "Remotes" then
+				for _, remote in folder:GetChildren() do
+					local name = string.lower(remote.Name)
+					assert(not (name:find("xp") or name:find("level") or name:find("niveau")), "no XP remote: " .. remote.Name)
+				end
+			end
+		end
 	end)
 
 	print(`HeroService: {passed} passed, {failed} failed`)
