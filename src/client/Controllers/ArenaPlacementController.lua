@@ -6,6 +6,7 @@
 --   • Pancarte du stage, à l'entrée de l'arène (Arene.PanneauStage, bannière) : affichage seul (stage
 --     choisi, ennemis agrégés, équipe x/4). SurfaceGui locale, sur la pancarte de SON arène.
 --     E près de la pancarte : fenêtre des stages (ExpeditionView) → choisir un stage (SelectStage),
+--     en Normal ou en Élite (#69 : onglets ; l'Élite se débloque avec 1-5 Normal, sa propre progression),
 --     « Préparer l'équipe » (dalles mises en évidence) ou « Lancer » (Ready, 1 à 4 héros posés).
 --   • Dans l'arène, équipe posée : pastille « F · Lancer le combat » (touche F, clic ou toucher) → Ready.
 --     Tutoriel (ArenaStore.guide.expedition) : la pastille respire, et la fenêtre Expédition met en avant
@@ -333,6 +334,13 @@ local function buildPanel(sign: SurfaceGui)
 	panel.Size = UDim2.fromScale(1, 1)
 	ui.panel = panel
 	ui.stage = line(panel, "", SIZE.Title, S.M, 36)
+	-- Mode Élite (#69) : pastille rouge royale à droite du titre de la pancarte
+	local eliteTag = UIKit.badge(panel, "Élite", C.RoyalRed)
+	eliteTag.Name = "Elite"
+	eliteTag.AnchorPoint = Vector2.new(1, 0)
+	eliteTag.Position = UDim2.new(1, -S.L, 0, S.M + 6)
+	eliteTag.Visible = false
+	ui.eliteTag = eliteTag
 	line(panel, "Ennemis", SIZE.Label, 56, 22).TextColor3 = C.TextMuted
 	local enemies = Instance.new("Frame")
 	enemies.BackgroundTransparency = 1
@@ -373,13 +381,18 @@ local function openStageMenu()
 		return
 	end
 	local zone = state.Zone or ArenaConfig.Zone
-	local stages = {}
-	for _, entry in state.Stages or {} do
-		if entry.Zone == zone then
-			table.insert(stages, { Stage = entry.Stage, Unlocked = entry.Status == "Unlocked", Cleared = entry.Cleared,
-				Waves = entry.Waves, Enemies = entry.Enemies })
+	local function cards(entries: { any }?): { any }
+		local list = {}
+		for _, entry in entries or {} do
+			if entry.Zone == zone then
+				table.insert(list, { Stage = entry.Stage, Unlocked = entry.Status == "Unlocked", Cleared = entry.Cleared,
+					Waves = entry.Waves, Enemies = entry.Enemies })
+			end
 		end
+		return list
 	end
+	local stages = cards(state.Stages)
+	local eliteStages = cards(state.EliteStages)
 	if #stages == 0 then
 		showToast("Aucun stage disponible")
 		return
@@ -401,14 +414,21 @@ local function openStageMenu()
 	local function closed()
 		ScreenState.close("Stage")
 	end
-	ExpeditionView.Show({ Zone = zone, Title = title, Stages = stages }, {
+	-- Le stage choisi porte son mode ; changer de stage OU de mode passe par SelectStage (revérifié serveur).
+	local function differs(z: number, stage: number, mode: string): boolean
+		local arena = ArenaStore.arena
+		return z ~= arena.Zone or stage ~= arena.Stage or mode ~= (arena.Mode or "Normal")
+	end
+	ExpeditionView.Show({ Zone = zone, Title = title, Stages = stages,
+		EliteStages = if #eliteStages > 0 then eliteStages else nil, EliteUnlocked = state.EliteUnlocked == true,
+		Mode = state.Mode }, {
 		OnClose = closed,
 		Guide = ArenaStore.guide.expedition,
 		Selected = state.Stage,
 		Team = { Placed = ArenaStore.placedCount(), Max = state.MaxHeroes or ArenaConfig.MaxHeroes },
-		OnSelect = function(z: number, stage: number)
-			if z ~= ArenaStore.arena.Zone or stage ~= ArenaStore.arena.Stage then
-				ArenaStore.request("SelectStage", z, stage)
+		OnSelect = function(z: number, stage: number, mode: string)
+			if differs(z, stage, mode) then
+				ArenaStore.request("SelectStage", z, stage, mode)
 			end
 		end,
 		OnPrepare = function()
@@ -417,11 +437,9 @@ local function openStageMenu()
 			showToast("Prends un héros (1 à 0), approche-toi d'une dalle : E")
 			ArenaStore.notify()
 		end,
-		OnLaunch = function(z: number, stage: number)
+		OnLaunch = function(z: number, stage: number, mode: string)
 			closed()
-			if (z ~= ArenaStore.arena.Zone or stage ~= ArenaStore.arena.Stage)
-				and not ArenaStore.request("SelectStage", z, stage)
-			then
+			if differs(z, stage, mode) and not ArenaStore.request("SelectStage", z, stage, mode) then
 				return
 			end
 			PlacementState.cancel(ArenaStore.placement) -- plus rien en main : la formation se verrouille
@@ -559,13 +577,16 @@ function render()
 	local signBoard = if board and board:IsA("BasePart") then board else nil
 	ui.sign.Adornee = signBoard
 	ui.sign.Enabled = signBoard ~= nil and state.Available ~= false
+	local elite = state.Mode == "Elite"
 	ui.stage.Text = `Stage {state.Zone or "?"}-{state.Stage or "?"}`
+	ui.stage.TextColor3 = if elite then C.RoyalRed else C.TextLight
+	ui.eliteTag.Visible = elite
 	ui.team.Text = `{count} / {max}`
 	ui.hint.Text = if inCombat then "Combat en cours" else "E · Choisir un stage"
 	renderEnemies()
 	local sp = signPrompt
 	if sp then
-		sp.ObjectText = `Stage {state.Zone or "?"}-{state.Stage or "?"}`
+		sp.ObjectText = `Stage {state.Zone or "?"}-{state.Stage or "?"}` .. (if elite then " · Élite" else "")
 		sp.Parent = signBoard
 		sp.Enabled = signBoard ~= nil and not inCombat and state.Available ~= false and ScreenState.free()
 	end
@@ -601,7 +622,7 @@ function render()
 		current.stroke.Thickness = UITheme.Stroke.Regular
 		launchGuide = nil
 	end
-	ui.launchText.Text = `F · Lancer le combat  ·  Stage {state.Zone or "?"}-{state.Stage or "?"}`
+	ui.launchText.Text = `F · Lancer le combat  ·  Stage {state.Zone or "?"}-{state.Stage or "?"}` .. (if elite then "  ·  ÉLITE" else "")
 	renderCases()
 end
 

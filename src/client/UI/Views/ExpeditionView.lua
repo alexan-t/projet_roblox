@@ -33,13 +33,15 @@ local CARD = Vector2.new(124, 150)
 
 export type Enemy = { EnemyId: string, Count: number, MiniBoss: boolean? }
 export type Stage = { Stage: number, Unlocked: boolean, Cleared: boolean?, Waves: number?, Enemies: { Enemy }? }
-export type Data = { Zone: number, Title: string?, Stages: { Stage } }
+-- EliteStages (#69) : cartes du Mode Élite (sa propre progression) ; EliteUnlocked : 1-5 Normal terminé ;
+-- Mode : mode du stage choisi ("Normal" par défaut). Sans EliteStages, pas de sélecteur.
+export type Data = { Zone: number, Title: string?, Stages: { Stage }, EliteStages: { Stage }?, EliteUnlocked: boolean?, Mode: string? }
 export type Team = { Placed: number, Max: number }
 export type Options = {
-	OnLaunch: ((zone: number, stage: number) -> ())?,
+	OnLaunch: ((zone: number, stage: number, mode: string) -> ())?,
 	OnClose: (() -> ())?,
 	Selected: number?,
-	OnSelect: ((zone: number, stage: number) -> ())?,
+	OnSelect: ((zone: number, stage: number, mode: string) -> ())?,
 	Team: Team?,
 	OnPrepare: (() -> ())?,
 	Guide: boolean?,
@@ -49,7 +51,7 @@ local ExpeditionView = {}
 
 local current: { screen: ScreenGui, panel: Frame, veil: GuiObject }? = nil
 
-local function stageCard(parent: Instance, zone: number, stage: Stage): (Frame, UIStroke, TextButton)
+local function stageCard(parent: Instance, zone: number, stage: Stage, elite: boolean?): (Frame, UIStroke, TextButton)
 	local frame = Instance.new("Frame")
 	frame.Name = `Stage_{stage.Stage}`
 	frame.Size = UDim2.fromOffset(CARD.X, CARD.Y)
@@ -88,6 +90,13 @@ local function stageCard(parent: Instance, zone: number, stage: Stage): (Frame, 
 	local boss = false
 	for _, enemy in stage.Enemies or {} do
 		boss = boss or enemy.MiniBoss == true
+	end
+	if elite then
+		-- Mode Élite : pastille au coin haut de l'illustration (jamais confondu avec la carte Normale)
+		local tag = UIKit.badge(art, "Élite", Colors.RoyalRed)
+		tag.Name = "Elite"
+		tag.Position = UDim2.fromOffset(Spacing.XS, Spacing.XS)
+		tag.ZIndex = 4
 	end
 	if boss then
 		local mark = UIKit.badge(art, "Boss", Colors.RoyalRed)
@@ -163,12 +172,14 @@ function ExpeditionView.Show(data: Data, options: Options?)
 	detailText.TextTruncate = Enum.TextTruncate.AtEnd
 
 	local selected: Stage? = nil
+	local mode: string = if data.Mode == "Elite" and data.EliteStages then "Elite" else "Normal"
 	local launch = UIKit.button(content, "Lancer", "Primary", UDim2.fromOffset(220, 56 + UITheme.Shadow.ButtonLip), function()
 		local stage = selected
 		if stage and stage.Unlocked and opts.OnLaunch then
 			local onLaunch = opts.OnLaunch
+			local launchMode = mode
 			ExpeditionView.Hide()
-			onLaunch(data.Zone, stage.Stage)
+			onLaunch(data.Zone, stage.Stage, launchMode)
 		end
 	end)
 	launch.holder.AnchorPoint = Vector2.new(0.5, 1)
@@ -190,7 +201,12 @@ function ExpeditionView.Show(data: Data, options: Options?)
 	local team = opts.Team
 	local teamReady = team == nil or team.Placed >= 1
 
+	-- Mode affiché (Normal / Élite, #69) : ses cartes, avec SA progression ; changer de mode reconstruit
+	-- les cartes, la sélection et le détail. Le mode choisi est toujours visible (onglet, titre, badges).
 	local borders: { [number]: UIStroke } = {}
+	local function stagesOf(m: string): { Stage }
+		return if m == "Elite" then data.EliteStages or {} else data.Stages
+	end
 	local function select(stage: Stage)
 		selected = stage
 		for number, border in borders do
@@ -198,43 +214,86 @@ function ExpeditionView.Show(data: Data, options: Options?)
 			border.Color = if on then Colors.Selected else UITheme.Stroke.Color
 			border.Thickness = if on then UITheme.Stroke.Thick else UITheme.Stroke.Regular
 		end
-		local text: string = if stage.Unlocked then describe(stage) else "Termine le stage précédent pour débloquer celui-ci"
+		local text: string = if stage.Unlocked then describe(stage)
+			elseif mode == "Elite" and not data.EliteUnlocked then `Termine {data.Zone}-5 pour débloquer l'Élite`
+			else "Termine le stage précédent pour débloquer celui-ci"
 		if stage.Unlocked and team then
 			text = `Équipe {team.Placed}/{team.Max}  ·  ` .. (if teamReady then text else "Place au moins un héros sur les dalles")
+		end
+		if mode == "Elite" and stage.Unlocked then
+			text = "Élite  ·  " .. text
 		end
 		detailText.Text = text
 		launch.setEnabled(stage.Unlocked and teamReady and opts.OnLaunch ~= nil)
 	end
-	for index, stage in data.Stages do
-		local frame, border, touch = stageCard(row, data.Zone, stage)
-		borders[stage.Stage] = border
-		UIKit.popIn(frame, 0.05 + (index - 1) * 0.05) -- cascade de 0,05 s par carte
-		touch.Activated:Connect(function()
-			if selected == stage then
-				return
+	local default: Stage? = nil
+	local tabs: { [string]: UIKit.Button } = {}
+	local function showMode(m: string, preferred: number?)
+		mode = m
+		for _, child in row:GetChildren() do
+			if child:IsA("GuiObject") then
+				child:Destroy()
 			end
-			select(stage)
-			if stage.Unlocked and opts.OnSelect then
-				opts.OnSelect(data.Zone, stage.Stage)
+		end
+		table.clear(borders)
+		selected = nil
+		local list = stagesOf(m)
+		for index, stage in list do
+			local frame, border, touch = stageCard(row, data.Zone, stage, m == "Elite")
+			borders[stage.Stage] = border
+			UIKit.popIn(frame, 0.05 + (index - 1) * 0.05) -- cascade de 0,05 s par carte
+			touch.Activated:Connect(function()
+				if selected == stage then
+					return
+				end
+				select(stage)
+				if stage.Unlocked and opts.OnSelect then
+					opts.OnSelect(data.Zone, stage.Stage, m)
+				end
+			end)
+		end
+		-- par défaut : le stage déjà choisi, sinon le premier stage disponible non terminé, sinon le premier
+		default = list[1]
+		for _, stage in list do
+			if stage.Unlocked and not stage.Cleared then
+				default = stage
+				break
 			end
-		end)
-	end
-	-- par défaut : le stage déjà choisi, sinon le premier stage disponible non terminé, sinon le premier
-	local default = data.Stages[1]
-	for _, stage in data.Stages do
-		if stage.Unlocked and not stage.Cleared then
-			default = stage
-			break
+		end
+		for _, stage in list do
+			if stage.Stage == preferred then
+				default = stage
+			end
+		end
+		zoneTitle.Text = (data.Title or `Zone {data.Zone}`) .. (if m == "Elite" then "  ·  Élite" else "")
+		zoneTitle.TextColor3 = if m == "Elite" then Colors.RoyalRed else Colors.TextLight
+		for id, tab in tabs do
+			tab.setSelected(id == m)
+		end
+		local first = default
+		if first then
+			select(first)
+		else
+			launch.setEnabled(false)
+			detailText.Text = `Termine {data.Zone}-5 pour débloquer l'Élite`
 		end
 	end
-	for _, stage in data.Stages do
-		if stage.Stage == opts.Selected then
-			default = stage
+	-- Sélecteur léger NORMAL / ÉLITE en haut à droite (l'Élite verrouillée reste consultable).
+	if data.EliteStages then
+		for index, info in { { Id = "Normal", Label = "Normal" }, { Id = "Elite", Label = if data.EliteUnlocked then "Élite" else "Élite · verrouillé" } } do
+			local tab = UIKit.button(content, info.Label, "Tab", UDim2.fromOffset(if index == 1 then 110 else 190, 36 + UITheme.Shadow.ButtonLip), function()
+				if mode ~= info.Id then
+					showMode(info.Id, nil)
+				end
+			end)
+			tab.holder.Name = `Mode_{info.Id}`
+			tab.holder.AnchorPoint = Vector2.new(1, 0)
+			tab.holder.Position = if index == 1 then UDim2.new(1, -(190 + Spacing.S), 0, Spacing.XS) else UDim2.new(1, 0, 0, Spacing.XS)
+			tab.label.TextSize = Typography.Size.Label
+			tabs[info.Id] = tab
 		end
 	end
-	if default then
-		select(default)
-	end
+	showMode(mode, opts.Selected)
 	UIKit.open(panel, veil)
 	-- Tutoriel : la hiérarchie visuelle montre l'étape suivante, sans texte ni flèche.
 	if opts.Guide and default and default.Unlocked then
