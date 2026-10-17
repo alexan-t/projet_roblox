@@ -70,7 +70,8 @@ Les couleurs « matière » sont **relevées dans la map** (surfaces de `PlotTra
 `EnergyFull #F5C542` (pulse), `Progress #E8C670`, fond `BarTrack` = `Ink`.
 Monnaies : `CurrencyGold #E6B23A`, `CurrencyGems #48C8E8`, `CurrencyTickets #B83E30`.
 
-**Rareté des héros** (`UITheme.Rarity`, paliers de `RarityConfig`, voir `docs/HEROES.md`) :
+**Rareté des héros et des items** (`UITheme.Rarity`, paliers de `RarityConfig`, voir
+`docs/HEROES.md` et `docs/ITEMS.md` § 2) :
 
 | Rareté | Couleur |
 | --- | --- |
@@ -89,10 +90,16 @@ Usage :
 
 - badge de rareté (pastille contourée `Ink`, texte clair) ;
 - contour de carte et rayons du reveal ;
-- lumière de l'effet d'invocation.
+- lumière de l'effet d'invocation ;
+- carte d'item : zone d'illustration teintée à `RarityTint` et cerclée de la couleur
+  (`RarityStyle.itemCard`).
 
-Rendu commun : `src/client/UI/RarityStyle.lua`. Hors invocation, le cadre des cartes reste
-neutre (`Ink`). Les **monstres n'ont aucune rareté**.
+Rendu commun : `src/client/UI/RarityStyle.lua`. Hors invocation, le **cadre extérieur** des
+cartes reste neutre (`Ink`) : il est réservé à `Selected`, qui a le même or que Légendaire.
+Les mêmes couleurs servent ailleurs (Légendaire = `Selected`/`EnergyFull`, Rare = `Info`/`Energy`,
+Peu commun = `Health`, Calamité proche d'`Error`) : la rareté ne se pose donc jamais sur un
+cadre de sélection, une barre ou un message d'erreur. Les **monstres** et les **ressources**
+n'ont aucune rareté.
 
 Règle de dosage, reprise de la DA : base **bois/sable** désaturée, accents saturés (or, rouge,
 bleu) **rares** et porteurs de sens.
@@ -112,6 +119,7 @@ pas une infobulle.
 | `Track` | 0,35 | fond des barres |
 | `Shadow` | 0,75 | ombre portée |
 | `Disabled` | 0,45 | texte et icône d'un élément désactivé |
+| `RarityTint` | 0,6 | zone d'illustration d'une carte d'item, teintée de sa rareté |
 
 **Lisibilité garantie** : tout texte Fredoka posé sur un fond transparent porte un contour
 `Ink` (§ 5). Un **texte long** (Builder Sans) ne se pose **jamais** directement sur un
@@ -191,8 +199,9 @@ Pastilles `Medium` : actif `Gold` opaque, inactif `WoodDeep` à `PanelStrong`. T
   contour `Selected` sur la carte), `Nouveau` (`RoyalRed`, petit pop), `Verrouillé`
   (`StoneGrey`, carte à 0,4), `Max` (`Gold`).
 - Slot vide : même cadre, fond `WoodDeep` à `PanelStrong`, sans contenu.
-- **Items 2D** (équipements) : même carte, icône dans la zone d'illustration, cadre neutre (pas de
-  couleur de rareté). Vitrine `Workspace.Bestiaire.Inventaire.Equipement` puis Sacoche : voir
+- **Items 2D** (équipements) : même carte, icône dans la zone d'illustration. Celle-ci est teintée
+  et cerclée de la couleur de rareté (`RarityStyle.itemCard`) ; le cadre extérieur reste `Ink`
+  (`Selected` si équipé). Vitrine `Workspace.Bestiaire.Inventaire.Equipement` puis Sacoche : voir
   `docs/ITEMS.md`.
 - **Ressources 2D** : même carte, icône dans la zone d'illustration, cadre neutre (aucune rareté).
   Catalogue, vitrine `Workspace.Bestiaire.Inventaire.Ressources` et production des icônes : voir
@@ -278,7 +287,10 @@ UITheme = {
 		Info, Disabled, Selected, Health, HealthLow, EnemyHealth, Energy, EnergyFull, Progress,
 		BarTrack, CurrencyGold, CurrencyGems, CurrencyTickets },
 	Transparency = { Panel = 0.25, PanelStrong = 0.12, HUD = 0.45, Overlay = 0.5,
-		Tooltip = 0.04, Track = 0.35, Shadow = 0.75, Disabled = 0.45, Hover = 0.08 },
+		Tooltip = 0.04, Track = 0.35, Shadow = 0.75, Disabled = 0.45, Hover = 0.08, …,
+		RarityTint = 0.6 },
+	Rarity = { Commun, PeuCommun, Rare, Epique, Legendaire, Mythique, Maudit, Supreme, Calamite,
+		Transcendant }, RarityPrism = { … },
 	Typography = { Display (Fredoka One), Body / BodyBold (Builder Sans), Size = {…},
 		TextStroke = { Small = 2, Medium = 3, Large = 4 } },
 	Radius = { Small, Medium, Large, Pill },
