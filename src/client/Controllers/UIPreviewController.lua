@@ -10,12 +10,14 @@
 --   "Collection" collection des héros (mêmes copies)
 --   "Transition" rideau entre deux scènes
 --   "Tout"       HUD (quête + monnaies) puis chaque fenêtre à la suite
+--   "Maquette"   composition figée de la maquette de validation (maquette_v2.jpg)
 -- Vide ou absent : rien. Studio uniquement.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
+local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local UIKit = require(script.Parent.Parent.UI.UIKit)
 local CollectionView = require(script.Parent.Parent.UI.Views.CollectionView)
 local CurrencyView = require(script.Parent.Parent.UI.Views.CurrencyView)
@@ -192,7 +194,57 @@ local function transition(id: number)
 	end
 end
 
+-- Composition figée de la maquette de validation (docs/references/ui/maquette_v2.jpg) : les vraies
+-- vues, chacune à sa place (§ 12 Placement), plus une fiche qui montre un texte long Builder Sans
+-- dans un sous-panneau PanelStrong (§ 3). L'ultime est automatique : la maquette ne montre aucun
+-- bouton ni consigne d'ultime ; l'annonce « ULTIME ! » vient d'un héros tagué ApercuUltime dans le
+-- monde (UltimateEffectController).
+local maquetteScreen: ScreenGui? = nil
+
+local function maquette(_id: number)
+	-- quête terminée : badge et bouton principal dans le suivi (haut gauche), pas de pastille séparée
+	QuestView.Show({ Title = "Défends ton domaine", Progress = 1, Target = 1, Completed = true }, {
+		OnClaim = function()
+			QuestView.Hide()
+		end,
+	})
+	CurrencyView.Set({ Gold = 12450, Gems = 85, SummonTickets = 3 })
+	local heroes = demoHeroes()
+	local entries = {}
+	for i, hero in heroes do
+		table.insert(entries, { Name = hero.Name, Model = hero.Model, ClassId = hero.ClassId, Count = if i == 1 then 2 else 1, New = i == 2, Equipped = i == 1 })
+	end
+	CollectionView.Show(entries)
+
+	local Typography = UITheme.Typography
+	local Spacing = UITheme.Spacing
+	local screen = UIKit.screen("MaquetteFiche", 11) -- au-dessus du voile de la collection
+	maquetteScreen = screen
+	local fiche = UIKit.subPanel(screen, UDim2.fromOffset(300, 168))
+	fiche.Name = "Fiche"
+	fiche.AnchorPoint = Vector2.new(1, 0.5)
+	fiche.Position = UDim2.new(1, -Spacing.ScreenMargin, 0.5, 0)
+	local name = if heroes[1] then heroes[1].Name else "Héros"
+	local title = UIKit.text(fiche, name, Typography.Size.Heading, { Align = Enum.TextXAlignment.Left })
+	title.Position = UDim2.fromOffset(Spacing.M, Spacing.S)
+	title.Size = UDim2.new(1, -2 * Spacing.M, 0, 30)
+	local body = UIKit.text(fiche, "Quand sa barre d'énergie est pleine, il lance son ultime tout seul. Pose-le sur une dalle de l'arène pour le faire combattre.", Typography.Size.Body, {
+		Font = Typography.Body,
+		Stroke = false,
+		Align = Enum.TextXAlignment.Left,
+	})
+	body.TextWrapped = true
+	body.TextYAlignment = Enum.TextYAlignment.Top
+	body.Position = UDim2.fromOffset(Spacing.M, 44)
+	body.Size = UDim2.new(1, -2 * Spacing.M, 1, -44 - Spacing.S)
+	UIKit.popIn(fiche, 0.2)
+end
+
 local function hideAll()
+	if maquetteScreen then
+		maquetteScreen:Destroy()
+		maquetteScreen = nil
+	end
 	QuestView.Hide()
 	CurrencyView.Hide()
 	ExpeditionView.Hide()
@@ -207,6 +259,7 @@ local DEMOS: { [string]: (id: number) -> () } = {
 	Invocation = summon,
 	Collection = collection,
 	Transition = transition,
+	Maquette = maquette,
 	Tout = function(id: number)
 		task.spawn(quest, id)
 		task.spawn(currencies, id)

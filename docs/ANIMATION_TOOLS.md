@@ -194,7 +194,7 @@ L'effet visuel (lueur, lame dorée, anneau au sol) est du code de jeu :
 `src/client/Controllers/UltimateEffectController.lua`, appelé par `CombatViewController` sur
 `UltimateUsed`. Garder `ANIMATION_IMPACT` de ce fichier égal à l'`Impact` du style. Pour le voir au
 Play, taguer le héros riggé `ApercuUltime` (Studio) : ultime en boucle vers un point à 10 studs
-devant lui.
+devant lui, avec l'annonce « ULTIME ! » comme en combat.
 
 ## Disparition à la mort (pas de réaction aux dégâts)
 
