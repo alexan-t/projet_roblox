@@ -1,6 +1,7 @@
 --!strict
 -- Hors du dossier Services : jamais exécuté par le bootstrap.
--- Teste la vraie migration v1 -> v2 (classes de combat temporaires -> HeroId réels).
+-- Teste les vraies migrations v1 -> v2 (classes de combat temporaires -> HeroId réels) et v2 -> v3
+-- (onboarding : les anciens profils ne refont pas l'invocation tutorielle).
 
 return function(Migrations: any, HeroRules: any, hotbarSize: number)
 	local passed, failed = 0, 0
@@ -47,10 +48,10 @@ return function(Migrations: any, HeroRules: any, hotbarSize: number)
 		for _, hero in d.Heroes do assert(not table.find(LEGACY, hero.HeroId), "legacy left: " .. hero.HeroId) end
 	end
 
-	test("version: CURRENT_VERSION is 2 and v1 profiles migrate", function()
-		assert(Migrations.CURRENT_VERSION == 2)
+	test("version: CURRENT_VERSION is 3 and v1 / v2 profiles migrate", function()
+		assert(Migrations.CURRENT_VERSION == 3)
 		local d = v1({ A = "Archer" })
-		assert(Migrations.run(d) == "Ok" and d.DataVersion == 2)
+		assert(Migrations.run(d) == "Ok" and d.DataVersion == 3)
 	end)
 
 	test("v1 six legacy classes -> one ecuyer_du_rempart, no legacy left", function()
@@ -95,13 +96,14 @@ return function(Migrations: any, HeroRules: any, hotbarSize: number)
 		assert(count(d.Heroes) == 3)
 	end)
 
-	test("v1 with only real heroes and no legacy: untouched (starter granted by HeroService on load)", function()
+	test("v1 with only real heroes and no legacy: heroes untouched; no hero at all stays empty (tutorial)", function()
 		local d = v1({ T = "tireuse_des_faubourgs" }, { "T" })
 		Migrations.run(d)
 		assert(count(d.Heroes) == 1 and d.Heroes.T.HeroId == "tireuse_des_faubourgs" and d.Hotbar[1] == "T")
 		local empty = v1({})
 		Migrations.run(empty)
 		assert(next(empty.Heroes) == nil)
+		assert(empty.Quests.SummonStarter == nil, "no hero: the tutorial summon gives the first one")
 	end)
 
 	test("hotbar: dead legacy references cleared, same size, no holes, valid for normalizeHotbar", function()
@@ -140,6 +142,102 @@ return function(Migrations: any, HeroRules: any, hotbarSize: number)
 		assert(count(again) == count(snapshot) and count(again) == 2)
 		for id, heroId in snapshot do assert(again[id] == heroId) end
 		assert(table.concat(d.Hotbar, "|") == bar and #d.Team == 1 and d.Team[1] == "E")
+	end)
+
+	-- Profil v2 réel : Écuyer reçu au chargement, Tireuse invoquée, 1-1 terminé, quête réclamée.
+	local function v2(): any
+		local bar = { "E", "T" }
+		for i = #bar + 1, hotbarSize do bar[i] = "" end
+		return {
+			DataVersion = 2,
+			Currencies = { Gold = 250, Gems = 25, SummonTickets = 2 },
+			Progression = { CurrentZone = 1, HighestStage = 0, FirstClears = { ["1-1"] = true, ["1-2"] = true } },
+			Heroes = { E = { HeroId = "ecuyer_du_rempart", Level = 1 }, T = { HeroId = "tireuse_des_faubourgs", Level = 2 } },
+			Team = { "E", "T" },
+			Hotbar = bar,
+			Summons = { Total = 3 },
+			Kingdom = { Level = 1, VisualState = 2 },
+			Quests = { DefendDomain = { Progress = 1, Claimed = true } },
+			Settings = { CombatSpeed = 2 },
+		}
+	end
+	-- Sérialisation stable (clés triées) pour comparer deux profils en entier.
+	local function dump(value: any): string
+		if typeof(value) ~= "table" then
+			return tostring(value)
+		end
+		local keys = {}
+		for key in value do table.insert(keys, tostring(key)) end
+		table.sort(keys)
+		local parts = {}
+		for _, key in keys do
+			local item = value[key]
+			if item == nil then item = value[tonumber(key)] end
+			table.insert(parts, key .. "=" .. dump(item))
+		end
+		return "{" .. table.concat(parts, ",") .. "}"
+	end
+
+	test("v2 -> v3: existing player skips SummonStarter (done + claimed), nothing else changes", function()
+		local d = v2()
+		local before = v2()
+		assert(Migrations.run(d) == "Ok" and d.DataVersion == 3)
+		assert(d.Quests.SummonStarter and d.Quests.SummonStarter.Progress == 1 and d.Quests.SummonStarter.Claimed == true)
+		assert(d.Quests.DefendStage12 and d.Quests.DefendStage12.Progress == 1 and d.Quests.DefendStage12.Claimed == true, "1-2 already won: its quest is done")
+		d.Quests.SummonStarter = nil
+		d.Quests.DefendStage12 = nil
+		d.DataVersion = 2
+		assert(dump(d) == dump(before), "heroes, hotbar, team, currencies, tickets, summons, FirstClears, kingdom, quests kept")
+	end)
+
+	test("v2 -> v3: no hero removed, no ticket / currency / summon touched", function()
+		local d = v2()
+		Migrations.run(d)
+		assert(count(d.Heroes) == 2 and d.Heroes.E.HeroId == "ecuyer_du_rempart" and d.Heroes.T.HeroId == "tireuse_des_faubourgs")
+		assert(d.Currencies.SummonTickets == 2 and d.Currencies.Gold == 250 and d.Summons.Total == 3)
+		assert(d.Progression.FirstClears["1-1"] and d.Progression.FirstClears["1-2"] and d.Kingdom.VisualState == 2)
+	end)
+
+	test("v2 -> v3: a profile without any hero keeps the tutorial; an existing SummonStarter state is kept", function()
+		local empty = v2()
+		empty.Heroes, empty.Team = {}, {}
+		for i = 1, hotbarSize do empty.Hotbar[i] = "" end
+		Migrations.run(empty)
+		assert(empty.Quests.SummonStarter == nil and empty.DataVersion == 3)
+		local started = v2()
+		started.Quests.SummonStarter = { Progress = 0, Claimed = false }
+		Migrations.run(started)
+		assert(started.Quests.SummonStarter.Progress == 0 and started.Quests.SummonStarter.Claimed == false)
+	end)
+
+	test("v2 -> v3: Zone 1 already finished -> every stage quest claimed, no retroactive reward", function()
+		local d = v2()
+		for stage = 1, 5 do d.Progression.FirstClears["1-" .. stage] = true end
+		d.Quests = {}
+		Migrations.run(d)
+		for _, id in { "DefendDomain", "DefendStage12", "DefendStage13", "DefendStage14", "DefeatRoiOrc" } do
+			assert(d.Quests[id] and d.Quests[id].Progress == 1 and d.Quests[id].Claimed == true, id)
+		end
+		assert(d.Currencies.Gold == 250 and d.Currencies.Gems == 25 and d.Currencies.SummonTickets == 2, "no currency added by the migration")
+	end)
+
+	test("v2 -> v3: stages not won stay open (rewarded later); an existing quest state is never overwritten", function()
+		local d = v2()
+		d.Progression.FirstClears = { ["1-1"] = true }
+		d.Quests = { DefendDomain = { Progress = 1, Claimed = false } }
+		Migrations.run(d)
+		assert(d.Quests.DefendDomain.Claimed == false, "completed but not claimed before: still claimable")
+		assert(d.Quests.DefendStage12 == nil and d.Quests.DefeatRoiOrc == nil, "future stages: normal reward after the migration")
+	end)
+
+	test("v3 (new profile): run() does nothing; v2 -> v3 replayed is idempotent", function()
+		local fresh: any = { DataVersion = 3, Heroes = {}, Quests = {} }
+		assert(Migrations.run(fresh) == "Ok" and fresh.Quests.SummonStarter == nil, "new profile starts the tutorial")
+		local d = v2()
+		Migrations.run(d)
+		local snapshot = dump(d)
+		Migrations.steps[2](d)
+		assert(Migrations.run(d) == "Ok" and dump(d) == snapshot)
 	end)
 
 	test("missing Heroes / Hotbar / Team tables do not crash", function()

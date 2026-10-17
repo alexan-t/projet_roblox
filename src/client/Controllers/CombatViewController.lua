@@ -25,6 +25,7 @@ local AttackEffectController = require(script.Parent.AttackEffectController)
 local AudioController = require(script.Parent.AudioController)
 local DamageFeedbackController = require(script.Parent.DamageFeedbackController)
 local DefeatEffectController = require(script.Parent.DefeatEffectController)
+local EnemyPresentationController = require(script.Parent.EnemyPresentationController)
 local MonsterAnimationController = require(script.Parent.MonsterAnimationController)
 local UltimateEffectController = require(script.Parent.UltimateEffectController)
 local Icons = require(script.Parent.Parent.UI.Icons)
@@ -43,6 +44,7 @@ local MANA_FULL = UITheme.Colors.EnergyFull
 
 type View = {
 	team: string,
+	typeId: string?, -- EnemyId / profil de combat (TypeId des événements) : profil de présentation des ennemis
 	health: number,
 	maxHealth: number,
 	energy: number,
@@ -223,6 +225,13 @@ local function attachBars(unitId: number, miniBoss: boolean, attempt: number)
 	end
 	gui.Parent = model
 	view.gui = gui
+	-- Ennemi encore remplacé par sa copie de présentation (attribut local « Intro », CombatPresentation) :
+	-- barres cachées jusqu'à l'échange, pour ne pas flotter au-dessus d'un modèle invisible.
+	local function intro()
+		gui.Enabled = model:GetAttribute("Intro") ~= true
+	end
+	intro()
+	model:GetAttributeChangedSignal("Intro"):Connect(intro)
 	attachIcon(model)
 	-- L'icône a pu être posée avant la réplication de toutes les pièces : la recaler au-dessus des barres.
 	placeIcon(model)
@@ -252,6 +261,7 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 		elseif kind == "UnitSpawned" then
 			views[event.UnitId] = {
 				team = event.Team,
+				typeId = event.TypeId,
 				health = event.Health,
 				maxHealth = event.MaxHealth,
 				energy = event.Energy,
@@ -332,8 +342,14 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 				Position = if attacker and attacker.model then attacker.model:GetPivot().Position else nil,
 			})
 			if attacker and attacker.model and event.TargetId then
-				-- Effet d'impact éventuel (attribut EffetAttaque) ; renvoie l'instant du coup.
-				local impact = AttackEffectController.Play(attacker.model, speed)
+				-- Ennemi : style de sa famille (EnemyPresentationController : coup de tête du slime, lance
+				-- du gobelin) ; sinon effet d'impact éventuel (attribut EffetAttaque, Seisme du Roi Orc).
+				-- Renvoie l'instant du coup : chiffres et barres attendent l'impact visible.
+				local target = views[event.TargetId]
+				local styled: number? = if attacker.team == "Enemy" and attacker.typeId
+					then EnemyPresentationController.Attack(attacker.model, attacker.typeId, target and target.model, speed)
+					else nil
+				local impact: number = styled or AttackEffectController.Play(attacker.model, speed)
 				if impact > 0 and not hitDelay[event.TargetId] then
 					hitDelay[event.TargetId] = impact
 				end
@@ -363,8 +379,14 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 				end
 				if view.model then
 					MonsterAnimationController.Stop(view.model, "Marche")
-					-- Disparaît quand le coup l'atteint (onde de l'ultime, impact de l'attaque).
-					DefeatEffectController.Play(view.model, hitDelay[event.UnitId] or 0, speed)
+					-- Disparaît quand le coup l'atteint (onde de l'ultime, impact de l'attaque) : mort de sa
+					-- famille pour un ennemi (POP du slime, chute du gobelin, chute lourde du boss), sinon dissolution.
+					local delay = hitDelay[event.UnitId] or 0
+					local handled = view.team == "Enemy" and view.typeId ~= nil
+						and EnemyPresentationController.Death(view.model, view.typeId :: string, delay, speed)
+					if not handled then
+						DefeatEffectController.Play(view.model, delay, speed)
+					end
 				end
 			end
 			animate(event.UnitId, "Mort")

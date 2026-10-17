@@ -79,8 +79,9 @@ doublon, et renvoie `true` avec des héros réels (`ecuyer_du_rempart` sur `Hero
   `ServerStorage.Archive_Plots.Lobby_RoyaumesPosesAvant35`).
 
 **HeroId réels depuis #10** : `PlayerData.Heroes` ne contient plus que des `HeroId` réels
-(`docs/HEROES.md`). Un nouveau joueur a l'Écuyer (`Heros_1`) ; sa première invocation donne la
-Tireuse des Faubourgs (`Heros_2`) et fait passer le royaume de l'état 1 à l'état 2. Les anciens
+(`docs/HEROES.md`). Un nouveau joueur obtient l'Écuyer (`Heros_1`) par l'invocation tutorielle, sans
+changer le royaume ; sa première invocation payante (héros tiré au hasard, `Heros_2`) fait passer le
+royaume de l'état 1 à l'état 2. Les anciens
 profils (6 classes temporaires `Archer`… `Tireur`, sans modèle ici) sont migrés en DataVersion 2.
 `CombatConfig` garde ces classes comme **profils de combat** temporaires, pas comme HeroId.
 

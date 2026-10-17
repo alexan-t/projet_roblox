@@ -9,7 +9,13 @@
 --   RequestSummon (RemoteFunction) -> invocation ; le client n'envoie que l'Id de la bannière
 --                                     (validé) : héros, rareté, coût et résultat sont décidés ici ;
 --   HeroObtained (RemoteEvent)     -> { InstanceId, HeroId, Name, New, Rarity } au seul joueur concerné ;
---   GetSummonState (RemoteFunction) -> { Tickets, Cost } pour la fenêtre d'invocation (lecture seule).
+--   GetSummonState (RemoteFunction) -> { Tickets, Cost, Starter } pour la fenêtre d'invocation (lecture
+--                                     seule ; Starter = { Active, HeroId, Name, Rarity } : invocation
+--                                     tutorielle disponible et héros présenté, sinon { Active = false }) ;
+--   RequestStarterSummon (RemoteFunction) -> invocation tutorielle (onboarding) : aucun argument, le
+--                                     serveur revérifie tout et donne SummonConfig.Starter.HeroId, gratuit,
+--                                     une seule fois, pendant la quête SummonConfig.Starter.QuestId.
+-- Un nouveau profil n'a aucun héros : le premier est obtenu pendant l'invocation tutorielle.
 -- Au démarrage, les modèles des héros activés sont clonés de ServerStorage.Assets.Heros vers
 -- ReplicatedStorage.Assets.Heros (révélation de l'invocation côté client).
 
@@ -29,6 +35,7 @@ local SummonRules = require(script.Parent.Parent.Heroes.SummonRules)
 local DataService = require(script.Parent.DataService)
 local PlotService = require(script.Parent.PlotService)
 local KingdomService = require(script.Parent.KingdomService)
+local QuestService = require(script.Parent.QuestService)
 
 local SCOPE = "HeroService"
 local ASSETS_NAME = "Assets"
@@ -52,7 +59,7 @@ local pool: SummonRules.Pool = SummonRules.buildPool(RarityConfig.Tiers, HeroCon
 local idSequence = 0
 
 -- Identifiant d'exemplaire unique, horodaté (largeur fixe) : KingdomService range les héros dans
--- l'ordre d'obtention (anciens "H_<GUID>" d'abord, puis "H_T…" par date) ; le starter reste sur Heros_1.
+-- l'ordre d'obtention (anciens "H_<GUID>" d'abord, puis "H_T…" par date) ; le premier héros reste sur Heros_1.
 local function newId(): string
 	idSequence = (idSequence + 1) % 10000
 	return string.format("H_T%010d%04d_%s", os.time(), idSequence, HttpService:GenerateGUID(false))
@@ -128,8 +135,9 @@ local function portalOf(player: Player): Instance?
 	return if portal and (portal:IsA("Model") or portal:IsA("BasePart")) then portal else nil
 end
 
--- Le joueur peut-il invoquer maintenant ? Renvoie ses données, ou nil et la raison.
-function HeroService:CanSummon(player: Player): (any, string?)
+-- Le joueur est-il en état d'invoquer à SON portail (données, personnage vivant, distance) ?
+-- Renvoie ses données, ou nil et la raison.
+local function atPortal(player: Player): (any, string?)
 	if not summonEnabled then
 		return nil, "invocation indisponible"
 	end
@@ -155,10 +163,66 @@ function HeroService:CanSummon(player: Player): (any, string?)
 	if Vector3.new(offset.X, 0, offset.Z).Magnitude > SummonConfig.MaxDistance then
 		return nil, "approche-toi de ton portail"
 	end
+	return data, nil
+end
+
+-- Le joueur peut-il invoquer maintenant ? Renvoie ses données, ou nil et la raison.
+function HeroService:CanSummon(player: Player): (any, string?)
+	local data, reason = atPortal(player)
+	if not data then
+		return nil, reason
+	end
 	if not SummonRules.canPay(data, SummonConfig) then
 		return nil, "pas de ticket d'invocation"
 	end
 	return data, nil
+end
+
+-- Invocation tutorielle disponible pour ces données : quête du tutoriel active (pas encore terminée)
+-- et héros de départ jamais obtenu. Renvoie false et la raison sinon.
+local function starterOpen(player: Player, data: any): (boolean, string?)
+	local starter = SummonConfig.Starter
+	local quest = QuestService:GetActiveQuest(player)
+	if not quest or quest.Id ~= starter.QuestId or quest.Completed then
+		return false, "invocation gratuite indisponible"
+	end
+	return SummonRules.canStarter(data, starter)
+end
+
+-- Le joueur peut-il faire l'invocation tutorielle maintenant ? Renvoie ses données, ou nil et la raison.
+function HeroService:CanStarterSummon(player: Player): (any, string?)
+	local data, reason = atPortal(player)
+	if not data then
+		return nil, reason
+	end
+	local open, why = starterOpen(player, data)
+	if not open then
+		return nil, why
+	end
+	return data, nil
+end
+
+-- Après une invocation réussie (données déjà modifiées) : royaume, collection, annonce au joueur et callbacks.
+local function announce(player: Player, result: SummonRules.Result, origin: string): Obtained
+	local info = HeroConfig.Heroes[result.HeroId]
+	local obtained: Obtained = {
+		InstanceId = result.InstanceId,
+		HeroId = result.HeroId,
+		Name = if info then info.Name else result.HeroId,
+		New = result.New,
+		Rarity = if info then info.Rarity else RarityConfig.Tiers[1].Id,
+	}
+	Log.info(SCOPE, `{player.Name} invoque {result.HeroId} [{obtained.Rarity}] ({origin}, {result.InstanceId}, nouveau = {tostring(result.New)}, royaume = {tostring(result.KingdomChanged)})`)
+	KingdomService:Refresh(player)
+	push(player)
+	local event = obtainedEvent
+	if event and player.Parent == Players then
+		event:FireClient(player, obtained)
+	end
+	for _, callback in obtainedCallbacks do
+		task.spawn(callback, player, table.clone(obtained))
+	end
+	return obtained
 end
 
 -- Invocation autoritaire. Section critique synchrone (aucun yield) entre la vérification du ticket
@@ -187,24 +251,31 @@ function HeroService:RequestSummon(player: Player, bannerId: any?): (Obtained?, 
 	if not result then
 		return nil, why
 	end
-	local info = HeroConfig.Heroes[result.HeroId]
-	local obtained: Obtained = {
-		InstanceId = result.InstanceId,
-		HeroId = result.HeroId,
-		Name = if info then info.Name else result.HeroId,
-		New = result.New,
-		Rarity = if info then info.Rarity else RarityConfig.Tiers[1].Id,
-	}
-	Log.info(SCOPE, `{player.Name} invoque {result.HeroId} [{obtained.Rarity}] sur {banner.Id} ({result.InstanceId}, nouveau = {tostring(result.New)}, royaume = {tostring(result.KingdomChanged)})`)
-	KingdomService:Refresh(player)
-	push(player)
-	local event = obtainedEvent
-	if event and player.Parent == Players then
-		event:FireClient(player, obtained)
+	return announce(player, result, banner.Id), nil
+end
+
+-- Invocation tutorielle (onboarding) : le héros de départ, gratuit, garanti, une seule fois.
+-- Mêmes vérifications que RequestSummon (données, plot, SON portail, distance, invocation en cours),
+-- plus la quête du tutoriel active et le héros de départ jamais obtenu. Section critique synchrone :
+-- exemplaire créé (hotbar 1re case libre), sans ticket, sans Summons.Total, sans évolution du royaume ;
+-- puis royaume, HeroesChanged, HeroObtained et enfin l'événement de quête (SummonConfig.Starter.Event).
+function HeroService:RequestStarterSummon(player: Player): (Obtained?, string?)
+	local data, reason = HeroService:CanStarterSummon(player)
+	if not data then
+		return nil, reason
 	end
-	for _, callback in obtainedCallbacks do
-		task.spawn(callback, player, table.clone(obtained))
+	summoning[player] = true
+	local ok, result, why = pcall(SummonRules.starter, data, SummonConfig.Starter, newId)
+	summoning[player] = nil
+	if not ok then
+		Log.warn(SCOPE, `Invocation tutorielle de {player.Name} en échec : {tostring(result)}`)
+		return nil, "invocation impossible"
 	end
+	if not result then
+		return nil, why
+	end
+	local obtained = announce(player, result, "tutoriel")
+	QuestService:HandleGameplayEvent(player, SummonConfig.Starter.Event)
 	return obtained, nil
 end
 
@@ -268,11 +339,6 @@ function HeroService:Init()
 			table.insert(problems, `{heroId} : profil de combat inconnu {info.CombatProfile}`)
 		end
 	end
-	for _, heroId in HeroConfig.StarterHeroes do
-		if not HeroConfig.Heroes[heroId] then
-			table.insert(problems, `StarterHeroes : HeroId inconnu {heroId}`)
-		end
-	end
 	for _, problem in problems do
 		Log.warn(SCOPE, `Config invalide : {problem}`)
 	end
@@ -325,6 +391,17 @@ function HeroService:Start()
 		return false, reason
 	end
 	summon.Parent = remotes
+	-- Invocation tutorielle : aucun argument lu, tout est décidé et revérifié ici.
+	local starter = Instance.new("RemoteFunction")
+	starter.Name = "RequestStarterSummon"
+	starter.OnServerInvoke = function(player: Player): (boolean, any)
+		local result, reason = HeroService:RequestStarterSummon(player)
+		if result then
+			return true, result
+		end
+		return false, reason
+	end
+	starter.Parent = remotes
 	-- Lecture seule pour la fenêtre d'invocation : tickets du joueur et coût d'une invocation.
 	local state = Instance.new("RemoteFunction")
 	state.Name = "GetSummonState"
@@ -333,7 +410,13 @@ function HeroService:Start()
 		if not data then
 			return nil
 		end
-		return { Tickets = data.Currencies.SummonTickets, Cost = SummonConfig.Cost }
+		local starter: any = { Active = false }
+		if starterOpen(player, data) then
+			local heroId = SummonConfig.Starter.HeroId
+			local info = HeroConfig.Heroes[heroId]
+			starter = { Active = true, HeroId = heroId, Name = info.Name, Rarity = info.Rarity }
+		end
+		return { Tickets = data.Currencies.SummonTickets, Cost = SummonConfig.Cost, Starter = starter }
 	end
 	state.Parent = remotes
 	Players.PlayerRemoving:Connect(function(player)
@@ -343,13 +426,9 @@ function HeroService:Start()
 
 	replicateHeroAssets()
 
+	-- Aucun héros donné au join : un nouveau profil reste vide jusqu'à l'invocation tutorielle.
 	DataService:OnPlayerReady(function(player: Player, data: any)
 		HeroRules.normalizeHotbar(data, HeroConfig.HotbarSize)
-		local granted = HeroRules.grantStarter(data, HeroConfig.StarterHeroes, newId)
-		if granted > 0 then
-			Log.info(SCOPE, `Héros de départ donnés à {player.Name} ({granted})`)
-			KingdomService:Refresh(player)
-		end
 		push(player)
 	end)
 end

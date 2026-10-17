@@ -142,6 +142,42 @@ return function(ArenaRules: any, stageConfig: any, arenaConfig: any)
 		assert(select(2, ArenaRules.canInteract({ x = 10, z = 10 }, nil, posesA[1], 14)) == "Approche-toi de ton arène", "no arena")
 	end)
 
+	-- Liste façon ZoneService:ListStages : le stage n est débloqué si n-1 est terminé (First Clear).
+	local function listAfter(cleared: number, total: number?): { any }
+		local list = {}
+		for stage = 1, total or 5 do
+			table.insert(list, { Zone = 1, Stage = stage, Status = if stage <= cleared + 1 then "Unlocked" else "Locked", Cleared = stage <= cleared })
+		end
+		return list
+	end
+
+	test("stage selection: default = first unlocked not cleared (new player 1-1, after 1-1 -> 1-2), all cleared -> last", function()
+		local z, s = ArenaRules.defaultStage(listAfter(0))
+		assert(z == 1 and s == 1, "new player: 1-1")
+		z, s = ArenaRules.defaultStage(listAfter(1))
+		assert(z == 1 and s == 2, "rejoin after 1-1: 1-2")
+		z, s = ArenaRules.defaultStage(listAfter(5))
+		assert(z == 1 and s == 5, "everything cleared: last stage, no 1-6")
+		assert(ArenaRules.defaultStage({}) == nil, "no stage")
+	end)
+
+	test("stage selection advances after a win: 1-1 -> 1-2 -> 1-3 -> 1-4 -> 1-5, no 1-6", function()
+		for stage = 1, 4 do
+			local z, s = ArenaRules.nextStage(listAfter(stage), 1, stage)
+			assert(z == 1 and s == stage + 1, `1-{stage} -> 1-{stage + 1}`)
+		end
+		local z, s = ArenaRules.nextStage(listAfter(5), 1, 5)
+		assert(z == 1 and s == 5, "1-5 stays 1-5")
+		z, s = ArenaRules.nextStage(listAfter(3), 1, 1)
+		assert(z == 1 and s == 2, "replaying 1-1 later: next is 1-2 (already unlocked)")
+		z, s = ArenaRules.nextStage(listAfter(0), 1, 1)
+		assert(z == 1 and s == 1, "next still locked (no First Clear recorded): stay")
+	end)
+
+	test("stage selection uses the real StageConfig: zone 1 has exactly 5 stages", function()
+		assert(#stageConfig.Zones == 1 and #stageConfig.Zones[1].Stages == 5)
+	end)
+
 	print(`ArenaRules: {passed} passed, {failed} failed`)
 	if failed > 0 then
 		error(`{failed} ArenaRules test(s) failed`)

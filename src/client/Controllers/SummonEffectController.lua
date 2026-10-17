@@ -53,6 +53,7 @@ local DUST_TEXTURE = "rbxasset://textures/particles/smoke_main.dds"
 local FIRE_TEXTURE = "rbxasset://textures/particles/fire_main.dds"
 
 local Colors = UITheme.Colors
+local SummonLanding = require(script.Parent.Parent.Summon.SummonLanding)
 local SummonEffectController = {}
 
 export type Options = {
@@ -105,10 +106,13 @@ local function emitter(parent: Instance, props: { [string]: any }): ParticleEmit
 	return particles
 end
 
--- Sol sous position, sans compter le portail ni les personnages des joueurs (le héros ne se pose pas
--- sur la tête de quelqu'un). Les héros invoqués ont CanQuery = false.
-local function ground(position: Vector3, portal: Instance): Vector3
-	local ignore: { Instance } = { portal }
+-- Sol praticable sous position : le dessus des marches / du socle du portail compte (avant, le portail
+-- entier était ignoré et le héros se posait sur le terrain SOUS la première marche, enfoncé de ~0,8 stud).
+-- Le rayon traverse les personnages des joueurs (jamais sur la tête de quelqu'un), les pièces
+-- non collidables ou invisibles (effets, pierres en orbite, cristaux : SummonLanding.isGround) ; les
+-- héros invoqués ont CanQuery = false.
+local function ground(position: Vector3, _portal: Instance): Vector3
+	local ignore: { Instance } = {}
 	for _, player in Players:GetPlayers() do
 		if player.Character then
 			table.insert(ignore, player.Character)
@@ -116,9 +120,19 @@ local function ground(position: Vector3, portal: Instance): Vector3
 	end
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = ignore
-	local hit = Workspace:Raycast(position + Vector3.new(0, 12, 0), Vector3.new(0, -60, 0), params)
-	return if hit then hit.Position else position
+	for _ = 1, 12 do
+		params.FilterDescendantsInstances = ignore
+		local hit = Workspace:Raycast(position + Vector3.new(0, 12, 0), Vector3.new(0, -60, 0), params)
+		if not hit then
+			return position
+		end
+		local part = hit.Instance
+		if not part:IsA("BasePart") or SummonLanding.isGround({ CanCollide = part.CanCollide, Transparency = part.Transparency }) then
+			return hit.Position
+		end
+		table.insert(ignore, part)
+	end
+	return position
 end
 
 -- Avant du modèle : comme AnimationKit, déduit des bras (le pivot des modèles générés est arbitraire),
@@ -380,7 +394,8 @@ local function nameplate(hero: Model, name: string, isNew: boolean, rarity: stri
 end
 
 -- Géométrie de l'invocation : centre du voile (disque au centre de l'arche), face avant du portail
--- (horizontale) et place où le héros se pose (sol, LANDING_DISTANCE devant le voile).
+-- (horizontale) et sol praticable LANDING_DISTANCE devant le voile (la place d'invocation y est posée ;
+-- le héros, lui, sur le dessus de la place : SummonLanding.feetY).
 function SummonEffectController.Layout(portal: Model): (Vector3, Vector3, Vector3)
 	local structure = portal:FindFirstChild("Structure")
 	local found = if structure then structure:FindFirstChild("voile") else portal:FindFirstChild("voile", true)
@@ -400,13 +415,14 @@ end
 local function pad(landing: Vector3, rank: number, paint: ((Color3) -> ()) -> (), charge: number): () -> ()
 	local radius = PAD_RADIUS + rank * 0.15
 	local flat = CFrame.Angles(0, 0, math.pi / 2)
+	local dims = SummonLanding.Pad
 	local rim = effectPart({
 		Name = "InvocationPlace",
 		Shape = Enum.PartType.Cylinder,
 		Material = Enum.Material.Neon,
 		Transparency = 1,
-		Size = Vector3.new(0.12, radius * 2, radius * 2),
-		CFrame = CFrame.new(landing + Vector3.new(0, 0.06, 0)) * flat,
+		Size = Vector3.new(dims.RimThickness, radius * 2, radius * 2),
+		CFrame = CFrame.new(landing + Vector3.new(0, dims.RimLift, 0)) * flat,
 	})
 	paint(function(color: Color3)
 		rim.Color = color
@@ -417,8 +433,8 @@ local function pad(landing: Vector3, rank: number, paint: ((Color3) -> ()) -> ()
 		Material = Enum.Material.SmoothPlastic,
 		Color = Colors.Stone,
 		Transparency = 1,
-		Size = Vector3.new(0.14, radius * 2 - 0.8, radius * 2 - 0.8),
-		CFrame = CFrame.new(landing + Vector3.new(0, 0.08, 0)) * flat,
+		Size = Vector3.new(dims.StoneThickness, radius * 2 - 0.8, radius * 2 - 0.8),
+		CFrame = CFrame.new(landing + Vector3.new(0, dims.StoneLift, 0)) * flat,
 	})
 	local appear = TweenInfo.new(math.min(charge, 1), Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 	tween(rim, appear, { Transparency = 0.15 })
@@ -536,6 +552,8 @@ function SummonEffectController.Play(portal: Model, heroTemplate: Model, options
 	local function placeFeet(at: Vector3)
 		hero:PivotTo(CFrame.new(at) * facing * pivotInFeet)
 	end
+	-- pieds sur le DESSUS de la place d'invocation (pas dans le disque, ni dans les marches)
+	local standing = Vector3.new(landing.X, SummonLanding.feetY(landing.Y), landing.Z)
 	placeFeet(center - Vector3.new(0, size.Y / 2, 0))
 	hero.Parent = Workspace
 
@@ -604,14 +622,14 @@ function SummonEffectController.Play(portal: Model, heroTemplate: Model, options
 				return
 			end
 			local t = math.clamp((os.clock() - start) / FLIGHT, 0, 1)
-			local horizontal = from:Lerp(landing, t)
+			local horizontal = from:Lerp(standing, t)
 			-- arc : bond hors du voile, retombe sur ses pieds devant le portail
 			local arc = math.sin(math.pi * t) * 2.5
-			local y = from.Y + (landing.Y - from.Y) * (t * t) + arc
+			local y = from.Y + (standing.Y - from.Y) * (t * t) + arc
 			placeFeet(Vector3.new(horizontal.X, y, horizontal.Z))
 			if t >= 1 then
 				connection:Disconnect()
-				placeFeet(landing)
+				placeFeet(standing)
 				-- poussière à l'atterrissage, puis la silhouette colorée révèle le héros
 				local puff = effectPart({ Transparency = 1, Size = Vector3.new(size.X, 0.4, size.Z), CFrame = CFrame.new(landing + Vector3.new(0, 0.3, 0)) })
 				emitter(puff, {

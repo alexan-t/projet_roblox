@@ -42,7 +42,8 @@ ZoneService ──► QuestService (StageCompleted, victoire seulement)
 
 **Ces valeurs sont temporaires, ce n'est pas le balancing final.** Aucune valeur n'existait
 dans le dépôt. Objectifs : Stage 1-1 (entrée) gagné par le héros de départ seul ; Zone 1 (1-1 à 1-5,
-boss compris) gagnée par l'équipe garantie Écuyer + Tireuse ;
+boss compris) gagnée par l'Écuyer + n'importe quel deuxième héros (chaque profil de combat est testé :
+aucun héros n'est garanti après l'Écuyer) ;
 un stage complet (vague 2 Slime + 4 Gobelin, puis le Boss) gagné avec 3-4 héros et perdu avec un héros seul, en
 une dizaine de secondes à une demi-minute à x1 (mesuré en Studio : 14 s), écart net entre
 x1 et x2. Ces objectifs sont vérifiés par des simulations complètes dans les tests.
@@ -164,6 +165,10 @@ n'attend jamais une animation. Les modèles portent les attributs `UnitId`, `Tea
 ## Côté client
 
 Règle d'interface : une information qui peut s'afficher dans le monde n'a pas de HUD séparé.
+
+Mise en scène (entrée des ennemis depuis le décor au lancement (pancarte ou F dans l'arène), attaques et morts par famille,
+outro et sac de récompenses) : voir [COMBAT_PRESENTATION.md](COMBAT_PRESENTATION.md). Le moteur est
+seulement retenu pendant les entrées (`CombatConfig.Presentation`, événement `EntranceHold`).
 
 - `ArenaPlacementController` : pendant le combat, une pastille légère au-dessus de la hotbar
   (vague, **x1 / x2**, **X** pour quitter), une annonce brève à chaque vague ou au mini-boss,

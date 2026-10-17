@@ -10,7 +10,7 @@
 
 local Migrations = {}
 
-Migrations.CURRENT_VERSION = 2
+Migrations.CURRENT_VERSION = 3
 
 -- v1 -> v2 (issue #10) : les héros Alpha étaient des classes de combat temporaires. En v2, HeroId
 -- est l'identifiant réel du héros. Valeurs figées à la date de la migration.
@@ -70,8 +70,44 @@ local function v1ToV2(data: { [string]: any })
 	end
 end
 
+-- v2 -> v3 (onboarding) : un nouveau profil n'a plus aucun héros ; le premier est obtenu pendant
+-- l'invocation tutorielle (quête "SummonStarter", nouvelle première quête). Les profils v2 ont reçu
+-- l'Écuyer automatiquement au chargement : leur SummonStarter est déjà terminée et réclamée, ils ne
+-- refont pas le tutoriel. Rien d'autre n'est touché (héros, hotbar, équipe, monnaies, invocations,
+-- First Clears, royaume, autres quêtes). Un profil v2 sans aucun héros (cas anormal) garde le tutoriel :
+-- c'est lui qui lui donnera son premier héros.
+-- Même version : chaîne de quêtes de la Zone 1 (une quête par stage, avec récompense à « Récupérer »).
+-- Un stage déjà gagné AVANT cette version (FirstClears) a sa quête marquée terminée ET réclamée, sans
+-- ses nouvelles récompenses : ni pluie de monnaies rétroactive, ni stage à refaire. Une quête déjà
+-- présente n'est jamais touchée. Valeurs figées à la date de la migration.
+local V3_STARTER_QUEST = "SummonStarter"
+local V3_STAGE_QUESTS = {
+	{ Quest = "DefendDomain", Stage = "1-1" },
+	{ Quest = "DefendStage12", Stage = "1-2" },
+	{ Quest = "DefendStage13", Stage = "1-3" },
+	{ Quest = "DefendStage14", Stage = "1-4" },
+	{ Quest = "DefeatRoiOrc", Stage = "1-5" },
+}
+
+local function v2ToV3(data: { [string]: any })
+	local quests: { [string]: any } = if typeof(data.Quests) == "table" then (data.Quests :: any) else {}
+	data.Quests = quests
+	local hasHero = typeof(data.Heroes) == "table" and next(data.Heroes) ~= nil
+	if hasHero and quests[V3_STARTER_QUEST] == nil then
+		quests[V3_STARTER_QUEST] = { Progress = 1, Claimed = true }
+	end
+	local progression: any = if typeof(data.Progression) == "table" then data.Progression else nil
+	local clears: { [string]: any } = if progression and typeof(progression.FirstClears) == "table" then progression.FirstClears else {}
+	for _, entry in V3_STAGE_QUESTS do
+		if clears[entry.Stage] == true and quests[entry.Quest] == nil then
+			quests[entry.Quest] = { Progress = 1, Claimed = true }
+		end
+	end
+end
+
 local STEPS: { [number]: (data: { [string]: any }) -> () } = {
 	[1] = v1ToV2,
+	[2] = v2ToV3,
 }
 
 -- Lecture seule pour les tests (rejouer une étape).

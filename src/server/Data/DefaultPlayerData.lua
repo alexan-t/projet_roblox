@@ -20,6 +20,7 @@ local DefaultPlayerData: PlayerDataTypes.PlayerData = {
 		HighestStage = 0,
 		FirstClears = {},
 	},
+	-- Aucun héros : le premier est obtenu pendant l'invocation tutorielle (quête SummonStarter).
 	Heroes = {},
 	Team = {},
 	-- 10 raccourcis vides (HeroConfig.HotbarSize) ; HeroService les remplit.

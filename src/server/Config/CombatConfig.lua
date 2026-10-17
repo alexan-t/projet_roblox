@@ -29,6 +29,21 @@ local CombatConfig = {
 		Gobelin = table.freeze({ MaxHealth = 80, AttackDamage = 8, AttackInterval = 1.0, AttackRange = 5, MoveSpeed = 8 }),
 		Boss = table.freeze({ MaxHealth = 450, AttackDamage = 18, AttackInterval = 1.5, AttackRange = 7, MoveSpeed = 6 }),
 	}),
+	-- Mise en scène (docs/COMBAT_PRESENTATION.md) : temps pendant lesquels CombatService ne fait PAS
+	-- avancer le moteur, pour laisser le client faire entrer les ennemis. Aucune stat, aucune règle :
+	-- le combat est seulement décalé. Envoyé au client par l'événement EntranceHold (Duration).
+	Presentation = table.freeze({
+		-- Après Prêt : la 1re vague sort du décor jusqu'à ses cases (respiration courte + plus longue entrée).
+		StartBreather = 0.2,
+		-- Avant une vague suivante ou le mini-boss : courte respiration, puis entrée depuis le décor.
+		WaveBreather = 0.5,
+		-- Durée de l'entrée par ennemi (la plus longue de la vague compte) ; inconnu : Default.
+		Entrance = table.freeze({ Slime = 1.4, Gobelin = 1.8, Boss = 2.6 }),
+		DefaultEntrance = 1.6,
+		-- Fin de combat : les modèles restent ce temps (outro du client : morts, sac, « VICTOIRE ! »),
+		-- puis la préparation est reconstruite. Rien ne disparaît d'un coup.
+		EndHold = 6,
+	}),
 }
 
 return table.freeze(CombatConfig)

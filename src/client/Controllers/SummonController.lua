@@ -9,6 +9,10 @@
 --     puis montre la carte du héros (SummonView.Reveal). « Continuer » rend tout au joueur.
 --   • Pas de spoil : la collection mise à jour (hotbar, sacoche) n'est montrée qu'à « Continuer »
 --     (ArenaStore.holdHeroes / releaseHeroes).
+--   • Invocation tutorielle (GetSummonState.Starter.Active, nouveau profil) : la même fenêtre avec la
+--     bannière spéciale « Premier héros » (le héros décrit par le serveur, vrais modèles), les vraies
+--     bannières grisées, sans taux, « Invoquer · Gratuit » ; puis RequestStarterSummon (aucun argument :
+--     le serveur décide du héros). Même cinématique, même carte.
 -- Refus du serveur (pas de ticket, trop loin…) : message bref (ArenaStore.toast).
 
 local Players = game:GetService("Players")
@@ -29,6 +33,7 @@ local ScreenState = require(script.Parent.Parent.UI.ScreenState)
 local UIKit = require(script.Parent.Parent.UI.UIKit)
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local SummonEffectController = require(script.Parent.SummonEffectController)
+local WorldPulse = require(script.Parent.Parent.UI.WorldPulse)
 
 local SummonController = {}
 
@@ -43,6 +48,7 @@ local HIDE_STEP = "InvocationCachePersonnage"
 
 local prompt: ProximityPrompt? = nil
 local requestRemote: RemoteFunction? = nil
+local starterRemote: RemoteFunction? = nil
 local stateRemote: RemoteFunction? = nil
 local busy = false -- fenêtre ouverte ou invocation en cours
 local lastBanner: string? = nil
@@ -244,8 +250,9 @@ local function handleObtained(payload: any)
 	end
 end
 
-local function summon(bannerId: string?)
-	local remote = requestRemote
+-- free = invocation tutorielle (RequestStarterSummon, sans argument), sinon RequestSummon(bannerId).
+local function summon(bannerId: string?, free: boolean?)
+	local remote = if free then starterRemote else requestRemote
 	if not remote then
 		finish()
 		return
@@ -254,8 +261,13 @@ local function summon(bannerId: string?)
 	-- La collection mise à jour (avec le héros) arrive avant la réponse : elle attend la carte.
 	ArenaStore.holdHeroes()
 	-- Seul l'Id de bannière part (choix d'interface, validé par le serveur) : ni HeroId, ni coût,
-	-- ni ticket ne sont décidés ici.
-	local ok, accepted, result = pcall(remote.InvokeServer, remote, bannerId)
+	-- ni ticket ne sont décidés ici. L'invocation tutorielle n'envoie rien du tout.
+	local ok, accepted, result
+	if free then
+		ok, accepted, result = pcall(remote.InvokeServer, remote)
+	else
+		ok, accepted, result = pcall(remote.InvokeServer, remote, bannerId)
+	end
 	if not ok or accepted ~= true or typeof(result) ~= "table" then
 		ArenaStore.releaseHeroes()
 		toast(if ok and typeof(result) == "string" then result else "Invocation impossible, réessaie")
@@ -272,21 +284,9 @@ function SummonController.HintPortal()
 	if not portal then
 		return
 	end
-	local glow = Instance.new("Highlight")
-	glow.Name = "IndicationPortail"
-	glow.FillColor = UITheme.Colors.GoldLight
-	glow.OutlineColor = UITheme.Colors.Gold
-	glow.FillTransparency = 1
-	glow.OutlineTransparency = 0
-	glow.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-	glow.Adornee = portal
-	glow.Parent = portal
-	local pulse = TweenService:Create(glow, UITheme.Animation.Pulse, { FillTransparency = 0.6 })
-	pulse:Play()
-	task.delay(HINT_SECONDS, function()
-		pulse:Cancel()
-		glow:Destroy()
-	end)
+	-- même langage que le guidage du tutoriel : le portail respire (WorldPulse)
+	local pulse = WorldPulse.start(portal, veilOf(portal))
+	task.delay(HINT_SECONDS, pulse.stop)
 	local screen = UIKit.screen("IndicationInvocation", 15)
 	UIKit.announce(screen, "Nouveau ticket ! Invoque un héros au portail", { Color = UITheme.Colors.GoldLight, Hold = 3 })
 	task.delay(5, function()
@@ -311,15 +311,24 @@ local function open()
 		return
 	end
 	local state: any = response
+	-- Invocation tutorielle : présentation seulement, le serveur revérifie tout et choisit le héros.
+	local starter: any = if typeof(state.Starter) == "table" and state.Starter.Active == true then state.Starter else nil
+	local free = starter ~= nil
 	SummonView.Show({
 		Tickets = state.Tickets,
 		Cost = state.Cost,
 		Banners = bannerViews(),
 		Rates = rates(),
 		Selected = lastBanner,
+		Free = free,
+		Starter = if starter then {
+			Name = tostring(starter.Name),
+			Rarity = tostring(starter.Rarity),
+			Model = if typeof(starter.HeroId) == "string" then Icons.heroModel(starter.HeroId) else nil,
+		} else nil,
 	}, {
 		OnSummon = function(bannerId: string?)
-			task.spawn(summon, bannerId)
+			task.spawn(summon, bannerId, free)
 		end,
 		OnClose = finish,
 	})
@@ -340,6 +349,10 @@ function SummonController:Start()
 
 	local remotes = ReplicatedStorage:WaitForChild("Remotes")
 	local request = remotes:WaitForChild("RequestSummon", 30)
+	local starter = remotes:WaitForChild("RequestStarterSummon", 30)
+	if starter and starter:IsA("RemoteFunction") then
+		starterRemote = starter
+	end
 	local state = remotes:WaitForChild("GetSummonState", 30)
 	if request and request:IsA("RemoteFunction") then
 		requestRemote = request

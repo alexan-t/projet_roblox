@@ -260,6 +260,14 @@ Courtes, douces, jamais agressives. Durées dans `UITheme.Animation`.
 
 Aucune animation au-delà de 0,4 s, pas de motion blur, un seul rebond au maximum.
 
+**Guidage du tutoriel** (`UITheme.World.Guide`, `src/client/UI/WorldPulse.lua`). Une cible à utiliser
+(portail, pancarte du stage, dalle) est « vivante », jamais signalée par une pancarte ni par un gros
+contour permanent : léger voile doré qui respire (`FillFrom` → `FillTo`, contour seulement au sommet du
+battement), lumière douce (`LightFrom` → `LightTo`), quelques étincelles ; battement plus marqué quand le
+joueur est arrivé (`Near`). Le même langage s'applique à l'interface : raccourci de hotbar à prendre
+(lueur dorée qui respire), pastille « F · Lancer » (contour doré), bouton « Récupérer » d'une quête
+(contour doré qui pulse, bouton qui respire, petit rebond régulier ; au clic : pop puis désactivé).
+
 ## 9. Tokens Roblox
 
 Module `UITheme` (structure) :

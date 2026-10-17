@@ -49,6 +49,11 @@ combat automatique, ultimes automatiques, vagues, mini-boss, victoire / défaite
 5. **Fin** : un seul écran de fin (`RewardScreenController` : « Victoire ! » ou « Défaite… », récompenses).
    L'**équipe reste posée** sur les mêmes dalles avec une nouvelle session du stage choisi : Lancer
    (ou Prêt) suffit pour rejouer. Si le stage ne peut pas être relancé, l'arène est libérée.
+   Après une **victoire**, le stage sélectionné passe au suivant (1-1 → 1-2 → 1-3 → 1-4 → 1-5 ; après
+   1-5, il reste 1-5 : pas de 1-6). Rien n'est lancé automatiquement : seule la sélection (pancarte,
+   fenêtre Expédition, pastille F) change. Sans choix du joueur (join, rejoin), la sélection se déduit de
+   la progression : le premier stage débloqué pas encore terminé (`ArenaRules.defaultStage` /
+   `nextStage`, purs et testés).
 
 ### Lumières de placement (client seulement)
 
@@ -88,6 +93,9 @@ lu dans l'attribut `Nom` du modèle de zone). Une carte par stage de `StageConfi
   relance la session de stage en gardant la formation (`ArenaPrep.restage`) ; refusé en combat ;
 - **Préparer l'équipe** : ferme la fenêtre et met les dalles en évidence ;
 - **Lancer** : `Ready` (désactivé tant qu'aucun héros n'est posé ; la ligne de détail le dit).
+- Tutoriel (quête `DefendDomain`) : « Préparer l'équipe » rebondit doucement tant qu'aucun héros n'est
+  posé, sinon « Lancer » fait un petit rebond à l'ouverture ; la dalle `ArenaConfig.PlacementSlot` (centre)
+  et le héros à prendre dans la hotbar pulsent tant que rien n'est posé (voir QUESTS.md § Guidage).
 
 ## Découpage
 

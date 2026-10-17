@@ -41,7 +41,8 @@ Zones = {
   | 1-5 | Slime ×2 + Gobelin ×1, puis **le Roi Orc** | 650 |
 
   Simulations (CombatEngine + CombatConfig, 20 tirages, tests #13) : l'Écuyer seul gagne 1-1 ;
-  l'Écuyer + la Tireuse (équipe garantie après la première invocation) gagnent 1-1 à 1-5. Un stage
+  l'Écuyer + n'importe quel deuxième héros (chaque profil de combat ; aucun n'est garanti) gagnent 1-1
+  à 1-5. Un stage
   n'est jouable qu'après le First Clear du précédent (RewardService, `docs/REWARDS.md`).
 - `EnemyId` est un **identifiant logique**. Stage 1 reprend les types de la vague de
   démonstration de `CombatIntroController` (`Slime`, `Gobelin`, `Boss`). Aucune statistique

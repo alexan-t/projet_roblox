@@ -20,6 +20,26 @@ ArenaStore.placement = PlacementState.new()
 ArenaStore.changed = Instance.new("BindableEvent")
 -- Message bref à afficher (refus, résultat) : texte.
 ArenaStore.toast = Instance.new("BindableEvent")
+-- Outro de fin de combat terminée (CombatPresentationController) : (combatId, victoire). L'écran de
+-- récompenses attend ce signal (OutroGate), avec un délai de sécurité.
+ArenaStore.outroFinished = Instance.new("BindableEvent")
+-- Combat terminé, outro et écran de fin pas encore passés (ArenaPlacementController) : les annonces
+-- (quête terminée…) attendent.
+ArenaStore.awaitingResult = false
+-- Guidage du tutoriel (QuestGuideController) : raccourci de hotbar à faire pulser (InstanceId du héros
+-- à prendre), bouton de la fenêtre Expédition à mettre en avant. Purement visuel.
+export type Guide = { hotbar: string?, expedition: boolean }
+ArenaStore.guide = { hotbar = nil, expedition = false } :: Guide
+
+-- Met à jour le guidage et notifie seulement s'il change.
+function ArenaStore.setGuide(hotbar: string?, expedition: boolean)
+	local guide = ArenaStore.guide
+	if guide.hotbar == hotbar and guide.expedition == expedition then
+		return
+	end
+	guide.hotbar, guide.expedition = hotbar, expedition
+	ArenaStore.changed:Fire()
+end
 
 local actionRemote: RemoteFunction? = nil
 local hotbarRemote: RemoteFunction? = nil

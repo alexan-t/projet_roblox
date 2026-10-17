@@ -1,8 +1,10 @@
 --!strict
 -- Hors du dossier Services : jamais exécuté par le bootstrap.
--- Exécute le vrai HeroService (héros de départ, invocation, HeroObtained, copie client des modèles)
+-- Exécute le vrai HeroService (invocation tutorielle, invocation, HeroObtained, copie client des modèles)
 -- avec les vraies HeroConfig, SummonConfig, CombatConfig, HeroRules et SummonRules, et des doubles de
--- DataService, PlotService, KingdomService et des API Roblox utilisées.
+-- DataService, PlotService, KingdomService, QuestService et des API Roblox utilisées.
+-- env.player(name) = profil existant (Écuyer déjà possédé en raccourci 1, tutoriel fini, comme un profil
+-- v2 migré) ; env.player(name, { fresh = true }) = nouveau profil (0 héros, quête SummonStarter active).
 
 return function(createService: any, modules: any)
 	local passed, failed = 0, 0
@@ -148,6 +150,22 @@ return function(createService: any, modules: any)
 		function dataService:OnPlayerReady(fn: any) table.insert(env.ready, fn) end
 		local plotService: any = {}
 		function plotService:GetPlot(p: any): any return env.plots[p] end
+		-- Quête active par joueur (Id) ; StarterHeroSummoned fait passer SummonStarter -> DefendDomain,
+		-- comme le vrai QuestService (AutoClaim).
+		env.quest, env.questEvents = {}, {}
+		local questService: any = {}
+		function questService:GetActiveQuest(p: any): any
+			local id = env.quest[p]
+			return if id then { Id = id, Completed = false } else nil
+		end
+		function questService:HandleGameplayEvent(p: any, name: string, payload: any?): boolean
+			table.insert(env.questEvents, { player = p, name = name, payload = payload })
+			if name == SummonConfig.Starter.Event and env.quest[p] == SummonConfig.Starter.QuestId then
+				env.quest[p] = "DefendDomain"
+				return true
+			end
+			return false
+		end
 		local kingdomService: any = {}
 		function kingdomService:Refresh(p: any): boolean
 			table.insert(env.refreshed, { player = p, visual = env.data[p] and env.data[p].Kingdom.VisualState })
@@ -155,7 +173,7 @@ return function(createService: any, modules: any)
 			if hook ~= nil then (hook :: any)(p) end
 			return true
 		end
-		env.script = { Parent = { DataService = dataService, PlotService = plotService, KingdomService = kingdomService,
+		env.script = { Parent = { DataService = dataService, PlotService = plotService, KingdomService = kingdomService, QuestService = questService,
 			Parent = { Config = { CombatConfig = modules.CombatConfig, SummonConfig = SummonConfig },
 				Heroes = { HeroRules = modules.HeroRules, SummonRules = modules.SummonRules } } } }
 		env.require = function(m: any): any return m end
@@ -177,7 +195,7 @@ return function(createService: any, modules: any)
 			character:add(inst("Humanoid", "Humanoid", { Health = 100 }))
 			p.Character = character
 			env.data[p] = {
-				DataVersion = 2,
+				DataVersion = 3,
 				Currencies = { Gold = 0, Gems = 0, SummonTickets = opts.tickets or 0 },
 				Progression = { CurrentZone = 1, HighestStage = 0, FirstClears = {} },
 				Heroes = {}, Team = {}, Hotbar = table.create(HeroConfig.HotbarSize, ""),
@@ -185,6 +203,15 @@ return function(createService: any, modules: any)
 				Kingdom = { Level = 1, VisualState = 1 },
 				Quests = {}, Settings = { CombatSpeed = 1 },
 			}
+			if opts.fresh then
+				env.quest[p] = SummonConfig.Starter.QuestId
+			else
+				-- profil existant : l'Écuyer reçu avant la refonte (identifiant horodaté le plus ancien)
+				local id = string.format("H_T%010d%04d_%s", 1, 0, "ecuyer" .. name)
+				env.data[p].Heroes[id] = { HeroId = "ecuyer_du_rempart", Level = 1 }
+				env.data[p].Hotbar[1] = id
+				env.quest[p] = "DefendDomain"
+			end
 			env.plots[p] = env.plot("Plot_" .. name, opts.portal or vector(0, 3, 0))
 			for _, fn in env.ready do fn(p, env.data[p]) end
 			return p
@@ -220,23 +247,158 @@ return function(createService: any, modules: any)
 		return n
 	end
 
-	test("new player: exactly 1 hero, ecuyer_du_rempart, shortcut 1, kingdom refreshed", function()
+	test("fresh profile has zero heroes: empty hotbar and team, nothing granted at join or rejoin", function()
 		local e = fixture()
 		e.start()
-		local p = e.player("A")
+		local p = e.player("A", { fresh = true })
 		local d = e.data[p]
-		assert(count(d.Heroes) == 1)
-		local id, hero = next(d.Heroes)
-		assert(hero.HeroId == "ecuyer_du_rempart" and d.Hotbar[1] == id)
-		for i = 2, HeroConfig.HotbarSize do assert(d.Hotbar[i] == "") end
-		assert(d.Kingdom.VisualState == 1 and #e.refreshed == 1)
-		assert(#e.events(p, "HeroesChanged") == 1, "collection pushed")
-		-- rejoin : aucun starter supplémentaire
+		assert(count(d.Heroes) == 0 and #d.Team == 0)
+		for i = 1, HeroConfig.HotbarSize do assert(d.Hotbar[i] == "") end
+		assert(d.Currencies.SummonTickets == 0 and d.Summons.Total == 0 and d.Kingdom.VisualState == 1)
+		assert(#e.refreshed == 0, "no kingdom change at join")
+		assert(#e.events(p, "HeroesChanged") == 1, "empty collection pushed")
 		for _, fn in e.ready do fn(p, d) end
-		assert(count(d.Heroes) == 1)
+		assert(count(d.Heroes) == 0, "rejoin: still nothing for free")
 	end)
 
-	test("summon refused without ticket; accepted with 1 -> ticket 0, first roll tireuse_des_faubourgs", function()
+	test("tutorial summon grants exactly one Ecuyer: shortcut 1, HeroesChanged, HeroObtained, quest event", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A", { fresh = true })
+		local got, reason = s:RequestStarterSummon(p)
+		assert(got and reason == nil, tostring(reason))
+		local d = e.data[p]
+		assert(count(d.Heroes) == 1 and d.Heroes[got.InstanceId].HeroId == "ecuyer_du_rempart" and d.Hotbar[1] == got.InstanceId)
+		assert(got.HeroId == "ecuyer_du_rempart" and got.New == true and got.Name == HeroConfig.Heroes.ecuyer_du_rempart.Name)
+		assert(got.Rarity == HeroConfig.Heroes.ecuyer_du_rempart.Rarity)
+		assert(#e.refreshed == 1, "kingdom refreshed (its hero appears)")
+		assert(#e.events(p, "HeroesChanged") == 2 and #e.events(p, "HeroObtained") == 1)
+		assert(#e.questEvents == 1 and e.questEvents[1].name == "StarterHeroSummoned" and e.questEvents[1].player == p)
+		assert(e.quest[p] == "DefendDomain", "quest chain moved on")
+	end)
+
+	test("tutorial summon costs zero: no ticket used, Summons.Total stays 0, kingdom stays 1", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A", { fresh = true, tickets = 2 })
+		assert(s:RequestStarterSummon(p))
+		local d = e.data[p]
+		assert(d.Currencies.SummonTickets == 2, "tickets untouched")
+		assert(d.Summons.Total == 0, "not counted as the first real summon")
+		assert(d.Kingdom.VisualState == 1 and d.Kingdom.Level == 1, "no artificial kingdom 1 -> 2")
+		assert(d.Currencies.Gold == 0 and d.Currencies.Gems == 0)
+	end)
+
+	test("tutorial summon cannot run twice (20 requests, rejoin, quest already done, Ecuyer owned)", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A", { fresh = true })
+		local invoke = e.remote("RequestStarterSummon").OnServerInvoke
+		local ok = 0
+		for _ = 1, 20 do if invoke(p) == true then ok += 1 end end
+		assert(ok == 1 and count(e.data[p].Heroes) == 1 and #e.events(p, "HeroObtained") == 1)
+		for _, fn in e.ready do fn(p, e.data[p]) end
+		local again, why = s:RequestStarterSummon(p)
+		assert(again == nil and why == "invocation gratuite indisponible", "quest over")
+		-- quête encore active (état forcé) mais Écuyer déjà possédé : refusé par la règle elle-même
+		e.quest[p] = SummonConfig.Starter.QuestId
+		local third, why3 = s:RequestStarterSummon(p)
+		assert(third == nil and why3 == "premier héros déjà obtenu" and count(e.data[p].Heroes) == 1)
+		-- un ancien joueur (Écuyer possédé, tutoriel passé) n'a jamais d'Écuyer gratuit
+		local old = e.player("B")
+		assert(s:RequestStarterSummon(old) == nil and count(e.data[old].Heroes) == 1)
+	end)
+
+	test("tutorial summon refusals: far from the portal, another player's portal, no plot, data not loaded, re-entrant", function()
+		local e = fixture()
+		local s = e.start()
+		local a = e.player("A", { fresh = true })
+		local b = e.player("B", { fresh = true, portal = vector(300, 3, 0), at = vector(300, 3, 0) })
+		e.moveTo(a, vector(300, 3, 0)) -- A devant le portail de B
+		local none, why = s:RequestStarterSummon(a)
+		assert(none == nil and why == "approche-toi de ton portail")
+		e.moveTo(a, vector(0, 3, 0))
+		e.plots[a] = nil
+		assert(select(2, s:RequestStarterSummon(a)) == "aucun portail")
+		e.plots[a] = e.plot("Plot_A", vector(0, 3, 0))
+		a.attributes.DataLoaded = nil
+		assert(select(2, s:RequestStarterSummon(a)) == "données non chargées")
+		a.attributes.DataLoaded = true
+		local reentrant: any = nil
+		e.onRefresh = function(pl: any)
+			if pl == a and reentrant == nil then reentrant = { s:RequestStarterSummon(a) } end
+		end
+		assert(s:RequestStarterSummon(a))
+		assert(reentrant and reentrant[1] == nil, "a request during the commit is refused")
+		assert(count(e.data[a].Heroes) == 1 and count(e.data[b].Heroes) == 0, "B untouched")
+		assert(s:RequestStarterSummon(b), "B summons at its own portal")
+	end)
+
+	test("tutorial then first paid summon: rolled (whatever the RNG gives), Summons.Total = 1, kingdom 1 -> 2", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A", { fresh = true })
+		assert(s:RequestStarterSummon(p))
+		local refused, why = s:RequestSummon(p)
+		assert(refused == nil and why == "pas de ticket d'invocation", "0 ticket after the tutorial")
+		e.data[p].Currencies.SummonTickets = 1 -- First Clear 1-1
+		local got = s:RequestSummon(p)
+		local d = e.data[p]
+		assert(SummonConfig.FirstSummon == nil, "no guaranteed hero any more")
+		assert(got and HeroConfig.Heroes[got.HeroId], "a real hero from the pool")
+		assert(d.Summons.Total == 1 and d.Currencies.SummonTickets == 0 and d.Kingdom.VisualState == 2, "first paid summon still evolves the kingdom")
+		assert(count(d.Heroes) == 2 and d.Hotbar[2] == got.InstanceId)
+	end)
+
+	test("GetSummonState: Starter presentation (Active, server HeroId / Name / Rarity) only during the tutorial", function()
+		local e = fixture()
+		local s = e.start()
+		local get = e.remote("GetSummonState").OnServerInvoke
+		local p = e.player("A", { fresh = true })
+		local starter = get(p).Starter
+		local info = HeroConfig.Heroes[SummonConfig.Starter.HeroId]
+		assert(starter.Active == true and starter.HeroId == "ecuyer_du_rempart" and starter.Name == info.Name and starter.Rarity == info.Rarity)
+		assert(get(p).Tickets == 0)
+		s:RequestStarterSummon(p)
+		assert(get(p).Starter.Active == false and get(p).Starter.HeroId == nil)
+		assert(get(e.player("B")).Starter.Active == false, "existing player")
+	end)
+
+	test("first paid summon uses the normal roll: Summons.Total == 0 never forces a HeroId (deterministic)", function()
+		local SummonRules = modules.SummonRules
+		local pool = SummonRules.buildPool(modules.RarityConfig.Tiers, HeroConfig.Heroes)
+		local banners = modules.SummonBannerConfig.Banners
+		local seen: { [string]: boolean } = {}
+		local rarities: { [string]: boolean } = {}
+		for tierValue = 1, 10000 do
+			for heroValue = 1, 3 do
+				for _, banner in banners do
+					-- même suite de tirages pour la règle de référence (roll) et pour la vraie transaction
+					local function picker(): (number) -> number
+						local calls = 0
+						return function(n: number): number
+							calls += 1
+							return if calls == 1 then math.min(tierValue, n) else math.clamp(heroValue, 1, n)
+						end
+					end
+					local expected = SummonRules.roll(pool, banner, picker())
+					local data = { Currencies = { SummonTickets = 1 }, Summons = { Total = 0 }, Kingdom = { VisualState = 1 },
+						Heroes = {}, Hotbar = table.create(HeroConfig.HotbarSize, "") }
+					local result = SummonRules.summon(data, SummonConfig, function() return "X" end, picker(), pool, banner)
+					assert(result and result.HeroId == expected, `first paid summon = normal roll ({tierValue}, {heroValue}, {banner.Id})`)
+					assert(result.First == true and data.Summons.Total == 1 and data.Kingdom.VisualState == 2)
+					seen[result.HeroId] = true
+					rarities[HeroConfig.Heroes[result.HeroId].Rarity] = true
+				end
+			end
+		end
+		local distinct, tiers = 0, 0
+		for _ in seen do distinct += 1 end
+		for _ in rarities do tiers += 1 end
+		assert(distinct > 10 and tiers == #modules.RarityConfig.Tiers, `many heroes and every rarity possible on the first paid summon ({distinct} heroes, {tiers} rarities)`)
+	end)
+
+	test("summon refused without ticket; accepted with 1 -> ticket 0, rolled hero saved (test RNG gives tireuse)", function()
 		local e = fixture()
 		local s = e.start()
 		local p = e.player("A")
@@ -281,7 +443,7 @@ return function(createService: any, modules: any)
 		end
 		assert(first.New == true)
 		for i = 2, #results do
-			assert(results[i].New == false, "every later roll is a hero already owned (starter or tireuse)")
+			assert(results[i].New == false, "with the test RNG, every later roll is a hero already owned (starter or tireuse)")
 		end
 		assert(count(e.data[p].Heroes) == 5 and e.data[p].Currencies.SummonTickets == 0)
 		local known = HeroConfig.Heroes

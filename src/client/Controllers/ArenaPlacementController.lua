@@ -7,11 +7,16 @@
 --     choisi, ennemis agrégés, équipe x/4). SurfaceGui locale, sur la pancarte de SON arène.
 --     E près de la pancarte : fenêtre des stages (ExpeditionView) → choisir un stage (SelectStage),
 --     « Préparer l'équipe » (dalles mises en évidence) ou « Lancer » (Ready, 1 à 4 héros posés).
+--   • Dans l'arène, équipe posée : pastille « F · Lancer le combat » (touche F, clic ou toucher) → Ready.
+--     Tutoriel (ArenaStore.guide.expedition) : la pastille respire, et la fenêtre Expédition met en avant
+--     « Préparer l'équipe » (aucun héros posé) ou « Lancer ».
+--     Les ennemis sortent alors du décor (CombatPresentationController) et le combat démarre seul.
 --   • Combat : pastille légère (vague, x1/x2, X) ; PV et énergie sont dans le monde
 --     (CombatViewController). Les ultimes sont automatiques.
 -- Le client n'envoie que des intentions (Place / Remove / SelectStage / Ready) ; ArenaService valide tout.
 
 local CollectionService = game:GetService("CollectionService")
+local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -26,6 +31,7 @@ local UIKit = require(script.Parent.Parent.UI.UIKit)
 local AudioController = require(script.Parent.AudioController)
 local RewardScreenController = require(script.Parent.RewardScreenController)
 local ExpeditionView = require(script.Parent.Parent.UI.Views.ExpeditionView)
+local OutroGate = require(script.Parent.Parent.Combat.OutroGate)
 local ScreenState = require(script.Parent.Parent.UI.ScreenState)
 local CurrencyController = require(script.Parent.CurrencyController)
 local SummonController = require(script.Parent.SummonController)
@@ -45,7 +51,8 @@ local PANEL_WIDTH = 264
 local PANEL_HEIGHT = 300 -- pancarte : même proportion que la bannière de Arene.PanneauStage
 local SIGN_NAME = ArenaConfig.SignName
 local SIGN_BOARD = ArenaConfig.SignBoard
-local RESULT_DELAY = 1.2 -- s après CombatEnded : la dernière unité a fini de se dissoudre
+-- Écran de fin : ouvert à la fin de l'outro (ArenaStore.outroFinished, voir OutroGate), plus d'attente fixe.
+local OUTRO = require(ReplicatedStorage.Shared.Config.EnemyPresentationConfig).Outro
 
 type CaseState = "Empty" | "Hover" | "ValidTarget" | "Occupied" | "Selected" | "Invalid"
 
@@ -61,6 +68,9 @@ local promptInfo: PlacementState.Prompt? = nil
 local signPrompt: ProximityPrompt? = nil -- E près de la pancarte : fenêtre des stages
 local prepMode = false -- « Préparer l'équipe » : dalles mises en évidence
 local render: () -> () -- défini plus bas (rendu complet : panneau, statut, dalles)
+local launch: () -> () -- défini plus bas (F / clic : Ready depuis l'arène)
+-- Combat fini, outro en cours (ArenaStore.awaitingResult) : pas de relance avant l'écran de fin.
+local launchGuide: { stroke: UIStroke, tween: Tween }? = nil -- pastille « F · Lancer » qui respire (tutoriel)
 
 ------------------------------------------------------------------ arène du plot
 
@@ -393,6 +403,7 @@ local function openStageMenu()
 	end
 	ExpeditionView.Show({ Zone = zone, Title = title, Stages = stages }, {
 		OnClose = closed,
+		Guide = ArenaStore.guide.expedition,
 		Selected = state.Stage,
 		Team = { Placed = ArenaStore.placedCount(), Max = state.MaxHeroes or ArenaConfig.MaxHeroes },
 		OnSelect = function(z: number, stage: number)
@@ -415,6 +426,7 @@ local function openStageMenu()
 			end
 			PlacementState.cancel(ArenaStore.placement) -- plus rien en main : la formation se verrouille
 			prepMode = false
+			-- Ready : les ennemis sortent du décor (CombatPresentationController), puis le combat démarre.
 			ArenaStore.request("Ready")
 		end,
 	})
@@ -458,6 +470,20 @@ local function build()
 	ui.sign = sign
 	buildPanel(sign)
 	sign.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+
+	-- Lancer depuis l'arène : pastille au-dessus de la hotbar (au-dessus du statut du héros en main).
+	local launchPill = pill(screen, T.HUD)
+	launchPill.Size = UDim2.fromOffset(420, 56)
+	launchPill.Position = UDim2.new(0.5, 0, 1, -ABOVE_HOTBAR - 60)
+	launchPill.Visible = false
+	ui.launch = launchPill
+	local launchButton = UIKit.button(launchPill, "", "Primary", UDim2.new(1, -2 * S.S, 0, 40 + UITheme.Shadow.ButtonLip), function()
+		launch()
+	end)
+	launchButton.holder.AnchorPoint = Vector2.new(0.5, 0.5)
+	launchButton.holder.Position = UDim2.fromScale(0.5, 0.5)
+	launchButton.label.TextSize = SIZE.Label
+	ui.launchText = launchButton.label
 
 	-- Combat : vague, x1 / x2, quitter.
 	local combat = pill(screen, T.HUD)
@@ -553,7 +579,39 @@ function render()
 	else
 		ui.status.Visible = false
 	end
+	-- Lancer depuis l'arène (F, clic, toucher) : équipe posée, rien en main, aucun écran ouvert.
+	local launchable = inArena and phase == "Placement" and count >= 1 and not held and state.Available ~= false
+		and ScreenState.free() and not ArenaStore.awaitingResult
+	ui.launch.Visible = launchable
+	-- tutoriel : la pastille respire (contour doré) tant qu'elle attend le premier lancement
+	local guided = launchable and ArenaStore.guide.expedition
+	local current = launchGuide
+	if guided and not current then
+		local stroke = ui.launch:FindFirstChildOfClass("UIStroke")
+		if stroke then
+			stroke.Color = UITheme.World.Guide.Color
+			local tween = TweenService:Create(stroke, UITheme.Animation.Pulse, { Thickness = UITheme.Stroke.Thick + 2 })
+			tween:Play()
+			launchGuide = { stroke = stroke, tween = tween }
+			UIKit.pop(ui.launch)
+		end
+	elseif not guided and current then
+		current.tween:Cancel()
+		current.stroke.Color = UITheme.Stroke.Color
+		current.stroke.Thickness = UITheme.Stroke.Regular
+		launchGuide = nil
+	end
+	ui.launchText.Text = `F · Lancer le combat  ·  Stage {state.Zone or "?"}-{state.Stage or "?"}`
 	renderCases()
+end
+
+function launch()
+	if not ui.launch.Visible or ArenaStore.busy then
+		return
+	end
+	PlacementState.cancel(ArenaStore.placement)
+	prepMode = false
+	ArenaStore.request("Ready") -- le serveur revérifie stage, équipe, plot, combat déjà actif
 end
 
 ------------------------------------------------------------------ entrées et événements
@@ -562,10 +620,46 @@ local function onInputBegan(input: InputObject, processed: boolean)
 	if not processed and input.KeyCode == Enum.KeyCode.Escape and ArenaStore.placement.held then
 		PlacementState.cancel(ArenaStore.placement)
 		ArenaStore.notify()
+	elseif not processed and (input.KeyCode == Enum.KeyCode.F or input.KeyCode == Enum.KeyCode.ButtonY) then
+		launch()
 	end
 end
 
-local function onCombatEvents(_combatId: number, events: { { [string]: any } })
+-- Écran de fin (#17, #19). Un seul CombatEnded par combat, envoyé par le serveur après l'attribution :
+-- FirstClear et Rewards sont les récompenses de RewardService (#9), déjà sauvegardées. L'écran ne fait
+-- que les montrer, après l'outro (mort complète, sac, « VICTOIRE ! »).
+-- Continuer : l'écran se ferme, le HUD des monnaies relit le serveur (il défile alors), et un ticket gagné
+-- montre la suite : le portail d'invocation. Le joueur est déjà sur son plot : rien à téléporter.
+local resultGate = OutroGate.new()
+
+local function showResult(event: { [string]: any }, silent: boolean)
+	ArenaStore.awaitingResult = false
+	local rewards: { any }? = if typeof(event.Rewards) == "table" then event.Rewards else nil
+	local ticket = false
+	for _, reward in rewards or {} do
+		if reward.Kind == "SummonTicket" and typeof(reward.Amount) == "number" and reward.Amount > 0 then
+			ticket = true
+		end
+	end
+	task.spawn(function()
+		-- un combat fini pendant une invocation attend la carte du héros
+		ScreenState.waitAndOpen("Reward")
+		RewardScreenController.Show({
+			Result = event.Result,
+			FirstClear = event.FirstClear,
+			Rewards = rewards,
+			Silent = silent, -- l'annonce « VICTOIRE ! » a déjà joué le son
+		}, function()
+			ScreenState.close("Reward")
+			CurrencyController.Refresh(true)
+			if ticket then
+				SummonController.HintPortal()
+			end
+		end)
+	end)
+end
+
+local function onCombatEvents(combatId: number, events: { { [string]: any } })
 	for _, event in events do
 		if event.Type == "WaveStarted" then
 			local text = if event.WaveCount > 1 then `Vague {event.Wave}/{event.WaveCount}` else "Vague"
@@ -581,34 +675,13 @@ local function onCombatEvents(_combatId: number, events: { { [string]: any } })
 			ui.x1.setSelected(event.Speed == 1)
 			ui.x2.setSelected(event.Speed == 2)
 		elseif event.Type == "CombatEnded" then
-			-- Écran de fin (#17, #19) une fois la dernière unité dissoute. Un seul CombatEnded par
-			-- combat, envoyé par le serveur après l'attribution : FirstClear et Rewards sont les
-			-- récompenses de RewardService (#9), déjà sauvegardées. L'écran ne fait que les montrer.
-			-- Continuer : l'écran se ferme, le HUD des monnaies relit le serveur (il défile alors), et
-			-- un ticket gagné montre la suite : le portail d'invocation. Le joueur est déjà sur son
-			-- plot (l'arène en fait partie) : aucun retour à téléporter.
-			local rewards: { any }? = if typeof(event.Rewards) == "table" then event.Rewards else nil
-			local ticket = false
-			for _, reward in rewards or {} do
-				if reward.Kind == "SummonTicket" and typeof(reward.Amount) == "number" and reward.Amount > 0 then
-					ticket = true
-				end
+			-- gardé jusqu'à la fin de l'outro (ou le délai de sécurité)
+			ArenaStore.awaitingResult = true
+			render()
+			local ready = resultGate:ended(combatId, event, os.clock())
+			if ready then
+				showResult(ready, ready.Result == "Victory")
 			end
-			task.delay(RESULT_DELAY, function()
-				-- un combat fini pendant une invocation attend la carte du héros
-				ScreenState.waitAndOpen("Reward")
-				RewardScreenController.Show({
-					Result = event.Result,
-					FirstClear = event.FirstClear,
-					Rewards = rewards,
-				}, function()
-					ScreenState.close("Reward")
-					CurrencyController.Refresh(true)
-					if ticket then
-						SummonController.HintPortal()
-					end
-				end)
-			end)
 		end
 	end
 end
@@ -645,6 +718,21 @@ function ArenaPlacementController:Start()
 		updatePrompt()
 	end)
 	ArenaStore.toast.Event:Connect(showToast)
+	ArenaStore.outroFinished.Event:Connect(function(combatId: number)
+		local ready = resultGate:outroFinished(combatId)
+		if ready then
+			showResult(ready, ready.Result == "Victory")
+		end
+	end)
+	-- Sécurité : si l'outro ne répond pas, l'écran s'ouvre quand même (jamais de blocage).
+	task.spawn(function()
+		while true do
+			task.wait(0.5)
+			for _, item in resultGate:expired(os.clock(), OUTRO.Safety) do
+				showResult(item.payload, false)
+			end
+		end
+	end)
 	-- Un écran modal s'ouvre ou se ferme : les prompts (pancarte, dalles) suivent.
 	ScreenState.changed.Event:Connect(function()
 		render()

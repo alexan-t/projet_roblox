@@ -11,7 +11,7 @@ export type Result = {
 	HeroId: string,
 	New: boolean, -- premier exemplaire de ce HeroId pour le joueur
 	Slot: number?, -- raccourci de hotbar utilisé, nil si la hotbar était pleine
-	First: boolean, -- toute première invocation du profil
+	First: boolean, -- première invocation payante du profil (Summons.Total était 0) ; ne décide pas du héros
 	KingdomChanged: boolean, -- Kingdom.VisualState vient de passer de KingdomFrom à KingdomTo
 }
 
@@ -80,8 +80,11 @@ function SummonRules.configProblems(config: any, catalog: { [string]: any }, tie
 	if typeof(config.Cost) ~= "number" or config.Cost < 1 or config.Cost % 1 ~= 0 then
 		table.insert(problems, "Cost doit être un entier >= 1")
 	end
-	if not catalog[config.FirstSummon] then
-		table.insert(problems, `FirstSummon inconnu : {tostring(config.FirstSummon)}`)
+	local starter = config.Starter
+	if typeof(starter) ~= "table" or not catalog[starter.HeroId] then
+		table.insert(problems, `Starter.HeroId inconnu : {tostring(if typeof(starter) == "table" then starter.HeroId else nil)}`)
+	elseif typeof(starter.QuestId) ~= "string" or typeof(starter.Event) ~= "string" then
+		table.insert(problems, "Starter : QuestId et Event requis")
 	end
 	if tiers then
 		local known: { [string]: boolean } = {}
@@ -149,10 +152,10 @@ function SummonRules.roll(pool: Pool, banner: Banner?, pick: (number) -> number)
 	return heroes[math.clamp(pick(#heroes), 1, #heroes)]
 end
 
--- Transaction complète, synchrone : revérifie le ticket, choisit le héros, prépare l'identifiant, crée
--- l'exemplaire (hotbar si une case est libre), débite, compte l'invocation et, à la toute première,
--- fait évoluer le royaume une seule fois. La toute première invocation donne toujours FirstSummon ;
--- les suivantes tirent dans `pool` (bannière facultative).
+-- Transaction complète, synchrone : revérifie le ticket, tire le héros dans `pool` (bannière
+-- facultative), prépare l'identifiant, crée l'exemplaire (hotbar si une case est libre), débite, compte
+-- l'invocation et, à la première invocation payante, fait évoluer le royaume une seule fois. Aucun héros
+-- garanti : la première invocation payante tire comme toutes les autres.
 -- Renvoie le résultat, ou nil et la raison sans rien modifier.
 function SummonRules.summon(data: any, config: any, makeId: () -> string, pick: (number) -> number, pool: Pool, banner: Banner?): (Result?, string?)
 	if not SummonRules.canPay(data, config) then
@@ -160,8 +163,8 @@ function SummonRules.summon(data: any, config: any, makeId: () -> string, pick: 
 	end
 	local summons = data.Summons
 	local total = if typeof(summons) == "table" and typeof(summons.Total) == "number" then summons.Total else 0
-	local first = total == 0
-	local heroId = if first then config.FirstSummon else SummonRules.roll(pool, banner, pick)
+	local firstPaid = total == 0
+	local heroId = SummonRules.roll(pool, banner, pick)
 	local new = not HeroRules.owns(data, heroId)
 	-- Tout ce qui peut échouer (identifiant, tirage) est prêt AVANT la première mutation : une
 	-- erreur ici laisse le ticket intact. Ensuite le héros est ajouté puis le ticket débité.
@@ -171,7 +174,7 @@ function SummonRules.summon(data: any, config: any, makeId: () -> string, pick: 
 	data.Currencies.SummonTickets -= config.Cost
 	data.Summons = { Total = total + 1 }
 	local kingdomChanged = false
-	if first and data.Kingdom.VisualState == config.KingdomFrom then
+	if firstPaid and data.Kingdom.VisualState == config.KingdomFrom then
 		data.Kingdom.VisualState = config.KingdomTo
 		kingdomChanged = true
 	end
@@ -180,8 +183,37 @@ function SummonRules.summon(data: any, config: any, makeId: () -> string, pick: 
 		HeroId = heroId,
 		New = new,
 		Slot = slot,
-		First = first,
+		First = firstPaid,
 		KingdomChanged = kingdomChanged,
+	}, nil
+end
+
+-- Invocation tutorielle encore possible ? Jamais si le profil possède déjà le héros de départ.
+-- (La quête du tutoriel est vérifiée par HeroService avec QuestService.)
+function SummonRules.canStarter(data: any, starter: any): (boolean, string?)
+	if HeroRules.owns(data, starter.HeroId) then
+		return false, "premier héros déjà obtenu"
+	end
+	return true, nil
+end
+
+-- Invocation tutorielle, synchrone : le héros de départ, gratuit et garanti. Aucun ticket débité,
+-- Summons.Total inchangé (compteur des invocations payantes), royaume inchangé.
+-- Renvoie le résultat, ou nil et la raison sans rien modifier.
+function SummonRules.starter(data: any, starter: any, makeId: () -> string): (Result?, string?)
+	local ok, why = SummonRules.canStarter(data, starter)
+	if not ok then
+		return nil, why
+	end
+	local instanceId = makeId() -- prêt AVANT la première mutation
+	local slot = HeroRules.addHero(data, instanceId, starter.HeroId)
+	return {
+		InstanceId = instanceId,
+		HeroId = starter.HeroId,
+		New = true,
+		Slot = slot,
+		First = false,
+		KingdomChanged = false,
 	}, nil
 end
 

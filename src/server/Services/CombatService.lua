@@ -44,6 +44,8 @@ type Session = {
 	models: { [number]: Model },
 	enemyFacing: Vector3,
 	allyFacing: Vector3,
+	-- Secondes de simulation encore retenues pour la mise en scène (EntranceHold) : le moteur n'avance pas.
+	hold: number,
 }
 type EndedCallback = (player: Player, combatId: number, result: string) -> ()
 
@@ -77,14 +79,25 @@ local function isSpeed(value: any): boolean
 	return value == 1 or value == 2
 end
 
-local function stop(session: Session)
+-- keep : fin normale (victoire / défaite) : les modèles restent EndHold secondes (outro du client),
+-- puis sont retirés. Annulation, départ : retirés tout de suite.
+local function stop(session: Session, keep: boolean?)
 	if sessions[session.player] == session then
 		sessions[session.player] = nil
 	end
-	for _, model in session.models do
-		model:Destroy()
-	end
+	local models = table.clone(session.models)
 	table.clear(session.models)
+	if keep then
+		task.delay(CombatConfig.Presentation.EndHold, function()
+			for _, model in models do
+				model:Destroy()
+			end
+		end)
+	else
+		for _, model in models do
+			model:Destroy()
+		end
+	end
 end
 
 -- Contexte encore valide : joueur présent, profil chargé, même session de stage.
@@ -166,8 +179,8 @@ local function finalize(session: Session)
 	if not result or sessions[session.player] ~= session then
 		return
 	end
-	-- Verrouiller d'abord : aucune seconde fin possible pour cette session.
-	stop(session)
+	-- Verrouiller d'abord : aucune seconde fin possible pour cette session (modèles gardés pour l'outro).
+	stop(session, true)
 	local victory = result == "Victory"
 	Log.info(SCOPE, `Combat {session.id} de {session.player.Name} : {if victory then "victoire" else "défaite"}`)
 	local _, reward = ZoneService:CompleteStage(session.player, session.zoneSessionId, victory)
@@ -182,6 +195,33 @@ local function finalize(session: Session)
 	end
 end
 
+-- Mise en scène : après une vague suivante ou le mini-boss, le moteur est retenu le temps que le client
+-- fasse entrer les nouveaux ennemis depuis le décor (respiration + plus longue entrée de la vague).
+-- Le client reçoit la durée exacte (EntranceHold) et cale ses entrées dessus.
+-- Durée de retenue pour un lot d'événements contenant une nouvelle vague (1re comprise) ou le mini-boss :
+-- respiration + plus longue entrée des ennemis apparus. nil : rien de nouveau.
+local function entranceHold(events: { CombatEngine.Event }): (number?, number?)
+	local presentation = CombatConfig.Presentation
+	local breather: number? = nil
+	for _, event in events do
+		if event.Type == "WaveStarted" then
+			breather = if (event.Wave :: number) > 1 then presentation.WaveBreather else presentation.StartBreather
+		elseif event.Type == "MiniBossStarted" then
+			breather = presentation.WaveBreather
+		end
+	end
+	if not breather then
+		return nil, nil
+	end
+	local longest = 0
+	for _, event in events do
+		if event.Type == "UnitSpawned" and event.Team == "Enemy" then
+			longest = math.max(longest, presentation.Entrance[event.TypeId :: string] or presentation.DefaultEntrance)
+		end
+	end
+	return breather + longest, breather
+end
+
 local function tick(dt: number)
 	for player, session in sessions do
 		if not contextAlive(session) then
@@ -189,8 +229,22 @@ local function tick(dt: number)
 			stop(session)
 			continue
 		end
-		CombatEngine.advance(session.state, dt, session.speed)
+		-- Temps retenu pour la mise en scène : consommé avant de faire avancer le moteur.
+		local step = dt
+		if session.hold > 0 then
+			local used = math.min(session.hold, step)
+			session.hold -= used
+			step -= used
+		end
+		if step > 0 then
+			CombatEngine.advance(session.state, step, session.speed)
+		end
 		local events, moved = CombatEngine.drain(session.state)
+		local hold, breather = entranceHold(events)
+		if hold then
+			session.hold = hold
+			table.insert(events, { Type = "EntranceHold", Duration = hold, Breather = breather })
+		end
 		present(session, events, moved)
 		finalize(session)
 	end
@@ -275,11 +329,15 @@ function CombatService:StartCombat(player: Player, zoneSessionId: number, format
 		models = {},
 		enemyFacing = average(context.EnemyPositions),
 		allyFacing = average(context.HeroPositions),
+		hold = 0, -- fixé ci-dessous : la 1re vague entre depuis le décor avant que le moteur ne démarre
 	}
 	sessions[player] = session
 	Log.info(SCOPE, `Combat {session.id} lancé par {player.Name} (stage {stage.Zone}-{stage.Stage}, {#allies} héros)`)
 	local events, moved = CombatEngine.drain(session.state)
 	table.insert(events, 2, { Type = "SpeedChanged", Speed = session.speed })
+	local hold, breather = entranceHold(events)
+	session.hold = hold or 0
+	table.insert(events, { Type = "EntranceHold", Duration = session.hold, Breather = breather or 0 })
 	present(session, events, moved)
 	return session.id, nil
 end
