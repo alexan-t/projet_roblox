@@ -12,6 +12,7 @@ export type Config = {
 	PerLevelXP: number,
 	StatGrowth: { [string]: number },
 	StageXP: { [string]: number },
+	EliteStageXP: { [string]: number }?,
 }
 
 local function isLevel(value: any, config: Config): boolean
@@ -83,9 +84,11 @@ function HeroProgressionRules.combatStats(base: { [string]: any }, level: number
 	return stats
 end
 
--- XP d'une victoire sur ce stage (0 si le stage n'en donne pas).
-function HeroProgressionRules.stageXP(zone: number, stage: number, config: Config): number
-	local amount = config.StageXP[`{zone}-{stage}`]
+-- XP d'une victoire sur ce stage, dans ce mode (nil / "Normal" : StageXP ; "Elite" : EliteStageXP) ;
+-- 0 si le stage ou le mode n'en donne pas.
+function HeroProgressionRules.stageXP(zone: number, stage: number, config: Config, mode: string?): number
+	local source = if mode == "Elite" then config.EliteStageXP elseif mode == nil or mode == "Normal" then config.StageXP else nil
+	local amount = if source then source[`{zone}-{stage}`] else nil
 	return if typeof(amount) == "number" and amount > 0 then amount else 0
 end
 
@@ -106,9 +109,11 @@ function HeroProgressionRules.configProblems(config: any): { string }
 			table.insert(problems, `StatGrowth.{key} invalide`)
 		end
 	end
-	for key, amount in config.StageXP or {} do
-		if typeof(amount) ~= "number" or amount < 0 or amount % 1 ~= 0 then
-			table.insert(problems, `StageXP[{key}] doit être un entier >= 0`)
+	for _, name in { "StageXP", "EliteStageXP" } do
+		for key, amount in config[name] or {} do
+			if typeof(amount) ~= "number" or amount < 0 or amount % 1 ~= 0 then
+				table.insert(problems, `{name}[{key}] doit être un entier >= 0`)
+			end
 		end
 	end
 	return problems

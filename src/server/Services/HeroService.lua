@@ -180,15 +180,15 @@ export type ProgressionView = {
 
 -- XP d'une victoire acceptée par ZoneService (appelée une seule fois par CombatService.finalize) :
 -- chaque exemplaire de `participants` (HeroInstanceId figés au lancement), encore possédé, gagne
--- l'XP du stage (HeroProgressionConfig.StageXP). Sans yield ; puis HeroesChanged. Renvoie la vue de
--- progression pour l'écran de fin (le client ne calcule jamais de niveau).
-function HeroService:GrantCombatXP(player: Player, participants: { string }, zone: number, stage: number): { ProgressionView }
+-- l'XP du stage dans son mode (HeroProgressionConfig.StageXP, ou EliteStageXP en Élite). Sans yield ;
+-- puis HeroesChanged. Renvoie la vue de progression pour l'écran de fin (le client ne calcule jamais de niveau).
+function HeroService:GrantCombatXP(player: Player, participants: { string }, zone: number, stage: number, mode: string?): { ProgressionView }
 	local data = DataService:GetData(player)
 	local views: { ProgressionView } = {}
 	if not data then
 		return views
 	end
-	local amount = HeroProgressionRules.stageXP(zone, stage, HeroProgressionConfig)
+	local amount = HeroProgressionRules.stageXP(zone, stage, HeroProgressionConfig, mode)
 	local seen: { [string]: boolean } = {}
 	for _, instanceId in participants do
 		local hero = if typeof(instanceId) == "string" and not seen[instanceId] then data.Heroes[instanceId] else nil
@@ -208,7 +208,7 @@ function HeroService:GrantCombatXP(player: Player, participants: { string }, zon
 		end
 	end
 	if #views > 0 then
-		Log.info(SCOPE, `{player.Name} : +{amount} XP à {#views} héros (stage {zone}-{stage})`)
+		Log.info(SCOPE, `{player.Name} : +{amount} XP à {#views} héros (stage {zone}-{stage}{if mode == "Elite" then " Élite" else ""})`)
 		push(player)
 	end
 	return views

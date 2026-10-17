@@ -67,11 +67,16 @@ local function copy(list: { Reward }): { Reward }
 end
 
 -- Attribution synchrone, sans aucun yield entre la vérification et la mutation :
---   pas encore de FirstClear → FirstClears[key] = true, puis FirstClearReward ;
+--   pas encore de FirstClear → clears[key] = true, puis FirstClearReward ;
 --   sinon                    → RepeatReward.
--- L'entrée doit avoir été validée (stageProblems vide).
-function RewardRules.grant(data: any, key: string, entry: StageRewards): Result
-	local firstClears = data.Progression.FirstClears
+-- clears = champ de Progression : "FirstClears" (Normal, défaut) ou "EliteFirstClears" (Élite, #69) ;
+-- les deux progressions sont indépendantes. L'entrée doit avoir été validée (stageProblems vide).
+function RewardRules.grant(data: any, key: string, entry: StageRewards, clears: string?): Result
+	local progressionField = clears or "FirstClears"
+	if typeof(data.Progression[progressionField]) ~= "table" then
+		data.Progression[progressionField] = {}
+	end
+	local firstClears = data.Progression[progressionField]
 	local first = firstClears[key] ~= true
 	local list = if first then entry.FirstClearReward else entry.RepeatReward
 	if first then

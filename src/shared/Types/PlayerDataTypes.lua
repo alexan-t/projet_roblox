@@ -14,6 +14,8 @@ export type Progression = {
 	HighestStage: number,
 	-- Clé = identifiant du stage, valeur = true une fois terminé la première fois.
 	FirstClears: { [string]: boolean },
+	-- Mode Élite (#69) : même format, progression indépendante (ajoutée aux anciens profils par Reconcile).
+	EliteFirstClears: { [string]: boolean },
 }
 
 export type Hero = {

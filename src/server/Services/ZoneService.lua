@@ -1,5 +1,6 @@
 --!strict
 -- Zones et stages (voir docs/ZONES.md) : autorise le lancement d'un stage depuis le plot du joueur,
+-- dans un MODE ("Normal" ou "Elite", #69 : mêmes stages, ennemis plus forts, progression à part),
 -- tient la session serveur (au plus une par joueur) et reçoit sa fin. Aucun combat ici (#8),
 -- aucune récompense ici (RewardService, #9).
 -- Une session n'existe qu'en mémoire. Elle est revérifiée à chaque accès (joueur présent,
@@ -16,17 +17,23 @@ local PlotService = require(script.Parent.PlotService)
 local QuestService = require(script.Parent.QuestService)
 local RewardService = require(script.Parent.RewardService)
 local StageConfig = require(script.Parent.Parent.Config.StageConfig)
+local EliteConfig = require(script.Parent.Parent.Config.EliteConfig)
+local Difficulty = require(script.Parent.Parent.Combat.Difficulty)
 
 type PlayerData = PlayerDataTypes.PlayerData
-type Session = { id: number, zone: number, stage: number, plot: Model, config: any }
+export type Mode = "Normal" | "Elite"
+type Session = { id: number, mode: Mode, zone: number, stage: number, plot: Model, config: any, difficulty: any? }
 
 -- Vue en lecture seule d'une session active (table gelée ; Config gelée en profondeur).
 export type StageSession = {
 	Id: number,
+	Mode: Mode,
 	Zone: number,
 	Stage: number,
 	Status: "Running",
 	Config: any,
+	-- Élite : multiplicateurs des stats ennemies (Difficulty) ; nil en Normal.
+	Difficulty: any?,
 }
 
 local SCOPE = "ZoneService"
@@ -37,6 +44,8 @@ local ZoneService = {}
 
 -- stages[zone][stage] = config gelée ; false = stage déclaré mais invalide.
 local stages: { [number]: { [number]: any } } = {}
+-- Élite : elite[zone] = { unlockAfter = "<zone>-<stage>", stages = { [stage] = multiplicateurs gelés } }.
+local elite: { [number]: { unlockAfter: string, stages: { [number]: any } } } = {}
 local sessions: { [Player]: Session } = {}
 local nextSessionId = 0
 
@@ -69,6 +78,72 @@ end
 
 local function stageKey(zone: number, stage: number): string
 	return `{zone}-{stage}`
+end
+
+-- Mode demandé : nil = "Normal" ; toute autre valeur que "Normal" / "Elite" est refusée (nil).
+local function modeOf(mode: any): Mode?
+	if mode == nil or mode == "Normal" then
+		return "Normal"
+	elseif mode == "Elite" then
+		return "Elite"
+	end
+	return nil
+end
+
+local function eliteClears(data: PlayerData): { [string]: boolean }
+	local clears = (data.Progression :: any).EliteFirstClears
+	return if typeof(clears) == "table" then clears else {}
+end
+
+-- Élite de la zone débloquée pour ces données ? (First Clear Normal de UnlockAfter)
+local function eliteUnlocked(data: PlayerData, zone: number): boolean
+	local entry = elite[zone]
+	return entry ~= nil and data.Progression.FirstClears[entry.unlockAfter] == true
+end
+
+-- Statut d'un stage Élite pour ces données.
+local function eliteStatus(data: PlayerData, zone: number, stage: number): "Unlocked" | "Locked" | "Unavailable"
+	local config = stages[zone] and stages[zone][stage]
+	if config == false then
+		return "Unavailable"
+	end
+	if not eliteUnlocked(data, zone) then
+		return "Locked"
+	end
+	if stage > 1 and eliteClears(data)[stageKey(zone, stage - 1)] ~= true then
+		return "Locked"
+	end
+	return "Unlocked"
+end
+
+-- Charge EliteConfig : seuls les stages Élite d'un stage Normal existant et des multiplicateurs valides.
+local function loadElite(config: any)
+	table.clear(elite)
+	if typeof(config) ~= "table" or typeof(config.Zones) ~= "table" then
+		return
+	end
+	for zone, entry in config.Zones do
+		local zoneStages = stages[zone]
+		if typeof(entry) ~= "table" or typeof(entry.UnlockAfter) ~= "string" or typeof(entry.Stages) ~= "table" or not zoneStages then
+			Log.warn(SCOPE, `Élite zone {tostring(zone)} invalide : UnlockAfter et Stages requis, zone connue`)
+			continue
+		end
+		local loaded = { unlockAfter = entry.UnlockAfter, stages = {} }
+		for stage, multipliers in entry.Stages do
+			local problems = Difficulty.problems(multipliers)
+			if zoneStages[stage] == nil then
+				table.insert(problems, "stage Normal inconnu")
+			end
+			if #problems > 0 then
+				for _, problem in problems do
+					Log.warn(SCOPE, `Élite {stageKey(zone, stage)} invalide : {problem}`)
+				end
+			else
+				loaded.stages[stage] = table.freeze(table.clone(multipliers))
+			end
+		end
+		elite[zone] = loaded
+	end
 end
 
 -- Problèmes de contenu d'un stage ; vide s'il est jouable.
@@ -158,21 +233,29 @@ end
 local function view(session: Session): StageSession
 	return table.freeze({
 		Id = session.id,
+		Mode = session.mode,
 		Zone = session.zone,
 		Stage = session.stage,
 		Status = "Running" :: "Running",
 		Config = session.config,
+		Difficulty = session.difficulty,
 	})
 end
 
--- Le joueur peut-il lancer ce stage maintenant ? Renvoie false et la raison sinon.
-function ZoneService:CanStartStage(player: Player, zone: number, stage: number): (boolean, string?)
+-- Le joueur peut-il lancer ce stage, dans ce mode (nil = Normal), maintenant ? Renvoie false et la raison sinon.
+-- Élite : la zone doit avoir son Élite débloquée (First Clear Normal de UnlockAfter) et le stage Élite
+-- précédent doit être terminé en Élite. Le client ne fournit que des entiers et un nom de mode.
+function ZoneService:CanStartStage(player: Player, zone: number, stage: number, mode: any?): (boolean, string?)
 	local data: PlayerData? = if player:GetAttribute("DataLoaded") == true then DataService:GetData(player) else nil
 	if player.Parent ~= Players or not data then
 		return false, "données non chargées"
 	end
 	if not PlotService:GetPlot(player) then
 		return false, "aucun plot"
+	end
+	local kind = modeOf(mode)
+	if not kind then
+		return false, "mode inconnu"
 	end
 	local zoneStages = if isPositiveInteger(zone) then stages[zone] else nil
 	local config = if zoneStages and isPositiveInteger(stage) then zoneStages[stage] else nil
@@ -182,9 +265,21 @@ function ZoneService:CanStartStage(player: Player, zone: number, stage: number):
 	if config == false then
 		return false, "stage indisponible"
 	end
-	local previousZone, previous = previousStage(zone, stage)
-	if previousZone and previous and data.Progression.FirstClears[stageKey(previousZone, previous)] ~= true then
-		return false, "stage verrouillé"
+	if kind == "Elite" then
+		if not (elite[zone] and elite[zone].stages[stage]) then
+			return false, "stage inconnu"
+		end
+		if not eliteUnlocked(data, zone) then
+			return false, "Élite verrouillé"
+		end
+		if eliteStatus(data, zone, stage) ~= "Unlocked" then
+			return false, "stage verrouillé"
+		end
+	else
+		local previousZone, previous = previousStage(zone, stage)
+		if previousZone and previous and data.Progression.FirstClears[stageKey(previousZone, previous)] ~= true then
+			return false, "stage verrouillé"
+		end
 	end
 	if currentSession(player) then
 		return false, "session déjà en cours"
@@ -193,6 +288,7 @@ function ZoneService:CanStartStage(player: Player, zone: number, stage: number):
 end
 
 export type StageEntry = {
+	Mode: Mode,
 	Zone: number,
 	Stage: number,
 	Status: "Unlocked" | "Locked" | "Unavailable",
@@ -203,10 +299,31 @@ export type StageEntry = {
 -- Tous les stages de StageConfig pour ce joueur, dans l'ordre (zone, puis stage), avec leur état :
 -- "Locked" tant que le stage précédent n'est pas dans FirstClears, "Unavailable" si sa config est
 -- invalide. Cleared = First Clear déjà obtenu. Liste vide si les données ne sont pas chargées.
-function ZoneService:ListStages(player: Player): { StageEntry }
+-- mode "Elite" : les stages Élite configurés, avec leur statut et leur First Clear ÉLITE.
+function ZoneService:ListStages(player: Player, mode: any?): { StageEntry }
 	local data: PlayerData? = if player:GetAttribute("DataLoaded") == true then DataService:GetData(player) else nil
 	local list: { StageEntry } = {}
 	if player.Parent ~= Players or not data then
+		return list
+	end
+	if modeOf(mode) == "Elite" then
+		local cleared = eliteClears(data)
+		for zone = 1, #stages do
+			local entry = elite[zone]
+			for stage = 1, if entry then #stages[zone] else 0 do
+				if entry.stages[stage] then
+					local config = stages[zone][stage]
+					table.insert(list, {
+						Mode = "Elite" :: Mode,
+						Zone = zone,
+						Stage = stage,
+						Status = eliteStatus(data, zone, stage) :: any,
+						Cleared = cleared[stageKey(zone, stage)] == true,
+						Config = if config == false then nil else config,
+					})
+				end
+			end
+		end
 		return list
 	end
 	for zone = 1, #stages do
@@ -217,6 +334,7 @@ function ZoneService:ListStages(player: Player): { StageEntry }
 			local locked = previousZone ~= nil and previous ~= nil
 				and data.Progression.FirstClears[stageKey(previousZone, previous)] ~= true
 			table.insert(list, {
+				Mode = "Normal" :: Mode,
 				Zone = zone,
 				Stage = stage,
 				Status = (if config == false then "Unavailable" elseif locked then "Locked" else "Unlocked") :: any,
@@ -228,18 +346,26 @@ function ZoneService:ListStages(player: Player): { StageEntry }
 	return list
 end
 
--- Crée la session serveur du stage. Ne modifie aucune donnée sauvegardée.
-function ZoneService:StartStage(player: Player, zone: number, stage: number): (StageSession?, string?)
-	local ok, reason = ZoneService:CanStartStage(player, zone, stage)
+-- Élite de la zone débloquée pour ce joueur ?
+function ZoneService:IsEliteUnlocked(player: Player, zone: number): boolean
+	local data = DataService:GetData(player)
+	return data ~= nil and eliteUnlocked(data, zone)
+end
+
+-- Crée la session serveur du stage, dans ce mode (nil = Normal). Ne modifie aucune donnée sauvegardée.
+function ZoneService:StartStage(player: Player, zone: number, stage: number, mode: any?): (StageSession?, string?)
+	local ok, reason = ZoneService:CanStartStage(player, zone, stage, mode)
 	if not ok then
 		return nil, reason
 	end
 	local plot = PlotService:GetPlot(player)
 	assert(plot, "plot vérifié par CanStartStage")
+	local kind = modeOf(mode) :: Mode
 	nextSessionId += 1
-	local session: Session = { id = nextSessionId, zone = zone, stage = stage, plot = plot, config = stages[zone][stage] }
+	local session: Session = { id = nextSessionId, mode = kind, zone = zone, stage = stage, plot = plot, config = stages[zone][stage],
+		difficulty = if kind == "Elite" then elite[zone].stages[stage] else nil }
 	sessions[player] = session
-	Log.info(SCOPE, `Stage {stageKey(zone, stage)} lancé par {player.Name} (session {session.id})`)
+	Log.info(SCOPE, `Stage {stageKey(zone, stage)}{if kind == "Elite" then " Élite" else ""} lancé par {player.Name} (session {session.id})`)
 	return view(session), nil
 end
 
@@ -261,12 +387,14 @@ function ZoneService:CompleteStage(player: Player, sessionId: number, victory: b
 	end
 	sessions[player] = nil
 	if victory ~= true then
-		Log.info(SCOPE, `Stage {stageKey(session.zone, session.stage)} échoué par {player.Name}`)
+		Log.info(SCOPE, `Stage {stageKey(session.zone, session.stage)} ({session.mode}) échoué par {player.Name}`)
 		return true, nil
 	end
-	Log.info(SCOPE, `Stage {stageKey(session.zone, session.stage)} réussi par {player.Name}`)
-	QuestService:HandleGameplayEvent(player, "StageCompleted", { Zone = session.zone, Stage = session.stage })
-	local rewards, reason = RewardService:HandleStageCompleted(player, session.zone, session.stage, session.id)
+	Log.info(SCOPE, `Stage {stageKey(session.zone, session.stage)} ({session.mode}) réussi par {player.Name}`)
+	-- Élite : événement distinct, jamais confondu avec une quête « gagner le stage » du Normal.
+	QuestService:HandleGameplayEvent(player, if session.mode == "Elite" then "EliteStageCompleted" else "StageCompleted",
+		{ Zone = session.zone, Stage = session.stage })
+	local rewards, reason = RewardService:HandleStageCompleted(player, session.zone, session.stage, session.id, session.mode)
 	if not rewards then
 		Log.warn(SCOPE, `Aucune récompense pour {stageKey(session.zone, session.stage)} ({player.Name}) : {reason}`)
 	end
@@ -286,6 +414,7 @@ end
 
 function ZoneService:Init()
 	loadConfig(StageConfig)
+	loadElite(EliteConfig)
 end
 
 function ZoneService:Start()
@@ -304,11 +433,11 @@ function ZoneService:Start()
 	assert(remotes)
 	local request = Instance.new("RemoteFunction")
 	request.Name = START_REMOTE_NAME
-	request.OnServerInvoke = function(player: Player, zone: any, stage: any): (boolean, string?)
-		if not isPositiveInteger(zone) or not isPositiveInteger(stage) then
+	request.OnServerInvoke = function(player: Player, zone: any, stage: any, mode: any): (boolean, string?)
+		if not isPositiveInteger(zone) or not isPositiveInteger(stage) or modeOf(mode) == nil then
 			return false, "requête invalide"
 		end
-		local session, reason = ZoneService:StartStage(player, zone, stage)
+		local session, reason = ZoneService:StartStage(player, zone, stage, mode)
 		return session ~= nil, reason
 	end
 	request.Parent = remotes

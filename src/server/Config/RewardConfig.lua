@@ -33,6 +33,16 @@ local RewardConfig = {
 		["1-4"] = { FirstClearReward = NONE, RepeatReward = NONE },
 		["1-5"] = { FirstClearReward = NONE, RepeatReward = NONE },
 	},
+	-- Mode Élite (#69) : même format, clé "<zone>-<stage>" du stage Élite. Le First Clear Élite est
+	-- enregistré dans Progression.EliteFirstClears (il débloque le stage Élite suivant). Listes VIDES,
+	-- PROVISOIRES : aucune économie Élite n'est encore définie (équipements, ressources : issues à venir).
+	EliteStages = {
+		["1-1"] = { FirstClearReward = NONE, RepeatReward = NONE },
+		["1-2"] = { FirstClearReward = NONE, RepeatReward = NONE },
+		["1-3"] = { FirstClearReward = NONE, RepeatReward = NONE },
+		["1-4"] = { FirstClearReward = NONE, RepeatReward = NONE },
+		["1-5"] = { FirstClearReward = NONE, RepeatReward = NONE },
+	},
 }
 
 return RewardConfig

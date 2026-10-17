@@ -152,6 +152,8 @@ E = Placer / Reprendre, pancarte du stage → Lancer).
 **Progression Alpha** : dans chaque zone, X-1 à X-4 sont des combats d'ennemis communs et X-5 est le
 boss de zone. Zone 1 : 1-1 à 1-5, boss = Roi Orc. Le Stage 1-1 se gagne avec le seul héros de départ ;
 l'Écuyer + n'importe quel deuxième héros (premier tirage payant, aucun garanti) terminent la zone.
+**Mode Élite** (#69) : après le Roi Orc (1-5 Normal), 1-1 à 1-5 Élite, mêmes stages et ennemis, PV / ATK
+ennemis multipliés, progression (`EliteFirstClears`) et XP distinctes (ALPHA 0.0.2 provisoire).
 Voir [la Zone 1](docs/ZONES.md).
 
 ## Récompenses et First Clear (RewardService)

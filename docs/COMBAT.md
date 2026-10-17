@@ -58,6 +58,13 @@ Unité : `UnitId` (unique dans la session), `Team` (`Ally` / `Enemy`), `TypeId` 
 `EnemyId`), `Health`, `MaxHealth`, `Energy`, `MaxEnergy`, `TargetId`, `Position` (plan
 horizontal), `Alive`, `Slot` (héros) ou `Cell` (ennemi), `MiniBoss`.
 
+**Mode Élite (#69, ALPHA 0.0.2 PROVISOIRE)** : la session de stage Élite porte des multiplicateurs
+(`EliteConfig`) ; CombatService donne au moteur une table d'ennemis de la session
+(`Combat/Difficulty.lua`, pur : seules `MaxHealth` et `AttackDamage` multipliées et arrondies, `EnemyId`
+inchangés pour les modèles, animations et effets). Sans multiplicateurs (Normal) : `CombatConfig.Enemies`
+tel quel. Les héros gardent leurs stats de niveau ; les deux systèmes ne se mélangent pas. `CombatView`
+et `GrantXP` portent le `Mode`.
+
 **Niveaux des héros (#68, ALPHA 0.0.2 PROVISOIRE)** : un allié de `CombatEngine` peut porter
 `Stats` (stats de CET exemplaire) ; sans `Stats`, `CombatConfig.Heroes[TypeId]` (comportement existant).
 `TypeId` reste le profil (animations, présentation). ArenaService passe le roster figé au lancement

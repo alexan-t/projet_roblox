@@ -18,13 +18,21 @@ local HeroProgressionConfig = {
 		MaxHealth = 0.05,
 		AttackDamage = 0.05,
 	}),
-	-- XP d'une victoire, par stage (mode normal). Un futur mode (Élite, #69) aura sa propre table ici.
+	-- XP d'une victoire, par stage, en Mode Normal.
 	StageXP = table.freeze({
 		["1-1"] = 25,
 		["1-2"] = 35,
 		["1-3"] = 50,
 		["1-4"] = 70,
 		["1-5"] = 100,
+	}),
+	-- XP d'une victoire en Mode Élite (#69), table distincte : 1-3 Élite ≠ 1-3 Normal.
+	EliteStageXP = table.freeze({
+		["1-1"] = 60,
+		["1-2"] = 80,
+		["1-3"] = 110,
+		["1-4"] = 150,
+		["1-5"] = 220,
 	}),
 }
 

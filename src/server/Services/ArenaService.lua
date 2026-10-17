@@ -16,21 +16,25 @@ local manager: ArenaPrep.Manager
 local contexts: { [Player]: any } = {}
 local worlds: { [Player]: any } = {}
 local stateEvent: RemoteEvent
-local lastAction: { [Player]: number } = {}
+-- Anti-spam par joueur ET par action : « Lancer » d'un autre stage envoie SelectStage puis Ready
+-- aussitôt ; seules les répétitions d'une même action sont freinées.
+local lastAction: { [Player]: { [string]: number } } = {}
 local stateVersion: { [Player]: number } = {}
 -- Stage sélectionné (pancarte, fenêtre Expédition) : utilisé au prochain lancement de session. Sans
 -- choix, il se déduit de la progression (premier stage débloqué non terminé : 1-2 après le 1-1 au
 -- rejoin) ; après une victoire, il passe au stage suivant (1-1 → 1-2 … 1-5, pas de 1-6). Jamais lancé
 -- automatiquement : seulement sélectionné / affiché.
-local chosen: { [Player]: { zone: number, stage: number } } = {}
+-- Le choix porte aussi un MODE ("Normal" / "Elite", #69) ; sans choix (join, rejoin) : Normal. En Élite,
+-- la victoire sélectionne le stage Élite suivant (1-1E → 1-2E … 1-5E reste 1-5E).
+local chosen: { [Player]: { mode: string, zone: number, stage: number } } = {}
 
-local function chosenOf(player: Player): (number, number)
+local function chosenOf(player: Player): (number, number, string)
 	local c = chosen[player]
 	if c then
-		return c.zone, c.stage
+		return c.zone, c.stage, c.mode
 	end
 	local zone, stage = ArenaRules.defaultStage(ZoneService:ListStages(player) :: any)
-	return zone or Config.Zone, stage or Config.Stage
+	return zone or Config.Zone, stage or Config.Stage, "Normal"
 end
 
 local function context(player: Player): any
@@ -76,9 +80,9 @@ local function canCommand(player: Player, c: any): (boolean, string?)
 end
 
 -- Stages proposés au joueur : état serveur (débloqué / verrouillé / terminé) et ennemis agrégés.
-local function stagesOf(player: Player): { any }
+local function stagesOf(player: Player, mode: string?): { any }
 	local list = {}
-	for _, entry in ZoneService:ListStages(player) do
+	for _, entry in ZoneService:ListStages(player, mode) do
 		table.insert(list, { Zone = entry.Zone, Stage = entry.Stage, Status = entry.Status, Cleared = entry.Cleared,
 			Waves = if entry.Config then #entry.Config.Waves else nil,
 			Enemies = if entry.Config then ArenaRules.summarize(entry.Config) else {} })
@@ -142,9 +146,10 @@ local function stateOf(player: Player, message: string?): any
 	end
 	-- Stage réellement courant (session) ou stage que l'arène lancera ; ennemis agrégés, sans position.
 	local session = if prep then ZoneService:GetSession(player) else nil
-	local chosenZone, chosenStage = chosenOf(player)
+	local chosenZone, chosenStage, chosenMode = chosenOf(player)
 	local zone = if session then session.Zone else chosenZone
 	local stageNumber = if session then session.Stage else chosenStage
+	local mode = if session then session.Mode else chosenMode
 	local stage = if session then session.Config else stageConfigOf(zone, stageNumber)
 	-- Numéro croissant par joueur : le client ignore un état plus ancien que celui qu'il a déjà
 	-- (la lecture initiale GetArenaState peut arriver après un ArenaState plus récent).
@@ -157,9 +162,10 @@ local function stateOf(player: Player, message: string?): any
 		table.insert(firstWave, { EnemyId = group.EnemyId, Count = group.Count })
 	end
 	return { Version = stateVersion[player], Phase = if prep then prep.phase else "Closed", Formation = formation,
-		MaxHeroes = Config.MaxHeroes, Zone = zone, Stage = stageNumber, FirstWave = firstWave,
+		MaxHeroes = Config.MaxHeroes, Zone = zone, Stage = stageNumber, Mode = mode, FirstWave = firstWave,
 		Enemies = if stage then ArenaRules.summarize(stage) else {},
-		Stages = stagesOf(player), Available = context(player) ~= nil, Message = message }
+		Stages = stagesOf(player), EliteStages = stagesOf(player, "Elite"), EliteUnlocked = ZoneService:IsEliteUnlocked(player, zone),
+		Available = context(player) ~= nil, Message = message }
 end
 
 local function send(player: Player, message: string?)
@@ -215,8 +221,8 @@ local function startCombat(player: Player, sessionId: number, classes: { [number
 	return CombatService:StartCombat(player, sessionId, classes, {
 		HeroPositions = heroPositions, EnemyPositions = enemyPositions,
 		Roster = roster,
-		GrantXP = function(participants: { string }, zone: number, stage: number): { any }
-			return HeroService:GrantCombatXP(player, participants, zone, stage)
+		GrantXP = function(participants: { string }, zone: number, stage: number, mode: string): { any }
+			return HeroService:GrantCombatXP(player, participants, zone, stage, mode)
 		end,
 		SpawnUnit = function(unit, position: Vector3, lookAt: Vector3): Model?
 			if context(player) ~= c or worlds[player] ~= w then return nil end
@@ -274,10 +280,10 @@ end
 function ArenaService:Init()
 	manager = ArenaPrep.new({ maxHeroes = Config.MaxHeroes, name = function(p) return p.Name end,
 		startStage = function(player)
-			local zone, stage = chosenOf(player)
-			-- figé au lancement : la fin du combat sait quel stage vient d'être joué
-			chosen[player] = { zone = zone, stage = stage }
-			local session, reason = ZoneService:StartStage(player, zone, stage)
+			local zone, stage, mode = chosenOf(player)
+			-- figé au lancement : la fin du combat sait quel stage (et quel mode) vient d'être joué
+			chosen[player] = { mode = mode, zone = zone, stage = stage }
+			local session, reason = ZoneService:StartStage(player, zone, stage, mode)
 			return if session then session.Id else nil, reason
 		end,
 		sessionAlive = function(player, id)
@@ -304,10 +310,13 @@ function ArenaService:Start()
 	get.Parent = remotes
 	local action = Instance.new("RemoteFunction")
 	action.Name = "ArenaAction"
-	action.OnServerInvoke = function(player, verb, slot, instanceId)
+	action.OnServerInvoke = function(player, verb, slot, instanceId, extra)
 		local now = os.clock()
-		if now - (lastAction[player] or -math.huge) < 0.12 then return false, "Patiente un instant" end
-		lastAction[player] = now
+		local key = if typeof(verb) == "string" then verb else "?"
+		local last = lastAction[player] or {}
+		lastAction[player] = last
+		if now - (last[key] or -math.huge) < 0.12 then return false, "Patiente un instant" end
+		last[key] = now
 		local c = context(player)
 		if not c then return false, "Ton arène est indisponible" end
 		local ok, reason
@@ -319,21 +328,27 @@ function ArenaService:Start()
 			if not allowed then return false, why :: any end
 			ok, reason = manager:ready(player)
 		elseif verb == "SelectStage" then
-			-- Le client n'envoie que deux entiers ; le serveur revérifie que le stage existe et est
-			-- débloqué pour ce joueur, puis relance la session si des héros sont déjà posés.
+			-- Le client n'envoie que deux entiers et un nom de mode (nil = Normal) ; le serveur revérifie que
+			-- le stage existe et est débloqué pour ce joueur DANS CE MODE, puis relance la session si des
+			-- héros sont déjà posés.
 			local zone, stage = slot, instanceId
+			local mode = if extra == nil then "Normal" else extra
+			if mode ~= "Normal" and mode ~= "Elite" then return false, "mode inconnu" end
 			local allowed, why = canCommand(player, c)
 			if not allowed then return false, why :: any end
 			local entry
-			for _, s in ZoneService:ListStages(player) do
+			for _, s in ZoneService:ListStages(player, mode) do
 				if s.Zone == zone and s.Stage == stage then entry = s end
 			end
 			if not entry then return false, "stage inconnu" end
 			if entry.Status ~= "Unlocked" then
+				if mode == "Elite" and not ZoneService:IsEliteUnlocked(player, zone) then
+					return false, "Élite verrouillé : termine 1-5"
+				end
 				return false, if entry.Status == "Locked" then "Stage verrouillé : termine le précédent" else "stage indisponible"
 			end
 			local previous = chosen[player]
-			chosen[player] = { zone = zone, stage = stage }
+			chosen[player] = { mode = mode, zone = zone, stage = stage }
 			ok, reason = manager:restage(player)
 			if not ok and reason == "combat déjà lancé" then chosen[player] = previous end
 		elseif verb == "Place" or verb == "Remove" then
@@ -354,9 +369,9 @@ function ArenaService:Start()
 		-- sélectionné, AVANT la nouvelle session de placement. Jamais relancé automatiquement.
 		local prep = manager.preps[player]
 		if result == "Victory" and prep and prep.combatId == id then
-			local zone, stage = chosenOf(player)
-			local nextZone, nextStage = ArenaRules.nextStage(ZoneService:ListStages(player) :: any, zone, stage)
-			chosen[player] = { zone = nextZone, stage = nextStage }
+			local zone, stage, mode = chosenOf(player)
+			local nextZone, nextStage = ArenaRules.nextStage(ZoneService:ListStages(player, mode) :: any, zone, stage)
+			chosen[player] = { mode = mode, zone = nextZone, stage = nextStage }
 		end
 		-- Le résultat n'est annoncé que par l'écran de fin (RewardScreenController), pas par un message.
 		if manager:combatEnded(player, id) then
