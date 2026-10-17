@@ -228,6 +228,39 @@ return function(createService: any, RewardRules: any, productionConfig: any)
 		assert(d.Progression.HighestStage == 0 and d.Progression.CurrentZone == 1, "#9 does not invent progression")
 	end)
 
+	-- Mode Élite (#69) --------------------------------------------------------------------------
+
+	test("#69 Elite completion: EliteFirstClears only, Normal FirstClears and currencies untouched", function()
+		local e = fixture()
+		local s = e.start()
+		assert(#e.warnings == 0)
+		local p = e.player("A")
+		local d = e.data[p]
+		d.Progression.FirstClears = { ["1-1"] = true, ["1-5"] = true }
+		local result = s:HandleStageCompleted(p, 1, 1, 501, "Elite")
+		assert(result and result.FirstClear == true and #result.Rewards == 0, "Elite first clear, no Elite economy yet")
+		assert(d.Progression.EliteFirstClears["1-1"] == true)
+		assert(d.Progression.FirstClears["1-1"] == true and d.Progression.FirstClears["1-2"] == nil, "Normal progression untouched")
+		assert(d.Currencies.Gold == 0 and d.Currencies.Gems == 0 and d.Currencies.SummonTickets == 0)
+		local again = s:HandleStageCompleted(p, 1, 1, 502, "Elite")
+		assert(again and again.FirstClear == false, "Elite replay")
+		assert(s:HandleStageCompleted(p, 1, 1, 502, "Elite") == nil, "same completion never twice")
+	end)
+
+	test("#69 Normal completion never touches EliteFirstClears; unknown mode refused; 1-6E unknown", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		local d = e.data[p]
+		s:HandleStageCompleted(p, 1, 1, 601)
+		assert(d.Progression.FirstClears["1-1"] == true and (d.Progression.EliteFirstClears == nil or next(d.Progression.EliteFirstClears) == nil))
+		local none, why = s:HandleStageCompleted(p, 1, 2, 602, "Hard")
+		assert(none == nil and why == "mode inconnu")
+		local six, whySix = s:HandleStageCompleted(p, 1, 6, 603, "Elite")
+		assert(six == nil and whySix == "stage inconnu")
+		assert(productionConfig.EliteStages["1-5"] and #productionConfig.EliteStages["1-5"].FirstClearReward == 0, "Elite rewards: architecture ready, empty")
+	end)
+
 	print(`RewardService: {passed} passed, {failed} failed`)
 	if failed > 0 then
 		error(`{failed} RewardService test(s) failed`)

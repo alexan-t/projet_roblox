@@ -280,6 +280,18 @@ return function(Migrations: any, HeroRules: any, hotbarSize: number)
 		assert(dump(d) == snapshot, "replayed step changes nothing")
 	end)
 
+	test("#69 v4 profile (no EliteFirstClears yet): still version 4, nothing migrated, no retroactive Elite clear", function()
+		-- EliteFirstClears est une clé fixe de Progression : Profile:Reconcile() (récursif) l'ajoute vide
+		-- aux anciens profils ; aucune étape de migration, DataVersion reste 4.
+		assert(Migrations.CURRENT_VERSION == 4)
+		local d = v3()
+		Migrations.run(d)
+		for stage = 1, 5 do d.Progression.FirstClears[`1-{stage}`] = true end
+		local snapshot = dump(d)
+		assert(Migrations.run(d) == "Ok" and d.DataVersion == 4 and dump(d) == snapshot)
+		assert(d.Progression.EliteFirstClears == nil, "never filled by a migration: no Elite clear given back")
+	end)
+
 	test("missing Heroes / Hotbar / Team tables do not crash", function()
 		local d: any = { DataVersion = 1 }
 		assert(Migrations.run(d) == "Ok" and typeof(d.Heroes) == "table")

@@ -36,6 +36,17 @@ return function(modules: any)
 		assert(Rules.stageXP(1, 6, Config) == 0 and Rules.stageXP(2, 1, Config) == 0)
 	end)
 
+	test("#69 Elite XP: 1-1E 60, 1-2E 80, 1-3E 110, 1-4E 150, 1-5E 220; Normal unchanged; distinct per mode", function()
+		local elite = { 60, 80, 110, 150, 220 }
+		local normal = { 25, 35, 50, 70, 100 }
+		for stage = 1, 5 do
+			assert(Rules.stageXP(1, stage, Config, "Elite") == elite[stage], `1-{stage}E`)
+			assert(Rules.stageXP(1, stage, Config, "Normal") == normal[stage] and Rules.stageXP(1, stage, Config) == normal[stage], `1-{stage}`)
+			assert(Rules.stageXP(1, stage, Config, "Elite") ~= Rules.stageXP(1, stage, Config), "never the same table by accident")
+		end
+		assert(Rules.stageXP(1, 6, Config, "Elite") == 0 and Rules.stageXP(1, 1, Config, "Hard") == 0, "1-6E / unknown mode: 0")
+	end)
+
 	test("new hero = Lv1 / XP 0 (HeroRules.addHero)", function()
 		local data = { Heroes = {}, Hotbar = table.create(10, "") }
 		HeroRules.addHero(data, "A", "ecuyer_du_rempart")

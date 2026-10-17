@@ -94,7 +94,7 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 			config = table.clone(configs)
 			config.StageConfig = stageConfig
 		end
-		local tree = { Config = config, Combat = { CombatEngine = CombatEngine }, Rewards = { RewardRules = RewardRules } }
+		local tree = { Config = config, Combat = { CombatEngine = CombatEngine, Difficulty = configs.Difficulty }, Rewards = { RewardRules = RewardRules } }
 		local function scriptFor(): any return { Parent = setmetatable({ Parent = tree }, { __index = services }) } end
 		services.RewardService = factories.reward(env, scriptFor())
 		services.QuestService = factories.quest(env, scriptFor())
@@ -141,8 +141,8 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 			end }
 		end
 		-- Un combat complet : stage 1-1 lancé, formation, simulation jusqu'à la fin.
-		function env.fight(p: any, formation: any, stage: number?): any
-			local zone = services.ZoneService:StartStage(p, 1, stage or 1)
+		function env.fight(p: any, formation: any, stage: number?, mode: string?): any
+			local zone = services.ZoneService:StartStage(p, 1, stage or 1, mode)
 			assert(zone, `stage 1-{stage or 1} started`)
 			assert(services.CombatService:StartCombat(p, zone.Id, formation, env.context()))
 			for _ = 1, 300 * 4 do
@@ -495,6 +495,37 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 		local r5 = w.fight(p, PAIR, 5)
 		assert(r5[#r5].Result == "Victory" and r5[#r5].FirstClear == false and #r5[#r5].Rewards == 0)
 		assert(d.Currencies.Gold == 120 and d.Currencies.SummonTickets == 1)
+	end)
+
+	test("#69 Elite on the real services: locked until 1-5, then 1-1E with stronger enemies, separate clears, next Elite stage", function()
+		local w = world()
+		local p = w.player("A")
+		local zone = w.services.ZoneService
+		for stage = 1, 4 do w.fight(p, STRONG, stage) end
+		assert(zone:StartStage(p, 1, 1, "Elite") == nil, "Elite locked before the Roi Orc")
+		w.fight(p, STRONG, 5)
+		local d = w.data[p]
+		local normalClears = {}
+		for k in d.Progression.FirstClears do table.insert(normalClears, k) end
+		table.sort(normalClears)
+		local before = #w.fired
+		local ended = w.fight(p, STRONG, 1, "Elite")
+		assert(ended[#ended].Result == "Victory" and ended[#ended].FirstClear == true, "1-1E won, Elite first clear")
+		local slimeHp
+		for _, ev in eventsSince(w, p, before, "UnitSpawned") do
+			if ev.TypeId == "Slime" then slimeHp = ev.MaxHealth end
+		end
+		assert(slimeHp == 90, "same Slime (EnemyId), Elite HP x1.5: " .. tostring(slimeHp))
+		assert(d.Progression.EliteFirstClears["1-1"] == true)
+		local after = {}
+		for k in d.Progression.FirstClears do table.insert(after, k) end
+		table.sort(after)
+		assert(table.concat(after, ",") == table.concat(normalClears, ","), "Normal FirstClears unchanged")
+		local elite = zone:ListStages(p, "Elite")
+		assert(elite[1].Cleared and elite[2].Status == "Unlocked" and elite[3].Status == "Locked")
+		assert(zone:StartStage(p, 1, 6, "Elite") == nil, "no 1-6E")
+		local b = w.player("B")
+		assert(zone:StartStage(b, 1, 1, "Elite") == nil and next(w.data[b].Progression.EliteFirstClears or {}) == nil, "B independent, still locked")
 	end)
 
 	test("#13 RewardConfig: a valid entry for every stage of StageConfig (First Clear = unlock)", function()

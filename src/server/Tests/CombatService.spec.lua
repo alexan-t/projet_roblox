@@ -3,7 +3,7 @@
 -- Exécute le vrai CombatService (avec le vrai CombatEngine et la vraie CombatConfig) et des doubles
 -- de ZoneService, DataService et des API Roblox utilisées.
 
-return function(createService: any, CombatEngine: any, combatConfig: any, _stageConfig: any) -- le vrai 1-1 est vérifié par CombatEngine.spec et RewardFlow.spec
+return function(createService: any, CombatEngine: any, combatConfig: any, _stageConfig: any, Difficulty: any, eliteConfig: any) -- le vrai 1-1 est vérifié par CombatEngine.spec et RewardFlow.spec
 	-- Stage de mécanique (l'ancien 1-1 : une vague 2 Slime + 4 Gobelin, puis le mini-boss) : il couvre
 	-- vagues, mini-boss, défaite et x2. Le vrai 1-1 (sans mini-boss, gagnable seul) est vérifié à part.
 	local MECHANICS = { Waves = { { Enemies = { { EnemyId = "Slime", Count = 2 }, { EnemyId = "Gobelin", Count = 4 } } } }, MiniBoss = { EnemyId = "Boss" } }
@@ -72,7 +72,7 @@ return function(createService: any, CombatEngine: any, combatConfig: any, _stage
 			return true, if victory then env.reward else nil
 		end
 		env.script = { Parent = { DataService = dataService, ZoneService = zoneService,
-			Parent = { Config = { CombatConfig = combatConfig }, Combat = { CombatEngine = CombatEngine } } } }
+			Parent = { Config = { CombatConfig = combatConfig }, Combat = { CombatEngine = CombatEngine, Difficulty = Difficulty } } } }
 		env.require = function(module: any): any return module end
 		env.Instance = { new = function(class: string): any
 			local i: any = { ClassName = class, Name = class }
@@ -671,8 +671,8 @@ return function(createService: any, CombatEngine: any, combatConfig: any, _stage
 			ctx.Roster[slot] = { HeroInstanceId = `I{slot}`, CombatProfile = profile,
 				Stats = (stats and stats[slot]) or combatConfig.Heroes[profile] }
 		end
-		ctx.GrantXP = function(participants: { string }, zone: number, stage: number): { any }
-			table.insert(calls, { participants = participants, zone = zone, stage = stage, completions = #e.completions })
+		ctx.GrantXP = function(participants: { string }, zone: number, stage: number, mode: string): { any }
+			table.insert(calls, { participants = participants, zone = zone, stage = stage, mode = mode, completions = #e.completions })
 			local views = {}
 			for _, id in participants do table.insert(views, { InstanceId = id, XPGranted = 25, LevelBefore = 1, LevelAfter = 1 }) end
 			return views
@@ -762,6 +762,101 @@ return function(createService: any, CombatEngine: any, combatConfig: any, _stage
 		local bad = rosterContext(f, { [5] = "Paladin" })
 		local id, why = s2:StartCombat(q, f.stages[q].Id, { [5] = "Epeiste" }, bad)
 		assert(id == nil and why == "équipe modifiée")
+	end)
+
+	-- Mode Élite (#69) : stats ennemies de la session, rien d'autre ---------------------------------
+
+	test("#69 Difficulty: only MaxHealth / AttackDamage scaled (rounded), copy, EnemyId kept; no multipliers = base", function()
+		local scaled = Difficulty.enemies(combatConfig.Enemies, { MaxHealth = 1.5, AttackDamage = 1.25 })
+		for id, base in combatConfig.Enemies do
+			local s = scaled[id]
+			assert(s, id .. " kept (same EnemyId)")
+			assert(s.MaxHealth == math.floor(base.MaxHealth * 1.5 + 0.5) and s.AttackDamage == math.floor(base.AttackDamage * 1.25 + 0.5), id)
+			for _, key in { "AttackInterval", "AttackRange", "MoveSpeed" } do
+				assert(s[key] == base[key], `{id}.{key} never scaled`)
+			end
+		end
+		assert(scaled.Slime.MaxHealth == 90 and scaled.Gobelin.AttackDamage == 10 and scaled.Boss.MaxHealth == 675)
+		local normal = Difficulty.enemies(combatConfig.Enemies, nil)
+		for id, base in combatConfig.Enemies do
+			for key, value in base do assert(normal[id][key] == value, `{id}.{key} unchanged without multipliers`) end
+		end
+		assert(combatConfig.Enemies.Slime.MaxHealth == 60, "CombatConfig never modified")
+		assert(#Difficulty.problems({ MoveSpeed = 2 }) == 1 and #Difficulty.problems({ MaxHealth = 0 }) == 1 and #Difficulty.problems({ MaxHealth = 1.2 }) == 0)
+		for stage, multipliers in eliteConfig.Zones[1].Stages do
+			assert(#Difficulty.problems(multipliers) == 0, `1-{stage}E valid`)
+		end
+	end)
+
+	test("#69 Elite combat: enemies spawn with scaled stats and their usual EnemyId; heroes untouched; mode passed to GrantXP", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		e.stages[p].Mode = "Elite"
+		e.stages[p].Difficulty = { MaxHealth = 2.25, AttackDamage = 1.5 }
+		local ctx, calls = rosterContext(e, TEAM)
+		s:StartCombat(p, e.stages[p].Id, TEAM, ctx)
+		local view = s:GetCombat(p)
+		assert(view.Mode == "Elite")
+		for _, u in view.Units do
+			if u.Team == "Enemy" then
+				local base = combatConfig.Enemies[u.TypeId]
+				assert(base and u.MaxHealth == math.floor(base.MaxHealth * 2.25 + 0.5), u.TypeId .. " HP x2.25")
+			else
+				assert(u.MaxHealth == combatConfig.Heroes[u.TypeId].MaxHealth, "hero stats not touched by the difficulty")
+			end
+		end
+		assert(e.runUntilEnd(s, p, 400))
+		-- coups réels des ennemis : jamais plus que l'ATK multipliée, et l'ATK multipliée est bien atteinte
+		local typeOf: { [number]: string } = {}
+		for _, ev in e.events(p, "UnitSpawned") do if ev.Team == "Enemy" then typeOf[ev.UnitId] = ev.TypeId end end
+		local best: { [string]: number } = {}
+		for _, ev in e.events(p, "Damage") do
+			local enemy = typeOf[ev.SourceId]
+			if enemy then best[enemy] = math.max(best[enemy] or 0, ev.Amount) end
+		end
+		for enemy, amount in best do
+			local scaledAtk = math.floor(combatConfig.Enemies[enemy].AttackDamage * 1.5 + 0.5)
+			assert(amount <= scaledAtk, `{enemy} hits at most {scaledAtk}`)
+		end
+		assert(best.Gobelin == 12 or best.Slime == 9, "an Elite enemy hit for its scaled ATK")
+		local result = e.events(p, "CombatEnded")[1].Result
+		if result == "Victory" then
+			assert(#calls == 1 and calls[1].mode == "Elite", "Elite XP requested with the Elite mode")
+		else
+			assert(#calls == 0, "defeat: no XP")
+		end
+	end)
+
+	test("#69 Normal combat stays exactly as before (CombatConfig.Enemies, Mode Normal)", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		s:StartCombat(p, e.stages[p].Id, TEAM, e.context())
+		local view = s:GetCombat(p)
+		assert(view.Mode == "Normal")
+		for _, u in view.Units do
+			if u.Team == "Enemy" then assert(u.MaxHealth == combatConfig.Enemies[u.TypeId].MaxHealth) end
+		end
+	end)
+
+	test("#69 Elite x1 / x2: same result and same XP grant (mode, participants)", function()
+		local function play(speed: number): (string, string)
+			local e = fixture()
+			local s = e.start()
+			local p = e.player("A")
+			e.data[p].Settings.CombatSpeed = speed
+			e.stages[p].Mode = "Elite"
+			e.stages[p].Difficulty = { MaxHealth = 1.5, AttackDamage = 1.25 }
+			local ctx, calls = rosterContext(e, TEAM)
+			s:StartCombat(p, e.stages[p].Id, TEAM, ctx)
+			assert(e.runUntilEnd(s, p, 400))
+			local result = e.events(p, "CombatEnded")[1].Result
+			return result, if calls[1] then `{calls[1].mode}:{#calls[1].participants}` else "none"
+		end
+		local r1, x1 = play(1)
+		local r2, x2 = play(2)
+		assert(r1 == r2 and x1 == x2, `{r1}/{x1} vs {r2}/{x2}`)
 	end)
 
 	-- Mise en scène (docs/COMBAT_PRESENTATION.md) : le moteur est retenu, jamais modifié.

@@ -3,8 +3,8 @@
 -- Exécute le vrai ZoneService avec la vraie StageConfig (ou une config de test)
 -- et des doubles de DataService, PlotService, QuestService et RewardService.
 
-return function(createService: any, productionConfig: any)
-	local function fixture(config: any?): any
+return function(createService: any, productionConfig: any, eliteConfig: any, Difficulty: any)
+	local function fixture(config: any?, elite: any?): any
 		local env: any = { data = {}, plots = {}, questEvents = {}, rewardCalls = {}, order = {}, warnings = {}, instances = {} }
 		local removing: any = { listeners = {} }
 		function removing:Connect(fn: any) table.insert(self.listeners, fn) end
@@ -35,15 +35,16 @@ return function(createService: any, productionConfig: any)
 			return true
 		end
 		local rewardService: any = {}
-		function rewardService:HandleStageCompleted(player: any, zone: number, stage: number, completionId: number): any
-			table.insert(env.rewardCalls, { player = player, zone = zone, stage = stage, completionId = completionId })
+		function rewardService:HandleStageCompleted(player: any, zone: number, stage: number, completionId: number, mode: string?): any
+			table.insert(env.rewardCalls, { player = player, zone = zone, stage = stage, completionId = completionId, mode = mode })
 			table.insert(env.order, "Reward")
 			return env.rewardResult
 		end
 		env.rewardResult = { FirstClear = false, Rewards = {} }
 		env.script = { Parent = { DataService = dataService, PlotService = plotService, QuestService = questService,
 			RewardService = rewardService,
-			Parent = { Config = { StageConfig = config or productionConfig } } } }
+			Parent = { Config = { StageConfig = config or productionConfig, EliteConfig = elite or eliteConfig },
+				Combat = { Difficulty = Difficulty } } } }
 		env.require = function(module: any): any return module end
 		env.Instance = { new = function(class: string): any
 			local instance = { ClassName = class, Name = class }
@@ -55,7 +56,7 @@ return function(createService: any, productionConfig: any)
 			return {
 				DataVersion = 1,
 				Currencies = { Gold = 0, Gems = 0, SummonTickets = 0 },
-				Progression = { CurrentZone = 1, HighestStage = 0, FirstClears = {} },
+				Progression = { CurrentZone = 1, HighestStage = 0, FirstClears = {}, EliteFirstClears = {} },
 				Heroes = {}, Team = {}, Kingdom = { Level = 1, VisualState = 1 },
 				Quests = { DefendDomain = { Progress = 0, Claimed = false } }, Settings = { CombatSpeed = 1 },
 			}
@@ -116,6 +117,145 @@ return function(createService: any, productionConfig: any)
 			{ Stages = { stage("Boss") } },
 		} }
 	end
+
+	-- Mode Élite (#69) -------------------------------------------------------------------------
+
+	local function clearNormal(e: any, p: any, upTo: number)
+		for stage = 1, upTo do e.data[p].Progression.FirstClears[`1-{stage}`] = true end
+	end
+
+	test("#69 Elite locked before 1-5 Normal: list all Locked, start refused, IsEliteUnlocked false", function()
+		local e = fixture()
+		local s = e.start()
+		assert(#e.warnings == 0, "elite config valid: " .. table.concat(e.warnings, "; "))
+		local p = e.player("A")
+		clearNormal(e, p, 4)
+		assert(s:IsEliteUnlocked(p, 1) == false)
+		local list = s:ListStages(p, "Elite")
+		assert(#list == 5)
+		for _, entry in list do assert(entry.Mode == "Elite" and entry.Status == "Locked" and entry.Cleared == false) end
+		local ok, why = s:CanStartStage(p, 1, 1, "Elite")
+		assert(ok == false and why == "Élite verrouillé")
+		assert(s:StartStage(p, 1, 1, "Elite") == nil)
+	end)
+
+	test("#69 1-5 Normal cleared -> 1-1E unlocked, 1-2E locked until 1-1E cleared; chain to 1-5E; no 1-6E", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		clearNormal(e, p, 5)
+		assert(s:IsEliteUnlocked(p, 1) == true)
+		local list = s:ListStages(p, "Elite")
+		assert(list[1].Status == "Unlocked" and list[2].Status == "Locked")
+		local ok, why = s:CanStartStage(p, 1, 2, "Elite")
+		assert(ok == false and why == "stage verrouillé", "1-2E before 1-1E")
+		local clears = e.data[p].Progression.EliteFirstClears
+		for stage = 1, 5 do
+			assert(s:CanStartStage(p, 1, stage, "Elite") == true, `1-{stage}E playable`)
+			if stage < 5 then
+				assert(s:CanStartStage(p, 1, stage + 1, "Elite") == false, `1-{stage + 1}E still locked`)
+			end
+			clears[`1-{stage}`] = true
+		end
+		local six, whySix = s:CanStartStage(p, 1, 6, "Elite")
+		assert(six == false and whySix == "stage inconnu", "no 1-6E")
+		assert(s:CanStartStage(p, 2, 1, "Elite") == false, "no Elite outside zone 1")
+	end)
+
+	test("#69 Normal and Elite progressions are separate (FirstClears vs EliteFirstClears)", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		clearNormal(e, p, 5)
+		e.data[p].Progression.EliteFirstClears["1-1"] = true
+		local normal = s:ListStages(p)
+		for _, entry in normal do assert(entry.Mode == "Normal" and entry.Cleared == true) end
+		local elite = s:ListStages(p, "Elite")
+		assert(elite[1].Cleared == true and elite[2].Cleared == false and elite[2].Status == "Unlocked")
+		local fresh = e.player("B")
+		e.data[fresh].Progression.EliteFirstClears = nil -- profil v4 avant Reconcile : toléré
+		assert(s:ListStages(fresh, "Elite")[1].Status == "Locked" and s:IsEliteUnlocked(fresh, 1) == false)
+	end)
+
+	test("#69 Elite session: Mode Elite + difficulty multipliers; Normal session: Mode Normal, no difficulty", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		clearNormal(e, p, 5)
+		local session = s:StartStage(p, 1, 1, "Elite")
+		assert(session and session.Mode == "Elite" and session.Zone == 1 and session.Stage == 1)
+		assert(session.Difficulty.MaxHealth == 1.5 and session.Difficulty.AttackDamage == 1.25)
+		assert(session.Config == productionConfig.Zones[1].Stages[1] or session.Config.Waves[1].Enemies[1].EnemyId == "Slime", "same stage content")
+		s:CancelStage(p)
+		local normal = s:StartStage(p, 1, 3)
+		assert(normal and normal.Mode == "Normal" and normal.Difficulty == nil)
+		s:CancelStage(p)
+		local expected = { { 1.5, 1.25 }, { 1.65, 1.3 }, { 1.8, 1.35 }, { 2.0, 1.4 }, { 2.25, 1.5 } }
+		for stage, m in expected do
+			e.data[p].Progression.EliteFirstClears[`1-{stage - 1}`] = true
+			local st = s:StartStage(p, 1, stage, "Elite")
+			assert(st and st.Difficulty.MaxHealth == m[1] and st.Difficulty.AttackDamage == m[2], `1-{stage}E multipliers`)
+			s:CancelStage(p)
+		end
+	end)
+
+	test("#69 Elite completion: EliteStageCompleted quest event (never StageCompleted), reward call in Elite mode", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		clearNormal(e, p, 5)
+		local session = s:StartStage(p, 1, 3 - 2, "Elite")
+		assert(s:CompleteStage(p, session.Id, true))
+		local q = e.questEvents[#e.questEvents]
+		assert(q.event == "EliteStageCompleted" and q.payload.Zone == 1 and q.payload.Stage == 1)
+		local r = e.rewardCalls[#e.rewardCalls]
+		assert(r.mode == "Elite" and r.zone == 1 and r.stage == 1)
+		local normal = s:StartStage(p, 1, 1)
+		s:CompleteStage(p, normal.Id, true)
+		assert(e.questEvents[#e.questEvents].event == "StageCompleted" and e.rewardCalls[#e.rewardCalls].mode == "Normal")
+	end)
+
+	test("#69 spoofed mode / stage refused: unknown mode, numbers, tables, 1-6E, locked stage; remote too", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		clearNormal(e, p, 5)
+		for _, mode in { "Hard", "elite", 5, {}, true } :: { any } do
+			local ok, why = s:CanStartStage(p, 1, 1, mode)
+			assert(ok == false and why == "mode inconnu", tostring(mode))
+		end
+		local remote = e.remote().OnServerInvoke
+		assert(remote(p, 1, 1, "Hard") == false and remote(p, 1, 1, { MaxHealth = 0.1 }) == false)
+		assert(remote(p, 1, 6, "Elite") == false and remote(p, 1, 2, "Elite") == false, "1-6E and locked 1-2E refused")
+		assert(remote(p, 1, 1, "Elite") == true, "valid Elite request")
+		assert(s:GetSession(p).Difficulty.MaxHealth == 1.5, "multipliers come from the server config only")
+	end)
+
+	test("#69 two players: A has Elite (1-5 cleared), B does not; independent sessions and modes", function()
+		local e = fixture()
+		local s = e.start()
+		local a, b = e.player("A"), e.player("B")
+		clearNormal(e, a, 5)
+		clearNormal(e, b, 3)
+		local sa = s:StartStage(a, 1, 1, "Elite")
+		assert(sa and sa.Mode == "Elite")
+		assert(s:StartStage(b, 1, 1, "Elite") == nil, "B locked")
+		local sb = s:StartStage(b, 1, 1)
+		assert(sb and sb.Mode == "Normal" and sb.Difficulty == nil and s:GetSession(a).Mode == "Elite")
+		assert(next(e.data[b].Progression.EliteFirstClears) == nil)
+	end)
+
+	test("#69 elite config: unknown stat or bad factor refused (warning, stage not playable in Elite)", function()
+		local bad = { Zones = { [1] = { UnlockAfter = "1-5", Stages = { [1] = { MoveSpeed = 2 }, [2] = { MaxHealth = -1 }, [3] = { MaxHealth = 1.2 } } } } }
+		local e = fixture(nil, bad)
+		local s = e.start()
+		assert(#e.warnings >= 2)
+		local p = e.player("A")
+		clearNormal(e, p, 5)
+		assert(s:CanStartStage(p, 1, 1, "Elite") == false, "invalid multipliers: stage not offered")
+		local list = s:ListStages(p, "Elite")
+		assert(#list == 1 and list[1].Stage == 3)
+	end)
 
 	test("production config: Zone 1 / Stage 1 exists, entry stage by config (2 Slime, 2 Gobelin, no mini-boss)", function()
 		local e = fixture()
@@ -322,7 +462,7 @@ return function(createService: any, productionConfig: any)
 	end)
 
 	test("Stage 2 and Zone 2 added by config only, unlocked by the previous FirstClear", function()
-		local e = fixture(twoStageConfig())
+		local e = fixture(twoStageConfig(), { Zones = {} })
 		local s = e.start()
 		assert(#e.warnings == 0)
 		local p = e.player("A")
@@ -393,7 +533,10 @@ return function(createService: any, productionConfig: any)
 			local ok, reason = remote.OnServerInvoke(p, args[1], args[2])
 			assert(ok == false and reason == "requête invalide")
 		end
-		local ok, reason = remote.OnServerInvoke(p, 1, 1, { Victory = true, Waves = {}, EnemyId = "Boss" })
+		-- 3e argument = mode (nom seulement) : une table ou une valeur inconnue est refusée
+		local bad, badReason = remote.OnServerInvoke(p, 1, 1, { Victory = true, Waves = {}, EnemyId = "Boss" })
+		assert(bad == false and badReason == "requête invalide", "no client data as mode")
+		local ok, reason = remote.OnServerInvoke(p, 1, 1, nil, { Victory = true, Waves = {}, EnemyId = "Boss" })
 		assert(ok == true and reason == nil, "extra client arguments are ignored")
 		local session = s:GetSession(p)
 		assert(session and session.Config.Waves[1].Enemies[1].Count == 2, "server config used, not client data")
@@ -413,7 +556,7 @@ return function(createService: any, productionConfig: any)
 		local session = s:StartStage(p, 1, 1)
 		assert(session)
 		for key in session :: any do
-			assert(key == "Id" or key == "Zone" or key == "Stage" or key == "Status" or key == "Config", "no combat field: " .. key)
+			assert(key == "Id" or key == "Mode" or key == "Zone" or key == "Stage" or key == "Status" or key == "Config" or key == "Difficulty", "no combat field: " .. key)
 		end
 		s:CompleteStage(p, session.Id, true)
 		local again = s:StartStage(p, 1, 1)
