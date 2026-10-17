@@ -17,10 +17,17 @@ local DataService = require(script.Parent.DataService)
 local ZoneService = require(script.Parent.ZoneService)
 
 -- Fourni par l'appelant : positions au sol (Vector3) et création des modèles de représentation.
+-- Roster (facultatif, #68) : par case, l'exemplaire réellement posé, figé au lancement par ArenaService
+-- (HeroService:GetCombatRoster) : son profil doit être celui de la formation ; ses Stats (niveau) sont
+-- celles de l'unité. GrantXP (facultatif) : appelé UNE fois, seulement après une victoire acceptée par
+-- ZoneService, avec les HeroInstanceId du roster ; renvoie la vue de progression envoyée au client.
+export type RosterEntry = { HeroInstanceId: string, CombatProfile: string, Stats: { [string]: any } }
 export type ArenaContext = {
 	HeroPositions: { [number]: Vector3 }, -- slot 1..9 -> pieds
 	EnemyPositions: { [number]: Vector3 }, -- case 1..9 -> pieds
 	SpawnUnit: (unit: { UnitId: number, Team: string, TypeId: string, Slot: number? }, feet: Vector3, lookAt: Vector3) -> Model?,
+	Roster: { [number]: RosterEntry }?,
+	GrantXP: ((participants: { string }, zone: number, stage: number) -> { any })?,
 }
 export type CombatView = {
 	Id: number,
@@ -46,6 +53,8 @@ type Session = {
 	allyFacing: Vector3,
 	-- Secondes de simulation encore retenues pour la mise en scène (EntranceHold) : le moteur n'avance pas.
 	hold: number,
+	-- HeroInstanceId des héros engagés dans CE combat (figés au lancement) : seuls eux gagnent l'XP.
+	participants: { string },
 }
 type EndedCallback = (player: Player, combatId: number, result: string) -> ()
 
@@ -172,8 +181,9 @@ end
 
 -- Fin de combat, dans cet ordre et une seule fois :
 --   moteur : Victory / Defeat → verrouillage de la session → ZoneService:CompleteStage
---   (QuestService, puis RewardService à la victoire) → CombatEnded final au client, avec
---   FirstClear et Rewards réellement attribués et déjà sauvegardés → callbacks (ArenaService).
+--   (QuestService, puis RewardService à la victoire) → XP des participants (victoire acceptée par
+--   ZoneService seulement) → CombatEnded final au client, avec FirstClear, Rewards et HeroProgression
+--   réellement attribués et déjà sauvegardés → callbacks (ArenaService).
 local function finalize(session: Session)
 	local result = session.state.result
 	if not result or sessions[session.player] ~= session then
@@ -183,12 +193,24 @@ local function finalize(session: Session)
 	stop(session, true)
 	local victory = result == "Victory"
 	Log.info(SCOPE, `Combat {session.id} de {session.player.Name} : {if victory then "victoire" else "défaite"}`)
-	local _, reward = ZoneService:CompleteStage(session.player, session.zoneSessionId, victory)
+	local completed, reward = ZoneService:CompleteStage(session.player, session.zoneSessionId, victory)
+	-- XP : victoire de CETTE session acceptée par ZoneService, une seule fois (la session est déjà verrouillée).
+	local progression = {}
+	local grant = session.context.GrantXP
+	if victory and completed and grant and #session.participants > 0 then
+		local ok, views = pcall(grant, table.clone(session.participants), session.zone, session.stage)
+		if ok and typeof(views) == "table" then
+			progression = views
+		elseif not ok then
+			Log.warn(SCOPE, `XP du combat {session.id} non attribuée : {tostring(views)}`)
+		end
+	end
 	send(session, { {
 		Type = "CombatEnded",
 		Result = result,
 		FirstClear = if victory and reward then reward.FirstClear else false,
 		Rewards = if victory and reward then reward.Rewards else {},
+		HeroProgression = progression,
 	} })
 	for _, callback in endedCallbacks do
 		task.spawn(callback, session.player, session.id, result)
@@ -265,6 +287,7 @@ function CombatService:StartCombat(player: Player, zoneSessionId: number, format
 		return nil, "combat déjà en cours"
 	end
 	local allies = {}
+	local participants: { string } = {}
 	for slot, classId in formation do
 		if not CombatConfig.Heroes[classId] then
 			return nil, "classe inconnue"
@@ -273,7 +296,14 @@ function CombatService:StartCombat(player: Player, zoneSessionId: number, format
 		if not feet then
 			return nil, "case héros invalide"
 		end
-		table.insert(allies, { TypeId = classId, Slot = slot, Position = flat(feet) })
+		local entry = if context.Roster then context.Roster[slot] else nil
+		if context.Roster and (not entry or entry.CombatProfile ~= classId) then
+			return nil, "équipe modifiée"
+		end
+		table.insert(allies, { TypeId = classId, Slot = slot, Position = flat(feet), Stats = if entry then table.clone(entry.Stats) else nil })
+		if entry then
+			table.insert(participants, entry.HeroInstanceId)
+		end
 	end
 	if #allies == 0 then
 		return nil, "formation vide"
@@ -330,6 +360,7 @@ function CombatService:StartCombat(player: Player, zoneSessionId: number, format
 		enemyFacing = average(context.EnemyPositions),
 		allyFacing = average(context.HeroPositions),
 		hold = 0, -- fixé ci-dessous : la 1re vague entre depuis le décor avant que le moteur ne démarre
+		participants = participants,
 	}
 	sessions[player] = session
 	Log.info(SCOPE, `Combat {session.id} lancé par {player.Name} (stage {stage.Zone}-{stage.Stage}, {#allies} héros)`)

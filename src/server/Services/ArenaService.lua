@@ -207,9 +207,17 @@ local function startCombat(player: Player, sessionId: number, classes: { [number
 		enemyPositions[cell] = c.front.CFrame:PointToWorldSpace(offset)
 	end
 	local formation = table.clone(w.prep.formation)
+	-- Roster figé (#68) : exemplaires réellement posés, leur niveau et leurs stats ; seuls eux gagneront
+	-- l'XP de ce combat, quoi qu'il arrive ensuite à la hotbar ou à la formation.
+	local roster, why = HeroService:GetCombatRoster(player, formation)
+	if not roster then return nil, why end
 	w.heroes:ClearAllChildren()
 	return CombatService:StartCombat(player, sessionId, classes, {
 		HeroPositions = heroPositions, EnemyPositions = enemyPositions,
+		Roster = roster,
+		GrantXP = function(participants: { string }, zone: number, stage: number): { any }
+			return HeroService:GrantCombatXP(player, participants, zone, stage)
+		end,
 		SpawnUnit = function(unit, position: Vector3, lookAt: Vector3): Model?
 			if context(player) ~= c or worlds[player] ~= w then return nil end
 			local ally = unit.Team == "Ally"

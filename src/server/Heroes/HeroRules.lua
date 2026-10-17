@@ -59,7 +59,7 @@ end
 -- Ajoute un exemplaire, et le met dans la première case libre de la hotbar s'il y en a une.
 -- Renvoie la case de hotbar utilisée, ou nil (hotbar pleine : le héros reste dans la collection).
 function HeroRules.addHero(data: any, instanceId: string, heroId: string): number?
-	data.Heroes[instanceId] = { HeroId = heroId, Level = 1 }
+	data.Heroes[instanceId] = { HeroId = heroId, Level = 1, XP = 0 }
 	for index, id in data.Hotbar do
 		if id == instanceId then
 			return index
@@ -120,13 +120,22 @@ function HeroRules.combatHero(data: any, instanceId: any, catalog: { [string]: a
 	return { HeroId = hero.HeroId, CombatProfile = info.CombatProfile, CombatTemplate = template }, nil
 end
 
--- Vue envoyée au client : exemplaires possédés (triés) et hotbar.
-export type HeroView = { Id: string, HeroId: string, Level: number }
+-- Vue envoyée au client : exemplaires possédés (triés) et hotbar. Avec la config de progression :
+-- XP (dans le niveau courant), XPToNext (0 au niveau max) et MaxLevel, par exemplaire.
+export type HeroView = { Id: string, HeroId: string, Level: number, XP: number?, XPToNext: number?, MaxLevel: number? }
 
-function HeroRules.view(data: any): { Heroes: { HeroView }, Hotbar: { string } }
+function HeroRules.view(data: any, progression: any?): { Heroes: { HeroView }, Hotbar: { string } }
 	local heroes: { HeroView } = {}
 	for id, hero in data.Heroes do
-		table.insert(heroes, { Id = id, HeroId = hero.HeroId, Level = hero.Level })
+		local entry: HeroView = { Id = id, HeroId = hero.HeroId, Level = hero.Level }
+		if progression then
+			local level, xp = progression.rules.normalize(hero, progression.config)
+			entry.Level = level
+			entry.XP = xp
+			entry.XPToNext = progression.rules.xpToNext(level, progression.config)
+			entry.MaxLevel = progression.config.MaxLevel
+		end
+		table.insert(heroes, entry)
 	end
 	table.sort(heroes, function(a: HeroView, b: HeroView): boolean
 		return a.Id < b.Id

@@ -59,9 +59,9 @@ rareté. Chacune met en avant 3 héros (`Featured`) : quand la rareté tirée co
 avant, l'un d'eux sort une fois sur deux (`FeaturedShare = 0,5`), sinon un héros quelconque de ce
 palier.
 
-## Données (`PlayerData`, DataVersion 2)
+## Données (`PlayerData`, DataVersion 4)
 
-- `Heroes : { [HeroInstanceId] = { HeroId, Level } }` : un exemplaire par identifiant unique
+- `Heroes : { [HeroInstanceId] = { HeroId, Level, XP } }` : un exemplaire par identifiant unique
   (`H_T<horodatage><séquence>_<GUID>`). KingdomService range les héros dans l'ordre d'obtention :
   anciens `H_<GUID>` d'abord (quelle que soit la casse), puis les identifiants horodatés par date ;
   le starter reste donc sur `Heros_1`. **Doublons autorisés** : même `HeroId`, `HeroInstanceId`
@@ -85,6 +85,44 @@ HeroConfig) et déterministe :
 Puis tous les autres exemplaires legacy sont retirés ; les cases de `Hotbar` qui les visaient
 deviennent `""` (même taille) et `Team` est recompactée. Les vrais `HeroId` déjà présents, les
 devises, tickets, `FirstClears`, quêtes, royaume et réglages ne sont pas touchés.
+
+## Niveaux et XP (#68) — ALPHA 0.0.2 PROVISOIRE
+
+La progression appartient à l'**exemplaire** (`HeroInstanceId`) : deux exemplaires du même `HeroId`
+ont chacun leur niveau. `HeroId` (catalogue) ≠ `HeroInstanceId` (exemplaire) ≠ `CombatProfile` (stats).
+
+- **Niveaux Lv1 → Lv20** (`HeroProgressionConfig.MaxLevel`). Pas d'étoiles, d'ascension, de fragments,
+  de talents ni de fusion.
+- **XP relative au niveau courant** : `Level = 3, XP = 40` = Lv3, 40 XP vers Lv4 (pas d'XP cumulée).
+  Nouveau héros : `Level = 1, XP = 0`. Au Lv20 : `XP = 0`, plus aucune XP gagnée.
+- **Courbe (provisoire)** : XP de Lv n à n + 1 = `100 + 25 × (n - 1)` → 100, 125, 150 … 550 (Lv19 → 20).
+  Plusieurs niveaux possibles d'un coup ; le surplus au Lv20 est perdu.
+- **Gain (provisoire)** : **victoire seulement**, par stage (`HeroProgressionConfig.StageXP`) :
+  1-1 = 25, 1-2 = 35, 1-3 = 50, 1-4 = 70, 1-5 = 100. Défaite = 0. Chaque héros **réellement posé et
+  engagé** dans le combat gagne le montant complet ; un héros de la collection ou de la hotbar non posé
+  ne gagne rien. Un futur mode (Élite, #69) aura sa propre table dans la même config.
+- **Stats** : `MaxHealth` et `AttackDamage` × `1 + (Level - 1) × 0,05`, arrondies (Lv1 = stats actuelles,
+  Lv2 = 105 %, Lv10 = 145 %, Lv20 = 195 %). **Aucune autre stat ne progresse** (cadence, portée, vitesse,
+  énergie, dégâts de l'ultime).
+- **Serveur autoritaire** : au lancement, ArenaService fige le roster (`HeroService:GetCombatRoster` :
+  case, `HeroInstanceId`, `HeroId`, profil, niveau, stats) depuis SA formation ; à la fin, l'XP n'est
+  donnée (`HeroService:GrantCombatXP`) qu'une fois ZoneService ayant accepté la victoire de CETTE session,
+  une seule fois (session verrouillée). Le client n'envoie ni exemplaire, ni XP, ni niveau : **aucune
+  remote d'XP**. `HeroesChanged` est poussé après la mutation ; `CombatEnded.HeroProgression` donne à
+  l'écran de fin `{ InstanceId, HeroId, XPGranted, LevelBefore, LevelAfter, XP, XPToNext, MaxLevel }`.
+- **Vue client** (`HeroesChanged` / `GetHeroes`) : `{ Id, HeroId, Level, XP, XPToNext, MaxLevel }` par
+  exemplaire (Lv20 : `XP = 0`, `XPToNext = 0`).
+- **Interface** : « Nv. n » sur chaque raccourci et chaque carte de la sacoche ; la carte choisie montre
+  « 40 / 150 XP » et une barre ; l'écran de fin a une section « Héros » (portrait, nom, Nv., « +25 XP »,
+  barre qui se remplit ; montée : « NIVEAU SUPÉRIEUR ! », « Nv.1 → Nv.2 », pop et lueur dorée).
+- Règles pures : `src/server/Heroes/HeroProgressionRules.lua` (`xpToNext`, `grantXP`, `combatStats`,
+  `stageXP`), testées par `tools/test-heroes.ps1` (suite `progression`).
+
+### Migration v3 → v4
+
+Chaque exemplaire reçoit `XP` (absente ou invalide → 0) ; un `Level` entier ≥ 1 est conservé, sinon 1.
+Aucun héros retiré, aucun identifiant changé ; hotbar, équipe, monnaies, First Clears, invocations,
+royaume et quêtes intacts.
 
 ## Premier héros : invocation tutorielle
 

@@ -10,7 +10,7 @@
 
 local Migrations = {}
 
-Migrations.CURRENT_VERSION = 3
+Migrations.CURRENT_VERSION = 4
 
 -- v1 -> v2 (issue #10) : les héros Alpha étaient des classes de combat temporaires. En v2, HeroId
 -- est l'identifiant réel du héros. Valeurs figées à la date de la migration.
@@ -105,9 +105,35 @@ local function v2ToV3(data: { [string]: any })
 	end
 end
 
+-- v3 -> v4 (#68, niveaux et XP) : chaque exemplaire de Heroes reçoit XP (progression dans le niveau
+-- courant). XP absente ou invalide → 0 ; un Level entier >= 1 est conservé, sinon 1. Aucun héros retiré,
+-- aucun identifiant changé, rien d'autre touché. (Reconcile ne descend pas dans les clés dynamiques
+-- de Heroes, d'où cette étape.)
+local function v3ToV4(data: { [string]: any })
+	if typeof(data.Heroes) ~= "table" then
+		data.Heroes = {}
+		return
+	end
+	for _, hero in data.Heroes :: { [string]: any } do
+		if typeof(hero) == "table" then
+			local level = hero.Level
+			if typeof(level) ~= "number" or level ~= level or level < 1 or level % 1 ~= 0 then
+				hero.Level = 1
+			end
+			local xp = hero.XP
+			if typeof(xp) ~= "number" or xp ~= xp or xp < 0 then
+				hero.XP = 0
+			else
+				hero.XP = math.floor(xp)
+			end
+		end
+	end
+end
+
 local STEPS: { [number]: (data: { [string]: any }) -> () } = {
 	[1] = v1ToV2,
 	[2] = v2ToV3,
+	[3] = v3ToV4,
 }
 
 -- Lecture seule pour les tests (rejouer une étape).
