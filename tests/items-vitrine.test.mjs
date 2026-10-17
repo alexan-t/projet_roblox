@@ -337,6 +337,20 @@ test('items.json: tasks follow TASK_FORMAT and target their Items #NNN [Rareté]
 	}
 });
 
+test('items.json: exactly the TASK_FORMAT fields of an item task, one distinct icon_hook per task', () => {
+	const fields = [
+		'id', 'name', 'type', 'slot_type', 'icon_hook', 'brief_source', 'target_studio_slot', 'worker', 'status',
+		'iteration', 'max_iterations', 'priority', 'reference_priority', 'screenshots', 'latest_review', 'notes',
+	].sort().join(',');
+	const hooks = new Map();
+	for (const task of catalogue.queue) {
+		assert(Object.keys(task).sort().join(',') === fields, `${task.id}: champs ${Object.keys(task).join(',')}`);
+		const hook = task.icon_hook.trim().toLowerCase();
+		assert(!hooks.has(hook), `${task.id}: même icon_hook que ${hooks.get(hook)}`);
+		hooks.set(hook, task.id);
+	}
+});
+
 test('items.json: references are the four main validated creatures (CLAUDE.md, ART_DIRECTION § 1)', () => {
 	const art = read('docs/ART_DIRECTION.md').toString('utf8');
 	const main = ['KingTreant', 'Treant_Masque', 'KingSlime', 'RoiOrc'];
