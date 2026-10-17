@@ -18,7 +18,8 @@ export type Progression = {
 
 export type Hero = {
 	HeroId: string, -- HeroId réel (catalogue HeroConfig, modèles ServerStorage.Assets.Heros), jamais une classe de combat
-	Level: number,
+	Level: number, -- 1..HeroProgressionConfig.MaxLevel, propre à CET exemplaire
+	XP: number, -- progression DANS le niveau courant (pas d'XP cumulée) ; 0 au niveau maximum
 }
 
 export type Summons = {

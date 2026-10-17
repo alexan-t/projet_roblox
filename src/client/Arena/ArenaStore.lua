@@ -8,7 +8,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HeroConfig = require(ReplicatedStorage.Shared.Config.HeroConfig)
 local PlacementState = require(script.Parent.PlacementState)
 
-export type HeroView = { Id: string, HeroId: string, Level: number }
+-- Level / XP / XPToNext / MaxLevel : vue serveur de la progression de CET exemplaire (#68), jamais calculée ici.
+export type HeroView = { Id: string, HeroId: string, Level: number, XP: number?, XPToNext: number?, MaxLevel: number? }
 
 local ArenaStore = {}
 

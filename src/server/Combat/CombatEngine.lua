@@ -44,7 +44,9 @@ export type Options = {
 	Heroes: { [string]: Stats },
 	Enemies: { [string]: Stats },
 	UltimateRadius: number,
-	Allies: { { TypeId: string, Slot: number, Position: Vec } },
+	-- Stats : stats propres à CETTE unité (niveau du héros, #68) ; absent → Heroes[TypeId]. TypeId reste le
+	-- profil de combat (animations, présentation).
+	Allies: { { TypeId: string, Slot: number, Position: Vec, Stats: Stats? } },
 	EnemyCells: { [number]: Vec },
 	Random: any, -- objet avec NextInteger(min, max) (Random Roblox en jeu)
 	TickRate: number,
@@ -348,7 +350,7 @@ function CombatEngine.new(options: Options): State
 		return a.Slot < b.Slot
 	end)
 	for _, ally in allies do
-		spawnUnit(state, "Ally", ally.TypeId, options.Heroes[ally.TypeId], ally.Position, ally.Slot, nil, false)
+		spawnUnit(state, "Ally", ally.TypeId, ally.Stats or options.Heroes[ally.TypeId], ally.Position, ally.Slot, nil, false)
 	end
 	startNext(state)
 	return state

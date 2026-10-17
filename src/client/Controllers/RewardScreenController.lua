@@ -8,11 +8,16 @@
 --   3. badge « Première victoire » si FirstClear ;
 --   4. cartes de récompense en cascade (pop décalé de 0,05 s), objet 3D tournant dans la carte,
 --      quantité qui défile (Count) puis pop de l'icône ; badge « Nouveau » sur une récompense nouvelle ;
---   5. bouton principal « Continuer » en dernier.
+--   5. section « Héros » (#68) : chaque héros engagé (portrait, nom, Nv., « +25 XP », barre qui se
+--      remplit) ; montée de niveau : « NIVEAU SUPÉRIEUR ! », « Nv.1 → Nv.2 », pop et lueur dorée.
+--      Valeurs du serveur (CombatEnded.HeroProgression), jamais calculées ici. Possible même sans carte de
+--      récompense (stages sans récompense de stage) ;
+--   6. bouton principal « Continuer » en dernier.
 -- Défaite : titre Error, sans rayons ni étincelles.
 -- API : RewardScreenController.Show(data, onContinue?) ; RewardScreenController.Hide().
 --   data = { Result: "Victory" | "Defeat", FirstClear: boolean?,
---            Rewards: { { Kind: "Gold" | "Gems" | "SummonTicket", Amount: number, New: boolean? } } }
+--            Rewards: { { Kind: "Gold" | "Gems" | "SummonTicket", Amount: number, New: boolean? } },
+--            Heroes: { { InstanceId, HeroId, XPGranted, LevelBefore, LevelAfter, XP, XPToNext, MaxLevel } }? }
 -- Démonstration Studio : attribut Workspace.ApercuEcranRecompenses = true (l'écran s'affiche, puis
 --   revient 2 s après « Continuer »).
 
@@ -22,7 +27,10 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
+local HeroConfig = require(ReplicatedStorage.Shared.Config.HeroConfig)
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
+local Icons = require(script.Parent.Parent.UI.Icons)
+local UIKit = require(script.Parent.Parent.UI.UIKit)
 local AudioController = require(script.Parent.AudioController)
 
 local Colors = UITheme.Colors
@@ -38,7 +46,12 @@ local SPARKS = 10
 
 export type Reward = { Kind: string, Amount: number, New: boolean? }
 -- Silent : le son du résultat a déjà été joué (annonce « VICTOIRE ! » de l'outro de combat).
-export type ScreenData = { Result: string, FirstClear: boolean?, Rewards: { Reward }?, Silent: boolean? }
+-- Progression d'un héros engagé (vue serveur, CombatEnded.HeroProgression).
+export type HeroProgress = { InstanceId: string, HeroId: string, XPGranted: number, LevelBefore: number, LevelAfter: number, XP: number, XPToNext: number, MaxLevel: number }
+export type ScreenData = { Result: string, FirstClear: boolean?, Rewards: { Reward }?, Silent: boolean?, Heroes: { HeroProgress }? }
+
+local HERO_CHIP = Vector2.new(300, 120)
+local HEROES_HEIGHT = 30 + HERO_CHIP.Y -- titre « Héros » + une ligne de héros
 
 local KINDS = {
 	Gold = { Label = "Or", Color = Colors.CurrencyGold },
@@ -404,6 +417,83 @@ function RewardScreenController.Hide()
 	end)
 end
 
+-- Un héros engagé : portrait, nom, niveau, « +XP », barre ; la barre part de l'XP d'avant le combat et
+-- se remplit ; une montée de niveau la remplit, puis repart du nouveau niveau, avec l'annonce.
+local function heroChip(parent: Instance, entry: HeroProgress, index: number, start: number)
+	local info = HeroConfig.Heroes[entry.HeroId]
+	local levelUp = entry.LevelAfter > entry.LevelBefore
+	local chip = UIKit.subPanel(parent, UDim2.fromOffset(HERO_CHIP.X, HERO_CHIP.Y))
+	chip.Name = `Heros_{index}`
+	chip.LayoutOrder = index
+	local border = chip:FindFirstChildOfClass("UIStroke")
+	local art = Instance.new("Frame")
+	art.BackgroundColor3 = Colors.Sand
+	art.BackgroundTransparency = UITheme.Transparency.Art
+	art.Position = UDim2.fromOffset(Spacing.S, Spacing.S)
+	art.Size = UDim2.fromOffset(HERO_CHIP.Y - 2 * Spacing.S, HERO_CHIP.Y - 2 * Spacing.S)
+	art.Parent = chip
+	corner(art, UITheme.Radius.Small)
+	local model = Icons.heroModel(entry.HeroId)
+	if model then
+		UIKit.portrait(art, model)
+	end
+	local left = HERO_CHIP.Y + Spacing.XS
+	local name = UIKit.text(chip, if info then info.Name else entry.HeroId, Typography.Size.Label, { Align = Enum.TextXAlignment.Left })
+	name.Position = UDim2.fromOffset(left, Spacing.S)
+	name.Size = UDim2.new(1, -left - Spacing.S, 0, 22)
+	name.TextTruncate = Enum.TextTruncate.AtEnd
+	local level = UIKit.text(chip, `Nv.{entry.LevelBefore}`, Typography.Size.Heading, { Align = Enum.TextXAlignment.Left })
+	level.Position = UDim2.fromOffset(left, 34)
+	level.Size = UDim2.fromOffset(90, 28)
+	local gain = UIKit.text(chip, `+{entry.XPGranted} XP`, Typography.Size.Heading, { Color = Colors.GoldLight, Align = Enum.TextXAlignment.Right })
+	gain.Position = UDim2.new(1, -Spacing.S - 110, 0, 34)
+	gain.Size = UDim2.fromOffset(110, 28)
+	local bar = UIKit.bar(chip, { Color = Colors.Progress, Size = UDim2.new(1, -left - Spacing.S, 0, 14) })
+	bar.Frame.Position = UDim2.fromOffset(left, 70)
+	local need = entry.XPToNext
+	local maxed = entry.LevelAfter >= entry.MaxLevel
+	local ratio = if maxed then 1 elseif need > 0 then entry.XP / need else 0
+	local before = if levelUp or maxed or need <= 0 then 0 else math.max(entry.XP - entry.XPGranted, 0) / need
+	bar.Set(before)
+	local note = UIKit.text(chip, if maxed then "Niveau max" else `{entry.XP} / {need} XP`, Typography.Size.Caption, { Color = Colors.TextMuted, Align = Enum.TextXAlignment.Left })
+	note.Position = UDim2.fromOffset(left, 90)
+	note.Size = UDim2.new(1, -left - Spacing.S, 0, 18)
+	popIn(chip, start + (index - 1) * CASCADE)
+	task.delay(start + (index - 1) * CASCADE + Animation.Toast.Time, function()
+		if not chip.Parent then
+			return
+		end
+		if not levelUp then
+			bar.Set(ratio, true)
+			return
+		end
+		-- montée de niveau : la barre se remplit, le niveau change, annonce dorée
+		bar.Set(1, true)
+		task.wait(Animation.Count.Time)
+		if not chip.Parent then
+			return
+		end
+		bar.Set(0)
+		bar.Set(ratio, true)
+		level.Text = `Nv.{entry.LevelBefore} → Nv.{entry.LevelAfter}`
+		level.Size = UDim2.fromOffset(170, 28)
+		level.TextColor3 = Colors.GoldLight
+		gain.Visible = false
+		local up = UIKit.badge(chip, "NIVEAU SUPÉRIEUR !", Colors.Gold)
+		up.AnchorPoint = Vector2.new(0.5, 0.5)
+		up.Position = UDim2.new(0.5, 0, 0, 0)
+		up.ZIndex = 5
+		UIKit.popIn(up, 0, 1.15)
+		UIKit.pop(chip)
+		if border then
+			border.Color = Colors.Gold
+			border.Thickness = UITheme.Stroke.Thick
+			tween(border, Animation.Pulse, { Color = Colors.GoldLight })
+		end
+		AudioController.Play("Recompense")
+	end)
+end
+
 -- Affiche l'écran ; onContinue est appelé au clic sur « Continuer » (après la fermeture).
 function RewardScreenController.Show(data: ScreenData, onContinue: (() -> ())?)
 	RewardScreenController.Hide()
@@ -413,6 +503,7 @@ function RewardScreenController.Show(data: ScreenData, onContinue: (() -> ())?)
 		AudioController.Play(if victory then "Victoire" else "Defaite") -- (#18)
 	end
 	local rewards = data.Rewards or {}
+	local heroes = if victory then data.Heroes or {} else {}
 
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "EcranRecompenses"
@@ -512,17 +603,54 @@ function RewardScreenController.Show(data: ScreenData, onContinue: (() -> ())?)
 		spinner:Disconnect()
 	end)
 
+	-- héros engagés et leur XP (sous les cartes ; sans carte, juste sous le titre)
+	local heroesY = titleY + 95 + (if #rewards > 0 then CARD_SIZE.Y + 30 else 0)
+	local heroesStart = cardsStart + #rewards * CASCADE + (if #rewards > 0 then Animation.Toast.Time else 0)
+	if #heroes > 0 then
+		local section = Instance.new("Frame")
+		section.Name = "Heros"
+		section.AnchorPoint = Vector2.new(0.5, 0)
+		section.Position = UDim2.fromOffset(380, heroesY)
+		section.Size = UDim2.fromOffset(740, HEROES_HEIGHT)
+		section.BackgroundTransparency = 1
+		section.Parent = root
+		local heading = UIKit.text(section, "Héros", Typography.Size.Label, { Color = Colors.TextMuted })
+		heading.Size = UDim2.new(1, 0, 0, 24)
+		popIn(heading, heroesStart)
+		local row = Instance.new("Frame")
+		row.BackgroundTransparency = 1
+		row.Position = UDim2.fromOffset(0, 30)
+		row.Size = UDim2.new(1, 0, 0, HERO_CHIP.Y)
+		row.Parent = section
+		local rowLayout = Instance.new("UIListLayout")
+		rowLayout.FillDirection = Enum.FillDirection.Horizontal
+		rowLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+		rowLayout.Padding = UDim.new(0, Spacing.M)
+		rowLayout.SortOrder = Enum.SortOrder.LayoutOrder
+		rowLayout.Parent = row
+		for index, entry in heroes do
+			heroChip(row, entry, index, heroesStart + 0.1)
+		end
+	end
+
 	-- bouton principal en dernier
 	local buttonDelay = cardsStart + #rewards * CASCADE + Animation.Toast.Time + Animation.Count.Time
+		+ (if #heroes > 0 then #heroes * CASCADE + Animation.Count.Time else 0)
 	local button = primaryButton(root, "Continuer", function()
 		RewardScreenController.Hide()
 		if onContinue then
 			task.delay(Animation.Close.Time, onContinue)
 		end
 	end)
-	-- sans récompense (défaite, ou avant RewardService #9), le bouton remonte sous le titre
-	button.Position = UDim2.fromOffset(380, titleY + 95 + (if #rewards > 0 then CARD_SIZE.Y + 50 else 20))
-	popIn(button, if #rewards > 0 then buttonDelay else 0.45, 1.06)
+	-- sans récompense ni héros (défaite), le bouton remonte sous le titre
+	local below = if #heroes > 0 then heroesY + HEROES_HEIGHT + 20
+		elseif #rewards > 0 then titleY + 95 + CARD_SIZE.Y + 50
+		else titleY + 95 + 20
+	button.Position = UDim2.fromOffset(380, below)
+	if #heroes > 0 then
+		root.Size = UDim2.fromOffset(760, math.max(520, below + 80))
+	end
+	popIn(button, if #rewards > 0 or #heroes > 0 then buttonDelay else 0.45, 1.06)
 
 	gui.Parent = player:WaitForChild("PlayerGui")
 end
@@ -535,6 +663,10 @@ local DEMO = {
 		{ Kind = "Gold", Amount = 120 },
 		{ Kind = "Gems", Amount = 15 },
 		{ Kind = "SummonTicket", Amount = 1, New = true },
+	},
+	Heroes = {
+		{ InstanceId = "Demo1", HeroId = "ecuyer_du_rempart", XPGranted = 35, LevelBefore = 1, LevelAfter = 2, XP = 10, XPToNext = 125, MaxLevel = 20 },
+		{ InstanceId = "Demo2", HeroId = "tireuse_des_faubourgs", XPGranted = 35, LevelBefore = 1, LevelAfter = 1, XP = 60, XPToNext = 100, MaxLevel = 20 },
 	},
 }
 

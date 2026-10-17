@@ -167,7 +167,8 @@ Le premier héros est obtenu pendant l'invocation tutorielle (`Remotes.RequestSt
 une seule fois : `ecuyer_du_rempart`). Hotbar de 10 raccourcis sauvegardée, invocation au portail de
 son plot (`Remotes.RequestSummon`, un `SummonTicket`, tirage par rareté et bannière dès la première
 invocation payante : aucun héros garanti après l'Écuyer), `Remotes.HeroObtained`, migrations des
-anciens profils (DataVersion 2, 3).
+anciens profils (DataVersion 2, 3, 4). Niveaux Lv1 → Lv20 et XP par exemplaire (victoire seulement,
+héros engagés, +5 % PV / ATK par niveau ; ALPHA 0.0.2 provisoire, voir HEROES.md § Niveaux et XP).
 HeroId réel ≠ profil de combat temporaire : voir [les données, les règles et l'API](docs/HEROES.md).
 
 ## Items 2D (ItemConfig)

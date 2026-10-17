@@ -58,6 +58,14 @@ Unité : `UnitId` (unique dans la session), `Team` (`Ally` / `Enemy`), `TypeId` 
 `EnemyId`), `Health`, `MaxHealth`, `Energy`, `MaxEnergy`, `TargetId`, `Position` (plan
 horizontal), `Alive`, `Slot` (héros) ou `Cell` (ennemi), `MiniBoss`.
 
+**Niveaux des héros (#68, ALPHA 0.0.2 PROVISOIRE)** : un allié de `CombatEngine` peut porter
+`Stats` (stats de CET exemplaire) ; sans `Stats`, `CombatConfig.Heroes[TypeId]` (comportement existant).
+`TypeId` reste le profil (animations, présentation). ArenaService passe le roster figé au lancement
+(`ArenaContext.Roster` : profil, `HeroInstanceId`, stats de niveau ; refus « équipe modifiée » s'il ne
+correspond pas à la formation) et `ArenaContext.GrantXP`. Seuls `MaxHealth` et `AttackDamage` progressent
+(+5 % par niveau au-delà du premier) ; aucune progression de l'ultime. La session garde les
+`participants` (`HeroInstanceId` figés) : seuls eux gagnent l'XP.
+
 ## Simulation
 
 - **Pas fixe** : 1/20 s. CombatService accumule `min(dt, 0.25) × vitesse` à chaque
@@ -95,6 +103,9 @@ Zone 1 : 1-1 à 1-4 sans boss, 1-5 = vague puis **boss de zone** (le Roi Orc, `B
 au boss de zone, sur X-5 seulement (contenu détaillé : `docs/ZONES.md`). Les tests de mécanique
 utilisent aussi un stage complet de test (Slime ×2 + Gobelin ×4, puis Boss).
 
+- **XP** : après `CompleteStage` accepté (victoire de CETTE session), `GrantXP` est appelé une fois avec
+  les participants ; défaite ou fin refusée : aucune XP. `CombatEnded` porte `HeroProgression` (vide sinon).
+  x1 et x2 donnent exactement la même XP (la vitesse n'agit que sur le temps simulé).
 - **Victoire** : toutes les vagues et le mini-boss morts, au moins un héros vivant.
 - **Défaite** : tous les héros morts avant la fin.
 - CombatService verrouille sa session, puis appelle `ZoneService:CompleteStage(player,

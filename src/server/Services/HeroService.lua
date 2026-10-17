@@ -16,6 +16,9 @@
 --                                     serveur revérifie tout et donne SummonConfig.Starter.HeroId, gratuit,
 --                                     une seule fois, pendant la quête SummonConfig.Starter.QuestId.
 -- Un nouveau profil n'a aucun héros : le premier est obtenu pendant l'invocation tutorielle.
+-- Niveaux et XP (#68) : par exemplaire (HeroInstanceId). GetCombatRoster fige, au lancement d'un combat,
+-- les héros posés et leurs stats de niveau ; GrantCombatXP leur donne l'XP d'une victoire acceptée
+-- (appelé par le combat, jamais par un client : aucune remote d'XP).
 -- Au démarrage, les modèles des héros activés sont clonés de ServerStorage.Assets.Heros vers
 -- ReplicatedStorage.Assets.Heros (révélation de l'invocation côté client).
 
@@ -30,7 +33,9 @@ local RarityConfig = require(ReplicatedStorage.Shared.Config.RarityConfig)
 local SummonBannerConfig = require(ReplicatedStorage.Shared.Config.SummonBannerConfig)
 local CombatConfig = require(script.Parent.Parent.Config.CombatConfig)
 local SummonConfig = require(script.Parent.Parent.Config.SummonConfig)
+local HeroProgressionConfig = require(script.Parent.Parent.Config.HeroProgressionConfig)
 local HeroRules = require(script.Parent.Parent.Heroes.HeroRules)
+local HeroProgressionRules = require(script.Parent.Parent.Heroes.HeroProgressionRules)
 local SummonRules = require(script.Parent.Parent.Heroes.SummonRules)
 local DataService = require(script.Parent.DataService)
 local PlotService = require(script.Parent.PlotService)
@@ -57,6 +62,8 @@ local random = Random.new()
 local pool: SummonRules.Pool = SummonRules.buildPool(RarityConfig.Tiers, HeroConfig.Heroes)
 
 local idSequence = 0
+-- Règles + config de progression, pour les vues envoyées au client (Level, XP, XPToNext, MaxLevel).
+local PROGRESSION = { rules = HeroProgressionRules, config = HeroProgressionConfig }
 
 -- Identifiant d'exemplaire unique, horodaté (largeur fixe) : KingdomService range les héros dans
 -- l'ordre d'obtention (anciens "H_<GUID>" d'abord, puis "H_T…" par date) ; le premier héros reste sur Heros_1.
@@ -76,7 +83,7 @@ local function push(player: Player)
 	local data = DataService:GetData(player)
 	local event = changedEvent
 	if data and event and player.Parent == Players then
-		event:FireClient(player, HeroRules.view(data))
+		event:FireClient(player, HeroRules.view(data, PROGRESSION))
 	end
 end
 
@@ -120,6 +127,91 @@ function HeroService:RemoveHero(player: Player, instanceId: string): boolean
 	KingdomService:Refresh(player)
 	push(player)
 	return true
+end
+
+export type RosterEntry = {
+	Slot: number,
+	HeroInstanceId: string,
+	HeroId: string,
+	CombatProfile: string,
+	CombatTemplate: string,
+	Level: number,
+	Stats: { [string]: any },
+}
+
+-- Roster figé d'un combat : pour chaque case de la formation serveur (case -> HeroInstanceId), l'exemplaire
+-- réellement possédé, son profil de combat et ses stats de niveau (copies). Refus si un exemplaire n'est
+-- plus jouable. Le client ne fournit rien ici : la formation est celle d'ArenaService.
+function HeroService:GetCombatRoster(player: Player, formation: { [number]: string }): ({ [number]: RosterEntry }?, string?)
+	local data = DataService:GetData(player)
+	if not data then
+		return nil, "données non chargées"
+	end
+	local roster: { [number]: RosterEntry } = {}
+	for slot, instanceId in formation do
+		local hero, reason = HeroRules.combatHero(data, instanceId, HeroConfig.Heroes, CombatConfig.Heroes)
+		if not hero then
+			return nil, reason
+		end
+		local level = HeroProgressionRules.normalize(data.Heroes[instanceId], HeroProgressionConfig)
+		roster[slot] = {
+			Slot = slot,
+			HeroInstanceId = instanceId,
+			HeroId = hero.HeroId,
+			CombatProfile = hero.CombatProfile,
+			CombatTemplate = hero.CombatTemplate,
+			Level = level,
+			Stats = HeroProgressionRules.combatStats(CombatConfig.Heroes[hero.CombatProfile], level, HeroProgressionConfig),
+		}
+	end
+	return roster, nil
+end
+
+export type ProgressionView = {
+	InstanceId: string,
+	HeroId: string,
+	XPGranted: number,
+	LevelBefore: number,
+	LevelAfter: number,
+	XP: number,
+	XPToNext: number,
+	MaxLevel: number,
+}
+
+-- XP d'une victoire acceptée par ZoneService (appelée une seule fois par CombatService.finalize) :
+-- chaque exemplaire de `participants` (HeroInstanceId figés au lancement), encore possédé, gagne
+-- l'XP du stage (HeroProgressionConfig.StageXP). Sans yield ; puis HeroesChanged. Renvoie la vue de
+-- progression pour l'écran de fin (le client ne calcule jamais de niveau).
+function HeroService:GrantCombatXP(player: Player, participants: { string }, zone: number, stage: number): { ProgressionView }
+	local data = DataService:GetData(player)
+	local views: { ProgressionView } = {}
+	if not data then
+		return views
+	end
+	local amount = HeroProgressionRules.stageXP(zone, stage, HeroProgressionConfig)
+	local seen: { [string]: boolean } = {}
+	for _, instanceId in participants do
+		local hero = if typeof(instanceId) == "string" and not seen[instanceId] then data.Heroes[instanceId] else nil
+		if hero then
+			seen[instanceId] = true
+			local grant = HeroProgressionRules.grantXP(hero, amount, HeroProgressionConfig)
+			table.insert(views, {
+				InstanceId = instanceId,
+				HeroId = hero.HeroId,
+				XPGranted = grant.XPGranted,
+				LevelBefore = grant.LevelBefore,
+				LevelAfter = grant.LevelAfter,
+				XP = grant.XP,
+				XPToNext = grant.XPToNext,
+				MaxLevel = HeroProgressionConfig.MaxLevel,
+			})
+		end
+	end
+	if #views > 0 then
+		Log.info(SCOPE, `{player.Name} : +{amount} XP à {#views} héros (stage {zone}-{stage})`)
+		push(player)
+	end
+	return views
 end
 
 -- Héros obtenu (invocation) : callback(player, { InstanceId, HeroId, Name, New }), après la
@@ -339,6 +431,9 @@ function HeroService:Init()
 			table.insert(problems, `{heroId} : profil de combat inconnu {info.CombatProfile}`)
 		end
 	end
+	for _, problem in HeroProgressionRules.configProblems(HeroProgressionConfig) do
+		Log.warn(SCOPE, `HeroProgressionConfig invalide : {problem}`)
+	end
 	for _, problem in problems do
 		Log.warn(SCOPE, `Config invalide : {problem}`)
 	end
@@ -365,7 +460,7 @@ function HeroService:Start()
 	get.Name = "GetHeroes"
 	get.OnServerInvoke = function(player: Player): any
 		local data = DataService:GetData(player)
-		return if data then HeroRules.view(data) else nil
+		return if data then HeroRules.view(data, PROGRESSION) else nil
 	end
 	get.Parent = remotes
 	local edit = Instance.new("RemoteFunction")
@@ -377,7 +472,7 @@ function HeroService:Start()
 		local ok, reason = self:HotbarAction(player, action, first, second)
 		if ok then push(player) end
 		local data = DataService:GetData(player)
-		return ok, reason, if data then HeroRules.view(data) else nil
+		return ok, reason, if data then HeroRules.view(data, PROGRESSION) else nil
 	end
 	edit.Parent = remotes
 	-- Seul l'Id de bannière est lu (validé) : HeroId, rareté, coût et résultat sont décidés par le serveur.

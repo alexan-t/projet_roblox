@@ -648,6 +648,7 @@ local function showResult(event: { [string]: any }, silent: boolean)
 			Result = event.Result,
 			FirstClear = event.FirstClear,
 			Rewards = rewards,
+			Heroes = if typeof(event.HeroProgression) == "table" then event.HeroProgression else nil, -- XP (#68)
 			Silent = silent, -- l'annonce « VICTOIRE ! » a déjà joué le son
 		}, function()
 			ScreenState.close("Reward")

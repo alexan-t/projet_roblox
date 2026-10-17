@@ -1,4 +1,4 @@
-param([string]$LuauPath = 'luau', [ValidateSet('all', 'rules', 'migrations', 'summon')][string]$Suite = 'all')
+param([string]$LuauPath = 'luau', [ValidateSet('all', 'rules', 'migrations', 'summon', 'progression')][string]$Suite = 'all')
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -21,6 +21,8 @@ $runner = "local HeroRules = $(Module 'src/server/Heroes/HeroRules.lua')`n" +
 	"    CombatConfig = $(Module 'src/server/Config/CombatConfig.lua'),`n" +
 	"    SummonConfig = $(Module 'src/server/Config/SummonConfig.lua'),`n" +
 	"    Migrations = $(Module 'src/server/Data/Migrations.lua'),`n" +
+	"    HeroProgressionConfig = $(Module 'src/server/Config/HeroProgressionConfig.lua'),`n" +
+	"    HeroProgressionRules = $(Module 'src/server/Heroes/HeroProgressionRules.lua'),`n" +
 	"}`n" +
 	"local function createService(env)`n    local game, script, require, Instance, Random, Vector3, task = env.game, env.script, env.require, env.Instance, env.Random, env.Vector3, env.task`n$(Source 'src/server/Services/HeroService.lua')`nend`n" +
 	"local suite = '$Suite'`n" +
@@ -28,6 +30,7 @@ $runner = "local HeroRules = $(Module 'src/server/Heroes/HeroRules.lua')`n" +
 	"if suite == 'all' or suite == 'rules' then table.insert(results, { pcall($(Module 'src/server/Tests/HeroRules.spec.lua'), HeroRules, modules.HeroConfig, modules.CombatConfig) }) end`n" +
 	"if suite == 'all' or suite == 'migrations' then table.insert(results, { pcall($(Module 'src/server/Tests/Migrations.spec.lua'), modules.Migrations, HeroRules, modules.HeroConfig.HotbarSize) }) end`n" +
 	"if suite == 'all' or suite == 'summon' then table.insert(results, { pcall($(Module 'src/server/Tests/HeroService.spec.lua'), createService, modules) }) end`n" +
+	"if suite == 'all' or suite == 'progression' then table.insert(results, { pcall($(Module 'src/server/Tests/HeroProgression.spec.lua'), modules) }) end`n" +
 	"for _, r in results do if not r[1] then error(r[2]) end end`n"
 $runnerPath = Join-Path $testBuild "hero-tests-$Suite.luau"
 [System.IO.File]::WriteAllText($runnerPath, $runner, [System.Text.UTF8Encoding]::new($false))
