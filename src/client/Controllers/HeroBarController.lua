@@ -8,6 +8,9 @@
 -- Style : design system (UITheme via UIKit) ; légère, transparente, la map reste visible.
 -- Tutoriel : le raccourci du héros à prendre (ArenaStore.guide.hotbar) s'entoure d'une lueur dorée qui
 -- respire, jusqu'à ce que le héros soit en main ou posé.
+-- Niveaux (#68) : « Nv. n » discret sur chaque raccourci et chaque carte (par exemplaire : deux doublons
+-- peuvent avoir des niveaux différents) ; la carte choisie montre son XP (« 40 / 150 XP » et une barre).
+-- Valeurs reçues du serveur (HeroesChanged), jamais calculées ici.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -42,9 +45,9 @@ local KEYS = {
 }
 
 -- portrait : vrai modèle du héros (UIKit.portrait) ; à défaut, monogramme provisoire.
-type SlotUI = { frame: TextButton, stroke: UIStroke, icon: TextLabel, placed: Frame, offset: number,
+type SlotUI = { frame: TextButton, stroke: UIStroke, icon: TextLabel, placed: Frame, offset: number, level: TextLabel,
 	portrait: ViewportFrame?, portraitHero: string?, guide: { frame: Frame, tween: Tween }? }
-type CardUI = { frame: TextButton, stroke: UIStroke, placed: Frame, shortcut: TextLabel, portrait: boolean }
+type CardUI = { frame: TextButton, stroke: UIStroke, placed: Frame, shortcut: TextLabel, portrait: boolean, level: TextLabel, xp: UIKit.Bar }
 
 -- Onglets de la sacoche. Équipement et Ressources n'ont pas encore de données.
 local TABS = {
@@ -122,11 +125,19 @@ local function buildHotbar(screen: ScreenGui)
 		placed.Parent = frame
 		UIKit.corner(placed, UITheme.Radius.Pill)
 		UIKit.stroke(placed, UITheme.Stroke.Thin)
+		-- niveau de l'exemplaire, discret en bas à droite (au-dessus du portrait)
+		local level = UIKit.text(frame, "", UITheme.Typography.Size.Caption)
+		level.Name = "Niveau"
+		level.AnchorPoint = Vector2.new(1, 1)
+		level.Position = UDim2.new(1, -4, 1, -2)
+		level.Size = UDim2.fromOffset(40, 16)
+		level.TextXAlignment = Enum.TextXAlignment.Right
+		level.ZIndex = 3
 		frame.Activated:Connect(function()
 			if not Drag.suppressed() then selectSlot(index) end
 		end)
 		Drag.bind(frame, function() return { slot = index, id = ArenaStore.hotbar[index] } end)
-		slots[index] = { frame = frame, stroke = stroke, icon = icon, placed = placed, offset = x }
+		slots[index] = { frame = frame, stroke = stroke, icon = icon, placed = placed, offset = x, level = level }
 	end
 end
 
@@ -196,6 +207,8 @@ local function renderHotbar()
 		slot.stroke.Thickness = if selected then UITheme.Stroke.Thick else UITheme.Stroke.Regular
 		slot.frame.Position = UDim2.fromOffset(slot.offset, if selected then S.M - 8 else S.M)
 		slot.placed.Visible = info ~= nil and placed[id] == true
+		slot.level.Text = if hero then `Nv. {hero.Level}` else ""
+		slot.level.TextTransparency = if locked then T.Disabled else 0
 		setGuided(slot, id ~= "" and id == ArenaStore.guide.hotbar and not held and not locked and not placed[id])
 	end
 end
@@ -412,8 +425,22 @@ local function card(hero: ArenaStore.HeroView): CardUI
 	local shortcut = UIKit.text(frame, "", 13)
 	shortcut.Position = UDim2.new(0, 0, 1, -18)
 	shortcut.Size = UDim2.new(1, 0, 0, 18)
+	-- niveau de CET exemplaire (coin haut gauche de l'illustration)
+	local level = UIKit.text(art, "", UITheme.Typography.Size.Caption, { Align = Enum.TextXAlignment.Left })
+	level.Name = "Niveau"
+	level.Position = UDim2.fromOffset(4, 2)
+	level.Size = UDim2.new(1, -8, 0, 16)
+	level.ZIndex = 3
+	-- XP (carte choisie seulement) : petite barre au pied de l'illustration
+	local xp = UIKit.bar(art, { Color = C.Progress, Size = UDim2.new(1, -8, 0, 6) })
+	xp.Frame.Name = "XP"
+	xp.Frame.AnchorPoint = Vector2.new(0.5, 1)
+	xp.Frame.Position = UDim2.new(0.5, 0, 1, -3)
+	xp.Frame.ZIndex = 3
+	xp.Fill.ZIndex = 4
+	xp.Frame.Visible = false
 	Drag.bind(frame, function() return { id = hero.Id } end)
-	local entry = { frame = frame, stroke = stroke, placed = placed, shortcut = shortcut, portrait = portrait ~= nil }
+	local entry = { frame = frame, stroke = stroke, placed = placed, shortcut = shortcut, portrait = portrait ~= nil, level = level, xp = xp }
 	cards[hero.Id] = entry
 	return entry
 end
@@ -439,7 +466,18 @@ local function renderBag()
 		entry.stroke.Thickness = if selected then UITheme.Stroke.Thick else UITheme.Stroke.Regular
 		entry.placed.Visible = placed[id] == true
 		local slot = table.find(ArenaStore.hotbar, id)
-		entry.shortcut.Text = if slot then `Raccourci {slot % 10}` else "Collection"
+		entry.level.Text = `Nv. {hero.Level}`
+		local need = hero.XPToNext or 0
+		local maxed = hero.MaxLevel ~= nil and hero.Level >= hero.MaxLevel
+		entry.xp.Frame.Visible = selected and (need > 0 or maxed)
+		entry.xp.Set(if maxed then 1 elseif need > 0 then (hero.XP or 0) / need else 0)
+		if selected and maxed then
+			entry.shortcut.Text = "Niveau max"
+		elseif selected and need > 0 then
+			entry.shortcut.Text = `{hero.XP or 0} / {need} XP`
+		else
+			entry.shortcut.Text = if slot then `Raccourci {slot % 10}` else "Collection"
+		end
 	end
 	ui.place.setEnabled(chosen ~= nil and not ArenaStore.inCombat())
 	local heroes = currentTab == "Heroes"
