@@ -19,7 +19,9 @@ Le tirage (quel héros, quelle rareté, doublon ou non) relève de HeroService (
    - au centre, la bannière choisie : nom, accroche, 3 héros mis en avant en cartes 3D (vrais
      modèles), avec le contour et le badge de leur rareté ;
    - en bas, « Tickets : n » (`Remotes.GetSummonState`), le coût, le bouton **Taux** (chances par
-     rareté, en deux colonnes) et le bouton principal **Invoquer**. Sans ticket, « Invoquer » est
+     rareté, en deux colonnes ; chaque ligne commence par la **pastille sans texte** de la rareté
+     — fond de sa couleur et son repère de forme, `RarityStyle.chip` — et le bouton principal
+     **Invoquer**. Sans ticket, le bouton est
      désactivé et une aide indique d'en gagner en combattant.
 3. **Invoquer** : `RequestSummon(bannerId)`. En cas de refus, un message bref s'affiche. Sinon :
    - **cinématique**, locale au joueur :
@@ -29,7 +31,7 @@ Le tirage (quel héros, quelle rareté, doublon ou non) relève de HeroService (
        couleur de la rareté, 7 studs devant le voile) et le cadre en pied, face à lui ;
    - l'effet se joue selon la rareté ;
    - la carte du héros apparaît (`SummonView.Reveal` : rayons et contour de la couleur de la rareté,
-     nom, rareté, « Nouveau »).
+     nom, rareté (libellé + pastille de son repère de forme), « Nouveau »).
 4. **Continuer** :
    - le héros et sa place disparaissent ;
    - la caméra, le personnage et le HUD reviennent ;
@@ -51,7 +53,9 @@ le regarder (`HOLD_ON_HERO`, 0,7 s + 0,1 s par rang de rareté). Il n'y a pas de
 calquée sur la durée de l'effet.
 
 **Contenu de la carte** : son nom, son vrai modèle, l'icône de son profil de combat (`ClassId` =
-`HeroConfig.CombatProfile`), sa rareté et le badge « Nouveau ».
+`HeroConfig.CombatProfile`), sa rareté (libellé et pastille de son repère de forme, en bas à droite)
+et le badge « Nouveau ». La forme, pas seulement la couleur, dit laquelle des dix raretés est sortie
+(`docs/UI_DESIGN_SYSTEM.md` § 2) : Épique et Maudit, Calamité et `Error` restent distincts.
 
 **Après un ticket gagné**, au « Continuer » de l'écran de fin : le portail du plot s'illumine
 quelques secondes (Highlight doré) et une annonce « Nouveau ticket ! Invoque un héros au portail »

@@ -120,6 +120,7 @@ test('UI_DESIGN_SYSTEM § 2 table matches RarityMark and the colors', () => {
 	const rows = new Map(
 		[...doc.matchAll(/^\| ([^|]+?) \| ([^|]+?) \| (\d) ([^|]+?) \|$/gm)].map((m) => [m[1], { color: m[2], count: Number(m[3]), word: m[4] }]),
 	);
+	assert(rows.size === tiers.length, `${rows.size} rarity rows in § 2, ${tiers.length} tiers`);
 	for (const t of tiers) {
 		const row = rows.get(t.name);
 		assert(row, `no row for ${t.name}`);
@@ -170,6 +171,174 @@ test('SummonView uses the mark in the rates panel, featured cards and reveal', (
 	assert(view.includes('RarityStyle.edgeBadge('), 'featured card has no rarity badge');
 	const chips = view.match(/RarityStyle\.chip\(/g)?.length ?? 0;
 	assert(chips >= 2, `expected a chip in the rates panel and the reveal, found ${chips}`);
+});
+
+// --- Formes réellement dessinées ---------------------------------------------------------------
+// Le nom d'une forme ne suffit pas : deux clés différentes pourraient dessiner le même objet.
+// Chaque ligne du bloc SHAPES (`Nom = { { W, H, Rotation?, Round?, Hole? }, … },`) est lue telle
+// quelle ; les pièces forment la signature visuelle de la forme.
+const SHAPE_KEYS = ['W', 'H', 'Rotation', 'Round', 'Hole'];
+function parsePieces(source) {
+	const out = new Map();
+	for (const line of (block(source, 'SHAPES') ?? '').split('\n')) {
+		const row = line.match(/^\t(\w+) = \{ (.*) \},?$/);
+		if (!row) continue;
+		const pieces = [...row[2].matchAll(/\{ ([^{}]*) \}/g)].map((p) =>
+			Object.fromEntries([...p[1].matchAll(/(\w+) = (-?[\w.]+)/g)].map((kv) => [kv[1], Number.isNaN(Number(kv[2])) ? kv[2] : Number(kv[2])])),
+		);
+		out.set(row[1], pieces);
+	}
+	return out;
+}
+const pieces = parsePieces(style);
+const signature = (shape) =>
+	JSON.stringify(
+		(shape ?? []).map((p) => [p.W, p.H, p.Rotation ?? 0, p.Round ?? false, p.Hole ?? false]),
+	);
+
+test('every mark shape is drawn with 1 to 3 frames and known piece fields', () => {
+	assert(pieces.size === shapes.size, `${pieces.size} shapes parsed, ${shapes.size} found`);
+	for (const [name, shape] of pieces) {
+		assert(shape.length >= 1 && shape.length <= 3, `${name}: ${shape.length} pieces`);
+		for (const p of shape) {
+			assert(typeof p.W === 'number' && p.W > 0 && p.W <= 1, `${name}: W ${p.W}`);
+			assert(typeof p.H === 'number' && p.H > 0 && p.H <= 1, `${name}: H ${p.H}`);
+			for (const key of Object.keys(p)) assert(SHAPE_KEYS.includes(key), `${name}: unknown field ${key}`);
+			if ('Rotation' in p) assert(typeof p.Rotation === 'number', `${name}: rotation ${p.Rotation}`);
+		}
+	}
+	for (const [id, mark] of Object.entries(marks)) assert(pieces.has(mark.shape), `${id}: ${mark.shape} not parsed`);
+});
+
+test('the six shapes draw different silhouettes (Épique ≠ Maudit)', () => {
+	const seen = new Map();
+	for (const [name, shape] of pieces) {
+		const key = signature(shape);
+		assert(!seen.has(key), `${name} and ${seen.get(key)} are drawn identically`);
+		seen.set(key, name);
+	}
+	// Un anneau sans creux serait un rond, un éclat ou une étoile une seule barre.
+	assert(pieces.get('Ring')?.some((p) => p.Hole), 'Ring has no hole');
+	assert(pieces.get('Star')?.length >= 2, 'Star is a single bar');
+	assert(pieces.get('Burst')?.length >= 2, 'Burst is a single bar');
+	assert(pieces.get('Cross')?.length === 2, 'Cross is not an X');
+});
+
+test('the mark is drawn with frames, never a glyph or an emoji', () => {
+	const markFn = style.match(/function RarityStyle\.mark\([\s\S]*?\nend\n/)?.[0] ?? '';
+	assert(markFn.includes('Instance.new("Frame")'), 'RarityStyle.mark builds no Frame');
+	assert(!/TextLabel|TextBox|ImageLabel|ImageButton|\bText =/.test(markFn), 'RarityStyle.mark uses a glyph or an image');
+	assert(!/[\u{1F000}-\u{1FAFF}]/u.test(theme + style), 'emoji in UITheme or RarityStyle');
+	// Aucune vue ne dessine sa propre forme : toutes passent par RarityStyle.
+	for (const path of clientFiles) {
+		if (path === 'src/client/UI/RarityStyle.lua') continue;
+		assert(!read(path).includes('UITheme.RarityMark'), `${path} reads UITheme.RarityMark directly`);
+	}
+});
+
+test('RarityStyle.chip has one width for every rarity, and an unknown rarity falls back', () => {
+	const chip = style.match(/function RarityStyle\.chip\([\s\S]*?\nend\n/)?.[0] ?? '';
+	assert(chip.includes('markWidth(MAX_COUNT'), 'chip width is not the common one');
+	assert(/MAX_COUNT = math\.max\(MAX_COUNT, spec\.Count\)/.test(style), 'MAX_COUNT is not read from RarityMark');
+	assert(
+		/\(UITheme\.RarityMark :: any\)\[id or ""\] or UITheme\.RarityMark\.Commun/.test(style),
+		'no fallback to the first tier for an unknown rarity',
+	);
+});
+
+// --- Pourquoi le repère : les paires que la revue signale sont proches en teinte ------------------
+const semantic = Object.fromEntries(
+	[...(block(theme, 'Colors') ?? '').matchAll(/^\t(\w+) = hex\("(#[0-9A-Fa-f]{6})"\)/gm)].map((m) => [m[1], m[2].toUpperCase()]),
+);
+function hueOf(hex) {
+	const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+	const max = Math.max(r, g, b);
+	const min = Math.min(r, g, b);
+	if (max === min) return 0;
+	const d = max - min;
+	const h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+	return h * 60;
+}
+const hueGap = (a, b) => {
+	const gap = Math.abs(hueOf(a) - hueOf(b)) % 360;
+	return gap > 180 ? 360 - gap : gap;
+};
+
+test('the pairs named by the review differ by shape, not only by colour', () => {
+	const pairs = [
+		['Épique', colors.Epique, marks.Epique.shape, 'Maudit', colors.Maudit, marks.Maudit.shape],
+		['Calamité', colors.Calamite, marks.Calamite.shape, 'Error', semantic.Error, null],
+	];
+	for (const [nameA, colorA, shapeA, nameB, colorB, shapeB] of pairs) {
+		assert(colorA && colorB, `missing colour for ${nameA} / ${nameB}`);
+		const gap = hueGap(colorA, colorB);
+		// Règle générale : deux couleurs de même teinte exigent deux formes différentes.
+		assert(gap >= 60 || shapeA !== shapeB, `${nameA}/${nameB}: ${gap.toFixed(0)}° of hue and the same shape`);
+	}
+	assert(marks.Epique.shape !== marks.Maudit.shape, 'Épique and Maudit share a shape');
+	assert(hueGap(colors.Epique, colors.Maudit) < 30, 'the review pair Épique/Maudit is no longer close in hue');
+	assert(semantic.Error !== undefined && marks.Error === undefined, 'Error must carry no rarity mark');
+});
+
+// --- Doc et câblage des deux suites ------------------------------------------------------------
+const section = (title, next) => doc.match(new RegExp(`## ${title}([\\s\\S]*?)## ${next}`))?.[1] ?? '';
+
+test('UI_DESIGN_SYSTEM § 9 keeps the RarityMark token', () => {
+	const tokens = section('9\\. Tokens Roblox', '10\\.');
+	assert(tokens.length > 0, '§ 9 not found');
+	assert(/RarityMark = \{ Commun = \{ Shape = "\w+", Count = 1 \}/.test(tokens), 'RarityMark missing from the token list');
+});
+
+test('UI_DESIGN_SYSTEM § 11 keeps the colour-alone rule and the grey-scale check', () => {
+	const control = section('11\\. Contrôle avant de livrer une interface', '12\\.');
+	assert(control.length > 0, '§ 11 not found');
+	assert(control.includes('couleur seule'), 'no colour-alone rule');
+	assert(control.includes('repère de forme'), 'no shape-mark rule');
+	assert(/gris|daltonien/.test(control), 'no grey-scale / colour-blind check');
+	assert(/Épique \/ Maudit/.test(control) && /Calamité/.test(control), 'the two confusable pairs are not named');
+});
+
+test('docs/SUMMON.md says where the mark is shown', () => {
+	const summon = read('docs/SUMMON.md');
+	assert(/RarityStyle|UITheme\.RarityMark/.test(summon), 'no RarityStyle / RarityMark reference');
+	assert(/repère de\s+forme/.test(summon), 'no shape mark');
+	assert(/RarityStyle\.chip|pastille sans texte/.test(summon), 'no chip');
+});
+
+test('the Luau spec and its runner stay wired together', () => {
+	const spec = read('src/server/Tests/RarityMark.spec.lua');
+	const runner = read('tools/test-ui-theme.ps1');
+	assert(runner.includes('src/server/Tests/RarityMark.spec.lua'), 'runner does not load the spec');
+	assert(runner.includes('docs/UI_DESIGN_SYSTEM.md'), 'runner gives no doc text');
+	assert(runner.includes('src/client/UI/RarityStyle.lua'), 'runner gives no RarityStyle text');
+	for (const rule of [
+		'every RarityConfig tier has a mark',
+		'every (shape, count) pair is unique',
+		'a shape covers consecutive tiers',
+		'marks are frozen',
+		'UI_DESIGN_SYSTEM § 2 table matches RarityMark',
+	]) {
+		assert(spec.includes(rule), `Luau spec no longer checks "${rule}"`);
+	}
+	// Le spec Luau lit les formes dans la source de RarityStyle (motifs Lua) : mêmes entrées, même résultat.
+	const luauBlock = style.match(/local SHAPES[^\n]*\n([\s\S]*?)\n}/)?.[1] ?? '';
+	const luauKeys = luauBlock
+		.split('\n')
+		.map((line) => line.match(/^\s*(\w+)\s*=\s*\{/)?.[1])
+		.filter(Boolean);
+	assert(new Set(luauKeys).size === shapes.size, `the Luau spec would read ${luauKeys.length} shapes, ${shapes.size} expected`);
+	// Le motif de doc du spec Luau doit encore trouver les dix lignes du tableau du § 2.
+	const table = doc.match(/\| Rareté \| Couleur \| Repère[^\n]*\n\|[^\n]*\n((?:\|[^\n]*\n)+)/)?.[1] ?? '';
+	const found = new Map();
+	for (const line of table.split('\n')) {
+		const row = line.match(/^\| ([^|]*?) \|(.*)\| (\d [^|]*?) \|$/); // même motif que le spec
+		if (row) found.set(row[1], row[3].trim());
+	}
+	for (const t of tiers) {
+		const cell = found.get(t.name);
+		assert(cell, `Luau spec finds no doc row for ${t.name}`);
+		assert(Number(cell[0]) === marks[t.id].count, `${t.name}: Luau would read "${cell}"`);
+	}
 });
 
 console.log(`RarityMark (node): ${passed} passed, ${failed} failed`);
