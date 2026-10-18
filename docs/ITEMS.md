@@ -9,7 +9,7 @@ une icône.
 | | État |
 | --- | --- |
 | Catalogue défini (100 items, `ItemConfig`) | **OUI** |
-| Icônes 2D livrées (AssetId publié, vitrine remplie) | **PARTIEL : 58 / 100** (`item_035` à `item_044`, `item_053` à `item_100`) ; `item_001` à `item_034` et `item_045` à `item_052` : `Icon = nil` |
+| Icônes 2D livrées (AssetId publié, vitrine remplie) | **OUI : 100 / 100** : 58 du partenaire (PR #74, `item_035` à `item_044`, `item_053` à `item_100`) et 42 produites ici (`item_001` à `item_034`, `item_045` à `item_052`, PNG dans `assets/icons/items/`) |
 | Stockage dans `PlayerData` | **NON** |
 | Obtention (récompenses, butin) | **NON** |
 | Équipement des héros, statistiques | **NON** |
@@ -23,9 +23,10 @@ Catalogue défini ≠ asset 2D livré ≠ système de jeu implémenté.
   texte `Nom` des cartes). Ce snapshot est **historique** : la référence des assets est la vitrine
   de la **DEV Studio actuelle**, contrôlée par `tools/studio-items-vitrine.luau` (§ 6).
 - **Catalogue de production** : `automation/catalogues/items.json`, au format des tâches du
-  pipeline (`automation/TASK_FORMAT.md`, `"type": "item"`), une tâche par icône **restant à
-  produire** : les 42 items hors de la livraison du partenaire (PR #74, 58 icônes `item_035`–`044`
-  et `item_053`–`100`), soit `item_001`–`034` et `item_045`–`052`. Source de vérité pour l'idée de
+  pipeline (`automation/TASK_FORMAT.md`, `"type": "item"`), une tâche par icône hors de la
+  livraison du partenaire (PR #74, 58 icônes `item_035`–`044` et `item_053`–`100`), soit
+  `item_001`–`034` et `item_045`–`052`. Les 42 sont `done` : PNG dans `screenshots`, review PASS
+  dans `automation/reviews/<item_id>_iteration_00.json`, AssetId dans `notes`. Source de vérité pour l'idée de
   l'icône (`icon_hook`) ; nom et emplacement (`slot_type`) recopiés de `ItemConfig`, rareté seulement
   dans `target_studio_slot`. Ce fichier n'est pas la file `automation/tasks.json` : on y copie les
   tâches par lots.
@@ -132,7 +133,14 @@ Règles du design system (§ 7), résumées :
   principale à rendre lisible. Sans tâche, pas de production.
 - Interdits : emoji, icônes plates génériques, traits fins, style futuriste, photoréalisme.
 
-Nommage du fichier source : `<item_id>.png` (ex. `item_037.png`).
+Nommage du fichier source : `<item_id>.png` (ex. `item_037.png`), versionné dans
+`assets/icons/items/`. `tools/icon-render.mjs` en produit le PNG à partir de deux captures Studio
+de l'objet (fond transparent, cadrage à 80 %, contour `Ink` cuit) et dessine la planche de contrôle
+à 128 et 32 px (`sheet`) ; l'objet 3D se construit dans `Workspace.AtelierIcones`, vidé après le lot.
+
+Les images publiées n'apparaissent que dans les expériences autorisées par leur propriétaire : les
+58 icônes du partenaire (compte `nxtoma`) restent vides dans une place d'un autre compte tant
+qu'il ne les a pas partagées avec cette expérience (Creator Hub → l'asset → Permissions).
 
 ## 5. Contrôle avant de livrer un item
 
