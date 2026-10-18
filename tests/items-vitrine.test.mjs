@@ -8,7 +8,8 @@
 //     INST, PROP, PRNT), d'où le catalogue a été relevé. Ne prouve pas l'état de la DEV Studio
 //     actuelle : celle-ci se contrôle avec tools/studio-items-vitrine.luau.
 // Complète src/server/Tests/ItemConfig.spec.lua (tools/test-items.ps1), qui demande luau.exe.
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
+import { inflateSync } from 'node:zlib';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -392,6 +393,89 @@ test('items.json: icon hooks stay in the DA (no rarity, emoji, futuristic or chr
 		const hit = task.icon_hook.match(banned);
 		assert(!hit, `${task.id}: « ${hit?.[0]} » dans icon_hook`);
 		assert(!emoji.test(task.icon_hook), `${task.id}: emoji`);
+	}
+});
+
+// --- Livraison des icônes (100/100) : ItemConfig, assets/icons/items/, automation/reviews/ ---
+
+test('ItemConfig: all 100 icons delivered, every AssetId distinct (no PNG reused for two items)', () => {
+	const missing = items.filter((info) => info.icon === undefined).map((info) => info.id);
+	assert(missing.length === 0, `${missing.length} sans icône : ${missing.slice(0, 5).join(', ')}`);
+	const owner = new Map();
+	for (const info of items) {
+		assert(!owner.has(info.icon), `${info.id} : même icône que ${owner.get(info.icon)}`);
+		owner.set(info.icon, info.id);
+	}
+});
+
+// Décode un PNG RGBA 8 bits non entrelacé (zlib + filtres de ligne) pour lire les pixels des coins.
+function decodeRgba(file) {
+	assert(file.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])), 'signature PNG');
+	const width = file.readUInt32BE(16);
+	const height = file.readUInt32BE(20);
+	assert(file.toString('latin1', 12, 16) === 'IHDR', 'IHDR absent');
+	assert(file[24] === 8 && file[25] === 6 && file[28] === 0, `profondeur ${file[24]}, type ${file[25]}, entrelacement ${file[28]} (RGBA 8 bits attendu)`);
+	const idat = [];
+	for (let p = 8; p < file.length; ) {
+		const len = file.readUInt32BE(p);
+		const type = file.toString('latin1', p + 4, p + 8);
+		if (type === 'IDAT') idat.push(file.subarray(p + 8, p + 8 + len));
+		if (type === 'IEND') break;
+		p += 12 + len;
+	}
+	const raw = inflateSync(Buffer.concat(idat));
+	const stride = width * 4;
+	const pixels = Buffer.alloc(stride * height);
+	for (let y = 0; y < height; y++) {
+		const filter = raw[y * (stride + 1)];
+		const line = raw.subarray(y * (stride + 1) + 1, (y + 1) * (stride + 1));
+		for (let x = 0; x < stride; x++) {
+			const a = x >= 4 ? pixels[y * stride + x - 4] : 0;
+			const b = y > 0 ? pixels[(y - 1) * stride + x] : 0;
+			const c = x >= 4 && y > 0 ? pixels[(y - 1) * stride + x - 4] : 0;
+			let predictor = 0;
+			if (filter === 1) predictor = a;
+			else if (filter === 2) predictor = b;
+			else if (filter === 3) predictor = (a + b) >> 1;
+			else if (filter === 4) {
+				const pa = Math.abs(b - c);
+				const pb = Math.abs(a - c);
+				const pc = Math.abs(a + b - 2 * c);
+				predictor = pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
+			} else assert(filter === 0, `filtre ${filter}`);
+			pixels[y * stride + x] = (line[x] + predictor) & 0xff;
+		}
+	}
+	return { width, height, alpha: (x, y) => pixels[y * stride + x * 4 + 3] };
+}
+
+test('assets/icons/items: exactly one PNG per items.json task, RGBA 512 x 512 with transparent corners', () => {
+	const pngs = readdirSync(join(repoRoot, 'assets/icons/items')).sort();
+	const expected = catalogue.queue.map((task) => `${task.id}.png`).sort();
+	assert(JSON.stringify(pngs) === JSON.stringify(expected), `${pngs.length} fichiers, ${expected.length} attendus`);
+	for (const name of pngs) {
+		const image = decodeRgba(read(`assets/icons/items/${name}`));
+		assert(image.width === 512 && image.height === 512, `${name} : ${image.width} x ${image.height}`);
+		const corners = [image.alpha(0, 0), image.alpha(511, 0), image.alpha(0, 511), image.alpha(511, 511)];
+		assert(corners.every((alpha) => alpha === 0), `${name} : coins non transparents (${corners.join(', ')})`);
+	}
+});
+
+test('automation/reviews: item reviews follow review.schema.json and cite the PNG and the delivered AssetId', () => {
+	const schema = JSON.parse(read('automation/review.schema.json').toString('utf8'));
+	const byId = new Map(items.map((info) => [info.id, info]));
+	for (const task of catalogue.queue.filter((t) => t.status === 'done')) {
+		const review = JSON.parse(read(task.latest_review).toString('utf8'));
+		for (const key of schema.required) assert(key in review, `${task.id}: champ ${key} absent`);
+		for (const key of Object.keys(review)) assert(key in schema.properties, `${task.id}: champ ${key} hors schéma`);
+		assert(Number.isInteger(review.iteration) && review.iteration === task.iteration, `${task.id}: iteration`);
+		assert(schema.properties.confidence.enum.includes(review.confidence), `${task.id}: confidence ${review.confidence}`);
+		for (const key of ['visible_issues', 'required_changes', 'references_checked']) {
+			assert(Array.isArray(review[key]) && review[key].every((v) => typeof v === 'string'), `${task.id}: ${key}`);
+		}
+		assert(review.required_changes.length === 0, `${task.id}: PASS avec des corrections demandées`);
+		assert(review.references_checked.includes(`assets/icons/items/${task.id}.png`), `${task.id}: PNG non cité`);
+		assert(review.summary.includes(byId.get(task.id).icon), `${task.id}: résumé sans l'AssetId de ItemConfig`);
 	}
 });
 
