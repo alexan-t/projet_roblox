@@ -1,5 +1,11 @@
 # Icônes des ressources — bilan Studio du 18 octobre 2026
 
+Revue de reprise : [RESOURCE_ICONS_RESTART.md](RESOURCE_ICONS_RESTART.md).
+Les 24 briefs ont été relus et les six captures refusées de la troisième passe
+examinées ; des constructions correctives et critères de contrôle sont proposés
+pour chaque ressource. Les états `human_review` et les compteurs restent inchangés.
+Aucune nouvelle génération, publication ou validation PASS pendant cette revue.
+
 Place : **test 3**, placeId `120616399792561`. Aucun push ni changement de branche.
 La mission reste **incomplète : 36/60 icônes renseignées**. Le bilan de la dernière reprise
 figure ci-dessous ; les sections suivantes conservent les preuves de la reprise précédente.
