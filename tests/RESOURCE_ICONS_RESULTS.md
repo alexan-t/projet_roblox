@@ -22,19 +22,22 @@ Icônes : 4 tests réussis, 1 échoué.
   Le décodeur vérifie désormais aussi le CRC de chaque chunk et les en-têtes tronqués.
 - Acceptation des 60 ressources : FIX, 24 icônes manquantes. Ce test reste bloquant.
 
-`./tools/test-resources.ps1` : exécution bloquée, commande `luau` introuvable.
-Les tests Luau n'ont donc pas été exécutés pendant cette phase ; les résultats
-Studio de la phase précédente ne sont pas comptabilisés comme une nouvelle exécution.
+`./tools/test-resources.ps1 -LuauPath "$PWD/build/luau-cli/luau.exe"` :
+code de sortie 0, **5 contrôles réussis, 0 échoué**. Interpréteur officiel Luau
+0.743 téléchargé depuis la release `luau-lang/luau` dans `build/luau-cli/`
+(dossier ignoré par Git). Catalogue complet, familles, absence de rareté,
+noms/icônes et gel du catalogue vérifiés. Le blocage initial dû à l'absence
+de `luau` dans PATH est résolu avec ce chemin explicite.
 
 `roblox-studio.list_roblox_studios` : liste vide. L'audit en lecture seule
 `tests/resource-icons.studio.luau` ne peut pas être relancé ; état actuel des cartes,
 égalité Image/AssetId/Icon, atelier vide et caméra non revérifiés.
 Aucune modification de scène ni publication effectuée pendant cette phase.
 
-Reprise du 18 octobre : suite Node relancée après ajout des deux assertions de
-troncature, résultat inchangé (11 entrées réussies, 1 échouée). Nouvelle tentative
-de `./tools/test-resources.ps1` : `luau` toujours introuvable. Nouvelle interrogation
-de `roblox-studio.list_roblox_studios` : `studios: []`. L'audit Studio reste non exécuté.
+Dernière reprise du 18 octobre : suite Node relancée, résultat inchangé
+(11 entrées réussies, 1 échouée). Tests Luau exécutés avec succès avec le chemin
+explicite ci-dessus. Nouvelle interrogation de `roblox-studio.list_roblox_studios` :
+`studios: []`. L'audit Studio reste non exécuté.
 
 ## Travail restant
 
@@ -48,8 +51,7 @@ puis renseigner leur carte et leur Icon :
 `resource_057`, `resource_058`, `resource_059`, `resource_060`.
 
 Reconnecter la place test 3 au serveur Studio et lancer l'audit avec ResourceConfig
-de Git évalué en mémoire, sans créer de script. Relancer les tests Luau avec un
-interpréteur disponible (`tools/test-resources.ps1 -LuauPath <chemin>`), puis la
-suite Node après livraison des icônes manquantes. Conserver les contrôles visuels
+de Git évalué en mémoire, sans créer de script. Relancer les suites Node et Luau
+après livraison des icônes manquantes. Conserver les contrôles visuels
 sur captures par famille ; le contrôle de transparence ne garantit pas à lui seul
 la qualité du détourage ou la lisibilité à 32 px.
