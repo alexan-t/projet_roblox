@@ -1,0 +1,25 @@
+{
+  "task_id": "resource_026",
+  "status": "human_review",
+  "stage": "review",
+  "iteration": 3,
+  "max_iterations": 3,
+  "last_completed_step": "third_production_pass_recorded",
+  "next_step": "review_brief_and_previous_failures_before_resuming_production",
+  "studio_target": "Workspace.Bestiaire.Inventaire.Ressources.Panneau.Affichage.Fond.Emplacements.Ressource_026",
+  "latest_review": "docs/RESOURCE_ICONS_QA.md",
+  "evidence": [
+    "automation/screenshots/resources/generation-results.json",
+    "automation/screenshots/resources/generation-retry-2026-10-18.json",
+    "automation/screenshots/resources/generation-third-2026-10-18.json"
+  ],
+  "notes": "Construire exactement trois rivets distincts, tous visibles sans occultation.",
+  "remaining_steps": [
+    "Revue du brief et des essais précédents",
+    "Construction 3D dans Workspace.AtelierIcones",
+    "Capture Studio trois quarts et export PNG transparent 512 × 512",
+    "Publication upload_image et renseignement de la carte réservée",
+    "Report de Icon dans ResourceConfig.lua",
+    "Captures carte et famille, VISUAL_QA PASS, nettoyage et réinitialisation caméra"
+  ]
+}

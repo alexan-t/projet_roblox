@@ -4,6 +4,26 @@ Place : **test 3**, placeId `120616399792561`. Aucun push ni changement de branc
 La mission reste **incomplète : 36/60 icônes renseignées**. Le bilan de la dernière reprise
 figure ci-dessous ; les sections suivantes conservent les preuves de la reprise précédente.
 
+## Contrôle de reprise — états persistants
+
+Contrôle en lecture seule dans Studio « test 3 » : 60 emplacements, 36 images renseignées,
+24 vides, zéro divergence avec Git sur ResourceId, Index, Famille, Nom, Image et AssetId.
+Les 36 PNG présents sont tous en 512 × 512 ; les 13 tests Node du catalogue passent.
+`Workspace.AtelierIcones` est vide. Aucune nouvelle icône ni validation visuelle n'est produite
+par ce contrôle technique ; les verdicts précédents restent ceux des captures référencées.
+
+Les 24 ressources manquantes ont désormais chacune leur fichier
+`automation/state/resource_NNN.json`, à l'état `human_review`, avec les trois passes historiques,
+les preuves et les étapes restantes. Cela applique `TASK_FORMAT.md` : « Si `max_iterations` est
+atteint sans PASS, utiliser `human_review`. Ne jamais boucler indéfiniment. »
+Ces états de reprise sont séparés de `resources.json`, qui reste le catalogue de tâches modèles.
+Une reprise doit lire ces fichiers avant de lancer une nouvelle génération ; le compteur zéro
+des modèles du catalogue n'annule pas les essais réellement effectués.
+
+La prochaine étape est la revue des briefs et des défauts listés ci-dessous, puis une reprise
+de production contrôlée. Aucun nouvel AssetId, script Studio ou changement de scène n'a été
+introduit pendant ce contrôle. Aucun push ni changement de branche.
+
 ## Troisième passe de production — état de référence
 
 Les 28 identifiants restants ont tous été retentés. Quatre nouvelles icônes sont livrées :
