@@ -71,7 +71,7 @@ local TutorialConfig = {
 		},
 		SummonBanners = {
 			Steps = {
-				{ Target = "Summon.Banners", Text = "Choisis une bannière", Seconds = 3 },
+				{ Target = "Summon.Banners", Text = "La bannière active", Seconds = 3 },
 				{ Target = "Summon.Tickets", Text = "Tes tickets", Seconds = 3 },
 				{ Target = "Summon.Invoke", Text = "Invoque !" },
 			},

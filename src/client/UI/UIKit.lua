@@ -240,7 +240,8 @@ function UIKit.screen(name: string, order: number?): ScreenGui
 	fit()
 	local camera = Workspace.CurrentCamera
 	if camera then
-		camera:GetPropertyChangedSignal("ViewportSize"):Connect(fit)
+		local connection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(fit)
+		screen.Destroying:Connect(function() connection:Disconnect() end)
 	end
 	screen.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
 	return screen

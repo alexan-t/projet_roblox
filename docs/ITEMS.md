@@ -9,7 +9,7 @@ une icône.
 | | État |
 | --- | --- |
 | Catalogue défini (100 items, `ItemConfig`) | **OUI** |
-| Icônes 2D livrées (AssetId publié, vitrine remplie) | **NON** : `Icon = nil` partout |
+| Icônes 2D livrées (AssetId publié, vitrine remplie) | **OUI : 100 / 100** : 58 du partenaire (PR #74, `item_035` à `item_044`, `item_053` à `item_100`) et 42 produites ici (`item_001` à `item_034`, `item_045` à `item_052`, PNG dans `assets/icons/items/`) |
 | Stockage dans `PlayerData` | **NON** |
 | Obtention (récompenses, butin) | **NON** |
 | Équipement des héros, statistiques | **NON** |
@@ -21,8 +21,15 @@ Catalogue défini ≠ asset 2D livré ≠ système de jeu implémenté.
   emplacements ont été relevés sur la vitrine `Workspace.Bestiaire.Inventaire` du snapshot
   `studio/sandbox/partner_sandbox_v4.rbxl` (attributs `ItemId`, `Index`, `Rarete`, `SlotType` et
   texte `Nom` des cartes). Ce snapshot est **historique** : la référence des assets est la vitrine
-  de la **DEV Studio actuelle**, contrôlée par `tools/studio-items-vitrine.luau` (§ 6). Les tâches
-  de production des icônes (`"type": "item"`, `automation/TASK_FORMAT.md`) restent à écrire.
+  de la **DEV Studio actuelle**, contrôlée par `tools/studio-items-vitrine.luau` (§ 6).
+- **Catalogue de production** : `automation/catalogues/items.json`, au format des tâches du
+  pipeline (`automation/TASK_FORMAT.md`, `"type": "item"`), une tâche par icône hors de la
+  livraison du partenaire (PR #74, 58 icônes `item_035`–`044` et `item_053`–`100`), soit
+  `item_001`–`034` et `item_045`–`052`. Les 42 sont `done` : PNG dans `screenshots`, review PASS
+  dans `automation/reviews/<item_id>_iteration_00.json`, AssetId dans `notes`. Source de vérité pour l'idée de
+  l'icône (`icon_hook`) ; nom et emplacement (`slot_type`) recopiés de `ItemConfig`, rareté seulement
+  dans `target_studio_slot`. Ce fichier n'est pas la file `automation/tasks.json` : on y copie les
+  tâches par lots.
 - **Catalogue en jeu** : `src/shared/Config/ItemConfig.lua` (partagé serveur et client). Mêmes
   identifiants, noms, raretés (Id de `RarityConfig`) et emplacements que la vitrine, plus l'icône
   livrée (`Icon`, `nil` tant qu'elle n'existe pas). C'est ce module que liront la Sacoche et l'écran
@@ -122,11 +129,18 @@ Règles du design system (§ 7), résumées :
   une couleur dominante + un accent.
 - **Contour `Ink` (`#1F1A17`) cuit dans l'image**, environ 6 % de la taille.
 - Vue de **trois quarts**, **fond transparent**, PNG **512 × 512** (256 minimum).
-- Partir de l'`icon_hook` de la tâche (à écrire avec la tâche, § 1) : c'est l'idée principale à
-  rendre lisible. Sans tâche, pas de production.
+- Partir de l'`icon_hook` de la tâche (`automation/catalogues/items.json`, § 1) : c'est l'idée
+  principale à rendre lisible. Sans tâche, pas de production.
 - Interdits : emoji, icônes plates génériques, traits fins, style futuriste, photoréalisme.
 
-Nommage du fichier source : `<item_id>.png` (ex. `item_037.png`).
+Nommage du fichier source : `<item_id>.png` (ex. `item_037.png`), versionné dans
+`assets/icons/items/`. `tools/icon-render.mjs` en produit le PNG à partir de deux captures Studio
+de l'objet (fond transparent, cadrage à 80 %, contour `Ink` cuit) et dessine la planche de contrôle
+à 128 et 32 px (`sheet`) ; l'objet 3D se construit dans `Workspace.AtelierIcones`, vidé après le lot.
+
+Les images publiées n'apparaissent que dans les expériences autorisées par leur propriétaire : les
+58 icônes du partenaire (compte `nxtoma`) restent vides dans une place d'un autre compte tant
+qu'il ne les a pas partagées avec cette expérience (Creator Hub → l'asset → Permissions).
 
 ## 5. Contrôle avant de livrer un item
 

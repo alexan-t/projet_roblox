@@ -10,6 +10,10 @@ local HeroService = require(script.Parent.HeroService)
 local ZoneService = require(script.Parent.ZoneService)
 local CombatService = require(script.Parent.CombatService)
 local StageConfig = require(script.Parent.Parent.Config.StageConfig)
+local RewardConfig = require(script.Parent.Parent.Config.RewardConfig)
+local EliteConfig = require(script.Parent.Parent.Config.EliteConfig)
+local HeroProgressionConfig = require(script.Parent.Parent.Config.HeroProgressionConfig)
+local StagePreview = require(script.Parent.Parent.Arena.StagePreview)
 local CombatConfig = require(script.Parent.Parent.Config.CombatConfig)
 local ArenaService = {}
 local manager: ArenaPrep.Manager
@@ -79,13 +83,24 @@ local function canCommand(player: Player, c: any): (boolean, string?)
 	return false, why
 end
 
--- Stages proposés au joueur : état serveur (débloqué / verrouillé / terminé) et ennemis agrégés.
+-- Sources de l'aperçu des stages (StagePreview) : vraies configs serveur. Butin : aucune table de loot
+-- tant que #72 (Loot & Inventaire) n'est pas livrée → PotentialDrops absent, section masquée côté UI.
+local PREVIEW_SOURCES = { Rewards = RewardConfig, Progression = HeroProgressionConfig, Elite = EliteConfig }
+
+-- Stages proposés au joueur : état serveur (débloqué / verrouillé / terminé), ennemis agrégés (pancarte)
+-- et aperçu de la fenêtre Expédition (vagues, boss, XP par héros, récompenses de stage, Élite), en
+-- lecture seule : le client n'en déduit aucune économie.
 local function stagesOf(player: Player, mode: string?): { any }
 	local list = {}
 	for _, entry in ZoneService:ListStages(player, mode) do
-		table.insert(list, { Zone = entry.Zone, Stage = entry.Stage, Status = entry.Status, Cleared = entry.Cleared,
-			Waves = if entry.Config then #entry.Config.Waves else nil,
-			Enemies = if entry.Config then ArenaRules.summarize(entry.Config) else {} })
+		local view: any = { Zone = entry.Zone, Stage = entry.Stage, Mode = entry.Mode, Status = entry.Status, Cleared = entry.Cleared,
+			Enemies = if entry.Config then ArenaRules.summarize(entry.Config) else {} }
+		if entry.Config then
+			for key, value in StagePreview.build(entry.Config, entry.Zone, entry.Stage, entry.Mode, PREVIEW_SOURCES) do
+				view[key] = value
+			end
+		end
+		table.insert(list, view)
 	end
 	return list
 end

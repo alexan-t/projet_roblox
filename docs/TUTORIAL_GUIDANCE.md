@@ -38,8 +38,8 @@ Rien pendant un combat, son outro ou l'écran de fin, sauf la découverte d'une 
 | --- | --- | --- |
 | `Bag` | Sacoche ouverte | 1. la première carte héros (« Tes héros ») ; 2. « Placer » (« Pose-le dans l'arène ») |
 | `Expedition` | fenêtre Expédition ouverte | 1. le stage proposé (« Choisis un stage ») ; 2. l'action possible : « Lancer » si un héros est posé, sinon « Préparer l'équipe » (`Expedition.Next`, légende donnée par la vue) |
-| `Summon` | invocation tutorielle (gratuite) | « Invoquer · Gratuit » |
-| `SummonBanners` | première invocation avec les vraies bannières | 1. colonne des bannières ; 2. tickets ; 3. « Invoquer » |
+| `Summon` | invocation tutorielle (gratuite) | bouton « GRATUIT » |
+| `SummonBanners` | première invocation avec les vraies bannières | 1. bannière active ; 2. tickets ; 3. bouton ×1 |
 | `Index` | Index ouvert | le compteur « n / 60 découverts » |
 | `Stats` | Stats ouvertes | aucune étape (le drapeau éteint le badge) |
 | `Currencies` | premier gain d'or (HUD, attend qu'aucun écran ne soit ouvert) | la pastille d'or (« Ton or ») |

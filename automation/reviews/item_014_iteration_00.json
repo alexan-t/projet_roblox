@@ -1,0 +1,15 @@
+{
+  "task_id": "item_014",
+  "iteration": 0,
+  "verdict": "PASS",
+  "summary": "Icône Fragment de Cristal Royal (rbxassetid://94045774006724), lot Rare 011-020 : objet chunky arrondi en vue de trois quarts, contour Ink cuit, fond transparent, PNG 512 x 512. Lisible à la taille de la carte dans la vitrine et cohérente avec ses voisines (contour, lumière, saturation, taille de l'objet). Conforme à l'icon_hook et au SlotType relic.",
+  "visible_issues": [],
+  "required_changes": [],
+  "references_checked": [
+    "assets/icons/items/item_014.png",
+    "Workspace.Bestiaire.Inventaire.Equipement (carte Item_014 et rangée de sa rareté, capture Studio)",
+    "docs/ITEMS.md § 4-5",
+    "docs/UI_DESIGN_SYSTEM.md § 7"
+  ],
+  "confidence": "high"
+}

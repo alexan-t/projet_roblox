@@ -1,510 +1,214 @@
 --!strict
--- Interface d'invocation et reveal du héros obtenu — docs/UI_DESIGN_SYSTEM.md § 6, docs/SUMMON.md.
--- Présentation seulement : HeroService décide du tirage, de la rareté et débite le ticket ;
--- SummonController ouvre cette vue au portail. L'effet 3D au portail est SummonEffectController.
---   Interface (avec bannières) : fenêtre « Invocation » ; à gauche un onglet par bannière ; au centre
---   la bannière choisie (nom, accroche, héros mis en avant en cartes 3D avec leur rareté) ; en bas
---   « Tickets : 3 », bouton « Taux » (chances par rareté) et bouton principal « Invoquer » (désactivé
---   sans ticket, avec une aide pour en gagner).
---   Sans bannière (aperçu) : gros ticket 3D, compteur, coût, « Invoquer ».
---   Reveal : voile, rayons de la couleur de la rareté, la carte du héros se retourne (largeur 0 →
---   pleine), portrait 3D en pied, nom, rareté, badge « Nouveau » (premier exemplaire), « Continuer ».
--- API : SummonView.Show(data, options) ; SummonView.Reveal(hero, options) ; SummonView.Hide().
---   Reveal cède la main le temps du retournement (≈ 0,3 s) : l'appeler dans un task.spawn au besoin.
---   data = { Tickets, Cost?, Banners?: { { Id, Name, Subtitle?, Featured: { { Name, Rarity, Model? } } } },
---            Rates?: { { Id, Name, Percent } }, Selected?: string (Id de bannière),
---            Free?: boolean (invocation tutorielle : « Invocation gratuite ! », bouton « Invoquer · Gratuit »
---            actif sans ticket et qui respire ; le serveur décide toujours du héros),
---            Starter?: { Name, Rarity, Model? } (invocation tutorielle : bannière spéciale « Premier héros »
---            sélectionnée avec ce héros, vraies bannières visibles mais grisées et non cliquables, « Taux »
---            masqué : il n'y a aucun tirage. Présentation seule, venue de GetSummonState) }
---   options (Show) = { OnSummon: ((bannerId: string?) -> ())?, OnClose: (() -> ())? }
---   hero = { Name: string, Model: Model?, ClassId: string?, New: boolean?, Rarity: string? }
---   options (Reveal) = { OnContinue: (() -> ())? }
+-- Invocation V2 : reproduction du ZIP final (docs/references/ui/invocation-v2).
+-- Aucun tirage ici : toutes les cartes et tous les taux proviennent de HeroService.
+local RS = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local Theme = require(RS.Shared.Config.UITheme)
+local Rarity = require(script.Parent.Parent.RarityStyle)
+local Guides = require(script.Parent.Parent.GuideTargets)
+local L = require(script.Parent.SummonLayout)
+local UIKit, Card, C = L.UIKit, L.Card, L.Colors
+local View = {}
+local current: any = nil
+local generation = 0
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local CurrencyVisualConfig = require(ReplicatedStorage.Shared.Config.CurrencyVisualConfig)
-local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
-local Icons = require(script.Parent.Parent.Icons)
-
--- Icône du ticket d'invocation : PNG du pack « Monnaies » (CurrencyVisualConfig), fond transparent.
-local function ticketIcon(parent: Instance)
-	local image = Instance.new("ImageLabel")
-	image.Name = "Icone"
-	image.BackgroundTransparency = 1
-	image.Size = UDim2.fromScale(1, 1)
-	image.Image = CurrencyVisualConfig.Kinds.SummonTicket.Normal
-	image.ScaleType = Enum.ScaleType.Fit
-	image.Parent = parent
-end
-local RarityStyle = require(script.Parent.Parent.RarityStyle)
-local UIKit = require(script.Parent.Parent.UIKit)
-local GuideTargets = require(script.Parent.Parent.GuideTargets)
-local AudioController = require(script.Parent.Parent.Parent.Controllers.AudioController)
-
-local Colors = UITheme.Colors
-local Typography = UITheme.Typography
-local Spacing = UITheme.Spacing
-local Animation = UITheme.Animation
-
-local WINDOW = Vector2.new(440, 340)
-local WINDOW_BANNERS = Vector2.new(920, 540)
-local TAB_WIDTH = 210
-local FEATURED_CARD = Vector2.new(184, 250)
-local REVEAL_CARD = Vector2.new(260, 340)
-local FLIP = 0.3 -- s : la carte se retourne
-
-export type FeaturedHero = { Name: string, Rarity: string, Model: Model? }
-export type BannerView = { Id: string, Name: string, Subtitle: string?, Featured: { FeaturedHero } }
-export type Rate = { Id: string, Name: string, Percent: string }
-export type StarterHero = { Name: string, Rarity: string, Model: Model? }
-export type Data = { Tickets: number, Cost: number?, Banners: { BannerView }?, Rates: { Rate }?, Selected: string?, Free: boolean?, Starter: StarterHero? }
-export type ShowOptions = { OnSummon: ((bannerId: string?) -> ())?, OnClose: (() -> ())? }
-export type Hero = { Name: string, Model: Model?, ClassId: string?, New: boolean?, Rarity: string? }
-export type RevealOptions = { OnContinue: (() -> ())? }
-
-local SummonView = {}
-
-local current: { screen: ScreenGui, panel: GuiObject, veil: GuiObject }? = nil
-
-function SummonView.Hide()
-	local c = current
-	if not c then
-		return
+function View.Hide()
+	generation += 1
+	if current then
+		current.connection:Disconnect()
+		current.screen:Destroy()
+		current = nil
 	end
-	current = nil
-	GuideTargets.close("Summon")
-	GuideTargets.close("SummonBanners")
-	UIKit.close(c.panel, c.veil, true, function()
-		c.screen:Destroy()
-	end)
+	Guides.close("Summon")
+	Guides.close("SummonBanners")
 end
 
-local function costText(cost: number): string
-	return if cost > 1 then `{cost} tickets` else "1 ticket"
-end
-
--- Carte d'un héros mis en avant : portrait en pied, nom, contour et badge de sa rareté.
-local function featuredCard(parent: Instance, hero: FeaturedHero, order: number): Frame
-	local card = UIKit.card(parent, { Size = FEATURED_CARD, Name = hero.Name })
-	card.LayoutOrder = order
-	local border = card:FindFirstChildOfClass("UIStroke")
-	if border then
-		border.Thickness = UITheme.Stroke.Thick
-		RarityStyle.paint(border, hero.Rarity)
-	end
-	local art = card:FindFirstChild("Illustration") :: Frame
-	art.Size = UDim2.new(1, -2 * Spacing.S, 0.72, -Spacing.S)
-	if hero.Model then
-		UIKit.portrait(art, hero.Model, true)
-	end
-	local name = card:FindFirstChild("Nom") :: TextLabel?
-	if name then
-		name.Position = UDim2.new(0, Spacing.XS, 0.72, Spacing.XS)
-		name.Size = UDim2.new(1, -2 * Spacing.XS, 0.28, -Spacing.S)
-	end
-	RarityStyle.edgeBadge(card, hero.Rarity)
-	return card
-end
-
--- Liste des chances par rareté, en deux colonnes, par-dessus la bannière.
-local function ratesPanel(parent: Instance, rates: { Rate }): Frame
-	local panel = UIKit.subPanel(parent, UDim2.fromScale(1, 1))
-	panel.Name = "Taux"
-	panel.ZIndex = 8
-	panel.BackgroundTransparency = UITheme.Transparency.Tooltip -- presque opaque : la bannière ne se lit pas au travers
-	local title = UIKit.text(panel, "Chances par rareté", Typography.Size.Heading, { Align = Enum.TextXAlignment.Left })
-	title.Position = UDim2.fromOffset(Spacing.L, Spacing.M)
-	title.Size = UDim2.new(1, -2 * Spacing.L, 0, 30)
-	title.ZIndex = 9
-	local half = math.ceil(#rates / 2)
-	for i, rate in rates do
-		local column = if i <= half then 0 else 1
-		local row = if i <= half then i - 1 else i - half - 1
-		local line = Instance.new("Frame")
-		line.BackgroundTransparency = 1
-		line.Position = UDim2.new(column * 0.5, Spacing.L, 0, 56 + row * 44)
-		line.Size = UDim2.new(0.5, -2 * Spacing.L, 0, 36)
-		line.ZIndex = 9
-		line.Parent = panel
-		local dot = Instance.new("Frame")
-		dot.AnchorPoint = Vector2.new(0, 0.5)
-		dot.Position = UDim2.fromScale(0, 0.5)
-		dot.Size = UDim2.fromOffset(22, 22)
-		dot.ZIndex = 9
-		dot.Parent = line
-		UIKit.corner(dot, UITheme.Radius.Pill)
-		UIKit.stroke(dot, UITheme.Stroke.Thin)
-		RarityStyle.paint(dot, rate.Id)
-		local name = UIKit.text(line, rate.Name, Typography.Size.Label, { Align = Enum.TextXAlignment.Left })
-		name.Position = UDim2.fromOffset(34, 0)
-		name.Size = UDim2.new(0.65, -34, 1, 0)
-		name.ZIndex = 9
-		local value = UIKit.text(line, rate.Percent, Typography.Size.Label, { Align = Enum.TextXAlignment.Right })
-		value.Position = UDim2.fromScale(0.65, 0)
-		value.Size = UDim2.fromScale(0.35, 1)
-		value.ZIndex = 9
-	end
-	local note = UIKit.text(panel, "Les héros mis en avant sortent une fois sur deux dans leur rareté", Typography.Size.Caption, { Color = Colors.TextMuted })
-	note.AnchorPoint = Vector2.new(0.5, 1)
-	note.Position = UDim2.new(0.5, 0, 1, -Spacing.M)
-	note.Size = UDim2.new(1, -2 * Spacing.L, 0, 20)
-	note.ZIndex = 9
-	return panel
-end
-
--- Invocation tutorielle : le bouton principal respire tant que la fenêtre est ouverte.
-local function breathe(button: UIKit.Button)
-	task.delay(UITheme.Animation.Open.Time + 0.1, function()
-		while button.holder.Parent do
-			UIKit.pop(button.holder)
-			task.wait(1.6)
-		end
-	end)
-end
-
-local function showBanners(content: Frame, data: Data, opts: ShowOptions, cost: number, enough: boolean)
-	local free = data.Free == true
-	local banners = data.Banners :: { BannerView }
-	local selected = banners[1]
-	for _, banner in banners do
-		if banner.Id == data.Selected then
-			selected = banner
-		end
-	end
-	-- Invocation tutorielle : une bannière spéciale, seule sélectionnable, avec le héros de départ.
-	local starter = data.Starter
-	local starterBanner: BannerView? = if starter then {
-		Id = "PremierHeros",
-		Name = "Premier héros",
-		Subtitle = "Ton premier défenseur rejoint ton royaume.",
-		Featured = { { Name = starter.Name, Rarity = starter.Rarity, Model = starter.Model } },
-	} else nil
-	if starterBanner then
-		selected = starterBanner
-	end
-
-	-- onglets
-	local tabs = Instance.new("Frame")
-	tabs.Name = "Bannieres"
-	tabs.BackgroundTransparency = 1
-	tabs.Size = UDim2.new(0, TAB_WIDTH, 1, -(56 + UITheme.Shadow.ButtonLip + Spacing.L))
-	tabs.Parent = content
-	local tabList = Instance.new("UIListLayout")
-	tabList.Padding = UDim.new(0, Spacing.S)
-	tabList.SortOrder = Enum.SortOrder.LayoutOrder
-	tabList.Parent = tabs
-
-	-- bannière choisie
-	local stage = Instance.new("Frame")
-	stage.Name = "Banniere"
-	stage.BackgroundTransparency = 1
-	stage.Position = UDim2.fromOffset(TAB_WIDTH + Spacing.L, 0)
-	stage.Size = UDim2.new(1, -(TAB_WIDTH + Spacing.L), 1, -(56 + UITheme.Shadow.ButtonLip + Spacing.L))
-	stage.Parent = content
-
-	local rates: Frame? = nil
-	local function render(banner: BannerView)
-		selected = banner
-		stage:ClearAllChildren()
-		rates = nil
-		local back = UIKit.subPanel(stage, UDim2.fromScale(1, 1))
-		back.Name = "Fond"
-		local title = UIKit.text(back, banner.Name, Typography.Size.Title, { Color = Colors.GoldLight, Align = Enum.TextXAlignment.Left })
-		title.Position = UDim2.fromOffset(Spacing.L, Spacing.M)
-		title.Size = UDim2.new(1, -2 * Spacing.L, 0, 38)
-		if banner.Subtitle then
-			local subtitle = UIKit.text(back, banner.Subtitle, Typography.Size.Label, { Color = Colors.TextMuted, Align = Enum.TextXAlignment.Left })
-			subtitle.Position = UDim2.fromOffset(Spacing.L, 52)
-			subtitle.Size = UDim2.new(1, -2 * Spacing.L, 0, 22)
-		end
-		local row = Instance.new("Frame")
-		row.Name = "MisEnAvant"
-		row.BackgroundTransparency = 1
-		row.AnchorPoint = Vector2.new(0.5, 1)
-		row.Position = UDim2.new(0.5, 0, 1, -Spacing.L)
-		row.Size = UDim2.new(1, -2 * Spacing.L, 0, FEATURED_CARD.Y + Spacing.L)
-		row.Parent = back
-		local list = Instance.new("UIListLayout")
-		list.FillDirection = Enum.FillDirection.Horizontal
-		list.HorizontalAlignment = Enum.HorizontalAlignment.Center
-		list.VerticalAlignment = Enum.VerticalAlignment.Bottom
-		list.Padding = UDim.new(0, Spacing.L)
-		list.SortOrder = Enum.SortOrder.LayoutOrder
-		list.Parent = row
-		for index, hero in banner.Featured do
-			local card = featuredCard(row, hero, index)
-			UIKit.popIn(card, 0.05 + (index - 1) * 0.06)
-		end
-	end
-
-	local tabButtons: { [string]: UIKit.Button } = {}
-	if starterBanner then
-		local special = UIKit.button(tabs, starterBanner.Name, "Tab", UDim2.new(1, 0, 0, 56 + UITheme.Shadow.ButtonLip), function() end)
-		special.holder.LayoutOrder = 0
-		special.label.TextSize = Typography.Size.Label
-		special.setSelected(true)
-		local locked = UIKit.text(tabs, "Disponible après ton premier héros", Typography.Size.Caption, { Color = Colors.TextMuted })
-		locked.Name = "Verrouillees"
-		locked.LayoutOrder = 1
-		locked.Size = UDim2.new(1, 0, 0, 18)
-		locked.TextWrapped = true
-	end
-	for index, banner in banners do
-		local tab = UIKit.button(tabs, banner.Name, "Tab", UDim2.new(1, 0, 0, 56 + UITheme.Shadow.ButtonLip), function()
-			if starterBanner then
-				return -- invocation tutorielle : les vraies bannières ne sont pas encore disponibles
-			end
-			if selected ~= banner then
-				render(banner)
-				for id, button in tabButtons do
-					button.setSelected(id == banner.Id)
-				end
-			end
-		end)
-		tab.holder.LayoutOrder = index + 1
-		tab.label.TextSize = Typography.Size.Label
-		tab.label.TextWrapped = true
-		tab.setSelected(banner == selected)
-		if starterBanner then
-			tab.setEnabled(false) -- grisée, sans effet au clic
-		end
-		tabButtons[banner.Id] = tab
-	end
-	render(selected)
-	GuideTargets.register("Summon.Banners", tabs) -- guidage : colonne des bannières
-
-	-- barre du bas : tickets, taux, invoquer
-	local bottom = Instance.new("Frame")
-	bottom.Name = "Actions"
-	bottom.BackgroundTransparency = 1
-	bottom.AnchorPoint = Vector2.new(0, 1)
-	bottom.Position = UDim2.fromScale(0, 1)
-	bottom.Size = UDim2.new(1, 0, 0, 56 + UITheme.Shadow.ButtonLip)
-	bottom.Parent = content
-	local ticket = Instance.new("Frame")
-	ticket.BackgroundTransparency = 1
-	ticket.Size = UDim2.fromOffset(64, 56)
-	ticket.Parent = bottom
-	ticketIcon(ticket)
-	local count = UIKit.text(bottom, if free then "Invocation gratuite !" else `Tickets : {data.Tickets}`, Typography.Size.Heading,
-		{ Color = if free then Colors.Success elseif enough then Colors.TextLight else Colors.Warning, Align = Enum.TextXAlignment.Left })
-	count.Position = UDim2.fromOffset(72, 0)
-	count.Size = UDim2.fromOffset(260, 32)
-	GuideTargets.register("Summon.Tickets", count)
-	local hint = UIKit.text(bottom, if free then "Ton premier héros t'attend" elseif enough then `Coût : {costText(cost)}` else "Gagne des tickets en combattant",
-		Typography.Size.Caption, { Color = Colors.TextMuted, Align = Enum.TextXAlignment.Left })
-	hint.Position = UDim2.fromOffset(72, 32)
-	hint.Size = UDim2.fromOffset(260, 22)
-
-	local summon = UIKit.button(bottom, if free then "Invoquer · Gratuit" else "Invoquer", "Primary", UDim2.fromOffset(240, 56 + UITheme.Shadow.ButtonLip), function()
-		if enough and opts.OnSummon then
-			local onSummon = opts.OnSummon
-			local bannerId = selected.Id
-			SummonView.Hide()
-			onSummon(bannerId)
-		end
-	end)
-	summon.setEnabled(enough and opts.OnSummon ~= nil)
-	summon.holder.AnchorPoint = Vector2.new(1, 0)
-	summon.holder.Position = UDim2.fromScale(1, 0)
-	GuideTargets.register("Summon.Invoke", summon.holder)
-	if free then
-		breathe(summon)
-	end
-	if data.Rates and not starterBanner then -- aucun tirage pendant l'invocation tutorielle : pas de taux
-		local rateList = data.Rates
-		local toggle: UIKit.Button
-		toggle = UIKit.button(bottom, "Taux", "Secondary", UDim2.fromOffset(120, 56 + UITheme.Shadow.ButtonLip), function()
-			local open = rates
-			if open then
-				open:Destroy()
-				rates = nil
-			else
-				local panel = ratesPanel(stage, rateList)
-				UIKit.popIn(panel, 0, 1.03)
-				rates = panel
-			end
-			toggle.setSelected(rates ~= nil)
-		end)
-		toggle.holder.AnchorPoint = Vector2.new(1, 0)
-		toggle.holder.Position = UDim2.new(1, -(240 + Spacing.L), 0, 0)
-	end
-end
-
-local function showSimple(content: Frame, data: Data, opts: ShowOptions, cost: number, enough: boolean)
-	local ticket = Instance.new("Frame")
-	ticket.Name = "Ticket"
-	ticket.BackgroundTransparency = 1
-	ticket.AnchorPoint = Vector2.new(0.5, 0)
-	ticket.Position = UDim2.new(0.5, 0, 0, Spacing.S)
-	ticket.Size = UDim2.fromOffset(120, 100)
-	ticket.Parent = content
-	ticketIcon(ticket)
-
-	local free = data.Free == true
-	local count = UIKit.text(content, if free then "Invocation gratuite !" else `Tickets : {data.Tickets}`, Typography.Size.Heading,
-		{ Color = if free then Colors.Success elseif enough then Colors.TextLight else Colors.Warning })
-	count.Position = UDim2.fromOffset(0, 112)
-	count.Size = UDim2.new(1, 0, 0, 30)
-	local price = UIKit.text(content, if free then "Ton premier héros t'attend" else `Coût : {costText(cost)}`, Typography.Size.Label, { Color = Colors.TextMuted })
-	price.Position = UDim2.fromOffset(0, 144)
-	price.Size = UDim2.new(1, 0, 0, 22)
-
-	local summon = UIKit.button(content, if free then "Invoquer · Gratuit" else "Invoquer", "Primary", UDim2.fromOffset(240, 56 + UITheme.Shadow.ButtonLip), function()
-		if enough and opts.OnSummon then
-			local onSummon = opts.OnSummon
-			SummonView.Hide()
-			onSummon(nil)
-		end
-	end)
-	summon.setEnabled(enough and opts.OnSummon ~= nil)
-	summon.holder.AnchorPoint = Vector2.new(0.5, 1)
-	summon.holder.Position = UDim2.new(0.5, 0, 1, -(if enough then 0 else 26))
-	GuideTargets.register("Summon.Invoke", summon.holder)
-	if free then
-		breathe(summon)
-	end
-	if not enough then
-		local hint = UIKit.text(content, "Gagne des tickets en combattant", Typography.Size.Caption, { Color = Colors.TextMuted })
-		hint.AnchorPoint = Vector2.new(0.5, 1)
-		hint.Position = UDim2.fromScale(0.5, 1)
-		hint.Size = UDim2.new(1, 0, 0, 20)
-	end
-end
-
-function SummonView.Show(data: Data, options: ShowOptions?)
-	SummonView.Hide()
-	local opts: ShowOptions = options or {}
-	local cost = data.Cost or 1
-	local enough = data.Free == true or data.Tickets >= cost
-	local withBanners = data.Banners ~= nil and #(data.Banners :: { BannerView }) > 0
-	local screen = UIKit.screen("Invocation", 10)
+-- Le scale de fenêtre complète celui d'UIKit ; le layout mobile change la composition.
+local function mount(name: string, render: (Frame, boolean) -> ())
+	View.Hide()
+	local screen = UIKit.screen(name,12)
 	local veil = UIKit.overlay(screen)
-	local function close()
-		SummonView.Hide()
-		if opts.OnClose then
-			opts.OnClose()
+	veil.BackgroundTransparency = if name == "Revelation" then .18 else Theme.Transparency.Overlay
+	local root = L.frame(screen,0,0,1000,610)
+	root.Name = "ContenuInvocation"
+	root.AnchorPoint,root.Position = Vector2.new(.5,.5),UDim2.fromScale(.5,.5)
+	local scale = Instance.new("UIScale")
+	scale.Parent = root
+	local lastMobile: boolean? = nil
+	local function fit()
+		local camera = workspace.CurrentCamera
+		local size = if camera then camera.ViewportSize else Vector2.new(1920,1080)
+		local mobile = size.Y < 500 or size.X < 900
+		local w,h = if mobile then 820 else 1000, if mobile then 354 else 610
+		local uiScale = screen:FindFirstChildOfClass("UIScale")
+		local outer = if uiScale then uiScale.Scale else 1
+		scale.Scale = math.min((size.X-32)/w,(size.Y-64)/h,1.25) / outer
+		root.Size = UDim2.fromOffset(w,h)
+		if mobile ~= lastMobile then
+			lastMobile = mobile
+			for _, child in root:GetChildren() do if child ~= scale then child:Destroy() end end
+			render(root,mobile)
 		end
 	end
+	local conn = RunService.RenderStepped:Connect(fit)
+	current = {screen=screen,connection=conn,root=root,veil=veil}
+	fit()
+	return root,veil
+end
+
+function View.Show(data: any, options: any)
+	local opts = options or {}
+	local pending = false
+	local function close() View.Hide(); if opts.OnClose then opts.OnClose() end end
+	local clockLabel: TextLabel? = nil
+	local progress: Frame? = nil
+	local buttons = {}
+	local root,veil = mount("Invocation",function(root, mobile)
+		buttons = {}
+		local w,h = if mobile then 820 else 1000, if mobile then 354 else 610
+		local panel,content = UIKit.window(root,{Size=Vector2.new(w,h),Title="Invocation",OnClose=close})
+		content.Position,content.Size = UDim2.fromOffset(if mobile then 10 else 20,if mobile then 10 else 34), UDim2.new(1,if mobile then -20 else -40,1,if mobile then -20 else -54)
+		local bw,bh = if mobile then 540 else 960, if mobile then 334 else 430
+		local banner = L.frame(content,0,0,bw,bh,C.RoyalRed)
+		banner.Name = "Banniere"
+		banner.ClipsDescendants = true
+		local gradient=Instance.new("UIGradient")
+		gradient.Color=ColorSequence.new(C.RoyalRed,C.WoodDeep)
+		gradient.Rotation=90
+		gradient.Parent=banner
+		banner.BackgroundColor3=Color3.new(1,1,1)
+		UIKit.corner(banner,UDim.new(0,14))
+		-- Rideaux géométriques du prototype (aucune texture rideau livrée).
+		for _, x in {0,12,32,bw-46,bw-26,bw-12} do
+			local stripe = L.frame(banner,x,0,if x%2==0 then 8 else 14,bh,C.WoodDeep)
+			stripe.BackgroundTransparency = .35
+		end
+		local floorH = if mobile then 46 else 64
+		L.frame(banner,0,bh-floorH,bw,floorH,C.WoodDark)
+		local raysSize = if mobile then 480 else 700
+		local rays = L.image(banner,"rays",(bw-raysSize)/2,bh-raysSize+(if mobile then 118 else 180),raysSize,raysSize)
+		rays.ImageColor3,rays.ImageTransparency = C.GoldLight,.65
+		local portalSize = if mobile then 280 else 400
+		L.image(banner,"portal",(bw-portalSize)/2,bh-portalSize+(if mobile then 18 else 30),portalSize,portalSize)
+		local border = L.image(banner,"banner_frame",0,0,bw,bh)
+		border.ScaleType = Enum.ScaleType.Slice
+		-- L'image @2x est réduite par Roblox à 1024x580 : coordonnées proportionnelles.
+		border.SliceCenter = Rect.new(102,102,922,478)
+		border.SliceScale = .12
+		border.ZIndex = 2
+		local title = if data.Free then "PREMIER HÉROS" else string.upper(data.Banner.Name)
+		local heading=L.text(banner,title,if mobile then 16 else 190,if mobile then 12 else 18,if mobile then 350 else 580,if mobile then 30 else 52,if mobile then 24 else 42,C.GoldLight)
+		local subtitle=L.text(banner,if data.Free then "Ton premier défenseur rejoint ton royaume" else data.Banner.Subtitle,16,if mobile then 42 else 68,if mobile then 350 else bw-32,24,if mobile then 12 else 15)
+		if mobile then heading.TextXAlignment=Enum.TextXAlignment.Left;subtitle.TextXAlignment=Enum.TextXAlignment.Left end
+		local featured = if data.Free then {data.Starter} else data.Banner.Featured
+		for i,hero in featured do
+			local main = i==1
+			local cw = if mobile then (if main then 138 else 96) else (if main then 196 else 140)
+			local x = if main then (bw-cw)/2 elseif i==2 then bw/2-(if mobile then 214 else 300) else bw/2+(if mobile then 118 else 164)
+			local bottom = if mobile then (if main then 34 else 26) else (if main then 40 else 34)
+			local card = Card.new(banner,hero,cw)
+			card.Position = UDim2.fromOffset(x,bh-bottom-cw*266/200)
+			card.ZIndex = if main then 5 else 4
+			if main and not data.Free then
+				local badge = UIKit.badge(card,"    VEDETTE",C.GoldDeep)
+				badge.AnchorPoint,badge.Position = Vector2.new(.5,1),UDim2.new(.5,0,0,-6)
+				badge.ZIndex = 6
+				local star=L.image(badge,"star",2,2,20,20)
+				star.ZIndex=7
+				L.ribbon(card,"ribbon_taux","TAUX AUGMENTÉ",-2,cw*266/200-5,cw+4)
+			elseif not data.Free then
+				local badge = UIKit.badge(card,Rarity.name(hero.Rarity).." · taux ↑",C.WoodDeep)
+				badge.Position = UDim2.new(.5,0,1,8)
+				badge.AnchorPoint = Vector2.new(.5,0)
+			end
+		end
+		if not data.Free then
+			local tw,th = if mobile then 148 else 196, if mobile then 76 else 88
+			local timer = UIKit.panel(banner,0,UDim.new(0,10),3)
+			timer.BackgroundColor3 = C.Cream
+			timer.Position,timer.Size = UDim2.fromOffset(bw-tw-16,14),UDim2.fromOffset(tw,th)
+			timer.ZIndex = 9
+			L.image(timer,"hourglass",8,16,if mobile then 28 else 38,if mobile then 28 else 38)
+			L.text(timer,"Nouvelle bannière dans",46,5,tw-54,32,if mobile then 11 else 14,C.WoodDark)
+			clockLabel = L.text(timer,"",46,36,tw-54,30,if mobile then 20 else 26,C.Ink)
+			progress = L.frame(timer,10,th-12,0,6,C.GoldDeep)
+		end
+		local controls = L.frame(content,if mobile then 550 else 0,if mobile then 0 else 446,if mobile then 250 else 960,if mobile then 334 else 110)
+		controls.Name = "Commandes"
+		local wallet = UIKit.panel(controls,.35,UDim.new(0,12),3)
+		wallet.Size = UDim2.fromOffset(if mobile then 128 else 210,if mobile then 50 else 58)
+		L.ticket(wallet,if mobile then -8 else -12,-5,if mobile then 50 else 64)
+		L.text(wallet,tostring(data.Tickets),if mobile then 36 else 52,0,80,32,if mobile then 26 else 32)
+		L.text(wallet,"Tickets",if mobile then 36 else 52,if mobile then 26 else 32,80,18,12,C.TextMuted)
+		Guides.register("Summon.Tickets",wallet)
+		if not data.Free then
+			local rates = L.button(controls,"% TAUX",if mobile then 138 else 0,if mobile then 0 else 68,if mobile then 112 else 210,if mobile then 54 else 42,"Secondary",function() if not root:FindFirstChild("Taux") then L.rates(root,data,mobile) end end)
+			rates.holder.Name = "OuvrirTaux"
+			rates.label.TextSize = 18
+		end
+		if data.Guarantee and not data.Free then L.guarantee(if mobile then controls else banner,if mobile then 0 else 28,if mobile then 56 else 20,mobile) end
+		for index,qty in {1,10,100} do
+			if data.Free and qty~=1 then continue end
+			local cw = if mobile then 250 elseif qty==1 then 160 else 196
+			local ch = if mobile then (if qty==1 then 58 else 62) elseif qty==1 then 96 else 108
+			local x = if mobile then 0 else ({376,550,760})[index]
+			local y = if mobile then ({124,194,268})[index] else 110-ch
+			local enough = data.Free or data.Tickets >= qty*data.Cost
+			local button = L.button(controls,"",x,y,cw,ch,if qty==1 then "Secondary" elseif qty==10 then "Primary" else "Danger",function()
+				if pending then return end
+				pending = true
+				for _,b in buttons do b.setEnabled(false) end
+				if opts.OnSummon then opts.OnSummon(qty) end
+			end)
+			button.holder.Name = "Invoquer"..qty
+			button.setEnabled(enough)
+			table.insert(buttons,button)
+			L.text(button.face,if data.Free then "GRATUIT" else "×"..qty,if mobile then 8 else 0,if mobile then 4 else 4,if mobile then 120 else cw,if mobile then 42 else 58,if mobile then 30 else 42)
+			L.ticket(button.face,if mobile then 170 else cw/2-26,if mobile then 14 else 62,24)
+			L.text(button.face,if data.Free then "0" elseif enough then tostring(qty*data.Cost) else "Manque "..(qty*data.Cost-data.Tickets),if mobile then 195 else cw/2,if mobile then 12 else 62,if enough then 46 else 88,26,if enough then 18 else 12,if enough then C.TextLight else C.TicketLight)
+			if qty==100 and enough and not data.Free then
+				local ring = UIKit.stroke(button.face,2,C.GoldLight)
+				ring.Transparency = .1
+				L.image(button.face,"sparkle",8,8,16,16)
+				L.image(button.face,"sparkle",cw-26,ch-32,12,12)
+			end
+			if qty==1 then Guides.register("Summon.Invoke",button.holder) end
+		end
+		Guides.register("Summon.Banners",banner)
+	end)
 	veil.Activated:Connect(close)
-	local panel, content = UIKit.window(screen, { Size = if withBanners then WINDOW_BANNERS else WINDOW, Title = "Invocation", OnClose = close })
-	panel.AnchorPoint = Vector2.new(0.5, 0.5)
-	panel.Position = UDim2.fromScale(0.5, 0.5)
-	current = { screen = screen, panel = panel, veil = veil }
-	if withBanners then
-		showBanners(content, data, opts, cost, enough)
-	else
-		showSimple(content, data, opts, cost, enough)
-	end
-	UIKit.open(panel, veil)
-	-- guidage de première ouverture : l'invocation tutorielle, puis les vraies bannières
-	GuideTargets.open(if data.Starter or data.Free then "Summon" elseif withBanners then "SummonBanners" else "Summon")
-end
-
--- Reveal : à afficher quand l'effet 3D du portail a révélé le héros.
-function SummonView.Reveal(hero: Hero, options: RevealOptions?)
-	SummonView.Hide()
-	local opts: RevealOptions = options or {}
-	local rarityColor = RarityStyle.color(hero.Rarity)
-	local screen = UIKit.screen("Revelation", 12)
-	local veil = UIKit.overlay(screen)
-	local root = Instance.new("Frame")
-	root.Name = "Contenu"
-	root.BackgroundTransparency = 1
-	root.AnchorPoint = Vector2.new(0.5, 0.5)
-	root.Position = UDim2.fromScale(0.5, 0.5)
-	root.Size = UDim2.fromOffset(REVEAL_CARD.X + 200, REVEAL_CARD.Y + 200)
-	root.Parent = screen
-	current = { screen = screen, panel = root, veil = veil }
-	UIKit.open(root, veil)
-	AudioController.Play("Revelation", { Delay = FLIP / 2 }) -- la face apparaît (#18)
-
-	local center = UDim2.new(0.5, 0, 0, REVEAL_CARD.Y / 2 + Spacing.L)
-	local rays = UIKit.rays(root, REVEAL_CARD.Y * 0.85, nil, if hero.Rarity then rarityColor else nil)
-	rays.Position = center
-	UIKit.popIn(rays, 0.05, 1)
-
-	-- la carte se retourne : sa largeur passe de 0 à pleine, dos bois puis face crème
-	local holder = Instance.new("Frame")
-	holder.Name = "Carte"
-	holder.BackgroundTransparency = 1
-	holder.AnchorPoint = Vector2.new(0.5, 0.5)
-	holder.Position = center
-	holder.Size = UDim2.fromOffset(0, REVEAL_CARD.Y)
-	holder.ClipsDescendants = false
-	holder.Parent = root
-	local back = Instance.new("Frame")
-	back.Name = "Dos"
-	back.Size = UDim2.fromScale(1, 1)
-	back.BackgroundColor3 = Colors.Wood
-	back.Parent = holder
-	UIKit.corner(back, UITheme.Radius.Medium)
-	UIKit.stroke(back, UITheme.Stroke.Thick)
-	local half = TweenInfo.new(FLIP / 2, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-	UIKit.tween(holder, half, { Size = UDim2.fromOffset(REVEAL_CARD.X, REVEAL_CARD.Y) }).Completed:Wait()
-	UIKit.tween(holder, half, { Size = UDim2.fromOffset(0, REVEAL_CARD.Y) }).Completed:Wait()
-	back:Destroy()
-	local card = UIKit.card(holder, { Size = REVEAL_CARD, Selected = true })
-	card.Size = UDim2.fromScale(1, 1)
-	if hero.Rarity then
-		local border = card:FindFirstChildOfClass("UIStroke")
-		if border then
-			RarityStyle.paint(border, hero.Rarity)
-		end
-	end
-	local art = card:FindFirstChild("Illustration") :: Frame
-	art.Size = UDim2.new(1, -2 * Spacing.S, 0.78, -Spacing.S)
-	if hero.Model then
-		UIKit.portrait(art, hero.Model, true)
-	end
-	if hero.ClassId then
-		local chip = Instance.new("Frame")
-		chip.BackgroundColor3 = Colors.Cream
-		chip.AnchorPoint = Vector2.new(0, 1)
-		chip.Position = UDim2.new(0, Spacing.S, 0.78, 0)
-		chip.Size = UDim2.fromOffset(44, 44)
-		chip.ZIndex = 3
-		chip.Parent = card
-		UIKit.corner(chip, UITheme.Radius.Pill)
-		UIKit.stroke(chip, UITheme.Stroke.Thin)
-		Icons.viewport(chip, hero.ClassId)
-	end
-	local name = UIKit.text(card, hero.Name, Typography.Size.Heading, { Color = Colors.InkSoft, Stroke = false })
-	name.Position = UDim2.new(0, Spacing.S, 0.78, Spacing.XS)
-	name.Size = UDim2.new(1, -2 * Spacing.S, 0.22, -Spacing.S)
-	name.TextWrapped = true
-	UIKit.tween(holder, TweenInfo.new(FLIP / 2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = UDim2.fromOffset(REVEAL_CARD.X, REVEAL_CARD.Y) })
-	if hero.New ~= false then
-		local badge = UIKit.edgeBadge(card, "Nouveau", Colors.RoyalRed)
-		badge.Size = UDim2.fromOffset(120, 30)
-		UIKit.popIn(badge, FLIP / 2 + 0.1)
-	end
-
-	local title = UIKit.text(root, if hero.New == false then "Héros obtenu !" else "Nouveau héros !", Typography.Size.Title, { Color = Colors.GoldLight })
-	title.AnchorPoint = Vector2.new(0.5, 0)
-	title.Position = UDim2.new(0.5, 0, 0, REVEAL_CARD.Y + Spacing.XL + Spacing.S)
-	title.Size = UDim2.new(1, 0, 0, 40)
-	UIKit.popIn(title, FLIP / 2)
-	if hero.Rarity then
-		local rarity = UIKit.text(root, RarityStyle.name(hero.Rarity), Typography.Size.Heading, { Color = rarityColor })
-		rarity.AnchorPoint = Vector2.new(0.5, 0)
-		rarity.Position = UDim2.new(0.5, 0, 0, REVEAL_CARD.Y + Spacing.XL + 48)
-		rarity.Size = UDim2.new(1, 0, 0, 30)
-		RarityStyle.paint(rarity, hero.Rarity)
-		UIKit.popIn(rarity, FLIP / 2 + 0.08)
-	end
-
-	local continue = UIKit.button(root, "Continuer", "Primary", UDim2.fromOffset(220, 56 + UITheme.Shadow.ButtonLip), function()
-		SummonView.Hide()
-		if opts.OnContinue then
-			task.delay(Animation.Close.Time, opts.OnContinue)
+	Guides.open(if data.Free then "Summon" else "SummonBanners")
+	local token = generation
+	task.spawn(function()
+		while current and generation==token do
+			local remaining = math.max(0,math.ceil((data.EndsAt or 0)-workspace:GetServerTimeNow()))
+			if clockLabel and clockLabel.Parent then
+				clockLabel.Text = string.format("%d:%02d",math.floor(remaining/60),remaining%60)
+				clockLabel.TextColor3 = if remaining<60 then C.RoyalRed else C.Ink
+			end
+			if progress and progress.Parent then
+				local ratio = math.clamp(1-remaining/900,0,1)
+				progress.Size = UDim2.new(ratio,-20*ratio,0,6)
+			end
+			if remaining==0 and not data.Free and not pending then
+				pending=true
+				for _,b in buttons do b.setEnabled(false) end
+				if opts.OnRefresh then opts.OnRefresh() end
+				break
+			end
+			task.wait(.25)
 		end
 	end)
-	continue.holder.AnchorPoint = Vector2.new(0.5, 1)
-	continue.holder.Position = UDim2.fromScale(0.5, 1)
-	UIKit.popIn(continue.holder, FLIP / 2 + 0.25, 1.06)
 end
 
-return SummonView
+function View.RevealBatch(batch: any, options: any)
+	local Reveal = require(script.Parent.SummonReveal)
+	Reveal.show(batch,options,mount,View.Hide)
+end
+function View.Reveal(hero: any, options: any)
+	local shown=table.clone(hero)
+	shown.Rarity=shown.Rarity or "Commun"
+	shown.HeroId=shown.HeroId or shown.Name
+	View.RevealBatch({Results={shown},Quantity=1,Tickets=0},options)
+end
+return View

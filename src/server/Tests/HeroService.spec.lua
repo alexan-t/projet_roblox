@@ -370,7 +370,7 @@ return function(createService: any, modules: any)
 		assert(get(e.player("B")).Starter.Active == false, "existing player")
 	end)
 
-	test("first paid summon uses the normal roll: Summons.Total == 0 never forces a HeroId (deterministic)", function()
+	test("first paid summon uses the renormalized Epic+ pool, never a fixed hero", function()
 		local SummonRules = modules.SummonRules
 		local pool = SummonRules.buildPool(modules.RarityConfig.Tiers, HeroConfig.Heroes)
 		local banners = modules.SummonBannerConfig.Banners
@@ -387,11 +387,11 @@ return function(createService: any, modules: any)
 							return if calls == 1 then math.min(tierValue, n) else math.clamp(heroValue, 1, n)
 						end
 					end
-					local expected = SummonRules.roll(pool, banner, picker())
+					local expected = SummonRules.roll(SummonRules.guaranteePool(pool, 4), banner, picker())
 					local data = { Currencies = { SummonTickets = 1 }, Summons = { Total = 0 }, Kingdom = { VisualState = 1 },
 						Heroes = {}, Hotbar = table.create(HeroConfig.HotbarSize, "") }
 					local result = SummonRules.summon(data, SummonConfig, function() return "X" end, picker(), pool, banner)
-					assert(result and result.HeroId == expected, `first paid summon = normal roll ({tierValue}, {heroValue}, {banner.Id})`)
+					assert(result and result.HeroId == expected, `first paid summon = Epic+ roll ({tierValue}, {heroValue}, {banner.Id})`)
 					assert(result.First == true and data.Summons.Total == 1 and data.Kingdom.VisualState == 2)
 					seen[result.HeroId] = true
 					rarities[HeroConfig.Heroes[result.HeroId].Rarity] = true
@@ -401,7 +401,7 @@ return function(createService: any, modules: any)
 		local distinct, tiers = 0, 0
 		for _ in seen do distinct += 1 end
 		for _ in rarities do tiers += 1 end
-		assert(distinct > 10 and tiers == #modules.RarityConfig.Tiers, `many heroes and every rarity possible on the first paid summon ({distinct} heroes, {tiers} rarities)`)
+		assert(distinct > 10 and tiers == #modules.RarityConfig.Tiers - 3, `many heroes and every rarity possible on the first paid summon ({distinct} heroes, {tiers} rarities)`)
 	end)
 
 	test("summon refused without ticket; accepted with 1 -> ticket 0, rolled hero saved (test RNG gives tireuse)", function()
@@ -412,10 +412,10 @@ return function(createService: any, modules: any)
 		assert(none == nil and reason == "pas de ticket d'invocation")
 		e.data[p].Currencies.SummonTickets = 1
 		local got = s:RequestSummon(p)
-		assert(got and got.HeroId == "tireuse_des_faubourgs" and got.New == true and got.Name == "Tireuse des Faubourgs")
+		assert(got and modules.RarityConfig.Rank[got.Rarity] >= 4 and got.New == true and got.Name == HeroConfig.Heroes[got.HeroId].Name)
 		local d = e.data[p]
 		assert(d.Currencies.SummonTickets == 0 and d.Summons.Total == 1)
-		assert(d.Heroes[got.InstanceId].HeroId == "tireuse_des_faubourgs", "saved with the real HeroId")
+		assert(d.Heroes[got.InstanceId].HeroId == got.HeroId, "saved with the real HeroId")
 		assert(d.Hotbar[1] ~= got.InstanceId and d.Hotbar[2] == got.InstanceId, "first free shortcut")
 		for _, hero in d.Heroes do assert(hero.HeroId ~= "Tireur" and hero.HeroId ~= "Epeiste") end
 	end)
@@ -482,39 +482,34 @@ return function(createService: any, modules: any)
 		assert(table.concat(d.Hotbar, "|") == bar and #d.Hotbar == HeroConfig.HotbarSize)
 	end)
 
-	test("double request with 1 ticket: exactly 1 success, 1 hero created, ticket 0 (also re-entrant)", function()
-		local e = fixture()
-		local s = e.start()
-		local p = e.player("A", { tickets = 1 })
-		local reentrant: any = nil
-		e.onRefresh = function(pl: any)
-			if pl == p and reentrant == nil then reentrant = { s:RequestSummon(p) } end
-		end
-		local invoke = e.remote("RequestSummon").OnServerInvoke
-		local ok1, r1 = invoke(p)
-		local ok2, r2 = invoke(p)
-		assert(ok1 == true and r1.HeroId == "tireuse_des_faubourgs")
-		assert(ok2 == false and r2 == "pas de ticket d'invocation")
-		assert(reentrant and reentrant[1] == nil, "a call issued during the commit is refused")
-		assert(count(e.data[p].Heroes) == 2 and e.data[p].Currencies.SummonTickets == 0)
-		assert(#e.events(p, "HeroObtained") == 1)
+	local function request(e: any, p: any, quantity: number): any
+		local state = e.remote("GetSummonState").OnServerInvoke(p)
+		return {BannerId=state.BannerId,Slot=state.Slot,Quantity=quantity,ExpectedTotal=state.ExpectedTotal}
+	end
+	test("V2 duplicate version and reentry: one debit and one collection publication", function()
+		local e=fixture();local s=e.start();local p=e.player("A",{tickets=200})
+		local req=request(e,p,100)
+		local nested
+		e.onGuid=function() if not nested then nested={s:RequestSummonBatch(p,req)} end end
+		local before=#e.events(p,"HeroesChanged")
+		local ok,batch=e.remote("RequestSummon").OnServerInvoke(p,req)
+		assert(ok and #batch.Results==100 and nested[1]==nil)
+		assert(e.remote("RequestSummon").OnServerInvoke(p,req)==false)
+		assert(e.data[p].Currencies.SummonTickets==100 and e.data[p].Summons.Total==100)
+		assert(#e.events(p,"HeroesChanged")==before+1 and #e.events(p,"HeroObtained")==0)
+		assert(count(e.data[p].Heroes)==101)
 	end)
-
-	test("remote: only a known banner id is read; HeroId, cost and result stay server-side", function()
-		local e = fixture()
-		e.start()
-		local p = e.player("A", { tickets = 1 })
-		local invoke = e.remote("RequestSummon").OnServerInvoke
-		for _, bad in { "barde_de_fer", 0, { Id = "royaume" }, "" } :: { any } do
-			local ok, why = invoke(p, bad, 0, { HeroId = "barde_de_fer", New = true })
-			assert(ok == false and why == "bannière inconnue", tostring(bad))
+	test("V2 network rejects forged fields, quantity, banner and stale rotation without debit", function()
+		local e=fixture();e.start();local p=e.player("A",{tickets=100})
+		local invoke=e.remote("RequestSummon").OnServerInvoke
+		assert(invoke(p,request(e,p,10),0)==false, "coût ajouté en argument refusé")
+		for _,bad in {"royaume",0,{}, {Quantity=0}} do assert(invoke(p,bad)==false) end
+		for key,value in {Cost=0,HeroId="barde_de_fer",Rates={},Quantity=11,Slot=-1,BannerId="unknown",ExpectedTotal=-1} do
+			local req=request(e,p,10);req[key]=value;assert(invoke(p,req)==false,key)
 		end
-		assert(e.data[p].Currencies.SummonTickets == 1 and e.data[p].Summons.Total == 0, "nothing consumed")
-		local ok, r = invoke(p, "aube", "barde_de_fer", 0, { HeroId = "barde_de_fer", New = true })
-		assert(ok and r.HeroId == "tireuse_des_faubourgs" and r.Rarity == "Commun" and e.data[p].Currencies.SummonTickets == 0)
-		e.data[p].Currencies.SummonTickets = 1
-		local ok2, r2 = invoke(p) -- sans bannière : bannière par défaut
-		assert(ok2 and modules.HeroConfig.Heroes[r2.HeroId] and r2.Rarity == modules.HeroConfig.Heroes[r2.HeroId].Rarity)
+		assert(e.data[p].Currencies.SummonTickets==100 and e.data[p].Summons.Total==0)
+		local ok,result=invoke(p,request(e,p,10))
+		assert(ok and #result.Results==10 and modules.RarityConfig.Rank[result.Results[1].Rarity]>=4)
 	end)
 
 	test("GetSummonState: own tickets and cost only; nil before data is loaded", function()
@@ -670,9 +665,9 @@ return function(createService: any, modules: any)
 		local evA, evB = e.events(a, "HeroObtained"), e.events(b, "HeroObtained")
 		assert(#evA == 1 and #evB == 0)
 		local o = evA[1]
-		assert(o.InstanceId == got.InstanceId and o.HeroId == "tireuse_des_faubourgs" and o.Name == "Tireuse des Faubourgs" and o.New == true)
+		assert(o.InstanceId == got.InstanceId and o.HeroId == got.HeroId and o.Name == HeroConfig.Heroes[got.HeroId].Name and o.New == true)
 		assert(#e.events(a, "HeroesChanged") == changedBefore + 1)
-		assert(#callbacks == 1 and callbacks[1][1] == a and callbacks[1][2].HeroId == "tireuse_des_faubourgs")
+		assert(#callbacks == 1 and callbacks[1][1] == a and callbacks[1][2].HeroId == got.HeroId)
 	end)
 
 	test("two players: independent starters, tickets, rolls, kingdoms", function()
@@ -683,7 +678,7 @@ return function(createService: any, modules: any)
 		e.moveTo(b, vector(300, 3, 0))
 		local ra = s:RequestSummon(a)
 		local rb = s:RequestSummon(b)
-		assert(ra.HeroId == "tireuse_des_faubourgs" and rb.HeroId == "tireuse_des_faubourgs", "each profile has its own first roll")
+		assert(modules.RarityConfig.Rank[ra.Rarity] >= 4 and modules.RarityConfig.Rank[rb.Rarity] >= 4, "each profile has its own first roll")
 		assert(ra.InstanceId ~= rb.InstanceId)
 		assert(e.data[a].Currencies.SummonTickets == 0 and e.data[b].Currencies.SummonTickets == 1)
 		assert(e.data[a].Kingdom.VisualState == 2 and e.data[b].Kingdom.VisualState == 2)
@@ -700,7 +695,7 @@ return function(createService: any, modules: any)
 		assert(hero.HeroId == "ecuyer_du_rempart" and hero.CombatProfile == "Epeiste" and hero.CombatTemplate == "Heros_EcuyerDuRempart")
 		local got = s:RequestSummon(p)
 		local t = s:GetCombatHero(p, got.InstanceId)
-		assert(t.HeroId == "tireuse_des_faubourgs" and t.CombatProfile == "Tireur" and t.CombatTemplate == "tireuse_des_faubourgs")
+		assert(t.HeroId == got.HeroId and t.CombatProfile == HeroConfig.Heroes[got.HeroId].CombatProfile and t.CombatTemplate == (HeroConfig.Heroes[got.HeroId].CombatTemplate or got.HeroId))
 		assert(s:AddHero(p, "Epeiste") == nil and s:AddHero(p, "heros_retire") == nil)
 		assert(s:AddHero(p, "barde_de_fer") ~= nil, "every catalog hero is activated")
 		assert(s:AddHero(p, "tireuse_des_faubourgs") ~= nil)
@@ -746,12 +741,13 @@ return function(createService: any, modules: any)
 		local p = e.player("A", { tickets = 1 })
 		local invoke = e.remote("RequestSummon").OnServerInvoke
 		local ok, refused = 0, 0
+		local req = request(e,p,1)
 		for _ = 1, 20 do
-			if invoke(p) == true then ok += 1 else refused += 1 end
+			if invoke(p,req) == true then ok += 1 else refused += 1 end
 		end
 		assert(ok == 1 and refused == 19, `{ok} / {refused}`)
 		assert(e.data[p].Currencies.SummonTickets == 0 and count(e.data[p].Heroes) == 2, "starter + one summoned hero")
-		assert(#e.events(p, "HeroObtained") == 1 and e.data[p].Summons.Total == 1)
+		assert(#e.events(p, "HeroObtained") == 0 and e.data[p].Summons.Total == 1)
 	end)
 
 	test("#12 summon never consumes a ticket without a hero: a failure inside the transaction changes nothing", function()
@@ -852,7 +848,7 @@ return function(createService: any, modules: any)
 		local pool = rules.buildPool(modules.RarityConfig.Tiers, HeroConfig.Heroes)
 		local made = 0
 		local got, why = rules.summon(data, SummonConfig, function(): string made += 1; return "X" end, function(): number return 1 end, pool, nil)
-		assert(got == nil and why == "pas de ticket d'invocation" and made == 0 and next(data.Heroes) == nil)
+		assert(got == nil and why == "pas assez de tickets d'invocation" and made == 0 and next(data.Heroes) == nil)
 	end)
 
 	test("#12 summon lock: a request re-entering during the transaction is refused", function()
@@ -969,6 +965,99 @@ return function(createService: any, modules: any)
 				end
 			end
 		end
+	end)
+
+	test("V2 rotation UTC: boundaries, all banners, same time across servers and rejoin",function()
+		local cfg=modules.SummonBannerConfig
+		for slot=0,300 do
+			local a,id,ends=cfg.active(slot*900)
+			local b,id2=cfg.active(slot*900+899)
+			local c,id3=cfg.active(slot*900+900)
+			assert(a==b and id==id2 and id3==id+1 and ends==(slot+1)*900 and c~=a)
+		end
+	end)
+	test("V2 exact odds include featured fallback, sum to 1, and guarantee excludes ranks 1-3",function()
+		local r=modules.SummonRules
+		local pool=r.buildPool(modules.RarityConfig.Tiers,HeroConfig.Heroes)
+		for _,b in modules.SummonBannerConfig.Banners do
+			local rates=r.rates(pool,b);local sum=0
+			for _,probability in rates.Heroes do sum+=probability end
+			assert(math.abs(sum-1)<1e-12)
+			for _,tier in pool.Tiers do
+				local n=0
+				for _,id in tier.Heroes do if table.find(b.Featured,id) then n+=1 end end
+				for _,id in tier.Heroes do
+					local expected=tier.Weight/pool.Total*(if n==0 then 1/#tier.Heroes else .5/#tier.Heroes+(if table.find(b.Featured,id) then .5/n else 0))
+					assert(math.abs(rates.Heroes[id]-expected)<1e-12)
+				end
+			end
+			local guaranteed=r.rates(r.guaranteePool(pool,4),b);sum=0
+			for id,probability in guaranteed.Heroes do
+				if modules.RarityConfig.Rank[HeroConfig.Heroes[id].Rarity]<4 then assert(probability==0) end
+				sum+=probability
+			end
+			assert(math.abs(sum-1)<1e-12)
+		end
+	end)
+	test("V2 x1/x10/x100 cost, first-only guarantee, 100 distinct instances, new once per hero",function()
+		local rules=modules.SummonRules
+		local pool=rules.buildPool(modules.RarityConfig.Tiers,HeroConfig.Heroes)
+		for _,q in {1,10,100} do
+			local data={Heroes={},Hotbar=table.create(10,""),Summons={Total=0},Currencies={SummonTickets=q*2},Kingdom={VisualState=1}}
+			local n=0
+			local make=function() n+=1;return tostring(n) end
+			local first=rules.batch(data,SummonConfig,q,make,function() return 1 end,pool,nil)
+			assert(#first.Results==q and data.Currencies.SummonTickets==q and data.Summons.Total==q)
+			assert(first.Results[1].Guaranteed and HeroConfig.Heroes[first.Results[1].HeroId].Rarity=="Epique")
+			local seen={}
+			for i,r in first.Results do
+				assert(r.New==not seen[r.HeroId]);seen[r.HeroId]=true
+				if i>1 then assert(not r.Guaranteed and HeroConfig.Heroes[r.HeroId].Rarity=="Commun") end
+			end
+			local second=rules.batch(data,SummonConfig,q,make,function() return 1 end,pool,nil)
+			assert(not second.Guaranteed and count(data.Heroes)==q*2 and data.Currencies.SummonTickets==0)
+			assert(HeroConfig.Heroes[second.Results[1].HeroId].Rarity=="Commun")
+		end
+	end)
+	test("V2 error on last RNG/ID, duplicate ID, insufficient tickets: no partial batch",function()
+		local rules=modules.SummonRules
+		local pool=rules.buildPool(modules.RarityConfig.Tiers,HeroConfig.Heroes)
+		for _,failure in {"last","duplicate","tickets"} do
+			local d={Heroes={},Hotbar=table.create(10,""),Summons={Total=0},Currencies={SummonTickets=if failure=="tickets" then 99 else 100},Kingdom={VisualState=1}}
+			local n=0
+			pcall(rules.batch,d,SummonConfig,100,function()
+				n+=1;if failure=="last" and n==100 then error("test") end
+				return if failure=="duplicate" then "same" else tostring(n)
+			end,function() return 1 end,pool,nil)
+			assert(count(d.Heroes)==0 and d.Summons.Total==0 and d.Kingdom.VisualState==1)
+			assert(d.Currencies.SummonTickets==(if failure=="tickets" then 99 else 100))
+		end
+	end)
+	test("V2 paid counter survives rejoin, rejects replay, old paid profiles never regain guarantee",function()
+		local e=fixture();local s=e.start();local a=e.player("A",{tickets=200})
+		local req=request(e,a,100)
+		local batch=s:RequestSummonBatch(a,req)
+		assert(batch and batch.Guaranteed)
+		local saved=e.data[a]
+		local back=e.player("Back",{tickets=0});e.data[back]=saved
+		assert(s:RequestSummonBatch(back,req)==nil)
+		local nextBatch=s:RequestSummonBatch(back,request(e,back,100))
+		assert(nextBatch and not nextBatch.Guaranteed and saved.Summons.Total==200)
+		local legacy=e.player("Legacy",{tickets=1});e.data[legacy].Summons.Total=9
+		assert(e.remote("GetSummonState").OnServerInvoke(legacy).Guarantee==false)
+	end)
+	test("V2 two players x100: independent balances, versions, guarantees and 200 unique ids",function()
+		local e=fixture();local service=e.start()
+		local a=e.player("A",{tickets=100})
+		local b=e.player("B",{tickets=100,portal=vector(300,3,0)})
+		e.moveTo(b,vector(300,3,0))
+		local ra=service:RequestSummonBatch(a,request(e,a,100))
+		assert(ra and ra.Guaranteed and e.data[b].Summons.Total==0 and e.data[b].Currencies.SummonTickets==100)
+		local rb=service:RequestSummonBatch(b,request(e,b,100))
+		assert(rb and rb.Guaranteed and e.data[a].Currencies.SummonTickets==0 and e.data[b].Currencies.SummonTickets==0)
+		local ids={}
+		for _,batch in {ra,rb} do for _,hero in batch.Results do assert(not ids[hero.InstanceId]);ids[hero.InstanceId]=true end end
+		assert(count(ids)==200 and e.data[a].Summons.Total==100 and e.data[b].Summons.Total==100)
 	end)
 
 	print(`HeroService: {passed} passed, {failed} failed`)

@@ -53,11 +53,7 @@ Un palier sans héros invocable reporte sa chance sur le palier inférieur le pl
 
 ## Bannières
 
-`src/shared/Config/SummonBannerConfig.lua` (partagé) : `Appel du Royaume` (par défaut), `Première
-Aube`, `Serment Brisé`. Toutes tirent dans le même pool (les 60 héros) avec les mêmes chances par
-rareté. Chacune met en avant 3 héros (`Featured`) : quand la rareté tirée contient un héros mis en
-avant, l'un d'eux sort une fois sur deux (`FeaturedShare = 0,5`), sinon un héros quelconque de ce
-palier.
+`SummonBannerConfig` définit trois bannières : Appel du Royaume, Première Aube et Serment Brisé. Une seule est active, par créneau UTC de **15 minutes**, identique sur tous les serveurs. `Featured` garde l'ordre vedette principale puis deux secondaires. Pool commun de 60 héros ; `FeaturedShare = 0,5` réserve la moitié des tirages de la rareté au sous-pool vedette, l'autre moitié au pool complet. Les probabilités exactes incluent ces deux chemins. Voir [SUMMON.md](SUMMON.md).
 
 ## Données (`PlayerData`, DataVersion 4)
 
@@ -139,7 +135,7 @@ Le serveur vérifie : données chargées, plot, SON portail, distance, aucune in
 `SummonStarter` active et pas terminée, Écuyer jamais obtenu. Puis, sans yield
 (`SummonRules.starter`) : exemplaire créé (raccourci 1), **sans ticket, sans `Summons.Total`, sans
 évolution du royaume** ; ensuite `KingdomService:Refresh`, `HeroesChanged`, `HeroObtained` et l'événement
-de quête. La première vraie invocation (avec ticket) est un tirage normal et fait évoluer le royaume.
+de quête. La première vraie invocation (avec ticket) garantit un résultat Épique ou mieux et fait évoluer le royaume.
 Impossible deux fois. Les anciens profils gardent leurs héros (migration v3).
 
 Présentation : `GetSummonState.Starter = { Active, HeroId, Name, Rarity }` (lecture seule) pour la bannière
@@ -148,49 +144,19 @@ héros : `RequestStarterSummon` n'a aucun argument.
 
 ## Invocation
 
-`Remotes.RequestSummon` (RemoteFunction). **Le client n'envoie que l'Id de la bannière** (texte,
-facultatif : bannière par défaut ; inconnu ou d'un autre type → refus « bannière inconnue », rien
-consommé). HeroId, coût, rareté et résultat sont décidés par le serveur ; tout autre argument est
-ignoré. Réponse : `(true, Obtained)` ou `(false, raison)`.
-`Remotes.GetSummonState` (RemoteFunction, lecture seule) : `{ Tickets, Cost }` pour la fenêtre
-d'invocation.
+`GetSummonState()` publie la bannière active, son créneau et sa prochaine borne, les tickets, coûts, probabilités normales/garanties et la disponibilité du starter. `RequestSummon({ BannerId, Slot, Quantity, ExpectedTotal })` autorise **1 / 10 / 100** résultats pour **1 / 10 / 100 tickets**. Aucun coût, héros ou taux client n'est accepté.
 
-Conditions vérifiées par le serveur (`HeroService:CanSummon`), réglages dans
-`src/server/Config/SummonConfig.lua` :
+Le serveur revérifie le profil, le personnage vivant, le portail du joueur à 18 studs maximum, le créneau actif, la version persistée et le solde. `SummonRules.batch` prépare tout avant mutation, puis crée un identifiant indépendant par résultat, débite le lot et publie une seule mise à jour de collection/royaume. Un replay de la même version ne peut pas débiter deux fois.
 
-- joueur présent, `DataLoaded`, profil disponible ;
-- plot attribué et **son** `PortailInvocation` (`PlotService:GetPlot(player).PortailInvocation`,
-  jamais `PlotTravail`, jamais une Instance fournie par le client) ;
-- personnage vivant, à **18 studs** au plus (distance horizontale, position serveur) du pivot de ce
-  portail : près du portail d'un autre joueur → refus ;
-- `SummonTickets >= Cost` (1) ; aucune invocation déjà en cours pour ce joueur.
+Le premier résultat de la première invocation payante (`Summons.Total == 0`) est **Épique ou mieux**, aux poids des rangs 4–10 renormalisés. Les autres résultats utilisent les taux normaux de la bannière. Le starter gratuit ne touche pas ce compteur ; les profils déjà payants (`Total > 0`) ne retrouvent jamais la garantie au rejoin. Le schéma DataVersion 4 suffit.
 
-Transaction (`SummonRules.summon`, pure, **sans yield**) : revérifier le ticket → choisir le héros →
-ticket −1 → nouveau `HeroInstanceId` → ajout aux `Heroes` → première case libre de la hotbar (sinon
-collection) → `New` = premier exemplaire de ce HeroId → `Summons.Total + 1` → à la première
-invocation seulement, `Kingdom.VisualState` 1 → 2. Deux demandes avec un seul ticket : une seule
-réussite, un seul héros, ticket final 0. Ensuite : `KingdomService:Refresh`, `HeroesChanged`,
-`HeroObtained`.
-
-**Tirage** :
-
-- **toute** invocation payante, première comprise → une rareté selon les chances (§ Raretés), puis un
-  héros de cette rareté (mise en avant de la bannière, § Bannières). `SummonRules.roll`, pur et testé.
-  **Aucun héros garanti** après l'Écuyer tutoriel : la Tireuse reste dans le pool et peut sortir comme
-  les autres. `Summons.Total` compte les invocations payantes ; à 0 (première invocation payante,
-  `firstPaid`), il ne décide que de l'évolution du royaume (1 → 2), jamais du héros.
-- équilibrage vérifié (tests #13, CombatEngine) : l'Écuyer + n'importe quel profil de combat comme
-  deuxième héros gagne 1-1 à 1-5 (20 tirages chacun) — aucun tirage bloquant.
-
-**Royaume** : `VisualState` 1 → 2 une seule fois (première invocation), jamais au-delà dans #10.
-`Kingdom.Level` n'a pas encore de règle et n'est pas modifié. Les héros apparaissent sur les
-repères du royaume dans l'ordre de leurs identifiants (`KINGDOM.md`).
+À la première invocation payante, `Kingdom.VisualState` passe de 1 à 2 une seule fois ; `Kingdom.Level` ne change pas. Doublons, hotbar et progression XP restent indépendants par exemplaire. Voir [SUMMON.md](SUMMON.md) pour le contrat complet, les taux, les reveals et l'économie provisoire des tickets.
 
 ## Événements
 
 - `HeroService:OnHeroObtained(callback)` (serveur) : `callback(player, Obtained)` après la sauvegarde
   dans PlayerData et le Refresh du royaume.
-- `Remotes.HeroObtained` (RemoteEvent, serveur → **seul** le joueur concerné) :
+- `Remotes.HeroObtained` (RemoteEvent du starter et de l’adaptateur interne x1, serveur → **seul** le joueur concerné) :
   `{ InstanceId, HeroId, Name, New, Rarity }`.
 - `Remotes.HeroesChanged` (RemoteEvent) : nouvelle vue de la collection après tout changement.
 
@@ -219,7 +185,8 @@ ServerStorage n'est pas modifiée. Seuls les HeroId de HeroConfig sont copiés.
 | Méthode | Résultat |
 | --- | --- |
 | `GetCombatHero(player, instanceId)` | `{ HeroId, CombatProfile, CombatTemplate }`, ou `nil` et la raison (ArenaService) |
-| `RequestSummon(player, bannerId?)` | `Obtained` (avec `Rarity`), ou `nil` et la raison |
+| `RequestSummonBatch(player, request)` | lot V2 autoritaire, ou `nil` et raison |
+| `RequestSummon(player, bannerId?)` | adaptateur serveur x1 conservé pour les outils historiques |
 | `CanSummon(player)` | données du joueur, ou `nil` et la raison |
 | `OnHeroObtained(callback)` | voir Événements |
 | `AddHero(player, heroId)` | identifiant du nouvel exemplaire (héros activé uniquement, sinon `nil`) |
@@ -232,7 +199,7 @@ les modèles d'arène portent `HeroId` (réel), `HeroClass` (profil) et `HeroIns
 ## Debug (Studio)
 
 `ServerStorage.DebugData:Invoke(player, "AddHero", "tireuse_des_faubourgs")` et `"RemoveHero", id`
-passent par HeroService. Pour invoquer, appeler `Remotes.RequestSummon:InvokeServer()` depuis un
+passent par HeroService. Pour invoquer, lire `GetSummonState`, puis envoyer la requête V2 décrite dans `SUMMON.md` depuis un
 client placé près du portail de son plot, ou passer par le portail (E). `"AddCurrency", "SummonTickets", 10`
 donne des tickets.
 

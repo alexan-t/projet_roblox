@@ -27,7 +27,7 @@ local DefaultPlayerData: PlayerDataTypes.PlayerData = {
 	Team = {},
 	-- 10 raccourcis vides (HeroConfig.HotbarSize) ; HeroService les remplit.
 	Hotbar = { "", "", "", "", "", "", "", "", "", "" },
-	-- Invocations réussies (HeroService) : la première donne le héros garanti (SummonConfig).
+	-- Résultats payants réussis (HeroService), starter exclu : 0 = premier résultat Épique ou mieux.
 	Summons = {
 		Total = 0,
 	},

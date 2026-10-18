@@ -1,0 +1,12 @@
+Assets Invocation — fond transparent, aucun texte intégré.
+PNG = @2x des SVG.
+card_frame_1..10 : cadre de carte par rang RarityConfig (1 Commun → 10 Transcendant). 7 Maudit = cadre assombri (ombre), 10 Transcendant = bande prisme (UITheme.RarityPrism). 200×266. Zone portrait : x19 y25 w162 h165. Plaque nom : y193→241.
+card_back : dos de carte (reveal ×10 flip).
+banner_frame : cadre bannière 9-slice — Roblox SliceCenter = Rect(60,60,540,280) sur 600×340.
+ribbon_taux / ribbon_garanti : rubans, texte posé par Roblox (TextLabel).
+seal_garanti : sceau "Épique garanti".
+portal : décor portail (reveal + fond bannière).
+rays / sparkle : BLANCS → teinter via ImageColor3 (couleur de rareté).
+star : étoile de rareté (1 étoile par palier).
+hourglass : icône timer de rotation.
+hero_placeholder : silhouette (phase silhouette du reveal + placeholder portrait).

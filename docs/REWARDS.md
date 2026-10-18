@@ -30,10 +30,8 @@ Stages = {
   - `Amount` est un entier fini ≥ 0.
   - `New` est un simple badge « Nouveau » sur l'écran de fin, sans effet de gameplay.
 - **Valeurs Alpha provisoires.** Seul le ticket d'invocation du premier clear de 1-1 est exigé (#9, il sert à #10). L'or, les gemmes et le replay sont des valeurs de départ à équilibrer.
-- **1-2 à 1-5 (#13).** `FirstClearReward = {}` et `RepeatReward = {}`, PROVISOIRES.
-  - Le First Clear est enregistré, ce qui déverrouille le stage suivant, sans inventer d'économie.
-  - Le game design définira ces récompenses.
-  - 1-1 garde son contrat : 100 or, 10 gemmes et 1 ticket au premier clear, 20 or en replay.
+- **ALPHA 0.0.2 PROVISOIRE (#80).** Les First Clears 1-2 à 1-5 restent vides (ils ouvrent la progression). `TicketEconomy` centralise les tickets de replay : Normal 1-2/1-3 = 1, 1-4 = 2, boss 1-5 = 5 ; Élite 1-1 à 1-4 = 2, boss = 10. Ainsi les x10 et x100 ont une source régulière, sans monétisation. Voir [SUMMON.md](SUMMON.md).
+  - 1-1 conserve 100 or, 10 gemmes et 1 ticket au premier clear, 20 or en replay.
 
 Au démarrage (`Init`), chaque entrée est validée. Une entrée est refusée, avec un warning, si l'un de ces cas se présente :
 - `Kind` inconnu ;
@@ -46,9 +44,7 @@ Une entrée refusée ne donne **rien**, pas même le First Clear. Les autres sta
 **Mode Élite (#69)** : `RewardConfig.EliteStages`, même format et même clé `"<zone>-<stage>"`, lu quand
 ZoneService termine une session Élite (`HandleStageCompleted(..., mode = "Elite")`). Son First Clear est
 enregistré dans `Progression.EliteFirstClears` (il débloque le stage Élite suivant), jamais dans
-`FirstClears` ; les deux progressions sont indépendantes. Les listes Élite sont **vides** pour l'instant
-(ALPHA 0.0.2 PROVISOIRE) : l'économie Élite (équipements, ressources) sera définie dans ses propres issues,
-sans dupliquer RewardService. Les récompenses Normales sont inchangées.
+`FirstClears` ; les deux progressions sont indépendantes. Les First Clears Élite restent vides ; les replays donnent les tickets définis dans `TicketEconomy` (ALPHA 0.0.2 PROVISOIRE, #80). Équipements et ressources restent à définir dans leurs issues.
 
 ## Flux
 
@@ -96,6 +92,17 @@ Raisons de refus :
 `ArenaPlacementController` reçoit le `CombatEnded` enrichi. Après `RESULT_DELAY`, il appelle `RewardScreenController.Show({ Result, FirstClear, Rewards })`.
 
 Aucun affichage permanent des devises n'existe encore : `CurrencyView` ne sert que dans l'aperçu UI. Le solde est visible dans les données du joueur.
+
+## Fenêtre Expédition
+
+La fenêtre montre les récompenses **réelles** du stage, sans rien inventer (`StagePreview`, voir `docs/ZONES.md`).
+
+- **« Première victoire »** (badge « Une fois ») présente `FirstClearReward`.
+  - Une fois le First Clear obtenu, la boîte reste visible, grisée, avec « ✓ Obtenue ».
+  - Le titre suivant devient alors « À chaque victoire ».
+- **« Ensuite, à chaque victoire »** présente l'XP par héros posé (`HeroProgressionConfig`), puis `RepeatReward`.
+- **Après #80** : les replays 1-2 à 1-5 Normal et les replays Élite peuvent afficher les tickets configurés dans `TicketEconomy` ; l'interface lit la vraie config et n'invente aucun montant.
+- **Bonus de quête** : jamais mélangé aux récompenses de stage. La quête garde son propre panneau.
 
 ## Validation
 
