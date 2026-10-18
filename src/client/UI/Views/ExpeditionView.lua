@@ -37,6 +37,7 @@ local ResourceConfig = require(ReplicatedStorage.Shared.Config.ResourceConfig)
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local GuideTargets = require(script.Parent.Parent.GuideTargets)
 local Icons = require(script.Parent.Parent.Icons)
+local ItemAura = require(script.Parent.Parent.ItemAura)
 local UIKit = require(script.Parent.Parent.UIKit)
 
 local C = UITheme.Colors
@@ -924,6 +925,10 @@ function ExpeditionView.Show(data: Data, options: Options?)
 						img.Position = UDim2.fromScale(0.5, 0.5)
 					else
 						UIKit.text(iconBox, string.upper(string.sub(name, 1, 2)), math.floor(L.DropIcon * 0.34), { Color = C.WoodDark, Stroke = false })
+					end
+					if drop.Kind == "Item" and config then
+						-- équipement : fond et aura de sa rareté (les ressources n'en ont aucune)
+						ItemAura.apply(iconBox, (config :: any).Rarity)
 					end
 					local label = UIKit.text(line, name, L.DropSize)
 					label.TextXAlignment = Enum.TextXAlignment.Left
