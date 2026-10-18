@@ -1,4 +1,28 @@
-# Icônes des ressources — bilan Studio du 18 octobre 2026
+# Icônes des ressources — bilan Studio
+
+## État final — 19 octobre 2026
+
+**PASS : 60/60 icônes livrées.**
+
+Les 15 dernières ressources (020, 030, 036, 040, 041, 044, 045, 046, 048, 050, 051, 054, 055, 059, 060)
+ont été reconstruites à la main dans Studio, sans `generate_mesh` ni `generate_procedural_model`.
+Chaque ressource possède désormais :
+- un PNG transparent 512 × 512 dans `assets/icons/resources/` ;
+- un AssetId publié unique dans `ResourceConfig.lua` ;
+- une carte Studio conforme (`Icone.Image = AssetId = Icon Git`) ;
+- un rapport PASS `automation/reviews/resource_NNN-handbuilt.md` avec captures de lisibilité.
+
+Audit Studio final : 60 cartes conformes au Git, 60 images, 0 vide ; `Workspace.AtelierIcones` vide.
+Les 15 modèles construits à la main sont archivés dans
+`ServerStorage.Archive_ResourceIcons_Handbuilt_20261019`.
+
+Validation technique : suite Node **14/14**, acceptation 60/60 PASS, AssetIds et PNG uniques,
+RGBA 512 × 512 avec transparence. La spec ResourceConfig a aussi été exécutée en mémoire dans Studio.
+Le CLI Luau local n'a pas été relancé dans ce worktree car `build/luau-cli/luau.exe` y était absent.
+
+Les sections ci-dessous sont conservées comme **historique de production** et ne décrivent plus l'état courant.
+
+# Historique — bilan Studio du 18 octobre 2026
 
 ## État final de la nouvelle série autorisée
 
