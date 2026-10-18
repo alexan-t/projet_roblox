@@ -107,7 +107,7 @@ resource("resource_046", "Rosée de Lune", "arcane", "rbxassetid://1273393878848
 resource("resource_047", "Essence Sylvestre", "arcane", "rbxassetid://128441665886090")
 resource("resource_048", "Galet Spirale", "arcane", "rbxassetid://83070458979354")
 resource("resource_049", "Encre Ancienne", "arcane", "rbxassetid://116209265150473")
-resource("resource_050", "Orbe de Verre Trouble", "arcane")
+resource("resource_050", "Orbe de Verre Trouble", "arcane", "rbxassetid://95090509797705")
 -- Royaume et artisanat
 resource("resource_051", "Pile de Planches", "royaume")
 resource("resource_052", "Lingot de Fer", "royaume", "rbxassetid://136456405227147")
