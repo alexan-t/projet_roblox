@@ -306,7 +306,7 @@ test(`Snapshot historique (${SNAPSHOT}): every card has Illustration.Icone; Asse
 	assert(problems.length === 0, `${problems.length} écart(s) : ${problems.slice(0, 5).join(' ; ')}`);
 });
 
-// --- Catalogue de production automation/catalogues/items.json (icônes restant à produire) ---
+// --- Catalogue de production automation/catalogues/items.json (icônes hors livraison du partenaire) ---
 
 const catalogue = JSON.parse(read('automation/catalogues/items.json').toString('utf8'));
 // Icônes fournies par le partenaire (PR #74) : elles n'ont pas de tâche.
@@ -319,8 +319,31 @@ test('items.json: one task per item outside the partner delivery (001-034, 045-0
 	queue.forEach((task, i) => {
 		const info = expected[i];
 		assert(task.id === info.id && task.name === info.name && task.slot_type === info.slotType, `${task.id} ≠ ${info.id}`);
-		assert(info.icon === undefined, `${task.id} : icône déjà livrée dans ItemConfig, tâche à retirer`);
 	});
+});
+
+// Une tâche « todo » n'a pas d'icône ; une tâche « done » a son icône dans ItemConfig, son PNG dans
+// assets/icons/items/ et une review PASS (TASK_FORMAT : pas de done sans PASS).
+test('items.json: task status agrees with ItemConfig.Icon, the PNG and the latest review', () => {
+	const byId = new Map(items.map((info) => [info.id, info]));
+	for (const task of catalogue.queue) {
+		const info = byId.get(task.id);
+		if (task.status === 'todo') {
+			assert(info.icon === undefined, `${task.id} : icône déjà livrée dans ItemConfig, tâche à passer en done`);
+			assert(task.iteration === 0 && task.screenshots.length === 0 && task.latest_review === null, `${task.id}: état todo`);
+			continue;
+		}
+		assert(task.status === 'done', `${task.id}: statut ${task.status}`);
+		assert(info.icon !== undefined, `${task.id} : done sans icône dans ItemConfig`);
+		const png = `assets/icons/items/${task.id}.png`;
+		assert(JSON.stringify(task.screenshots) === JSON.stringify([png]), `${task.id}: screenshots`);
+		const header = read(png);
+		assert(header.readUInt32BE(16) === 512 && header.readUInt32BE(20) === 512, `${png} n'est pas en 512 x 512`);
+		assert(task.latest_review === `automation/reviews/${task.id}_iteration_00.json`, `${task.id}: latest_review`);
+		const review = JSON.parse(read(task.latest_review).toString('utf8'));
+		assert(review.task_id === task.id && review.verdict === 'PASS', `${task.id}: review sans PASS`);
+		assert(task.notes.includes(info.icon), `${task.id}: notes sans l'AssetId livré`);
+	}
 });
 
 test('items.json: tasks follow TASK_FORMAT and target their Items #NNN [Rareté] slot', () => {
@@ -332,10 +355,9 @@ test('items.json: tasks follow TASK_FORMAT and target their Items #NNN [Rareté]
 		assert(typeof task.icon_hook === 'string' && task.icon_hook.length >= 30, `${task.id}: icon_hook`);
 		const expected = `Items #${task.id.slice(-3)} [${rarityName.get(byId.get(task.id).rarity)}]`;
 		assert(task.target_studio_slot === expected, `${task.id}: ${task.target_studio_slot}`);
-		assert(task.status === 'todo' && task.iteration === 0 && task.max_iterations > 0, `${task.id}: état`);
+		assert(task.iteration === 0 && task.max_iterations > 0, `${task.id}: état`);
 		assert(task.worker === 'windows' && Number.isInteger(task.priority), `${task.id}: worker ou priority`);
-		assert(Array.isArray(task.screenshots) && task.screenshots.length === 0, `${task.id}: screenshots`);
-		assert(task.latest_review === null && typeof task.notes === 'string', `${task.id}: latest_review ou notes`);
+		assert(Array.isArray(task.screenshots) && typeof task.notes === 'string', `${task.id}: screenshots ou notes`);
 		assert(!('rarity' in task), `${task.id}: champ de rareté (elle vient de ItemConfig)`);
 	}
 });

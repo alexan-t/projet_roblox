@@ -10,7 +10,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #001 [Commun]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -20,9 +20,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_001.png"
+      ],
+      "latest_review": "automation/reviews/item_001_iteration_00.json",
+      "notes": "Livrée : rbxassetid://75383129280019 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_002",
@@ -33,7 +35,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #002 [Commun]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -43,9 +45,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_002.png"
+      ],
+      "latest_review": "automation/reviews/item_002_iteration_00.json",
+      "notes": "Livrée : rbxassetid://138619427866574 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_003",
@@ -56,7 +60,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #003 [Commun]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -66,9 +70,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_003.png"
+      ],
+      "latest_review": "automation/reviews/item_003_iteration_00.json",
+      "notes": "Livrée : rbxassetid://131621203288181 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_004",
@@ -79,7 +85,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #004 [Commun]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -89,9 +95,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_004.png"
+      ],
+      "latest_review": "automation/reviews/item_004_iteration_00.json",
+      "notes": "Livrée : rbxassetid://75705056543057 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_005",
@@ -102,7 +110,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #005 [Peu commun]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -112,9 +120,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_005.png"
+      ],
+      "latest_review": "automation/reviews/item_005_iteration_00.json",
+      "notes": "Livrée : rbxassetid://100382250983240 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_006",
@@ -125,7 +135,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #006 [Peu commun]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -135,9 +145,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_006.png"
+      ],
+      "latest_review": "automation/reviews/item_006_iteration_00.json",
+      "notes": "Livrée : rbxassetid://109337087954591 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_007",
@@ -148,7 +160,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #007 [Peu commun]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -158,9 +170,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_007.png"
+      ],
+      "latest_review": "automation/reviews/item_007_iteration_00.json",
+      "notes": "Livrée : rbxassetid://134279738581507 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_008",
@@ -171,7 +185,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #008 [Peu commun]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -181,9 +195,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_008.png"
+      ],
+      "latest_review": "automation/reviews/item_008_iteration_00.json",
+      "notes": "Livrée : rbxassetid://85942125661651 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_009",
@@ -194,7 +210,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #009 [Peu commun]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -204,9 +220,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_009.png"
+      ],
+      "latest_review": "automation/reviews/item_009_iteration_00.json",
+      "notes": "Livrée : rbxassetid://85985960470979 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_010",
@@ -217,7 +235,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #010 [Peu commun]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -227,9 +245,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_010.png"
+      ],
+      "latest_review": "automation/reviews/item_010_iteration_00.json",
+      "notes": "Livrée : rbxassetid://122580976141210 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_011",
@@ -240,7 +260,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #011 [Rare]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -250,9 +270,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_011.png"
+      ],
+      "latest_review": "automation/reviews/item_011_iteration_00.json",
+      "notes": "Livrée : rbxassetid://121409872992743 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_012",
@@ -263,7 +285,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #012 [Rare]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -273,9 +295,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_012.png"
+      ],
+      "latest_review": "automation/reviews/item_012_iteration_00.json",
+      "notes": "Livrée : rbxassetid://131801218085616 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_013",
@@ -286,7 +310,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #013 [Rare]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -296,9 +320,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_013.png"
+      ],
+      "latest_review": "automation/reviews/item_013_iteration_00.json",
+      "notes": "Livrée : rbxassetid://122429059801729 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_014",
@@ -309,7 +335,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #014 [Rare]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -319,9 +345,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_014.png"
+      ],
+      "latest_review": "automation/reviews/item_014_iteration_00.json",
+      "notes": "Livrée : rbxassetid://94045774006724 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_015",
@@ -332,7 +360,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #015 [Rare]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -342,9 +370,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_015.png"
+      ],
+      "latest_review": "automation/reviews/item_015_iteration_00.json",
+      "notes": "Livrée : rbxassetid://140393190537576 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_016",
@@ -355,7 +385,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #016 [Rare]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -365,9 +395,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_016.png"
+      ],
+      "latest_review": "automation/reviews/item_016_iteration_00.json",
+      "notes": "Livrée : rbxassetid://129981610111915 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_017",
@@ -378,7 +410,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #017 [Rare]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -388,9 +420,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_017.png"
+      ],
+      "latest_review": "automation/reviews/item_017_iteration_00.json",
+      "notes": "Livrée : rbxassetid://97832163211741 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_018",
@@ -401,7 +435,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #018 [Rare]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -411,9 +445,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_018.png"
+      ],
+      "latest_review": "automation/reviews/item_018_iteration_00.json",
+      "notes": "Livrée : rbxassetid://128661024104646 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_019",
@@ -424,7 +460,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #019 [Rare]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -434,9 +470,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_019.png"
+      ],
+      "latest_review": "automation/reviews/item_019_iteration_00.json",
+      "notes": "Livrée : rbxassetid://105229390240237 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_020",
@@ -447,7 +485,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #020 [Rare]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -457,9 +495,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_020.png"
+      ],
+      "latest_review": "automation/reviews/item_020_iteration_00.json",
+      "notes": "Livrée : rbxassetid://91664155851908 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_021",
@@ -470,7 +510,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #021 [Épique]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -480,9 +520,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_021.png"
+      ],
+      "latest_review": "automation/reviews/item_021_iteration_00.json",
+      "notes": "Livrée : rbxassetid://128233433960069 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_022",
@@ -493,7 +535,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #022 [Épique]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -503,9 +545,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_022.png"
+      ],
+      "latest_review": "automation/reviews/item_022_iteration_00.json",
+      "notes": "Livrée : rbxassetid://122724246593428 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_023",
@@ -516,7 +560,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #023 [Épique]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -526,9 +570,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_023.png"
+      ],
+      "latest_review": "automation/reviews/item_023_iteration_00.json",
+      "notes": "Livrée : rbxassetid://82387024923327 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_024",
@@ -539,7 +585,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #024 [Épique]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -549,9 +595,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_024.png"
+      ],
+      "latest_review": "automation/reviews/item_024_iteration_00.json",
+      "notes": "Livrée : rbxassetid://100962130436041 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_025",
@@ -562,7 +610,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #025 [Épique]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -572,9 +620,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_025.png"
+      ],
+      "latest_review": "automation/reviews/item_025_iteration_00.json",
+      "notes": "Livrée : rbxassetid://133640141930343 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_026",
@@ -585,7 +635,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #026 [Épique]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -595,9 +645,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_026.png"
+      ],
+      "latest_review": "automation/reviews/item_026_iteration_00.json",
+      "notes": "Livrée : rbxassetid://83757662738159 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_027",
@@ -608,7 +660,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #027 [Épique]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -618,9 +670,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_027.png"
+      ],
+      "latest_review": "automation/reviews/item_027_iteration_00.json",
+      "notes": "Livrée : rbxassetid://97249685414729 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_028",
@@ -631,7 +685,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #028 [Épique]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -641,9 +695,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_028.png"
+      ],
+      "latest_review": "automation/reviews/item_028_iteration_00.json",
+      "notes": "Livrée : rbxassetid://136126974238539 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_029",
@@ -654,7 +710,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #029 [Épique]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -664,9 +720,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_029.png"
+      ],
+      "latest_review": "automation/reviews/item_029_iteration_00.json",
+      "notes": "Livrée : rbxassetid://81476904289745 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_030",
@@ -677,7 +735,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #030 [Épique]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -687,9 +745,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_030.png"
+      ],
+      "latest_review": "automation/reviews/item_030_iteration_00.json",
+      "notes": "Livrée : rbxassetid://120031934130190 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_031",
@@ -700,7 +760,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #031 [Épique]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -710,9 +770,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_031.png"
+      ],
+      "latest_review": "automation/reviews/item_031_iteration_00.json",
+      "notes": "Livrée : rbxassetid://137050623904645 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_032",
@@ -723,7 +785,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #032 [Épique]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -733,9 +795,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_032.png"
+      ],
+      "latest_review": "automation/reviews/item_032_iteration_00.json",
+      "notes": "Livrée : rbxassetid://76907636024464 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_033",
@@ -746,7 +810,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #033 [Épique]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -756,9 +820,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_033.png"
+      ],
+      "latest_review": "automation/reviews/item_033_iteration_00.json",
+      "notes": "Livrée : rbxassetid://99809229151384 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_034",
@@ -769,7 +835,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #034 [Épique]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -779,9 +845,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_034.png"
+      ],
+      "latest_review": "automation/reviews/item_034_iteration_00.json",
+      "notes": "Livrée : rbxassetid://125158496576190 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_045",
@@ -792,7 +860,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #045 [Légendaire]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -802,9 +870,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_045.png"
+      ],
+      "latest_review": "automation/reviews/item_045_iteration_00.json",
+      "notes": "Livrée : rbxassetid://84156912322231 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_046",
@@ -815,7 +885,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #046 [Légendaire]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -825,9 +895,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_046.png"
+      ],
+      "latest_review": "automation/reviews/item_046_iteration_00.json",
+      "notes": "Livrée : rbxassetid://87967893266765 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_047",
@@ -838,7 +910,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #047 [Légendaire]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -848,9 +920,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_047.png"
+      ],
+      "latest_review": "automation/reviews/item_047_iteration_00.json",
+      "notes": "Livrée : rbxassetid://86066746304624 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_048",
@@ -861,7 +935,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #048 [Légendaire]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -871,9 +945,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_048.png"
+      ],
+      "latest_review": "automation/reviews/item_048_iteration_00.json",
+      "notes": "Livrée : rbxassetid://114723103696719 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_049",
@@ -884,7 +960,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #049 [Légendaire]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -894,9 +970,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_049.png"
+      ],
+      "latest_review": "automation/reviews/item_049_iteration_00.json",
+      "notes": "Livrée : rbxassetid://111152709057378 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_050",
@@ -907,7 +985,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #050 [Légendaire]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -917,9 +995,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_050.png"
+      ],
+      "latest_review": "automation/reviews/item_050_iteration_00.json",
+      "notes": "Livrée : rbxassetid://78075902239753 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_051",
@@ -930,7 +1010,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #051 [Légendaire]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -940,9 +1020,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_051.png"
+      ],
+      "latest_review": "automation/reviews/item_051_iteration_00.json",
+      "notes": "Livrée : rbxassetid://70713662192333 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     },
     {
       "id": "item_052",
@@ -953,7 +1035,7 @@
       "brief_source": "docs/ITEMS.md",
       "target_studio_slot": "Items #052 [Légendaire]",
       "worker": "windows",
-      "status": "todo",
+      "status": "done",
       "iteration": 0,
       "max_iterations": 3,
       "priority": 50,
@@ -963,9 +1045,11 @@
         "KingSlime",
         "RoiOrc"
       ],
-      "screenshots": [],
-      "latest_review": null,
-      "notes": ""
+      "screenshots": [
+        "assets/icons/items/item_052.png"
+      ],
+      "latest_review": "automation/reviews/item_052_iteration_00.json",
+      "notes": "Livrée : rbxassetid://107155692469582 (ItemConfig.Icon, Icone.Image et AssetId de la vitrine)."
     }
   ]
 }
