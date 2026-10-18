@@ -1,5 +1,34 @@
 # Icônes des ressources — bilan Studio du 18 octobre 2026
 
+## État final de la nouvelle série autorisée
+
+**45/60 livrées ; 15 en human_review.** Les paragraphes ci-dessous cette section
+conservent les bilans historiques à 36/60 ; ils ne décrivent plus l'état courant.
+
+Neuf ressources livrées par la reprise précédente : 025, 026, 029, 031, 047, 049,
+052, 057, 058. Leurs PASS et captures sont dans `automation/reviews/resource_NNN-resume.md`.
+Les commits de livraison sont conservés ; aucune de ces images n'a été remplacée ici.
+
+Dernier essai sur chacune des quinze restantes : 020, 030, 036, 040, 041, 044,
+045, 046, 048, 050, 051, 054, 055, 059, 060. Tous les appels ont échoué avec
+`Mesh generation failed with error: Unable to generate Model`.
+Résultats bruts et jobId :
+`automation/screenshots/resources/generation-final-resume-2026-10-18.json`.
+Chaque état pointe désormais vers son rapport `automation/reviews/resource_NNN-final-resume.md` :
+FIX de livraison, human_review, aucun nouveau PASS artistique sans objet ni capture.
+
+Audit Studio final dans test 3 : **60 cartes conformes à Git, 45 images, 15 vides**,
+aucun écart de ResourceId, Index, Famille, Nom, Image ou AssetId.
+Les 34 enfants hérités de l'atelier ont été déplacés, sans destruction, dans
+`ServerStorage.Archive_ResourceIcons_Restart_20261018` ; étape ChangeHistory enregistrée.
+Atelier vide. Caméra Fixed lors de l'audit ; aucune nouvelle screen_capture dans cette reprise.
+Ni push, ni changement de branche, ni publication de place.
+
+Tests : Node ciblés 11 réussites / 1 échec (acceptation 60/60 : 15 manquantes).
+Les contrôles catalogue et intégrité des PNG livrés passent. Le CLI Luau local
+est absent ; même spec ResourceConfig exécutée avec succès dans Studio, en mémoire.
+Voir `tests/RESOURCE_ICONS_RESULTS.md` pour les commandes et limites.
+
 Revue de reprise : [RESOURCE_ICONS_RESTART.md](RESOURCE_ICONS_RESTART.md).
 Les 24 briefs ont été relus et les six captures refusées de la troisième passe
 examinées ; des constructions correctives et critères de contrôle sont proposés

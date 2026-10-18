@@ -1,5 +1,26 @@
 # Résultats des tests des icônes — 18 octobre 2026
 
+## Dernière reprise — 45/60
+
+Cette section remplace les totaux historiques à 36/60 conservés plus bas.
+
+- `node --test --test-isolation=none tests/resources.test.mjs tests/resource-icons.test.mjs tests/items-vitrine.test.mjs tests/ui-assets.test.mjs` :
+  **11 entrées réussies, 1 échouée**. Seul le test d'acceptation des 60 icônes échoue :
+  45 livrées, 15 manquantes. Les 13 assertions catalogue, 9 assertions items,
+  5 contrôles UI et contrôles d'intégrité, unicité, RGBA/alpha 512 × 512 passent.
+- `./tools/test-resources.ps1 -LuauPath "$PWD/build/luau-cli/luau.exe"` :
+  impossible à exécuter, exécutable absent dans ce worktree. Le résultat historique
+  du CLI ne doit pas être présenté comme un résultat de cette reprise.
+- Remplacement autorisé : `src/server/Tests/ResourceConfig.spec.lua` évalué
+  en mémoire dans Studio Edit avec ResourceConfig de Git : succès, aucune erreur.
+- `tests/resource-icons.studio.luau`, même méthode en mémoire : succès,
+  60 cartes conformes, 45 images et 15 vides ; atelier vide, caméra Fixed.
+
+Manquantes : 020, 030, 036, 040, 041, 044, 045, 046, 048, 050, 051, 054, 055, 059, 060.
+Les quinze dernières générations ont toutes échoué techniquement ; détails dans
+`automation/screenshots/resources/generation-final-resume-2026-10-18.json`.
+Chaque ressource a son état human_review et son rapport FIX individuel.
+
 Verdict de livraison : **FIX**, 36/60 icônes livrées dans les fichiers du dépôt.
 Ce rapport technique ne constitue pas une nouvelle validation artistique.
 Les captures et verdicts de production restent dans `docs/RESOURCE_ICONS_QA.md`.
