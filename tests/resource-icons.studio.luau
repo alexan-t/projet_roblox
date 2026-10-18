@@ -25,6 +25,7 @@ return function(config)
 	end
 	local atelier = workspace:FindFirstChild("AtelierIcones")
 	assert(atelier and #atelier:GetChildren() == 0, "AtelierIcones must be empty")
+	local camera = workspace.CurrentCamera
 	print(`PASS Studio: {count} cards match Git, {delivered} images, {count - delivered} empty; atelier empty`)
-	return { cards = count, delivered = delivered, missing = count - delivered }
+	return { cards = count, delivered = delivered, missing = count - delivered, cameraType = camera and tostring(camera.CameraType) }
 end

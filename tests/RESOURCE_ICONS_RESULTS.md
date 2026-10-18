@@ -29,15 +29,22 @@ code de sortie 0, **5 contrôles réussis, 0 échoué**. Interpréteur officiel 
 noms/icônes et gel du catalogue vérifiés. Le blocage initial dû à l'absence
 de `luau` dans PATH est résolu avec ce chemin explicite.
 
-`roblox-studio.list_roblox_studios` : liste vide. L'audit en lecture seule
-`tests/resource-icons.studio.luau` ne peut pas être relancé ; état actuel des cartes,
-égalité Image/AssetId/Icon, atelier vide et caméra non revérifiés.
-Aucune modification de scène ni publication effectuée pendant cette phase.
+Reprise finale : Studio « test 3 » connecté (placeId 120616399792561), mode Edit.
+Audit `tests/resource-icons.studio.luau` exécuté avec ResourceConfig de Git évalué
+uniquement en mémoire : **PASS**, 60 cartes conformes, 36 images, 24 vides.
+ResourceId, Index, Famille, Nom, Image et AssetId correspondent au catalogue.
+`Workspace.AtelierIcones` : **PASS**, zéro enfant, donc aucun script temporaire.
+Aucune icône produite ni publiée pendant cette phase de tests.
 
-Dernière reprise du 18 octobre : suite Node relancée, résultat inchangé
-(11 entrées réussies, 1 échouée). Tests Luau exécutés avec succès avec le chemin
-explicite ci-dessus. Nouvelle interrogation de `roblox-studio.list_roblox_studios` :
-`studios: []`. L'audit Studio reste non exécuté.
+Caméra initialement Scriptable. Recréation selon la procédure du projet :
+Fixed, CFrame et Focus restaurés dans le même appel. Cependant, l'appel d'audit
+suivant retrouve Scriptable : la persistance de la restauration reste non validée.
+Le test Studio expose maintenant cameraType dans son résultat, sans confondre
+ce constat avec la conformité des cartes. Une dernière restauration est tentée
+après les contrôles ; vérifier manuellement le clic droit et le clic molette.
+
+Suite Node relancée : 11 entrées réussies, 1 échec (24 icônes manquantes).
+Suite Luau relancée : 5 réussites, 0 échec. Aucun nouveau PASS artistique.
 
 ## Travail restant
 
@@ -50,7 +57,7 @@ puis renseigner leur carte et leur Icon :
 `resource_050`, `resource_051`, `resource_052`, `resource_054`, `resource_055`,
 `resource_057`, `resource_058`, `resource_059`, `resource_060`.
 
-Reconnecter la place test 3 au serveur Studio et lancer l'audit avec ResourceConfig
+Relancer après livraison l'audit Studio avec ResourceConfig
 de Git évalué en mémoire, sans créer de script. Relancer les suites Node et Luau
 après livraison des icônes manquantes. Conserver les contrôles visuels
 sur captures par famille ; le contrôle de transparence ne garantit pas à lui seul
