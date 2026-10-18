@@ -80,7 +80,7 @@ resource("resource_021", "Lambeau de Tissu Rouge", "horde", "rbxassetid://862381
 resource("resource_022", "Lanière de Cuir", "horde", "rbxassetid://124467689473100")
 resource("resource_023", "Croc de Gobelin", "horde", "rbxassetid://130044684290868")
 resource("resource_024", "Os Gravé", "horde", "rbxassetid://82566021198094")
-resource("resource_025", "Plume de Guetteur", "horde")
+resource("resource_025", "Plume de Guetteur", "horde", "rbxassetid://80948233125363")
 resource("resource_026", "Rivets de Fer Usé", "horde")
 resource("resource_027", "Fer de Lance Ébréché", "horde", "rbxassetid://90611132056356")
 resource("resource_028", "Planche de Bouclier", "horde", "rbxassetid://87552586783738")
