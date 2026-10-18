@@ -1,0 +1,41 @@
+{
+  "task_id": "resource_020",
+  "status": "done",
+  "stage": "review",
+  "iteration": 3,
+  "max_iterations": 3,
+  "last_completed_step": "handbuilt_studio_card_family_capture_pass",
+  "next_step": null,
+  "studio_target": "Workspace.Bestiaire.Inventaire.Ressources.Panneau.Affichage.Fond.Emplacements.Ressource_020",
+  "latest_review": "automation/reviews/resource_020-handbuilt.md",
+  "evidence": [
+    "automation/screenshots/resources/generation-results.json",
+    "automation/screenshots/resources/generation-retry-2026-10-18.json",
+    "automation/screenshots/resources/generation-third-2026-10-18.json",
+    "automation/screenshots/resources/generation-resume-2026-10-18.json",
+    "automation/screenshots/resources/generation-final-resume-2026-10-18.json",
+    "automation/screenshots/resources/resource_020-handbuilt.png",
+    "automation/screenshots/resources/card020-handbuilt.png",
+    "automation/screenshots/resources/slimerow-020-handbuilt.png",
+    "automation/screenshots/resources/readability-020-handbuilt.png"
+  ],
+  "notes": "Construit à la main (CSG sur Parts) après l'échec du générateur : morceau de couronne dorée à pointes rondes, à moitié noyé et incliné dans une flaque de gelée bleue, une pointe ployée et des coulures d'or. Carte remplie (Image et AssetId).",
+  "remaining_steps": [],
+  "restart_authorization": "Mission utilisateur du 18 octobre 2026 : nouvelle s?rie de passes explicitement autoris?e apr?s max_iterations.",
+  "previous_series": {
+    "iteration": 3,
+    "max_iterations": 3,
+    "latest_review": "docs/RESOURCE_ICONS_QA.md",
+    "evidence": [
+      "automation/screenshots/resources/generation-results.json",
+      "automation/screenshots/resources/generation-retry-2026-10-18.json",
+      "automation/screenshots/resources/generation-third-2026-10-18.json"
+    ]
+  },
+  "handbuilt_series": {
+    "authorization": "Mission utilisateur du 19 octobre 2026 : nouvelle série autorisée, construction à la main sans generate_mesh ni generate_procedural_model.",
+    "method": "Parts, ellipsoïdes (SpecialMesh Sphere), cylindres et coins dans Workspace.AtelierIcones ; archive ServerStorage.Archive_ResourceIcons_Handbuilt_20261019",
+    "export": "CaptureService → tools/icon-render.mjs serve → tools/export-resource-icon.mjs build"
+  },
+  "icon": "rbxassetid://104772860969453"
+}

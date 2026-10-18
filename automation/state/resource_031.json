@@ -1,0 +1,33 @@
+{
+  "task_id": "resource_031",
+  "status": "done",
+  "stage": "review",
+  "iteration": 2,
+  "max_iterations": 3,
+  "last_completed_step": "studio_card_family_capture_pass",
+  "next_step": null,
+  "studio_target": "Workspace.Bestiaire.Inventaire.Ressources.Panneau.Affichage.Fond.Emplacements.Ressource_031",
+  "latest_review": "automation/reviews/resource_031-resume.md",
+  "evidence": [
+    "automation/screenshots/resources/generation-results.json",
+    "automation/screenshots/resources/generation-retry-2026-10-18.json",
+    "automation/screenshots/resources/generation-third-2026-10-18.json",
+    "automation/screenshots/resources/resource_031-resume.jpg",
+    "automation/screenshots/resources/card031-resume.jpg",
+    "automation/screenshots/resources/minerow-resume.jpg"
+  ],
+  "notes": "Refaire un galet ovale aplati, poli et lisse, mousse limitée à un coin.",
+  "remaining_steps": [],
+  "restart_authorization": "Mission utilisateur du 18 octobre 2026 : nouvelle s?rie de passes explicitement autoris?e apr?s max_iterations.",
+  "previous_series": {
+    "iteration": 3,
+    "max_iterations": 3,
+    "latest_review": "docs/RESOURCE_ICONS_QA.md",
+    "evidence": [
+      "automation/screenshots/resources/generation-results.json",
+      "automation/screenshots/resources/generation-retry-2026-10-18.json",
+      "automation/screenshots/resources/generation-third-2026-10-18.json"
+    ]
+  },
+  "icon": "rbxassetid://124890748158418"
+}

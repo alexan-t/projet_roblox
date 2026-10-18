@@ -1,0 +1,1988 @@
+{
+  "date": "2026-10-18",
+  "studio": "test 3",
+  "attempt1": [
+    {
+      "id": 21,
+      "job": {
+        "jobId": "f6643d09-f03d-46cc-ad8a-ff1fe8a0b54c",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 22,
+      "job": {
+        "jobId": "d5eade63-2c78-4a53-b002-e46b1160c21d",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 23,
+      "job": {
+        "jobId": "37801091-20ca-475c-9e1c-151262cbbf64",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 24,
+      "job": {
+        "jobId": "a2d429fa-fe1c-4c8d-b104-46348cab239b",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 25,
+      "job": {
+        "jobId": "be83adf2-1d04-4341-8dd6-23097f2d2ccc",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Failed to fetch image for model generation",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 26,
+      "job": {
+        "jobId": "42fbf796-8e1d-4655-95b2-becd31f9f580",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 27,
+      "job": {
+        "jobId": "69937173-e3cf-458c-bd12-f7aa8bdfa57b",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 28,
+      "job": {
+        "jobId": "55c3aabf-9965-4e3c-841d-0031514d45b8",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 29,
+      "job": {
+        "jobId": "ebaca485-a66a-4535-9d05-af9476a6c985",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 30,
+      "job": {
+        "jobId": "10a8f9d6-e34e-4e2a-8ed8-cc251588621e",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Character limit exceeded",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 31,
+      "job": {
+        "jobId": "9434b6fb-8435-4aa4-ab92-c711ab95866a",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 32,
+      "job": {
+        "jobId": "40fd8a8a-9ad9-4c3d-a7e2-2350fbae4780",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Completed",
+        "jobResult": {
+          "structuredContent": {
+            "generationId": "ab891be1-6e4c-43bc-b921-bf8727c1ff7c",
+            "generationName": "Single inventory resource object. Bloc de pierre taillé chunky aux arêtes adoucies, beige pierre, une fissure. Hand painted stylized fantasy with chunky rounded organic volumes, broad material shading and cream upper-left highlights, dark earthy shadows, rich painted texture. Match Warcraft hand-painted forest creature material style. Earthy desaturated base. No text, no face, no character, no platform, no framing. Strong simple silhouette readable at 32 pixels. Essential details large.",
+            "publishedAssetId": "135296047225676",
+            "tag": "Assistant-3d25a6cb-41de-49d8-a161-a5a3874a541a"
+          },
+          "content": [
+            {
+              "text": "{\"generationName\":\"Single inventory resource object. Bloc de pierre taillé chunky aux arêtes adoucies, beige pierre, une fissure. Hand painted stylized fantasy with chunky rounded organic volumes, broad material shading and cream upper-left highlights, dark earthy shadows, rich painted texture. Match Warcraft hand-painted forest creature material style. Earthy desaturated base. No text, no face, no character, no platform, no framing. Strong simple silhouette readable at 32 pixels. Essential details large.\",\"tag\":\"Assistant-3d25a6cb-41de-49d8-a161-a5a3874a541a\"}",
+              "type": "text"
+            }
+          ],
+          "isError": false
+        }
+      }
+    },
+    {
+      "id": 33,
+      "job": {
+        "jobId": "b1eea62c-be66-465a-ba16-6b257325a611",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 34,
+      "job": {
+        "jobId": "a69a421b-df70-49e8-8a8b-31b066379370",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 35,
+      "job": {
+        "jobId": "724d5a7f-af74-4156-a0be-01948bc6c9a9",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 36,
+      "job": {
+        "jobId": "6f0fec11-3720-413a-849d-fc7663dd21cc",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 37,
+      "job": {
+        "jobId": "e626ca40-8c23-49bb-b7f7-be21104afba8",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 38,
+      "job": {
+        "jobId": "d4d82771-75e9-4d58-9d3b-d4aa7bf16a7f",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 39,
+      "job": {
+        "jobId": "b26ab11a-7ac6-4a65-888c-eb64e2c233d7",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 40,
+      "job": {
+        "jobId": "9f8a8155-c00e-4266-a1ec-b42098e518c1",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 41,
+      "job": {
+        "jobId": "ebc3c183-d579-45ca-ac88-3a21caf8fab5",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Failed to fetch image for model generation",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 42,
+      "job": {
+        "jobId": "b0053607-83ca-4d99-bb3f-8e5c04f8088d",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 43,
+      "job": {
+        "jobId": "9c0b8c25-d505-4b64-ba4d-a2ac03ce7304",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 44,
+      "job": {
+        "jobId": "f5f30ed8-5645-4287-905d-c9cc74f3d682",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Character limit exceeded",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 45,
+      "job": {
+        "jobId": "27c4ae84-cabf-45fa-a500-b6b7274fea87",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 46,
+      "job": {
+        "jobId": "831709a9-db79-4689-81ab-0b370d44ae03",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 47,
+      "job": {
+        "jobId": "4bb8bfb8-ad89-4bb3-a363-b9f84c0c8591",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 48,
+      "job": {
+        "jobId": "c9d6234d-4864-469d-8982-5d0caaae4b74",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 49,
+      "job": {
+        "jobId": "b7ba9065-6f49-4708-85a7-6206991ea6c8",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 50,
+      "job": {
+        "jobId": "04a98cf9-2439-46fa-bbf1-4cfc8982cb9b",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 51,
+      "job": {
+        "jobId": "104c21c1-0bf4-4cf9-9e40-1dcdac2a7abb",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Schema definition must not contain duplicate part names",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 52,
+      "job": {
+        "jobId": "7e17c6ea-4ed5-4c4f-95c7-83c591ca12e4",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 53,
+      "job": {
+        "jobId": "fd4d0d11-1119-4ccd-8e16-93375cbe3f51",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 54,
+      "job": {
+        "jobId": "af15f17d-ca05-48ce-aed0-f94711b658a8",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 55,
+      "job": {
+        "jobId": "05c1ebd8-39c8-475a-a79f-5db946203f88",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 56,
+      "job": {
+        "jobId": "044e3bbf-0b1b-40dc-b622-58e99365472a",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 57,
+      "job": {
+        "jobId": "d33f978a-a4d1-4645-904a-833eeafe2ab8",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 58,
+      "job": {
+        "jobId": "af5d3249-cee3-41a4-bb7d-d7e9005747fe",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 59,
+      "job": {
+        "jobId": "1c126e5c-c048-4aea-aec2-3be42bd49949",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 60,
+      "job": {
+        "jobId": "9e20d5ea-5a78-482b-8cc6-938c5b4156e5",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    }
+  ],
+  "attempt2": [
+    {
+      "id": 25,
+      "job": {
+        "jobId": "401ea49d-fdf0-416b-a158-099e7d7cf7f0",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 26,
+      "job": {
+        "jobId": "a5d146b5-9450-4149-9bef-655142feac57",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 27,
+      "job": {
+        "jobId": "d81d1acf-a7d6-4e18-9dc1-114fc2338c86",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Completed",
+        "jobResult": {
+          "structuredContent": {
+            "generationId": "73c74efe-068c-4415-bc8f-336654927445",
+            "generationName": "Pointe de lance en fer gris usée, ébréchée sur un côté, ruban rouge noué au départ du manche. Objet fantasy peint à la main, volumes chunky arrondis, grandes ombres peintes, sans socle ni texte.",
+            "publishedAssetId": "135667687449185",
+            "tag": "Assistant-054110b4-dbb5-4b76-b1be-d9994d6ceae1"
+          },
+          "content": [
+            {
+              "text": "{\"generationName\":\"Pointe de lance en fer gris usée, ébréchée sur un côté, ruban rouge noué au départ du manche. Objet fantasy peint à la main, volumes chunky arrondis, grandes ombres peintes, sans socle ni texte.\",\"tag\":\"Assistant-054110b4-dbb5-4b76-b1be-d9994d6ceae1\"}",
+              "type": "text"
+            }
+          ],
+          "isError": false
+        }
+      }
+    },
+    {
+      "id": 28,
+      "job": {
+        "jobId": "bae52feb-3db9-42f7-aed3-d2b8537823e1",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Completed",
+        "jobResult": {
+          "structuredContent": {
+            "generationId": "c9a775b1-3113-41a5-8ad7-77b9119be494",
+            "generationName": "Planche de bois brun chaud cerclée d'une bande de fer rivetée, une entaille de coup. Objet fantasy peint à la main, volumes chunky arrondis, grandes ombres peintes, sans socle ni texte.",
+            "publishedAssetId": "134792733859324",
+            "tag": "Assistant-f01f15b2-a0d4-4a82-9354-d45ad50c925b"
+          },
+          "content": [
+            {
+              "text": "{\"generationName\":\"Planche de bois brun chaud cerclée d'une bande de fer rivetée, une entaille de coup. Objet fantasy peint à la main, volumes chunky arrondis, grandes ombres peintes, sans socle ni texte.\",\"tag\":\"Assistant-f01f15b2-a0d4-4a82-9354-d45ad50c925b\"}",
+              "type": "text"
+            }
+          ],
+          "isError": false
+        }
+      }
+    },
+    {
+      "id": 29,
+      "job": {
+        "jobId": "9f60db4f-74c5-4805-8655-a2b32bea72b8",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 30,
+      "job": {
+        "jobId": "ceb5dee9-32d0-4878-b921-3d83b1c9eb0d",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Completed",
+        "jobResult": {
+          "structuredContent": {
+            "generationId": "e994e307-f686-40fa-98a6-5cd0b95f0bf6",
+            "generationName": "Corne massive du Roi Orc, ivoire et os, anneau de fer riveté et pic d'os à la base (trophée de boss). Objet fantasy peint à la main, volumes chunky arrondis, grandes ombres peintes, sans socle ni texte.",
+            "publishedAssetId": "83619461592979",
+            "tag": "Assistant-3970668b-c897-4550-ac2a-bcdefe12f8ba"
+          },
+          "content": [
+            {
+              "text": "{\"generationName\":\"Corne massive du Roi Orc, ivoire et os, anneau de fer riveté et pic d'os à la base (trophée de boss). Objet fantasy peint à la main, volumes chunky arrondis, grandes ombres peintes, sans socle ni texte.\",\"tag\":\"Assistant-3970668b-c897-4550-ac2a-bcdefe12f8ba\"}",
+              "type": "text"
+            }
+          ],
+          "isError": false
+        }
+      }
+    },
+    {
+      "id": 31,
+      "job": {
+        "jobId": "4cc6a072-64ff-4100-b93b-f921d085904d",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 33,
+      "job": {
+        "jobId": "8b40c491-fa24-4895-be81-c59da5ec203b",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 34,
+      "job": {
+        "jobId": "64e62a32-87d5-4fc3-bc1e-0007d7dfa8ec",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 35,
+      "job": {
+        "jobId": "de68913c-88da-423a-b006-b6ddce4627dc",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 36,
+      "job": {
+        "jobId": "20882b49-6c9d-4db0-a270-20eae9b47ad4",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Completed",
+        "jobResult": {
+          "structuredContent": {
+            "generationId": "3d31aaa7-c7a3-4f27-921b-92b298e61730",
+            "generationName": "Pépite d'or bosselée et ronde, or chaud, reflet clair en haut à gauche. Objet fantasy peint à la main, volumes chunky arrondis, grandes ombres peintes, sans socle ni texte.",
+            "publishedAssetId": "114044782755305",
+            "tag": "Assistant-34f6c81d-1cb5-444f-8b33-91381269f52d"
+          },
+          "content": [
+            {
+              "text": "{\"generationName\":\"Pépite d'or bosselée et ronde, or chaud, reflet clair en haut à gauche. Objet fantasy peint à la main, volumes chunky arrondis, grandes ombres peintes, sans socle ni texte.\",\"tag\":\"Assistant-34f6c81d-1cb5-444f-8b33-91381269f52d\"}",
+              "type": "text"
+            }
+          ],
+          "isError": false
+        }
+      }
+    },
+    {
+      "id": 37,
+      "job": {
+        "jobId": "9c06d8cf-058d-4ce3-96c6-1a8fa9bcd5df",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 38,
+      "job": {
+        "jobId": "52f6ad76-f447-48c2-b19d-8e56045e14f5",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 39,
+      "job": {
+        "jobId": "96743ab1-3a83-46c7-a641-c6abf9a527fc",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Completed",
+        "jobResult": {
+          "structuredContent": {
+            "generationId": "c5c11786-c9b8-47b8-9615-4afe3297a8f5",
+            "generationName": "Petit sac de toile crème ouvert, rempli de sable doré, cordon noué. Objet fantasy peint à la main, volumes chunky arrondis, grandes ombres peintes, sans socle ni texte.",
+            "publishedAssetId": "138006822394635",
+            "tag": "Assistant-d09a1f82-8c0b-4d20-852c-839c3327dcd0"
+          },
+          "content": [
+            {
+              "text": "{\"generationName\":\"Petit sac de toile crème ouvert, rempli de sable doré, cordon noué. Objet fantasy peint à la main, volumes chunky arrondis, grandes ombres peintes, sans socle ni texte.\",\"tag\":\"Assistant-d09a1f82-8c0b-4d20-852c-839c3327dcd0\"}",
+              "type": "text"
+            }
+          ],
+          "isError": false
+        }
+      }
+    },
+    {
+      "id": 40,
+      "job": {
+        "jobId": "d4e3c193-f9d2-4d6e-85b8-ddc07deb97eb",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 41,
+      "job": {
+        "jobId": "947b7279-4dbc-4693-804c-c4ff63318fe5",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 42,
+      "job": {
+        "jobId": "c4065400-7bde-4eaa-a195-bd4eadb8a456",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 43,
+      "job": {
+        "jobId": "f793106d-696e-4521-b6be-51bb23237901",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 44,
+      "job": {
+        "jobId": "f68b0a95-1c54-4ad9-86b8-78bc7d685066",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 45,
+      "job": {
+        "jobId": "7eb6187d-1895-4a69-9905-85b87998568d",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Completed",
+        "jobResult": {
+          "structuredContent": {
+            "generationId": "68dd0f39-433f-4a55-9958-e74cbae99c54",
+            "generationName": "Braise orange vif enfermée dans une petite cage de fer noir rivetée. Objet fantasy peint à la main, volumes chunky arrondis, grandes ombres peintes, sans socle ni texte.",
+            "publishedAssetId": "125172375157161",
+            "tag": "Assistant-25ec95cd-15ee-4ad7-ab45-794318224093"
+          },
+          "content": [
+            {
+              "text": "{\"generationName\":\"Braise orange vif enfermée dans une petite cage de fer noir rivetée. Objet fantasy peint à la main, volumes chunky arrondis, grandes ombres peintes, sans socle ni texte.\",\"tag\":\"Assistant-25ec95cd-15ee-4ad7-ab45-794318224093\"}",
+              "type": "text"
+            }
+          ],
+          "isError": false
+        }
+      }
+    },
+    {
+      "id": 46,
+      "job": {
+        "jobId": "8d4b1cfc-da13-44d0-af68-a5831b063a8f",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 47,
+      "job": {
+        "jobId": "6ac15754-a446-4e00-9962-6e871977496e",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 48,
+      "job": {
+        "jobId": "fd382fc4-82ba-4f4c-b6a9-86be6bb9607b",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 49,
+      "job": {
+        "jobId": "9655b8a2-29f0-4406-a1c9-287a49477e19",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 50,
+      "job": {
+        "jobId": "678967df-52b1-4e15-8ecd-30dfb7941fd8",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 51,
+      "job": {
+        "jobId": "2983cd37-64bd-46f5-b6d2-7704dfa11fa7",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Schema definition must not contain duplicate part names",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 52,
+      "job": {
+        "jobId": "25c559a6-ecd7-4505-9b84-690459c15280",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 53,
+      "job": {
+        "jobId": "0efad20e-06e1-4682-ae1e-ba5a21a0bb27",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Completed",
+        "jobResult": {
+          "structuredContent": {
+            "generationId": "e88c01ab-f8bd-48ba-8949-323b78435c6b",
+            "generationName": "Lingot d'or trapu, or chaud, reflet clair, marque de couronne frappée. Objet fantasy peint à la main, volumes chunky arrondis, grandes ombres peintes, sans socle ni texte.",
+            "publishedAssetId": "96171208262005",
+            "tag": "Assistant-f37b68fa-09fe-4e0f-b8bc-92b177cf1b3a"
+          },
+          "content": [
+            {
+              "text": "{\"generationName\":\"Lingot d'or trapu, or chaud, reflet clair, marque de couronne frappée. Objet fantasy peint à la main, volumes chunky arrondis, grandes ombres peintes, sans socle ni texte.\",\"tag\":\"Assistant-f37b68fa-09fe-4e0f-b8bc-92b177cf1b3a\"}",
+              "type": "text"
+            }
+          ],
+          "isError": false
+        }
+      }
+    },
+    {
+      "id": 54,
+      "job": {
+        "jobId": "70bb2927-ac31-4e94-a8de-e04dd7861e6e",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 55,
+      "job": {
+        "jobId": "8439a4bd-ca79-421b-8d91-41fa25cf7c78",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Completed",
+        "jobResult": {
+          "structuredContent": {
+            "generationId": "f9699678-20e6-4374-b0ce-e2e3c218fb07",
+            "generationName": "Rouleau de toile crème épaisse, une bande rouge royal sur le bord, ficelle nouée. Objet fantasy peint à la main, volumes chunky arrondis, grandes ombres peintes, sans socle ni texte.",
+            "publishedAssetId": "97367034482108",
+            "tag": "Assistant-f8ea88a0-9023-4a15-86d4-61b7e7b3e63f"
+          },
+          "content": [
+            {
+              "text": "{\"generationName\":\"Rouleau de toile crème épaisse, une bande rouge royal sur le bord, ficelle nouée. Objet fantasy peint à la main, volumes chunky arrondis, grandes ombres peintes, sans socle ni texte.\",\"tag\":\"Assistant-f8ea88a0-9023-4a15-86d4-61b7e7b3e63f\"}",
+              "type": "text"
+            }
+          ],
+          "isError": false
+        }
+      }
+    },
+    {
+      "id": 56,
+      "job": {
+        "jobId": "3385eda8-b631-41ea-ad34-96cefce9b9c2",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Completed",
+        "jobResult": {
+          "structuredContent": {
+            "generationId": "544a203c-6b9e-4966-88ba-d5b6d56f7873",
+            "generationName": "Poignée de gros clous de fer à tête ronde, liés par une ficelle. Objet fantasy peint à la main, volumes chunky arrondis, grandes ombres peintes, sans socle ni texte.",
+            "publishedAssetId": "122823136040730",
+            "tag": "Assistant-4b43414c-7c21-4198-a4f0-61d7460e99f2"
+          },
+          "content": [
+            {
+              "text": "{\"generationName\":\"Poignée de gros clous de fer à tête ronde, liés par une ficelle. Objet fantasy peint à la main, volumes chunky arrondis, grandes ombres peintes, sans socle ni texte.\",\"tag\":\"Assistant-4b43414c-7c21-4198-a4f0-61d7460e99f2\"}",
+              "type": "text"
+            }
+          ],
+          "isError": false
+        }
+      }
+    },
+    {
+      "id": 57,
+      "job": {
+        "jobId": "70534774-e361-4bf6-9d63-c970c6e1cfb9",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 58,
+      "job": {
+        "jobId": "d67b71cb-1b98-48cc-87a7-31cc5fba9741",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 59,
+      "job": {
+        "jobId": "77b983d4-87a8-48dc-9c21-6f4a45e2eabe",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Completed",
+        "jobResult": {
+          "structuredContent": {
+            "generationId": "393bcf38-716e-4376-b197-b7b9bea87eca",
+            "generationName": "Bannière bleu royal pliée en carré, liseré or, emblème de tour à moitié visible. Objet fantasy peint à la main, volumes chunky arrondis, grandes ombres peintes, sans socle ni texte.",
+            "publishedAssetId": "127170683103062",
+            "tag": "Assistant-bae6725d-8364-49c0-a886-5df76cb9a1d0"
+          },
+          "content": [
+            {
+              "text": "{\"generationName\":\"Bannière bleu royal pliée en carré, liseré or, emblème de tour à moitié visible. Objet fantasy peint à la main, volumes chunky arrondis, grandes ombres peintes, sans socle ni texte.\",\"tag\":\"Assistant-bae6725d-8364-49c0-a886-5df76cb9a1d0\"}",
+              "type": "text"
+            }
+          ],
+          "isError": false
+        }
+      }
+    },
+    {
+      "id": 60,
+      "job": {
+        "jobId": "23125b9c-eec9-4906-862c-a1f73bbfda48",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    }
+  ],
+  "attempt3": [
+    {
+      "id": 25,
+      "job": {
+        "jobId": "ad045df3-9167-4b75-a087-18d221b82edc",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 26,
+      "job": {
+        "jobId": "7b4a1d72-c924-4cf8-87b3-40129dbd1189",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 29,
+      "job": {
+        "jobId": "c1a67390-fbbc-482f-80ad-19ef57eb2024",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 31,
+      "job": {
+        "jobId": "95b8a42a-7e0a-42b9-a668-76d20d75758a",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 33,
+      "job": {
+        "jobId": "edad2870-8f51-422f-a563-f4b34fc95755",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 34,
+      "job": {
+        "jobId": "2d9f24d8-cffa-428b-8873-12cb4c233400",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 35,
+      "job": {
+        "jobId": "8e162aee-f3da-4620-8d49-a57b2ad5f0a6",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Completed",
+        "jobResult": {
+          "structuredContent": {
+            "generationId": "59631985-3a9f-4882-907f-21b9d0946d4a",
+            "generationName": "Roche grise arrondie traversée de veines de fer gris clair brillantes. Objet 3D fantasy peint à la main.",
+            "publishedAssetId": "111751761699878",
+            "tag": "Assistant-10a9cebb-05fc-4950-bbc8-8c6e9437afc9"
+          },
+          "content": [
+            {
+              "text": "{\"generationName\":\"Roche grise arrondie traversée de veines de fer gris clair brillantes. Objet 3D fantasy peint à la main.\",\"tag\":\"Assistant-10a9cebb-05fc-4950-bbc8-8c6e9437afc9\"}",
+              "type": "text"
+            }
+          ],
+          "isError": false
+        }
+      }
+    },
+    {
+      "id": 37,
+      "job": {
+        "jobId": "a314dbd6-1542-4f64-86a6-6775e0da7e64",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 38,
+      "job": {
+        "jobId": "2dba06eb-7dda-4ddf-aecf-3a5f97d76cdc",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 40,
+      "job": {
+        "jobId": "14b31252-3137-4ba5-947c-084621b77eeb",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 41,
+      "job": {
+        "jobId": "3a6a36fc-da17-4222-b453-073e46938819",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 42,
+      "job": {
+        "jobId": "f5f7c574-23ae-4f0f-a49e-0d224940b877",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 43,
+      "job": {
+        "jobId": "fdb9c2d6-4930-4d7b-845b-20bea03688af",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Completed",
+        "jobResult": {
+          "structuredContent": {
+            "generationId": "87e12d36-32f7-422a-a349-8ace06d33996",
+            "generationName": "Petite coupelle en bois remplie de poussière dorée scintillante, trois grains qui en sortent. Objet 3D fantasy peint à la main.",
+            "publishedAssetId": "99817329940503",
+            "tag": "Assistant-25143699-ed29-4fbe-9204-2baf27106fe4"
+          },
+          "content": [
+            {
+              "text": "{\"generationName\":\"Petite coupelle en bois remplie de poussière dorée scintillante, trois grains qui en sortent. Objet 3D fantasy peint à la main.\",\"tag\":\"Assistant-25143699-ed29-4fbe-9204-2baf27106fe4\"}",
+              "type": "text"
+            }
+          ],
+          "isError": false
+        }
+      }
+    },
+    {
+      "id": 44,
+      "job": {
+        "jobId": "846948ec-2580-42cf-8fc6-24fec4a2e2c6",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 46,
+      "job": {
+        "jobId": "72b0f538-5d93-489f-8708-ac3893ba3aea",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 47,
+      "job": {
+        "jobId": "3e26f2c6-4588-450c-b7a8-bd70061af550",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 48,
+      "job": {
+        "jobId": "aa617be0-003d-4041-b26b-529b98e59b35",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 49,
+      "job": {
+        "jobId": "d34b78ab-85de-497c-ac93-474cf703b54b",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Auto-segmentation failed: could not derive part names for prompt \"Encrier trapu en bois sombre, encre noire bleutée, plume crème plantée dedans. Objet 3D fantasy peint à la main.\". Retry, or pass segmentation=\"none\", or pass segmentation=\"explicit\" with partNames.",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 50,
+      "job": {
+        "jobId": "a5395f16-fe7c-4bc2-97b0-f4520b162da6",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 51,
+      "job": {
+        "jobId": "b2761d75-9410-463c-b429-910fd12e4035",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 52,
+      "job": {
+        "jobId": "4aa1e50a-1c07-4c4b-b80e-164ed54af3de",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 54,
+      "job": {
+        "jobId": "1a1f8eb6-8a00-4317-94e7-f0619b5e638b",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 57,
+      "job": {
+        "jobId": "3949e8b4-3454-4bb9-b1d8-9bd8ca4d07dc",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 58,
+      "job": {
+        "jobId": "0d1f7103-1e45-4a76-881b-ccce139afa64",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "id": 60,
+      "job": {
+        "jobId": "a857f54d-181b-492d-86c9-69f7de7846dc",
+        "status": "Running"
+      },
+      "result": {
+        "status": "Failed",
+        "jobResult": {
+          "content": [
+            {
+              "text": "Mesh generation failed with error: Unable to generate Model",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      }
+    }
+  ]
+}
