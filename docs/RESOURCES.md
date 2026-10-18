@@ -9,7 +9,7 @@ ressources sont réparties, **où le worker pose chaque icône** et comment la p
 | | État |
 | --- | --- |
 | Catalogue défini (60 ressources, `ResourceConfig`, `resources.json`) | **OUI** |
-| Icônes 2D livrées (AssetId publié, vitrine remplie) | **PARTIEL : 45/60** ; 15 restent sans `Icon`, en `human_review` après la nouvelle série autorisée (bilan : `docs/RESOURCE_ICONS_QA.md`) |
+| Icônes 2D livrées (AssetId publié, vitrine remplie) | **OUI : 60/60** ; chaque ressource a un `Icon` publié et un PNG 512 × 512 validé (bilan : `docs/RESOURCE_ICONS_QA.md`) |
 | Stockage dans `PlayerData` | **NON** |
 | Obtention (récompenses, butin, récolte) | **NON** |
 | Recettes, crafting | **NON** |
@@ -23,8 +23,7 @@ rareté**.
   file `automation/tasks.json` : on y copie les tâches par lots, une fois la vitrine en place (§ 3).
 - **Catalogue en jeu** : `src/shared/Config/ResourceConfig.lua` (partagé serveur et client). Mêmes
   identifiants, noms et familles, plus l'icône livrée (`Icon`, `nil` tant qu'elle n'existe pas).
-  C'est ce module que liront l'onglet **Ressources** de la Sacoche (`HeroBarController`, encore
-  « Bientôt disponible ») et l'écran de récompenses.
+  C'est ce module que liront l'onglet **Ressources** de la Sacoche et l'écran de récompenses quand le stockage / loot de #72 sera implémenté.
 - **Aucun système de ressources en jeu** pour l'instant : pas de stockage dans `PlayerData`
   (`src/shared/Types/PlayerDataTypes.lua`), pas d'obtention (`RewardConfig`), pas de recette. Ces
   choix restent à faire côté gameplay. Les monnaies (or, gemmes, tickets) **ne sont pas** des
