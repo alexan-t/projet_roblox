@@ -1,6 +1,7 @@
 ﻿Add-Type -AssemblyName System.Drawing
 $files=Get-ChildItem assets/icons/resources/*.png | Sort-Object Name
-$canvas=New-Object Drawing.Bitmap 900,900
+$rows=[int][Math]::Ceiling($files.Count / 5.0)
+$canvas=New-Object Drawing.Bitmap 900,($rows * 150)
 $g=[Drawing.Graphics]::FromImage($canvas)
 $g.Clear([Drawing.Color]::FromArgb(243,230,200))
 $font=New-Object Drawing.Font 'Arial',10

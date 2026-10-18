@@ -1,0 +1,439 @@
+{
+  "date": "2026-10-18",
+  "studio": "test 3",
+  "retry": {
+    "resource_021": {
+      "meshAssetId": "71491931753114",
+      "jobId": "8ec0d78e-3600-47bc-8563-e7e94d4bc5d8"
+    },
+    "families": {
+      "Horde": [
+        {
+          "resource_id": "resource_020",
+          "status": "Completed",
+          "jobResult": {
+            "structuredContent": {
+              "generationId": "41ec6658-1650-4095-b8fa-497f75a6bd6c",
+              "generationName": "Single fantasy resource prop for a game inventory. Morceau de couronne dorée à pointes rondes à moitié noyé dans une flaque de gelée bleue (trophée du Slime King). Chunky rounded inflated natural forms, thick volumes, hand painted earthy material textures, warm top left light, strong silhouette readable at 32 pixels, Warcraft Hearthstone fantasy style. Only the described object, no text, no pedestal, no extra ornament. ",
+              "publishedAssetId": "75593787686602",
+              "tag": "Assistant-c9786983-9e61-4e28-b286-28ea40c1b8e8"
+            },
+            "content": [
+              {
+                "text": "{\"generationName\":\"Single fantasy resource prop for a game inventory. Morceau de couronne dorée à pointes rondes à moitié noyé dans une flaque de gelée bleue (trophée du Slime King). Chunky rounded inflated natural forms, thick volumes, hand painted earthy material textures, warm top left light, strong silhouette readable at 32 pixels, Warcraft Hearthstone fantasy style. Only the described object, no text, no pedestal, no extra ornament. \",\"tag\":\"Assistant-c9786983-9e61-4e28-b286-28ea40c1b8e8\"}",
+                "type": "text"
+              }
+            ],
+            "isError": false
+          }
+        },
+        {
+          "resource_id": "resource_022",
+          "status": "Completed",
+          "jobResult": {
+            "structuredContent": {
+              "generationId": "fed5e33e-af4f-4ecd-a6f7-f2dd1847684c",
+              "generationName": "Single fantasy resource prop for a game inventory. Rouleau de lanière de cuir brun sombre, boucle en fer gris usée. Chunky rounded inflated natural forms, thick volumes, hand painted earthy material textures, warm top left light, strong silhouette readable at 32 pixels, Warcraft Hearthstone fantasy style. Only the described object, no text, no pedestal, no extra ornament. ",
+              "publishedAssetId": "133516727992038",
+              "tag": "Assistant-dc0b9ffd-c8ab-438e-b3bb-e46e757b092f"
+            },
+            "content": [
+              {
+                "text": "{\"generationName\":\"Single fantasy resource prop for a game inventory. Rouleau de lanière de cuir brun sombre, boucle en fer gris usée. Chunky rounded inflated natural forms, thick volumes, hand painted earthy material textures, warm top left light, strong silhouette readable at 32 pixels, Warcraft Hearthstone fantasy style. Only the described object, no text, no pedestal, no extra ornament. \",\"tag\":\"Assistant-dc0b9ffd-c8ab-438e-b3bb-e46e757b092f\"}",
+                "type": "text"
+              }
+            ],
+            "isError": false
+          }
+        },
+        {
+          "resource_id": "resource_025",
+          "status": "Failed",
+          "jobResult": {
+            "content": [
+              {
+                "text": "Failed to publish assets with error: Operation failed: Too Many Requests",
+                "type": "text"
+              }
+            ],
+            "isError": true
+          }
+        },
+        {
+          "resource_id": "resource_026",
+          "status": "Completed",
+          "jobResult": {
+            "structuredContent": {
+              "generationId": "b9711ce3-73c6-4e34-8b3c-5c8b8cbdb140",
+              "generationName": "Single fantasy resource prop for a game inventory. Trois gros rivets de fer gris à tête bombée, rouille brune sur les bords. Chunky rounded inflated natural forms, thick volumes, hand painted earthy material textures, warm top left light, strong silhouette readable at 32 pixels, Warcraft Hearthstone fantasy style. Only the described object, no text, no pedestal, no extra ornament. ",
+              "publishedAssetId": "121703215483174",
+              "tag": "Assistant-a6c7ad58-673f-4b79-b65a-1d202d8a70cd"
+            },
+            "content": [
+              {
+                "text": "{\"generationName\":\"Single fantasy resource prop for a game inventory. Trois gros rivets de fer gris à tête bombée, rouille brune sur les bords. Chunky rounded inflated natural forms, thick volumes, hand painted earthy material textures, warm top left light, strong silhouette readable at 32 pixels, Warcraft Hearthstone fantasy style. Only the described object, no text, no pedestal, no extra ornament. \",\"tag\":\"Assistant-a6c7ad58-673f-4b79-b65a-1d202d8a70cd\"}",
+                "type": "text"
+              }
+            ],
+            "isError": false
+          }
+        },
+        {
+          "resource_id": "resource_029",
+          "status": "Completed",
+          "jobResult": {
+            "structuredContent": {
+              "generationId": "2bf145e1-c567-4259-bd45-3fd8fcc0e885",
+              "generationName": "Single fantasy resource prop for a game inventory. Grande défense d'orc courbe, ivoire crème, base cerclée de cuir sombre. Chunky rounded inflated natural forms, thick volumes, hand painted earthy material textures, warm top left light, strong silhouette readable at 32 pixels, Warcraft Hearthstone fantasy style. Only the described object, no text, no pedestal, no extra ornament. ",
+              "publishedAssetId": "116709793433422",
+              "tag": "Assistant-07fcb3e3-f4da-4c1a-a07f-483aeba37291"
+            },
+            "content": [
+              {
+                "text": "{\"generationName\":\"Single fantasy resource prop for a game inventory. Grande défense d'orc courbe, ivoire crème, base cerclée de cuir sombre. Chunky rounded inflated natural forms, thick volumes, hand painted earthy material textures, warm top left light, strong silhouette readable at 32 pixels, Warcraft Hearthstone fantasy style. Only the described object, no text, no pedestal, no extra ornament. \",\"tag\":\"Assistant-07fcb3e3-f4da-4c1a-a07f-483aeba37291\"}",
+                "type": "text"
+              }
+            ],
+            "isError": false
+          }
+        },
+        {
+          "resource_id": "resource_030",
+          "status": "Completed",
+          "jobResult": {
+            "structuredContent": {
+              "generationId": "41c7833e-7492-4f6a-9342-89a8851cc101",
+              "generationName": "Single fantasy resource prop for a game inventory. Corne massive du Roi Orc, ivoire et os, anneau de fer riveté et pic d'os à la base (trophée de boss). Chunky rounded inflated natural forms, thick volumes, hand painted earthy material textures, warm top left light, strong silhouette readable at 32 pixels, Warcraft Hearthstone fantasy style. Only the described object, no text, no pedestal, no extra ornament. Large curved ivory horn with broad iron riveted collar.",
+              "publishedAssetId": "123695927813595",
+              "tag": "Assistant-6de367f7-7543-4fbf-90a7-f448145bfd88"
+            },
+            "content": [
+              {
+                "text": "{\"generationName\":\"Single fantasy resource prop for a game inventory. Corne massive du Roi Orc, ivoire et os, anneau de fer riveté et pic d'os à la base (trophée de boss). Chunky rounded inflated natural forms, thick volumes, hand painted earthy material textures, warm top left light, strong silhouette readable at 32 pixels, Warcraft Hearthstone fantasy style. Only the described object, no text, no pedestal, no extra ornament. Large curved ivory horn with broad iron riveted collar.\",\"tag\":\"Assistant-6de367f7-7543-4fbf-90a7-f448145bfd88\"}",
+                "type": "text"
+              }
+            ],
+            "isError": false
+          }
+        }
+      ],
+      "Mine": [
+        {
+          "resource_id": "resource_031",
+          "status": "Failed",
+          "jobResult": {
+            "content": [
+              {
+                "text": "Mesh generation failed with error: Unable to generate Model",
+                "type": "text"
+              }
+            ],
+            "isError": true
+          }
+        },
+        {
+          "resource_id": "resource_033",
+          "status": "Failed",
+          "jobResult": {
+            "content": [
+              {
+                "text": "Mesh generation failed with error: Unable to generate Model",
+                "type": "text"
+              }
+            ],
+            "isError": true
+          }
+        },
+        {
+          "resource_id": "resource_034",
+          "status": "Failed",
+          "jobResult": {
+            "content": [
+              {
+                "text": "Mesh generation failed with error: Unable to generate Model",
+                "type": "text"
+              }
+            ],
+            "isError": true
+          }
+        },
+        {
+          "resource_id": "resource_036",
+          "status": "Failed",
+          "jobResult": {
+            "content": [
+              {
+                "text": "Mesh generation failed with error: Unable to generate Model",
+                "type": "text"
+              }
+            ],
+            "isError": true
+          }
+        },
+        {
+          "resource_id": "resource_037",
+          "status": "Failed",
+          "jobResult": {
+            "content": [
+              {
+                "text": "Mesh generation failed with error: Unable to generate Model",
+                "type": "text"
+              }
+            ],
+            "isError": true
+          }
+        },
+        {
+          "resource_id": "resource_038",
+          "status": "Failed",
+          "jobResult": {
+            "content": [
+              {
+                "text": "Mesh generation failed with error: Unable to generate Model",
+                "type": "text"
+              }
+            ],
+            "isError": true
+          }
+        },
+        {
+          "resource_id": "resource_040",
+          "status": "Failed",
+          "jobResult": {
+            "content": [
+              {
+                "text": "Mesh generation failed with error: Unable to generate Model",
+                "type": "text"
+              }
+            ],
+            "isError": true
+          }
+        }
+      ],
+      "Arcane": [
+        {
+          "resource_id": "resource_041",
+          "status": "Failed",
+          "jobResult": {
+            "content": [
+              {
+                "text": "Mesh generation failed with error: Unable to generate Model",
+                "type": "text"
+              }
+            ],
+            "isError": true
+          }
+        },
+        {
+          "resource_id": "resource_044",
+          "status": "Failed",
+          "jobResult": {
+            "content": [
+              {
+                "text": "Mesh generation failed with error: Unable to generate Model",
+                "type": "text"
+              }
+            ],
+            "isError": true
+          }
+        },
+        {
+          "resource_id": "resource_045",
+          "status": "Failed",
+          "jobResult": {
+            "content": [
+              {
+                "text": "Mesh generation failed with error: Unable to generate Model",
+                "type": "text"
+              }
+            ],
+            "isError": true
+          }
+        },
+        {
+          "resource_id": "resource_046",
+          "status": "Failed",
+          "jobResult": {
+            "content": [
+              {
+                "text": "Mesh generation failed with error: Unable to generate Model",
+                "type": "text"
+              }
+            ],
+            "isError": true
+          }
+        },
+        {
+          "resource_id": "resource_047",
+          "status": "Failed",
+          "jobResult": {
+            "content": [
+              {
+                "text": "Mesh generation failed with error: Unable to generate Model",
+                "type": "text"
+              }
+            ],
+            "isError": true
+          }
+        },
+        {
+          "resource_id": "resource_048",
+          "status": "Failed",
+          "jobResult": {
+            "content": [
+              {
+                "text": "Mesh generation failed with error: Unable to generate Model",
+                "type": "text"
+              }
+            ],
+            "isError": true
+          }
+        },
+        {
+          "resource_id": "resource_049",
+          "status": "Failed",
+          "jobResult": {
+            "content": [
+              {
+                "text": "Mesh generation failed with error: Unable to generate Model",
+                "type": "text"
+              }
+            ],
+            "isError": true
+          }
+        },
+        {
+          "resource_id": "resource_050",
+          "status": "Failed",
+          "jobResult": {
+            "content": [
+              {
+                "text": "Mesh generation failed with error: Unable to generate Model",
+                "type": "text"
+              }
+            ],
+            "isError": true
+          }
+        }
+      ],
+      "Royaume": [
+        {
+          "resource_id": "resource_051",
+          "status": "Failed",
+          "jobResult": {
+            "content": [
+              {
+                "text": "Mesh generation failed with error: Unable to generate Model",
+                "type": "text"
+              }
+            ],
+            "isError": true
+          }
+        },
+        {
+          "resource_id": "resource_052",
+          "status": "Completed",
+          "jobResult": {
+            "structuredContent": {
+              "generationId": "572078be-0386-44e0-b401-8b13a3cbbd7d",
+              "generationName": "One isolated game inventory resource prop. Lingot de fer gris trapu, arêtes adoucies, éraflures, marque en losange frappée. Thick chunky rounded natural forms with hand painted earthy textures. Hearthstone Warcraft stylized fantasy world prop. Warm light above left, soft worn edges, no text, no pedestal, no additional objects beyond the brief.",
+              "publishedAssetId": "126149198356330",
+              "tag": "Assistant-7e29a0ec-0c17-49bb-a538-a00519200f0f"
+            },
+            "content": [
+              {
+                "text": "{\"generationName\":\"One isolated game inventory resource prop. Lingot de fer gris trapu, arêtes adoucies, éraflures, marque en losange frappée. Thick chunky rounded natural forms with hand painted earthy textures. Hearthstone Warcraft stylized fantasy world prop. Warm light above left, soft worn edges, no text, no pedestal, no additional objects beyond the brief.\",\"tag\":\"Assistant-7e29a0ec-0c17-49bb-a538-a00519200f0f\"}",
+                "type": "text"
+              }
+            ],
+            "isError": false
+          }
+        },
+        {
+          "resource_id": "resource_054",
+          "status": "Failed",
+          "jobResult": {
+            "content": [
+              {
+                "text": "Mesh generation failed with error: Unable to generate Model",
+                "type": "text"
+              }
+            ],
+            "isError": true
+          }
+        },
+        {
+          "resource_id": "resource_055",
+          "status": "Failed",
+          "jobResult": {
+            "content": [
+              {
+                "text": "Mesh generation failed with error: Unable to generate Model",
+                "type": "text"
+              }
+            ],
+            "isError": true
+          }
+        },
+        {
+          "resource_id": "resource_057",
+          "status": "Failed",
+          "jobResult": {
+            "content": [
+              {
+                "text": "Mesh generation failed with error: Unable to generate Model",
+                "type": "text"
+              }
+            ],
+            "isError": true
+          }
+        },
+        {
+          "resource_id": "resource_058",
+          "status": "Failed",
+          "jobResult": {
+            "content": [
+              {
+                "text": "Mesh generation failed with error: Unable to generate Model",
+                "type": "text"
+              }
+            ],
+            "isError": true
+          }
+        },
+        {
+          "resource_id": "resource_059",
+          "status": "Completed",
+          "jobResult": {
+            "structuredContent": {
+              "generationId": "da217ce4-f291-412c-930e-c2a25c0da99e",
+              "generationName": "One isolated game inventory resource prop. Bannière bleu royal pliée en carré, liseré or, emblème de tour à moitié visible. Thick chunky rounded natural forms with hand painted earthy textures. Hearthstone Warcraft stylized fantasy world prop. Warm light above left, soft worn edges, no text, no pedestal, no additional objects beyond the brief.",
+              "publishedAssetId": "109609118553687",
+              "tag": "Assistant-e762b68a-b0c0-4eaa-bc65-9e405c72c1c8"
+            },
+            "content": [
+              {
+                "text": "{\"generationName\":\"One isolated game inventory resource prop. Bannière bleu royal pliée en carré, liseré or, emblème de tour à moitié visible. Thick chunky rounded natural forms with hand painted earthy textures. Hearthstone Warcraft stylized fantasy world prop. Warm light above left, soft worn edges, no text, no pedestal, no additional objects beyond the brief.\",\"tag\":\"Assistant-e762b68a-b0c0-4eaa-bc65-9e405c72c1c8\"}",
+                "type": "text"
+              }
+            ],
+            "isError": false
+          }
+        },
+        {
+          "resource_id": "resource_060",
+          "status": "Failed",
+          "jobResult": {
+            "content": [
+              {
+                "text": "Mesh generation failed with error: Unable to generate Model",
+                "type": "text"
+              }
+            ],
+            "isError": true
+          }
+        }
+      ]
+    }
+  }
+}

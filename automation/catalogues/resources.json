@@ -482,7 +482,7 @@
       ],
       "screenshots": [],
       "latest_review": null,
-      "notes": ""
+      "notes": "PASS 2026-10-18. Image rbxassetid://86238190807240. Remplace rbxassetid://140086618576004 (détourage corrigé). PNG 512x512 ; vitrine et ResourceConfig renseignés. Review et captures : docs/RESOURCE_ICONS_QA.md."
     },
     {
       "id": "resource_022",
@@ -505,7 +505,7 @@
       ],
       "screenshots": [],
       "latest_review": null,
-      "notes": ""
+      "notes": "PASS 2026-10-18. Image rbxassetid://124467689473100. PNG 512x512 ; vitrine et ResourceConfig renseignés. Review et captures : docs/RESOURCE_ICONS_QA.md."
     },
     {
       "id": "resource_023",

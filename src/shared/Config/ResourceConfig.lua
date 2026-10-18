@@ -76,8 +76,8 @@ resource("resource_018", "Liane de Couronne", "slime", "rbxassetid://80833359295
 resource("resource_019", "Cristal Flottant", "slime", "rbxassetid://84378247299023")
 resource("resource_020", "Couronne Fondue", "slime")
 -- Gobelins et orcs
-resource("resource_021", "Lambeau de Tissu Rouge", "horde")
-resource("resource_022", "Lanière de Cuir", "horde")
+resource("resource_021", "Lambeau de Tissu Rouge", "horde", "rbxassetid://86238190807240")
+resource("resource_022", "Lanière de Cuir", "horde", "rbxassetid://124467689473100")
 resource("resource_023", "Croc de Gobelin", "horde", "rbxassetid://130044684290868")
 resource("resource_024", "Os Gravé", "horde", "rbxassetid://82566021198094")
 resource("resource_025", "Plume de Guetteur", "horde")
