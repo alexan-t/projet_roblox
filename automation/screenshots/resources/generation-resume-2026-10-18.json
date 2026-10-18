@@ -1,0 +1,1009 @@
+{
+  "series": 1,
+  "jobs": [
+    {
+      "id": "resource_020",
+      "jobId": "c96d01e3-07fa-4eae-a8c3-b86e49e7c740",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"b955de2c-1e29-44e1-a949-e0b295ea7462\",\"generationName\":\"Stylized hand-painted fantasy prop: broken fragment of a gold crown with two rounded tips, tilted and half submerged in a puddle of blue slime. Only a broken crown segment, torn jagged ends. Chunky rounded volumes, painted warm gold and blue jelly highlights. Three quarter view. No text.\",\"publishedAssetId\":\"121536554509565\",\"tag\":\"Assistant-3d37a869-0435-4fd4-9275-7d290cbc653a\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Stylized hand-painted fantasy prop: broken fragment of a gold crown with two rounded tips, tilted and half submerged in a puddle of blue slime. Only a broken crown segment, torn jagged ends. Chunky rounded volumes, painted warm gold and blue jelly highlights. Three quarter view. No text.\\\",\\\"tag\\\":\\\"Assistant-3d37a869-0435-4fd4-9275-7d290cbc653a\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_025",
+      "jobId": "cba69f6b-b3bb-4a0f-867f-caa5b6c6d93c",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_026",
+      "jobId": "3ff5ce51-5618-47f5-94e3-6bf0f94e4faa",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_029",
+      "jobId": "033640be-3e97-4854-bacc-ed94de689118",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_030",
+      "jobId": "228cc466-d9a5-416a-bce1-96f99c953e9d",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_031",
+      "jobId": "6aab9d05-d22d-436b-bfab-62851236f204",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_036",
+      "jobId": "4c0de072-1169-4f30-8d58-dcbc60fff9ca",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_040",
+      "jobId": "d8970e53-ccc2-4086-aa05-99eda0f01942",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_041",
+      "jobId": "25a5bd71-0f38-4443-b814-3022f637fa1e",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_044",
+      "jobId": "c48aa391-73c1-4da1-9342-f8f4ff529180",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_045",
+      "jobId": "8c371bd2-1d72-4062-b77c-8d184207a733",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"d0adfde5-c4cc-46e7-8f86-c5ed52c1e95c\",\"generationName\":\"Stylized hand-painted fantasy game prop only. Small thick riveted black iron cage enclosing one bright orange ember. Wide opening facing front makes the ember visible. Chunky rounded volumes, rich painterly natural material texture, earthy palette, broad warm upper-left highlights. Three quarter view. No text, no pedestal.\",\"publishedAssetId\":\"139016721218975\",\"tag\":\"Assistant-3aae9ffa-2595-475b-bc3a-97ca7c6fec2c\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Stylized hand-painted fantasy game prop only. Small thick riveted black iron cage enclosing one bright orange ember. Wide opening facing front makes the ember visible. Chunky rounded volumes, rich painterly natural material texture, earthy palette, broad warm upper-left highlights. Three quarter view. No text, no pedestal.\\\",\\\"tag\\\":\\\"Assistant-3aae9ffa-2595-475b-bc3a-97ca7c6fec2c\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_046",
+      "jobId": "9282dcad-176d-404e-b926-97f49fbcdd49",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_047",
+      "jobId": "f3ca90a5-0ea3-4304-b149-fe37cbe7e273",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_048",
+      "jobId": "0a59b4e5-cdf5-47ae-87df-1c25142febf4",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_049",
+      "jobId": "c50d3d46-3b10-4320-8d0e-c230b70c3710",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_050",
+      "jobId": "4d0d0c3f-fc2d-427d-b299-e359c818e858",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_051",
+      "jobId": "9fd60a0a-23da-4ac8-8de3-8d647ee4c70f",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_052",
+      "jobId": "63be8bba-724d-414f-aa71-7588662fab16",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_054",
+      "jobId": "dc67c401-ef00-43a0-ba72-82fca9a58389",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_055",
+      "jobId": "675299bc-2a81-4227-a2e8-7f29e85845de",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_057",
+      "jobId": "e4bd1fa4-ed5d-472a-abc0-f405e2163dfd",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_058",
+      "jobId": "f162cded-d284-4a14-9bdf-4cc979047ead",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_059",
+      "jobId": "dd28c108-e997-4d13-86e1-ec84c4f4b843",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_060",
+      "jobId": "54edba1f-44b2-47a3-8693-78232222fba0",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_020",
+      "pass": 2,
+      "prompt": "Hand-painted fantasy prop: a BROKEN CURVED GOLD STRIP, two round crown tips, jagged broken ends. Half buried tilted sideways in blue jelly puddle. Crown fragment only.",
+      "jobId": "a64108dc-b029-4639-9665-da1fee4f7069",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"397956c0-6a7a-49fa-a648-c0ff81eda562\",\"generationName\":\"Hand-painted fantasy prop: a BROKEN CURVED GOLD STRIP, two round crown tips, jagged broken ends. Half buried tilted sideways in blue jelly puddle. Crown fragment only.\",\"publishedAssetId\":\"112522122387264\",\"tag\":\"Assistant-bdab5368-17e7-4b8e-aac8-e43066a3b968\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Hand-painted fantasy prop: a BROKEN CURVED GOLD STRIP, two round crown tips, jagged broken ends. Half buried tilted sideways in blue jelly puddle. Crown fragment only.\\\",\\\"tag\\\":\\\"Assistant-bdab5368-17e7-4b8e-aac8-e43066a3b968\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_026",
+      "pass": 2,
+      "prompt": "Hand-painted fantasy prop: one grey iron rivet with broad domed head and rusty brown rim.",
+      "jobId": "aa17500d-1162-47ff-8b88-532504ce8a5e",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"8264bfee-edeb-4c80-997a-d5a3ff4317e2\",\"generationName\":\"Hand-painted fantasy prop: one grey iron rivet with broad domed head and rusty brown rim.\",\"publishedAssetId\":\"101504748157359\",\"tag\":\"Assistant-5ebc4702-fe78-4a7f-9ca7-a9effc024492\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Hand-painted fantasy prop: one grey iron rivet with broad domed head and rusty brown rim.\\\",\\\"tag\\\":\\\"Assistant-5ebc4702-fe78-4a7f-9ca7-a9effc024492\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_029",
+      "pass": 2,
+      "jobId": "dde9c471-bb1e-4f1d-ab25-215e10a2e9e0",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"2c9ffd16-3c7c-4a08-9794-7e943cb3f1d5\",\"generationName\":\"Hand-painted chunky fantasy prop. One single large curved orc tusk, cream ivory, dark leather band around the base. Single ivory point.\",\"publishedAssetId\":\"133280070770192\",\"tag\":\"Assistant-f9f7af9d-5af1-4473-a579-3f85bd682726\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Hand-painted chunky fantasy prop. One single large curved orc tusk, cream ivory, dark leather band around the base. Single ivory point.\\\",\\\"tag\\\":\\\"Assistant-f9f7af9d-5af1-4473-a579-3f85bd682726\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_030",
+      "pass": 2,
+      "jobId": "6d5ccf5c-5141-4632-9110-28cb30436e2f",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"6c644562-dae9-4f4b-854d-eaca8ac79407\",\"generationName\":\"Hand-painted chunky fantasy prop. Massive curved ivory bone horn, riveted worn iron ring around base and one distinct smaller bone spike attached at the base, projecting sideways.\",\"publishedAssetId\":\"140109791179021\",\"tag\":\"Assistant-950b2112-76ea-4bee-916c-dd92d4b7151a\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Hand-painted chunky fantasy prop. Massive curved ivory bone horn, riveted worn iron ring around base and one distinct smaller bone spike attached at the base, projecting sideways.\\\",\\\"tag\\\":\\\"Assistant-950b2112-76ea-4bee-916c-dd92d4b7151a\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_031",
+      "pass": 2,
+      "prompt": "Hand-painted chunky fantasy prop. Smooth polished oval flattened blue grey river pebble, rounded continuous surface, small patch of green moss on one corner and broad pale painted highlight.",
+      "jobId": "c8b5f124-d057-4949-83a7-5e16f1e1e417",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"c89145e9-04cb-4672-8dc0-26f5e524fd1e\",\"generationName\":\"Hand-painted chunky fantasy prop. Smooth polished oval flattened blue grey river pebble, rounded continuous surface, small patch of green moss on one corner and broad pale painted highlight.\",\"publishedAssetId\":\"95654732772527\",\"tag\":\"Assistant-43aadce6-50a7-4c65-904a-4240beb9198b\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Hand-painted chunky fantasy prop. Smooth polished oval flattened blue grey river pebble, rounded continuous surface, small patch of green moss on one corner and broad pale painted highlight.\\\",\\\"tag\\\":\\\"Assistant-43aadce6-50a7-4c65-904a-4240beb9198b\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_036",
+      "pass": 2,
+      "prompt": "Hand-painted chunky fantasy prop. Solid irregular rounded gold nugget with broad convex bumps, warm gold, pale painted highlight upper left. Solid metal surface, no holes.",
+      "jobId": "5a2a6247-0637-4262-ac5f-00ac281ac468",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"30d18512-1894-4a98-85b2-43b2f99e1253\",\"generationName\":\"Hand-painted chunky fantasy prop. Solid irregular rounded gold nugget with broad convex bumps, warm gold, pale painted highlight upper left. Solid metal surface, no holes.\",\"publishedAssetId\":\"102568913822894\",\"tag\":\"Assistant-f73f9dec-cbe7-4b42-a555-8174045d99d7\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Hand-painted chunky fantasy prop. Solid irregular rounded gold nugget with broad convex bumps, warm gold, pale painted highlight upper left. Solid metal surface, no holes.\\\",\\\"tag\\\":\\\"Assistant-f73f9dec-cbe7-4b42-a555-8174045d99d7\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_040",
+      "pass": 2,
+      "prompt": "Hand-painted chunky fantasy prop. Low rounded lump of red brown clay with one single oval thumb depression on top. Wide low mound, one shallow hollow.",
+      "jobId": "4b03db20-28a8-46c6-94f2-ef38ee8fea7d",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"1036721a-943c-4a62-8839-7660d98a985f\",\"generationName\":\"Hand-painted chunky fantasy prop. Low rounded lump of red brown clay with one single oval thumb depression on top. Wide low mound, one shallow hollow.\",\"publishedAssetId\":\"85986519017904\",\"tag\":\"Assistant-e7655fec-8ade-43cd-8ec1-d030b3545c08\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Hand-painted chunky fantasy prop. Low rounded lump of red brown clay with one single oval thumb depression on top. Wide low mound, one shallow hollow.\\\",\\\"tag\\\":\\\"Assistant-e7655fec-8ade-43cd-8ec1-d030b3545c08\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_041",
+      "pass": 2,
+      "prompt": "Hand-painted chunky fantasy prop. Pointed cyan crystal shard, two broad large facets, soft glow within one central core.",
+      "jobId": "7db87a36-adca-4b6b-b4e9-0c483c524955",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"124551e7-dc95-43ed-88c0-c5f7b064e8e0\",\"generationName\":\"Hand-painted chunky fantasy prop. Pointed cyan crystal shard, two broad large facets, soft glow within one central core.\",\"publishedAssetId\":\"100406001112476\",\"tag\":\"Assistant-c88c8d2f-e4df-4d3e-b530-6f1ecaab6953\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Hand-painted chunky fantasy prop. Pointed cyan crystal shard, two broad large facets, soft glow within one central core.\\\",\\\"tag\\\":\\\"Assistant-c88c8d2f-e4df-4d3e-b530-6f1ecaab6953\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_044",
+      "pass": 2,
+      "prompt": "Hand-painted chunky fantasy prop. Round wooden heart core with spiral wood grain, single narrow glowing cyan split in center.",
+      "jobId": "6bcc34a8-a36d-442c-bed1-332d6638d302",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"4a3c0f4e-7414-44e4-a9ca-df070080903b\",\"generationName\":\"Hand-painted chunky fantasy prop. Round wooden heart core with spiral wood grain, single narrow glowing cyan split in center.\",\"publishedAssetId\":\"133862349539786\",\"tag\":\"Assistant-f1e5a0e7-59a1-4e49-ba82-7cbac278b986\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Hand-painted chunky fantasy prop. Round wooden heart core with spiral wood grain, single narrow glowing cyan split in center.\\\",\\\"tag\\\":\\\"Assistant-f1e5a0e7-59a1-4e49-ba82-7cbac278b986\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_046",
+      "pass": 2,
+      "prompt": "Hand-painted chunky fantasy prop. Curved green leaf shaped as a cup, one pale blue dew drop resting inside it.",
+      "jobId": "a6e4e8a0-d303-4685-a61e-30b98d675ccd",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"15bebd39-8151-4a66-a0c1-d44a9e5bba8a\",\"generationName\":\"Hand-painted chunky fantasy prop. Curved green leaf shaped as a cup, one pale blue dew drop resting inside it.\",\"publishedAssetId\":\"137799483527604\",\"tag\":\"Assistant-1087e0ad-0cbc-45c0-adc4-73f3da9f3617\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Hand-painted chunky fantasy prop. Curved green leaf shaped as a cup, one pale blue dew drop resting inside it.\\\",\\\"tag\\\":\\\"Assistant-1087e0ad-0cbc-45c0-adc4-73f3da9f3617\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_047",
+      "pass": 2,
+      "prompt": "Hand-painted chunky fantasy prop. Round bottle with a long narrow neck, leaf green liquid inside, cork stopper tied with thick twine.",
+      "jobId": "35593e42-e686-4b2f-8429-377e839316dd",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"3c2856d4-b953-4af0-96f8-5c40d460a0bb\",\"generationName\":\"Hand-painted chunky fantasy prop. Round bottle with a long narrow neck, leaf green liquid inside, cork stopper tied with thick twine.\",\"publishedAssetId\":\"117448268009746\",\"tag\":\"Assistant-42c94696-b884-4c03-a9f9-a0535e414ff1\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Hand-painted chunky fantasy prop. Round bottle with a long narrow neck, leaf green liquid inside, cork stopper tied with thick twine.\\\",\\\"tag\\\":\\\"Assistant-42c94696-b884-4c03-a9f9-a0535e414ff1\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_048",
+      "pass": 2,
+      "prompt": "Hand-painted chunky fantasy prop. Smooth round grey pebble with one large engraved cyan spiral softly glowing on front upper surface.",
+      "jobId": "eb6fbcb0-4d0c-4d9c-bd5c-2a6cf07208c4",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"226562aa-4ef7-4059-a8fa-3aaef53e0ad9\",\"generationName\":\"Hand-painted chunky fantasy prop. Smooth round grey pebble with one large engraved cyan spiral softly glowing on front upper surface.\",\"publishedAssetId\":\"85546051339574\",\"tag\":\"Assistant-cb833c19-8310-42cc-8d69-39101dbab6f1\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Hand-painted chunky fantasy prop. Smooth round grey pebble with one large engraved cyan spiral softly glowing on front upper surface.\\\",\\\"tag\\\":\\\"Assistant-cb833c19-8310-42cc-8d69-39101dbab6f1\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_025",
+      "pass": 2,
+      "jobId": "eb1417df-5557-4471-81b9-87931134acd4",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"efa72f67-cbfc-43d1-a243-8910ff00e0e2\",\"generationName\":\"Stylized hand-painted russet feather with red tip and leather tie at base. Chunky fantasy prop.\",\"publishedAssetId\":\"113011292956152\",\"tag\":\"Assistant-e8bc2291-d262-4b75-b6bc-7aae83ac8b32\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Stylized hand-painted russet feather with red tip and leather tie at base. Chunky fantasy prop.\\\",\\\"tag\\\":\\\"Assistant-e8bc2291-d262-4b75-b6bc-7aae83ac8b32\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_049",
+      "pass": 2,
+      "prompt": "Hand-painted chunky fantasy prop. Squat dark wooden inkwell containing blue black ink and a single cream feather quill inserted in opening.",
+      "jobId": "3da22c3e-38c8-483b-8f9e-13742a057357",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"31a30ad9-71b2-4250-a423-d167a91974a6\",\"generationName\":\"Hand-painted chunky fantasy prop. Squat dark wooden inkwell containing blue black ink and a single cream feather quill inserted in opening.\",\"publishedAssetId\":\"133642969183472\",\"tag\":\"Assistant-9840bd3d-7dfa-477d-8337-c030e4cd30f0\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Hand-painted chunky fantasy prop. Squat dark wooden inkwell containing blue black ink and a single cream feather quill inserted in opening.\\\",\\\"tag\\\":\\\"Assistant-9840bd3d-7dfa-477d-8337-c030e4cd30f0\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_050",
+      "pass": 2,
+      "prompt": "Hand-painted chunky fantasy prop. Milky blue grey cloudy glass sphere with a bronze band around it, supported by one short small foot.",
+      "jobId": "b7fd8705-603a-45b9-8bc7-db37edaca306",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"8ab75666-970c-426d-825b-03e9191fc779\",\"generationName\":\"Hand-painted chunky fantasy prop. Milky blue grey cloudy glass sphere with a bronze band around it, supported by one short small foot.\",\"publishedAssetId\":\"136446646437151\",\"tag\":\"Assistant-be9309ce-41df-4b32-8c47-c9a639daa0f9\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Hand-painted chunky fantasy prop. Milky blue grey cloudy glass sphere with a bronze band around it, supported by one short small foot.\\\",\\\"tag\\\":\\\"Assistant-be9309ce-41df-4b32-8c47-c9a639daa0f9\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_051",
+      "pass": 2,
+      "prompt": "Hand-painted chunky fantasy prop. Three separate pale wooden planks stacked crosswise, flat cut ends, thick rounded edges and broad painted wood grain.",
+      "jobId": "86ff3409-c7e8-4306-bc9f-875f400c5a4c",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"bf4eb276-67c6-4e40-b8df-b24c157b333c\",\"generationName\":\"Hand-painted chunky fantasy prop. Three separate pale wooden planks stacked crosswise, flat cut ends, thick rounded edges and broad painted wood grain.\",\"publishedAssetId\":\"76023958300836\",\"tag\":\"Assistant-2db3e182-55e1-4b96-ae6a-80398c3b68fd\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Hand-painted chunky fantasy prop. Three separate pale wooden planks stacked crosswise, flat cut ends, thick rounded edges and broad painted wood grain.\\\",\\\"tag\\\":\\\"Assistant-2db3e182-55e1-4b96-ae6a-80398c3b68fd\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_052",
+      "pass": 2,
+      "prompt": "Hand-painted chunky fantasy prop. Low squat solid grey iron ingot with softened edges, scratches, single diamond stamp engraved into top. Simple solid low bar.",
+      "jobId": "5b881368-de18-40a1-ad71-1f2da0b4a65e",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"6f98ac31-6049-4f71-9e7f-589db3b547d1\",\"generationName\":\"Hand-painted chunky fantasy prop. Low squat solid grey iron ingot with softened edges, scratches, single diamond stamp engraved into top. Simple solid low bar.\",\"publishedAssetId\":\"103969659688197\",\"tag\":\"Assistant-4b81c7f1-2497-47af-ad74-7b915ba55e72\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Hand-painted chunky fantasy prop. Low squat solid grey iron ingot with softened edges, scratches, single diamond stamp engraved into top. Simple solid low bar.\\\",\\\"tag\\\":\\\"Assistant-4b81c7f1-2497-47af-ad74-7b915ba55e72\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_054",
+      "pass": 2,
+      "prompt": "Hand-painted chunky fantasy prop. Coil of thick braided beige hemp rope, one loose end hanging distinctly away from coil silhouette.",
+      "jobId": "611466d3-dc3e-474b-a5e2-9146715234ab",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"937be8e1-34b9-4278-9b8c-f9e2f38f19f7\",\"generationName\":\"Hand-painted chunky fantasy prop. Coil of thick braided beige hemp rope, one loose end hanging distinctly away from coil silhouette.\",\"publishedAssetId\":\"121423867719240\",\"tag\":\"Assistant-d1631582-a526-4da7-8bd7-80568068fb9e\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Hand-painted chunky fantasy prop. Coil of thick braided beige hemp rope, one loose end hanging distinctly away from coil silhouette.\\\",\\\"tag\\\":\\\"Assistant-d1631582-a526-4da7-8bd7-80568068fb9e\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_055",
+      "pass": 2,
+      "prompt": "Hand-painted chunky fantasy prop. Thick roll of cream canvas, royal red stripe along edge, tied with twine knot.",
+      "jobId": "7e572b3a-b278-424b-aff8-eeebc5cece69",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"637146c6-0fbb-4b02-ba24-b831063b376e\",\"generationName\":\"Hand-painted chunky fantasy prop. Thick roll of cream canvas, royal red stripe along edge, tied with twine knot.\",\"publishedAssetId\":\"112519387596525\",\"tag\":\"Assistant-b710296d-00b1-443f-81df-50dc2aa286f4\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Hand-painted chunky fantasy prop. Thick roll of cream canvas, royal red stripe along edge, tied with twine knot.\\\",\\\"tag\\\":\\\"Assistant-b710296d-00b1-443f-81df-50dc2aa286f4\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_057",
+      "pass": 2,
+      "prompt": "Hand-painted chunky fantasy prop. Stack of exactly three curved red brown clay roof tiles, slightly offset, thick rounded edges. Three distinct curved layers.",
+      "jobId": "f2b0c37b-ffc7-442e-b242-f21fa4b57f6f",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"31125dd4-b61e-4c8f-a38f-7cbfcb0b0a40\",\"generationName\":\"Hand-painted chunky fantasy prop. Stack of exactly three curved red brown clay roof tiles, slightly offset, thick rounded edges. Three distinct curved layers.\",\"publishedAssetId\":\"127285404981555\",\"tag\":\"Assistant-e61c2cbc-1549-485d-9f55-45823e781e99\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Hand-painted chunky fantasy prop. Stack of exactly three curved red brown clay roof tiles, slightly offset, thick rounded edges. Three distinct curved layers.\\\",\\\"tag\\\":\\\"Assistant-e61c2cbc-1549-485d-9f55-45823e781e99\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_058",
+      "pass": 2,
+      "prompt": "Hand-painted chunky fantasy prop. Rolled cream blank parchment with irregular edges and one red ribbon knotted in middle. No writing.",
+      "jobId": "ff184c3b-7348-40db-bfe1-f16e16fd9049",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"6c25c8a0-a7df-418f-acdb-5b2c44a59c74\",\"generationName\":\"Hand-painted chunky fantasy prop. Rolled cream blank parchment with irregular edges and one red ribbon knotted in middle. No writing.\",\"publishedAssetId\":\"133901634687491\",\"tag\":\"Assistant-19e9a235-c0ea-4fe7-a48d-b72a3955593e\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Hand-painted chunky fantasy prop. Rolled cream blank parchment with irregular edges and one red ribbon knotted in middle. No writing.\\\",\\\"tag\\\":\\\"Assistant-19e9a235-c0ea-4fe7-a48d-b72a3955593e\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_059",
+      "pass": 2,
+      "prompt": "Hand-painted chunky fantasy prop. Royal blue fabric banner folded into a square, gold edging, half of gold tower emblem hidden beneath folded flap. Compact square folded cloth only.",
+      "jobId": "0cbdd713-1c77-42f7-a7c8-c309d57cd147",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"baac5ab6-2128-41f7-9526-895c8824ff7d\",\"generationName\":\"Hand-painted chunky fantasy prop. Royal blue fabric banner folded into a square, gold edging, half of gold tower emblem hidden beneath folded flap. Compact square folded cloth only.\",\"publishedAssetId\":\"110390531454736\",\"tag\":\"Assistant-392b4bbc-7069-4907-a8d8-0d7b84fc5f94\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Hand-painted chunky fantasy prop. Royal blue fabric banner folded into a square, gold edging, half of gold tower emblem hidden beneath folded flap. Compact square folded cloth only.\\\",\\\"tag\\\":\\\"Assistant-392b4bbc-7069-4907-a8d8-0d7b84fc5f94\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_060",
+      "pass": 2,
+      "prompt": "Hand-painted chunky fantasy prop. Squat beige cut stone corner block, two faces visible, gold kingdom tower emblem inlaid flush into front surface. Low solid masonry block.",
+      "jobId": "c0c6e57b-ef81-4b6f-bad9-c6d0f433b4a4",
+      "status": "Running",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"206ef1c3-d628-4d20-bf7b-c6a4307c4715\",\"generationName\":\"Hand-painted chunky fantasy prop. Squat beige cut stone corner block, two faces visible, gold kingdom tower emblem inlaid flush into front surface. Low solid masonry block.\",\"publishedAssetId\":\"116610210777667\",\"tag\":\"Assistant-ef341be9-b396-4519-a297-95acb3d5e7cd\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Hand-painted chunky fantasy prop. Squat beige cut stone corner block, two faces visible, gold kingdom tower emblem inlaid flush into front surface. Low solid masonry block.\\\",\\\"tag\\\":\\\"Assistant-ef341be9-b396-4519-a297-95acb3d5e7cd\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    }
+  ],
+  "specs": [
+    [
+      25,
+      "Single curved russet brown feather, red tip, thick dark leather tie at base.",
+      2,
+      4,
+      1
+    ],
+    [
+      26,
+      "One single large worn grey iron rivet with a domed round head, brown rust around its rim. One rivet only, to be duplicated later.",
+      2,
+      1,
+      2
+    ],
+    [
+      29,
+      "One single large curved orc tusk, cream ivory, dark leather band around the base. Single ivory point.",
+      2,
+      4,
+      2
+    ],
+    [
+      30,
+      "Massive curved ivory bone horn, riveted worn iron ring around base and one distinct smaller bone spike attached at the base, projecting sideways.",
+      3,
+      4,
+      2
+    ],
+    [
+      31,
+      "Smooth polished oval flattened blue grey river pebble, rounded continuous surface, small patch of green moss on one corner and broad pale painted highlight.",
+      4,
+      2,
+      3
+    ],
+    [
+      36,
+      "Solid irregular rounded gold nugget with broad convex bumps, warm gold, pale painted highlight upper left. Solid metal surface, no holes.",
+      3,
+      3,
+      3
+    ],
+    [
+      40,
+      "Low rounded lump of red brown clay with one single oval thumb depression on top. Wide low mound, one shallow hollow.",
+      4,
+      1.6,
+      3
+    ],
+    [
+      41,
+      "Pointed cyan crystal shard, two broad large facets, soft glow within one central core.",
+      2,
+      4,
+      2
+    ],
+    [
+      44,
+      "Round wooden heart core with spiral wood grain, single narrow glowing cyan split in center.",
+      3,
+      3,
+      2
+    ],
+    [
+      45,
+      "Small thick riveted black iron cage enclosing one bright orange ember. Wide opening facing front makes the ember visible.",
+      3,
+      3,
+      3
+    ],
+    [
+      46,
+      "Curved green leaf shaped as a cup, one pale blue dew drop resting inside it.",
+      4,
+      2,
+      3
+    ],
+    [
+      47,
+      "Round bottle with a long narrow neck, leaf green liquid inside, cork stopper tied with thick twine.",
+      3,
+      4,
+      3
+    ],
+    [
+      48,
+      "Smooth round grey pebble with one large engraved cyan spiral softly glowing on front upper surface.",
+      3,
+      2,
+      3
+    ],
+    [
+      49,
+      "Squat dark wooden inkwell containing blue black ink and a single cream feather quill inserted in opening.",
+      3,
+      4,
+      3
+    ],
+    [
+      50,
+      "Milky blue grey cloudy glass sphere with a bronze band around it, supported by one short small foot.",
+      3,
+      3.6,
+      3
+    ],
+    [
+      51,
+      "Three separate pale wooden planks stacked crosswise, flat cut ends, thick rounded edges and broad painted wood grain.",
+      4,
+      2,
+      3
+    ],
+    [
+      52,
+      "Low squat solid grey iron ingot with softened edges, scratches, single diamond stamp engraved into top. Simple solid low bar.",
+      4,
+      1.5,
+      2.5
+    ],
+    [
+      54,
+      "Coil of thick braided beige hemp rope, one loose end hanging distinctly away from coil silhouette.",
+      3,
+      3,
+      2
+    ],
+    [
+      55,
+      "Thick roll of cream canvas, royal red stripe along edge, tied with twine knot.",
+      4,
+      2.5,
+      2.5
+    ],
+    [
+      57,
+      "Stack of exactly three curved red brown clay roof tiles, slightly offset, thick rounded edges. Three distinct curved layers.",
+      4,
+      2,
+      3
+    ],
+    [
+      58,
+      "Rolled cream blank parchment with irregular edges and one red ribbon knotted in middle. No writing.",
+      4,
+      2,
+      2
+    ],
+    [
+      59,
+      "Royal blue fabric banner folded into a square, gold edging, half of gold tower emblem hidden beneath folded flap. Compact square folded cloth only.",
+      3,
+      1,
+      3
+    ],
+    [
+      60,
+      "Squat beige cut stone corner block, two faces visible, gold kingdom tower emblem inlaid flush into front surface. Low solid masonry block.",
+      4,
+      3,
+      3
+    ]
+  ],
+  "correction_specs": [
+    [
+      20,
+      "Broken gold crown fragment lying diagonally halfway inside blue jelly. Short curved band with jagged broken ends and two round tips. Hand-painted fantasy prop.",
+      4,
+      2,
+      3
+    ],
+    [
+      25,
+      "Curved russet feather, red tip, thick brown leather knot tied around base. Hand-painted fantasy prop.",
+      2,
+      4,
+      1
+    ],
+    [
+      26,
+      "One smooth round domed steel rivet. Grey iron head with brown rusty rim. Smooth curved surface, painterly fantasy prop.",
+      2,
+      1,
+      2
+    ],
+    [
+      29,
+      "One long ivory tusk curving upward to a sharp point. Base wrapped in dark brown leather. Hand-painted fantasy prop.",
+      2,
+      4,
+      2
+    ],
+    [
+      30,
+      "One curved pointed ivory horn with a riveted iron collar and a smaller bone spike on the side of its base. Hand-painted fantasy prop.",
+      3,
+      4,
+      2
+    ],
+    [
+      36,
+      "Lumpy rounded solid GOLD NUGGET, warm rich yellow gold, soft painted highlight. Hand-painted fantasy game prop.",
+      3,
+      3,
+      3
+    ],
+    [
+      40,
+      "Low soft lump of red brown clay, shallow oval thumb dent pressed into top surface. Hand-painted fantasy prop.",
+      4,
+      1.5,
+      3
+    ],
+    [
+      41,
+      "One single cyan crystal shard. Pointed top, two broad facets, soft pale cyan core. Hand-painted fantasy prop.",
+      2,
+      4,
+      2
+    ],
+    [
+      44,
+      "Round brown wood seed core, spiral growth rings, one glowing cyan crack through middle. Hand-painted fantasy prop.",
+      3,
+      3,
+      2
+    ],
+    [
+      45,
+      "Small riveted black iron cage holding a single orange glowing lump of coal. Hand-painted fantasy prop.",
+      3,
+      3,
+      3
+    ],
+    [
+      46,
+      "One curled broad green leaf cradling a large pale blue water droplet. Hand-painted fantasy prop.",
+      3,
+      2,
+      3
+    ],
+    [
+      48,
+      "Flat oval grey river pebble with a cyan spiral engraved on its broad upper face. Hand-painted fantasy prop.",
+      3,
+      1.5,
+      2.5
+    ],
+    [
+      50,
+      "Cloudy milky blue-grey glass ball held in a bronze ring, short bronze foot. Hand-painted fantasy prop.",
+      3,
+      3.5,
+      3
+    ],
+    [
+      51,
+      "One single thick pale wooden plank, flat rectangular cut ends, broad painted woodgrain, softly rounded edges. Hand-painted fantasy prop.",
+      4,
+      0.5,
+      1.2
+    ],
+    [
+      54,
+      "Thick beige braided rope coiled in a circle with a long loose end curving outward. Hand-painted fantasy prop.",
+      3,
+      2,
+      3
+    ],
+    [
+      55,
+      "Cream canvas roll tied with a thick string bow, red stripe along fabric edge. Hand-painted fantasy prop.",
+      4,
+      2,
+      2
+    ],
+    [
+      57,
+      "One curved terracotta roof tile, rounded thick edges, red brown painted clay. Hand-painted fantasy prop.",
+      3,
+      0.6,
+      2
+    ],
+    [
+      58,
+      "Blank cream parchment scroll with two curled ends and a red ribbon bow around its middle. Hand-painted fantasy prop.",
+      4,
+      2,
+      2
+    ],
+    [
+      59,
+      "Square folded royal blue cloth with gold border. Fold conceals half of a gold tower emblem. Hand-painted fantasy prop.",
+      3,
+      0.7,
+      3
+    ],
+    [
+      60,
+      "Low beige rectangular stone masonry corner block, flat gold tower emblem engraved on front face. Hand-painted fantasy prop.",
+      4,
+      2,
+      3
+    ]
+  ]
+}

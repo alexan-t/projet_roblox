@@ -2,16 +2,17 @@
   "task_id": "resource_020",
   "status": "in_progress",
   "stage": "production",
-  "iteration": 0,
+  "iteration": 2,
   "max_iterations": 3,
-  "last_completed_step": "authorized_restart_brief_reviewed",
+  "last_completed_step": "new_series_generation_attempt_recorded",
   "next_step": "generate_corrected_3d_model_in_test_3",
   "studio_target": "Workspace.Bestiaire.Inventaire.Ressources.Panneau.Affichage.Fond.Emplacements.Ressource_020",
   "latest_review": "docs/RESOURCE_ICONS_QA.md",
   "evidence": [
     "automation/screenshots/resources/generation-results.json",
     "automation/screenshots/resources/generation-retry-2026-10-18.json",
-    "automation/screenshots/resources/generation-third-2026-10-18.json"
+    "automation/screenshots/resources/generation-third-2026-10-18.json",
+    "automation/screenshots/resources/generation-resume-2026-10-18.json"
   ],
   "notes": "Recomposer un fragment de couronne cassée, incliné et à moitié noyé dans la gelée.",
   "remaining_steps": [
