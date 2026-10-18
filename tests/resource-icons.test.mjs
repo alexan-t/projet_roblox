@@ -36,6 +36,15 @@ test('resource icons: published asset ids and PNG contents are unique', () => {
 });
 
 // Decode the current exporter format (8-bit RGBA, non-interlaced), including PNG row filters.
+function crc32(bytes) {
+	let crc = 0xffffffff;
+	for (const byte of bytes) {
+		crc ^= byte;
+		for (let bit = 0; bit < 8; bit++) crc = (crc >>> 1) ^ ((crc & 1) ? 0xedb88320 : 0);
+	}
+	return (crc ^ 0xffffffff) >>> 0;
+}
+
 function pixels(png) {
 	assert.deepEqual([...png.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
 	assert.equal(png.toString('ascii', 12, 16), 'IHDR');
@@ -45,9 +54,11 @@ function pixels(png) {
 	const chunks = [];
 	let end = false;
 	for (let pos = 8; pos < png.length;) {
+		assert.ok(pos + 12 <= png.length, 'truncated PNG chunk header');
 		const size = png.readUInt32BE(pos);
 		assert.ok(pos + size + 12 <= png.length, 'truncated PNG chunk');
 		const kind = png.toString('ascii', pos + 4, pos + 8);
+		assert.equal(crc32(png.subarray(pos + 4, pos + 8 + size)), png.readUInt32BE(pos + 8 + size), `${kind}: invalid CRC`);
 		if (kind === 'IDAT') chunks.push(png.subarray(pos + 8, pos + 8 + size));
 		pos += size + 12;
 		if (kind === 'IEND') { end = true; assert.equal(pos, png.length); break; }
@@ -74,6 +85,17 @@ function pixels(png) {
 	}
 	return out;
 }
+
+test('resource icons: decoder rejects corrupted PNG chunk data', () => {
+	const png = Buffer.from(read(directory + files[0]));
+	// Change IHDR compression method without updating its CRC; dimensions remain intact.
+	png[26] ^= 1;
+	assert.throws(() => pixels(png), /8-bit RGBA/);
+	const damaged = Buffer.from(read(directory + files[0]));
+	// Alter the IHDR checksum itself to exercise integrity validation independently.
+	damaged[29] ^= 1;
+	assert.throws(() => pixels(damaged), /invalid CRC/);
+});
 
 test('resource icons: delivered PNGs decode at 512 x 512 with visible content and transparent background', () => {
 	for (const file of files) {
