@@ -2,18 +2,17 @@
 -- Petite fenêtre d'information du menu (voir docs/TUTORIAL_GUIDANCE.md) : Statistiques, ou une entrée
 -- « Bientôt disponible » (Boutique, Guilde) présentée proprement plutôt qu'un bouton mort.
 -- Présentation seulement : MenuController fournit le contenu (valeurs du serveur pour les stats).
---   Fenêtre bois standard (UIKit.window), grosse icône 3D en tête, puis :
+--   Fenêtre bois standard (UIKit.window), grande icône du menu en tête (PNG, MenuIconConfig), puis :
 --     • Rows : une ligne par statistique (libellé à gauche, valeur dorée à droite) sur des sous-panneaux ;
 --     • Message : bandeau « Bientôt disponible » et un court texte (Builder Sans).
 -- API : InfoView.Show(data, options?) ; InfoView.Hide().
---   data = { Title: string, Icon: string, Rows: { { Label: string, Value: string } }?, Message: string? }
+--   data = { Title: string, Image: string (rbxassetid de l'icône, "" : aucune), Rows: { { Label: string, Value: string } }?, Message: string? }
 --   options = { OnClose: (() -> ())?, Guide: string? (drapeau signalé à l'ouverture, ex. "Stats") }
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local GuideTargets = require(script.Parent.Parent.GuideTargets)
-local Icons = require(script.Parent.Parent.Icons)
 local UIKit = require(script.Parent.Parent.UIKit)
 
 local Colors = UITheme.Colors
@@ -25,7 +24,7 @@ local ICON = 96
 local ROW = 44
 
 export type Row = { Label: string, Value: string }
-export type Data = { Title: string, Icon: string, Rows: { Row }?, Message: string? }
+export type Data = { Title: string, Image: string, Rows: { Row }?, Message: string? }
 export type Options = { OnClose: (() -> ())?, Guide: string? }
 
 local InfoView = {}
@@ -62,14 +61,15 @@ function InfoView.Show(data: Data, options: Options?)
 	panel.Position = UDim2.fromScale(0.5, 0.5)
 	current = { screen = screen, panel = panel, veil = veil, guide = opts.Guide, onClose = opts.OnClose }
 
-	local icon = Instance.new("Frame")
+	local icon = Instance.new("ImageLabel")
 	icon.Name = "Icone"
 	icon.BackgroundTransparency = 1
+	icon.Image = data.Image
+	icon.ScaleType = Enum.ScaleType.Fit
 	icon.AnchorPoint = Vector2.new(0.5, 0)
 	icon.Position = UDim2.new(0.5, 0, 0, Spacing.S)
 	icon.Size = UDim2.fromOffset(ICON, ICON)
 	icon.Parent = content
-	Icons.viewport(icon, data.Icon)
 	UIKit.popIn(icon, 0.05)
 
 	local top = ICON + Spacing.L

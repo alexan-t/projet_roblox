@@ -104,6 +104,7 @@ local function buildHotbar(screen: ScreenGui)
 	bar.Position = UDim2.new(0.5, 0, 1, -S.ScreenMargin)
 	bar.Size = UDim2.fromOffset(width, SLOT + 2 * S.M)
 	ui.bar = bar
+	GuideTargets.register("Hotbar.Bar", bar) -- le menu principal s'arrête au-dessus
 	for index = 1, count do
 		local frame = Instance.new("TextButton")
 		frame.Name = `Raccourci{index}`
@@ -229,6 +230,7 @@ local function setBag(open: boolean)
 	end
 	ui.bag.Visible = open
 	if open then
+		ui.placeBag()
 		UIKit.pop(ui.bag)
 		GuideTargets.open("Bag")
 	else
@@ -250,7 +252,7 @@ local function buildBag(screen: ScreenGui)
 	local bag = UIKit.panel(screen, T.Panel)
 	bag.Name = "Sacoche"
 	bag.AnchorPoint = Vector2.new(0, 0.5)
-	bag.Position = UDim2.new(0, S.ScreenMargin + S.MenuColumn, 0.5, -40)
+	bag.Position = UDim2.new(0, S.ScreenMargin, 0.5, -40)
 	bag.Size = UDim2.fromOffset(372, 620)
 	bag.Visible = false
 	ui.bag = bag
@@ -258,12 +260,14 @@ local function buildBag(screen: ScreenGui)
 	scale.Parent = bag
 	local function resize()
 		scale.Scale = math.min(1, math.max(0.5, (screen.AbsoluteSize.Y - 130) / 620))
-		-- le menu (UIKit.screen) suit l'échelle de l'écran de référence : la sacoche s'ouvre juste à côté
-		local menuScale = math.clamp(screen.AbsoluteSize.Y / 1080, 0.7, 1.25)
-		bag.Position = UDim2.new(0, S.ScreenMargin + S.MenuColumn * menuScale, 0.5, -40)
+		-- la sacoche s'ouvre juste à droite du menu principal (cible « Menu.Area », sa taille réelle)
+		local menu = GuideTargets.get("Menu.Area")
+		local x = if menu then menu.AbsolutePosition.X + menu.AbsoluteSize.X + S.M else S.ScreenMargin
+		bag.Position = UDim2.new(0, x, 0.5, -40)
 	end
 	screen:GetPropertyChangedSignal("AbsoluteSize"):Connect(resize)
 	task.defer(resize)
+	ui.placeBag = resize
 
 	local title = Instance.new("Frame")
 	title.BackgroundColor3 = C.Wood

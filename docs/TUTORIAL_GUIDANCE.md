@@ -14,7 +14,7 @@ permanent.
 | Données | étapes, drapeaux, rappels, entrées du menu | `src/shared/Config/TutorialConfig.lua` |
 | Règles | validation, priorités, première fois, badges (pur, testé) | `src/shared/Tutorial/TutorialRules.lua` |
 | Mémoire | drapeaux « vu une fois » | `PlayerData.Tutorial.Seen`, `TutorialService` |
-| Menu | colonne d'icônes : Boutique, Sac, Index, Guilde, Stats | `MenuController`, `UI/Views/MenuView`, `UI/Views/InfoView` |
+| Menu | icônes PNG du ZIP « Icones Menu » : Boutique, Sac, Index, Guilde, Stats | `MenuController`, `UI/Views/MenuView`, `UI/Views/InfoView`, `Shared/Config/MenuIconConfig` |
 
 Aucune coordonnée en dur : le monde vise des cibles de `Shared.Quests.QuestGuide` (toujours dans le plot
 du joueur), l'interface vise des cibles enregistrées par les vues (`GuideTargets.register`).
@@ -58,18 +58,42 @@ ne relance rien (pas de boucle).
 Conditions, toujours venues du serveur : `HasHero` et `SecondHero` (collection `ArenaStore`),
 `FirstVictory` (`Remotes.GetPlayerStats`).
 
-## Menu de navigation
+## Menu principal
 
-| Entrée | Icône (maison, `UI/Icons`) | Ouvre |
+Icônes : les PNG du ZIP « Icones Menu » (512 x 512, fond transparent), publiés **tels quels** sur Roblox ;
+les SVG du ZIP ne sont que la source. Tous les AssetIds sont dans `src/shared/Config/MenuIconConfig.lua`
+(aucun ailleurs : vérifié par `tests/menu-icons.test.mjs`).
+
+| Entrée | PNG normal / attention | Ouvre |
 | --- | --- | --- |
-| Boutique | étal à auvent rayé, pièce d'or | « Bientôt disponible » (InfoView) |
-| Sac | sacoche de cuir, boucle dorée | la Sacoche (`HeroBarController.SetBag`) ; bouton sélectionné tant qu'elle est ouverte |
-| Index | livre bleu royal, emblème doré | catalogue des 60 héros : possédés (vrai modèle, ×n), les autres « ??? » + cadenas, sans spoil |
-| Guilde | bannière rouge à queue d'aronde | « Bientôt disponible » |
-| Stats | trois barres sur un socle | statistiques du serveur : héros, niveau max, stages, Élite, invocations, royaume |
+| Boutique | `shop.png` / `shop-badge.png` | « Bientôt disponible » (InfoView) |
+| Sac | `bag.png` / `bag-badge.png` | LA Sacoche existante (`HeroBarController.SetBag`) ; bouton sélectionné tant qu'elle est ouverte |
+| Index | `index.png` / `index-badge.png` | catalogue des 60 héros (CollectionView) : possédés (vrai modèle, ×n), les autres « ??? » + cadenas |
+| Guilde | `guild.png` / `guild-badge.png` | « Bientôt disponible » |
+| Stats | `stats.png` / `stats-badge.png` | statistiques du serveur : héros, niveau max, stages, Élite, invocations, royaume |
+
+`badge.png` (le « ! » seul) n'est pas utilisé : chaque variante `*-badge.png` l'intègre déjà.
+
+- Disposition : grille de 2 colonnes (Boutique Sac / Index Guilde / Stats), sans panneau, nom sous
+  l'icône. Placée dans la bande libre entre le suivi de quête et la hotbar (sur écran tactile, au-dessus
+  de 62 % de la hauteur : joystick), agrandie jusqu'à x1,3 si la place le permet ; bande trop basse
+  (téléphone en paysage) : les 5 icônes sur une seule ligne.
+- États : survol (léger gonflement), enfoncé, sélectionné (pastille bois sombre, contour doré), attention
+  (variante PNG « ! » + petit rebond toutes les 3 s), mis en avant (halo doré qui respire).
+- Masqué pendant tout autre écran modal (ScreenState : Expédition, invocation, récompenses…).
+- API : `MenuController.SetAttention(id, on)`, `MenuController.SetHighlighted(id, on)`,
+  `MenuController.GetButton(id)`. Le tutoriel s'y branche sans y mettre sa logique : attention = drapeaux
+  non vus (`TutorialController.Badge`), halo = bouton visé par la flèche UI (`TutorialController.pointing`).
+- Aperçu Studio : attribut `Workspace.ApercuMenu`, ex. `"Bag=attention,Index=halo"` (vide : normal).
 
 Le bouton texte « Sac » à côté de la hotbar est remplacé par l'entrée Sac du menu ; la Sacoche s'ouvre
-juste à droite de la colonne (`UITheme.Spacing.MenuColumn`).
+juste à droite du menu (cible `Menu.Area`, sa taille réelle).
+
+### Publier une nouvelle version d'icône
+
+1. Téléverser le PNG sur Roblox (Asset Manager ou Creator Hub), sans le retoucher.
+2. Coller `rbxassetid://<id>` dans `MenuIconConfig` (`Icon` ou `BadgeIcon` de l'entrée).
+3. `node --test tests/`.
 
 ## Ajouter un guidage
 

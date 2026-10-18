@@ -1,179 +1,276 @@
 --!strict
--- Menu de navigation (HUD, colonne à gauche) — voir docs/TUTORIAL_GUIDANCE.md, docs/UI_DESIGN_SYSTEM.md.
--- Présentation seulement : MenuController décide de ce qu'ouvre chaque bouton et des badges.
---   Un bouton « chunky » carré par entrée (face crème sur lèvre bois, contour Ink), une icône 3D maison
---   (UI/Icons : Boutique, Sac, Index, Guilde, Stats) qui déborde légèrement, le nom dessous en Fredoka.
---   États : normal ; survol (léger gonflement) ; enfoncé (la face descend sur sa lèvre) ; sélectionné
---   (face dorée, contour Selected : la fenêtre de ce bouton est ouverte) ; badge « ! » rouge royal qui
---   rebondit doucement (nouveau / à découvrir).
--- Chaque bouton est la cible de guidage « Menu.<Id> » (GuideTargets).
--- API : MenuView.Build(entries, onSelect) ; MenuView.SetSelected(id?) ; MenuView.SetBadge(id, visible).
---   entries = { { Id: string, Label: string, Icon: string } }
+-- Menu principal (HUD, à gauche, sous le suivi de quête) — voir docs/TUTORIAL_GUIDANCE.md § Menu.
+-- Présentation seulement : MenuController décide de ce qu'ouvre chaque bouton, des badges et des
+-- mises en avant. Les icônes sont les PNG du ZIP « Icones Menu », publiés tels quels
+-- (Shared.Config.MenuIconConfig) : l'icône est l'élément principal, sans panneau derrière.
+--   Grille de 2 colonnes (Boutique Sac / Index Guilde / Stats), nom en Fredoka sous chaque icône.
+--   États :
+--     survol     : léger gonflement (souris seulement, jamais seul indicateur) ;
+--     enfoncé    : l'icône se tasse ;
+--     sélectionné: pastille ronde bois sombre et contour doré sous l'icône (sa fenêtre est ouverte) ;
+--     attention  : variante PNG avec « ! » (BadgeIcon), apparition en pop puis petit rebond espacé ;
+--     mis en avant (tutoriel) : halo doré qui respire sous l'icône, l'icône gonfle doucement.
+-- Chaque icône est la cible de guidage « Menu.<Id> » (GuideTargets) ; attribut GuideGlow = false : la
+-- flèche UI ne dessine pas son cadre, le halo rond du menu le remplace.
+-- Placement : MenuView.Fit(top, bottom) le place dans la bande libre (coordonnées absolues), le réduit si
+-- elle est trop courte et l'agrandit un peu si elle est haute. Bande trop basse pour la grille (téléphone
+-- en paysage) : les 5 icônes passent sur une seule ligne, plutôt que de devenir illisibles. Sa zone est la cible « Menu.Area »
+-- (la sacoche s'ouvre juste à côté, la flèche UI se place à sa droite).
+-- API : MenuView.Build(entries, onSelect) ; SetSelected(id?) ; SetAttention(id, on) ; SetHighlighted(id, on) ;
+--   SetVisible(on) ; Fit(top, bottom) ; Width() (largeur à l'écran, px).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
+local MenuIconConfig = require(ReplicatedStorage.Shared.Config.MenuIconConfig)
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local GuideTargets = require(script.Parent.Parent.GuideTargets)
-local Icons = require(script.Parent.Parent.Icons)
 local UIKit = require(script.Parent.Parent.UIKit)
 
 local Colors = UITheme.Colors
 local Spacing = UITheme.Spacing
 local Animation = UITheme.Animation
+local GUIDE = UITheme.World.Guide
 
-local SIZE = Spacing.MenuButton
-local LABEL = 20 -- hauteur du nom sous le bouton
-local LIP = UITheme.Shadow.ButtonLip
-local BADGE = 26
-local BADGE_EVERY = 2.2 -- s entre deux rebonds du badge
+local ICON = Spacing.MenuIcon
+local LABEL = 20 -- hauteur du nom sous l'icône
+local COLUMNS = 2
+local GRID_MIN = 0.8 -- en dessous de cette réduction, la grille passe sur une seule ligne
+local GAP = Spacing.S
+local DISC = 0.86 -- diamètre de la pastille (sélection, halo) en part de l'icône
+local ATTENTION_EVERY = 3 -- s entre deux petits rebonds d'une icône « attention »
+local MIN_FIT = 0.55 -- réduction maximale quand la place manque
+local MAX_FIT = 1.3 -- agrandissement maximal quand la bande est haute (petit écran de PC : icônes lisibles)
 
-export type Entry = { Id: string, Label: string, Icon: string }
+export type Entry = { Id: string, Label: string }
 
-type ButtonUI = { holder: Frame, face: TextButton, gradient: UIGradient, stroke: UIStroke, scale: UIScale, badge: Frame, selected: boolean }
+type ButtonUI = {
+	id: string,
+	holder: Frame,
+	icon: ImageButton,
+	press: UIScale,
+	pulse: UIScale,
+	disc: Frame,
+	discStroke: UIStroke,
+	selected: boolean,
+	attention: boolean,
+	highlighted: boolean,
+}
 
 local MenuView = {}
 
 local buttons: { [string]: ButtonUI } = {}
 local screen: ScreenGui? = nil
+local column: Frame? = nil
+local fit: UIScale? = nil
+local grid: UIGridLayout? = nil
+local count = 0
+local pulseConnection: RBXScriptConnection? = nil
 
-local function paint(button: ButtonUI)
-	local top, bottom = Colors.Cream, Colors.Sand
-	if button.selected then
-		top, bottom = Colors.GoldLight, Colors.GoldDeep
+local function iconOf(id: string, attention: boolean): string
+	local config = MenuIconConfig[id]
+	if not config then
+		return ""
 	end
-	button.gradient.Color = ColorSequence.new(top, bottom)
-	button.stroke.Color = if button.selected then Colors.Selected else UITheme.Stroke.Color
-	button.stroke.Thickness = if button.selected then UITheme.Stroke.Thick else UITheme.Stroke.Regular
+	-- pas de variante « ! » fournie : l'icône normale reste (on n'en invente pas)
+	return if attention and config.BadgeIcon ~= "" then config.BadgeIcon else config.Icon
+end
+
+-- Pastille sous l'icône : bois sombre + contour doré (sélectionné), halo doré (mis en avant).
+local function paint(button: ButtonUI)
+	button.disc.Visible = button.selected or button.highlighted
+	if button.highlighted then
+		button.disc.BackgroundColor3 = GUIDE.Color
+		button.discStroke.Color = GUIDE.Color
+		button.discStroke.Thickness = UITheme.Stroke.Thick
+	else
+		button.disc.BackgroundColor3 = Colors.WoodDeep
+		button.disc.BackgroundTransparency = UITheme.Transparency.HUD
+		button.discStroke.Color = Colors.Selected
+		button.discStroke.Thickness = UITheme.Stroke.Thick
+		button.discStroke.Transparency = 0
+	end
+end
+
+-- Respiration des boutons mis en avant : une seule connexion, coupée quand plus rien ne respire.
+local function step()
+	local any = false
+	local wave = 0.5 + 0.5 * math.sin(os.clock() * 2 * math.pi / GUIDE.Period)
+	for _, button in buttons do
+		if button.highlighted then
+			any = true
+			button.disc.BackgroundTransparency = 0.75 - 0.3 * wave
+			button.discStroke.Transparency = 0.5 * (1 - wave)
+			button.pulse.Scale = 1 + (Animation.Scale.Highlight - 1) * wave
+		end
+	end
+	if not any and pulseConnection then
+		pulseConnection:Disconnect()
+		pulseConnection = nil
+	end
 end
 
 local function build(parent: Instance, entry: Entry, order: number, onSelect: (string) -> ()): ButtonUI
 	local holder = Instance.new("Frame")
 	holder.Name = entry.Id
 	holder.BackgroundTransparency = 1
-	holder.Size = UDim2.fromOffset(SIZE, SIZE + LIP + LABEL)
+	holder.Size = UDim2.fromOffset(ICON, ICON + LABEL)
 	holder.LayoutOrder = order
 	holder.Parent = parent
-	local scale = Instance.new("UIScale")
-	scale.Parent = holder
+	local pulse = Instance.new("UIScale")
+	pulse.Name = "Respiration"
+	pulse.Parent = holder
 
-	local lip = Instance.new("Frame")
-	lip.Name = "Levre"
-	lip.BackgroundColor3 = Colors.WoodDark
-	lip.Position = UDim2.fromOffset(0, LIP)
-	lip.Size = UDim2.fromOffset(SIZE, SIZE)
-	lip.Parent = holder
-	UIKit.corner(lip, UITheme.Radius.Large)
-	UIKit.stroke(lip, UITheme.Stroke.Regular)
+	local disc = Instance.new("Frame")
+	disc.Name = "Pastille"
+	disc.AnchorPoint = Vector2.new(0.5, 0.5)
+	disc.Position = UDim2.fromOffset(ICON / 2, ICON / 2)
+	disc.Size = UDim2.fromOffset(ICON * DISC, ICON * DISC)
+	disc.Visible = false
+	disc.Parent = holder
+	UIKit.corner(disc, UITheme.Radius.Pill)
+	local discStroke = UIKit.stroke(disc, UITheme.Stroke.Thick, Colors.Selected)
 
-	local face = Instance.new("TextButton")
-	face.Name = "Bouton"
-	face.AutoButtonColor = false
-	face.Text = ""
-	face.BackgroundColor3 = Color3.new(1, 1, 1)
-	face.Size = UDim2.fromOffset(SIZE, SIZE)
-	face.Parent = holder
-	UIKit.corner(face, UITheme.Radius.Large)
-	local stroke = UIKit.stroke(face, UITheme.Stroke.Regular)
-	local gradient = Instance.new("UIGradient")
-	gradient.Rotation = 90
-	gradient.Parent = face
-	-- reflet clair en haut de la face (volume « jouet », pas de dégradé glossy)
-	local shine = Instance.new("Frame")
-	shine.Name = "Reflet"
-	shine.BackgroundColor3 = Colors.TextLight
-	shine.BackgroundTransparency = 0.55
-	shine.Position = UDim2.fromOffset(Spacing.S, Spacing.XS + 1)
-	shine.Size = UDim2.new(1, -2 * Spacing.S, 0, 8)
-	shine.Parent = face
-	UIKit.corner(shine, UITheme.Radius.Pill)
-
-	local icon = Instance.new("Frame")
+	local icon = Instance.new("ImageButton")
 	icon.Name = "Icone"
+	icon.AutoButtonColor = false
 	icon.BackgroundTransparency = 1
-	icon.AnchorPoint = Vector2.new(0.5, 0.5)
-	icon.Position = UDim2.new(0.5, 0, 0.5, -2)
-	icon.Size = UDim2.fromOffset(SIZE + 8, SIZE + 8) -- déborde un peu du bouton (effet chunky)
+	icon.Image = iconOf(entry.Id, false)
+	icon.ScaleType = Enum.ScaleType.Fit
+	icon.Size = UDim2.fromOffset(ICON, ICON)
 	icon.ZIndex = 2
-	icon.Parent = face
-	Icons.viewport(icon, entry.Icon).ZIndex = 2
+	icon:SetAttribute("GuideGlow", false)
+	icon.Parent = holder
+	local press = Instance.new("UIScale")
+	press.Parent = icon
 
 	local label = UIKit.text(holder, entry.Label, UITheme.Typography.Size.Label)
 	label.Name = "Nom"
 	label.AnchorPoint = Vector2.new(0.5, 1)
-	label.Position = UDim2.new(0.5, 0, 1, 2)
-	label.Size = UDim2.fromOffset(SIZE + 24, LABEL + 2)
+	label.Position = UDim2.new(0.5, 0, 1, 0)
+	label.Size = UDim2.fromOffset(ICON + 2 * GAP, LABEL)
 	label.ZIndex = 3
 
-	local badge = Instance.new("Frame")
-	badge.Name = "Badge"
-	badge.AnchorPoint = Vector2.new(0.5, 0.5)
-	badge.Position = UDim2.new(1, -6, 0, 6)
-	badge.Size = UDim2.fromOffset(BADGE, BADGE)
-	badge.BackgroundColor3 = Colors.RoyalRed
-	badge.Visible = false
-	badge.ZIndex = 4
-	badge.Parent = holder
-	UIKit.corner(badge, UITheme.Radius.Pill)
-	UIKit.stroke(badge, UITheme.Stroke.Thin)
-	local mark = UIKit.text(badge, "!", UITheme.Typography.Size.Label)
-	mark.ZIndex = 5
-
-	local ui: ButtonUI = { holder = holder, face = face, gradient = gradient, stroke = stroke, scale = scale, badge = badge, selected = false }
-	paint(ui)
-	face.MouseEnter:Connect(function()
-		TweenService:Create(scale, Animation.Hover, { Scale = Animation.Scale.Hover }):Play()
+	local ui: ButtonUI = {
+		id = entry.Id, holder = holder, icon = icon, press = press, pulse = pulse, disc = disc, discStroke = discStroke,
+		selected = false, attention = false, highlighted = false,
+	}
+	icon.MouseEnter:Connect(function()
+		TweenService:Create(press, Animation.Hover, { Scale = Animation.Scale.Hover }):Play()
 	end)
-	face.MouseLeave:Connect(function()
-		TweenService:Create(scale, Animation.Hover, { Scale = 1 }):Play()
-		TweenService:Create(face, Animation.Press, { Position = UDim2.fromOffset(0, 0) }):Play()
+	icon.MouseLeave:Connect(function()
+		TweenService:Create(press, Animation.Hover, { Scale = 1 }):Play()
 	end)
-	face.MouseButton1Down:Connect(function()
-		TweenService:Create(face, Animation.Press, { Position = UDim2.fromOffset(0, LIP) }):Play()
+	icon.MouseButton1Down:Connect(function()
+		TweenService:Create(press, Animation.Press, { Scale = Animation.Scale.Pressed }):Play()
 	end)
-	face.MouseButton1Up:Connect(function()
-		TweenService:Create(face, Animation.Press, { Position = UDim2.fromOffset(0, 0) }):Play()
+	icon.MouseButton1Up:Connect(function()
+		TweenService:Create(press, Animation.Hover, { Scale = 1 }):Play()
 	end)
-	face.Activated:Connect(function()
+	icon.Activated:Connect(function()
 		onSelect(entry.Id)
 	end)
-	GuideTargets.register(`Menu.{entry.Id}`, face)
+	GuideTargets.register(`Menu.{entry.Id}`, icon)
 	return ui
 end
 
+-- Construit le menu (une seule fois : un nouvel appel remplace l'ancien écran et ses connexions).
 function MenuView.Build(entries: { Entry }, onSelect: (string) -> ())
 	if screen then
 		screen:Destroy()
 	end
+	if pulseConnection then
+		pulseConnection:Disconnect()
+		pulseConnection = nil
+	end
 	table.clear(buttons)
 	local s = UIKit.screen("MenuNavigation", 3)
+	-- coordonnées sous la barre de Roblox, comme AbsolutePosition : Fit place le menu sans conversion
+	s.IgnoreGuiInset = false
 	screen = s
-	local column = Instance.new("Frame")
-	column.Name = "Menu"
-	column.BackgroundTransparency = 1
-	column.AnchorPoint = Vector2.new(0, 0.5)
-	column.Position = UDim2.new(0, Spacing.ScreenMargin + Spacing.S, 0.5, 40) -- sous le suivi de quête
-	column.Size = UDim2.fromOffset(SIZE, #entries * (SIZE + LIP + LABEL + Spacing.S))
-	column.Parent = s
-	local list = Instance.new("UIListLayout")
-	list.FillDirection = Enum.FillDirection.Vertical
-	list.Padding = UDim.new(0, Spacing.S)
-	list.SortOrder = Enum.SortOrder.LayoutOrder
-	list.Parent = column
+	count = #entries
+	local frame = Instance.new("Frame")
+	frame.Name = "Menu"
+	frame.BackgroundTransparency = 1
+	frame.Position = UDim2.fromOffset(Spacing.ScreenMargin, 0)
+	frame.Parent = s
+	column = frame
+	GuideTargets.register("Menu.Area", frame)
+	local scale = Instance.new("UIScale")
+	scale.Name = "Ajustement"
+	scale.Parent = frame
+	fit = scale
+	local layout = Instance.new("UIGridLayout")
+	layout.CellSize = UDim2.fromOffset(ICON, ICON + LABEL)
+	layout.CellPadding = UDim2.fromOffset(GAP, GAP)
+	layout.FillDirection = Enum.FillDirection.Horizontal
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Parent = frame
+	grid = layout
 	for index, entry in entries do
-		buttons[entry.Id] = build(column, entry, index, onSelect)
+		buttons[entry.Id] = build(frame, entry, index, onSelect)
 	end
-	-- badges : petit rebond régulier (attire l'œil sans clignoter)
+	-- « attention » : petit rebond espacé (attire l'œil sans clignoter)
 	task.spawn(function()
 		while screen == s and s.Parent do
-			task.wait(BADGE_EVERY)
+			task.wait(ATTENTION_EVERY)
 			for _, button in buttons do
-				if button.badge.Visible then
-					UIKit.pop(button.badge)
+				if button.attention and not button.highlighted then
+					UIKit.pop(button.icon)
 				end
 			end
 		end
 	end)
+end
+
+-- Taille (px, avant échelle) du menu sur `columns` colonnes.
+local function sizeFor(columns: number): Vector2
+	local rows = math.ceil(count / columns)
+	return Vector2.new(columns * ICON + (columns - 1) * GAP, rows * (ICON + LABEL) + (rows - 1) * GAP)
+end
+
+-- Place le menu dans la bande verticale libre [top, bottom] (px, sous la barre de Roblox).
+function MenuView.Fit(top: number, bottom: number)
+	local s, frame, scale, layout = screen, column, fit, grid
+	if not s or not frame or not scale or not layout then
+		return
+	end
+	local base = s:FindFirstChildOfClass("UIScale")
+	local screenScale = if base then base.Scale else 1
+	local band = bottom - top
+	local columns = COLUMNS
+	if band / (sizeFor(COLUMNS).Y * screenScale) < GRID_MIN then
+		columns = count -- une seule ligne
+	end
+	local size = sizeFor(columns)
+	if layout.FillDirectionMaxCells ~= columns then
+		layout.FillDirectionMaxCells = columns
+	end
+	if frame.Size.X.Offset ~= size.X or frame.Size.Y.Offset ~= size.Y then
+		frame.Size = UDim2.fromOffset(size.X, size.Y)
+	end
+	local k = math.clamp(band / math.max(size.Y * screenScale, 1), MIN_FIT, MAX_FIT)
+	if math.abs(scale.Scale - k) > 0.01 then
+		scale.Scale = k
+	end
+	local y = top / screenScale
+	if math.abs(frame.Position.Y.Offset - y) > 0.5 then
+		frame.Position = UDim2.fromOffset(Spacing.ScreenMargin, y)
+	end
+end
+
+-- Largeur du menu à l'écran (px), pour ouvrir la sacoche juste à côté.
+function MenuView.Width(): number
+	local frame = column
+	return if frame then frame.AbsoluteSize.X else 0
+end
+
+function MenuView.SetVisible(on: boolean)
+	local s = screen
+	if s and s.Enabled ~= on then
+		s.Enabled = on
+	end
 end
 
 function MenuView.SetSelected(id: string?)
@@ -186,14 +283,36 @@ function MenuView.SetSelected(id: string?)
 	end
 end
 
-function MenuView.SetBadge(id: string, visible: boolean)
+function MenuView.SetAttention(id: string, on: boolean)
 	local button = buttons[id]
-	if button and button.badge.Visible ~= visible then
-		button.badge.Visible = visible
-		if visible then
-			UIKit.popIn(button.badge, 0, 1.25)
-		end
+	if not button or button.attention == on then
+		return
 	end
+	button.attention = on
+	button.icon.Image = iconOf(id, on)
+	if on then
+		UIKit.popIn(button.icon, 0, Animation.Scale.Pop)
+	end
+end
+
+function MenuView.SetHighlighted(id: string, on: boolean)
+	local button = buttons[id]
+	if not button or button.highlighted == on then
+		return
+	end
+	button.highlighted = on
+	if not on then
+		button.pulse.Scale = 1
+	end
+	paint(button)
+	if on and not pulseConnection then
+		pulseConnection = RunService.RenderStepped:Connect(step)
+	end
+end
+
+function MenuView.IsHighlighted(id: string): boolean
+	local button = buttons[id]
+	return button ~= nil and button.highlighted
 end
 
 return MenuView

@@ -22,6 +22,7 @@ local TextChatService = game:GetService("TextChatService")
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local Icons = require(script.Parent.Parent.Icons)
 local UIKit = require(script.Parent.Parent.UIKit)
+local GuideTargets = require(script.Parent.Parent.GuideTargets)
 
 local Colors = UITheme.Colors
 local Typography = UITheme.Typography
@@ -92,6 +93,7 @@ local function build(): Refs
 	local panel = UIKit.subPanel(screen, UDim2.fromOffset(WIDTH, HEIGHT))
 	panel.Name = "Quete"
 	panel.Position = UDim2.fromOffset(Spacing.ScreenMargin, TOP)
+	GuideTargets.register("Quest.Panel", panel) -- le menu principal se place dessous
 	panel.BackgroundTransparency = UITheme.Transparency.HUD
 	local icon = Instance.new("Frame")
 	icon.Name = "Icone"
