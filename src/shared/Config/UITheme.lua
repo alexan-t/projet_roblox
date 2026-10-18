@@ -64,6 +64,19 @@ local Colors = {
 	CurrencyTickets = hex("#B83E30"),
 	TicketLight = hex("#D8584A"), -- montant d'un ticket dans un reveal (pack « Monnaies »)
 	DisabledLip = hex("#5A524A"), -- lèvre d'un bouton gris « En cours » (pack « Quêtes HUD »)
+	-- Mode Élite (fenêtre Expédition, maquette figée) : rouge royal profond, accent or.
+	EliteTop = hex("#C8503E"), -- plaque de titre Élite (haut)
+	EliteBottom = hex("#8E2A20"), -- plaque de titre Élite (bas)
+	EliteFaceTop = hex("#D8584A"), -- onglet / bouton Élite (haut)
+	EliteFaceBottom = hex("#9A2E22"), -- onglet / bouton Élite (bas)
+	EliteCardTop = hex("#A63A2E"), -- carte de stage Élite (haut)
+	EliteCardBottom = hex("#6E2219"), -- carte de stage Élite (bas)
+	EliteLip = hex("#5E1A12"), -- lèvre d'un bouton Élite
+	ElitePale = hex("#FFB4A8"), -- texte clair sur fond Élite (multiplicateurs, équipe vide)
+	GoldLip = hex("#8A5D12"), -- lèvre d'un bouton doré
+	LockedTop = hex("#9A9086"), -- carte verrouillée (haut)
+	LockedBottom = hex("#776E65"), -- carte verrouillée (bas)
+	SuccessLight = hex("#8FD873"), -- « ✓ Obtenue »
 }
 
 -- Raretés des héros (RarityConfig) : badge, cadre de carte, lumière de l'invocation. Les monstres
@@ -249,6 +262,46 @@ local Pack = {
 		ValueMin = 44, -- largeur minimale de la valeur
 		Fill = 0.45, -- transparence du fond WoodDeep
 	},
+	-- Fenêtre Expédition (maquette « Expedition.dc.html », figée) : trois dispositions. PC et tablette
+	-- gardent la même hiérarchie (tablette : espacements réduits) ; téléphone (844 x 390) a ses propres
+	-- tailles, sans texte minuscule. Device = taille de l'écran de référence de chaque disposition.
+	Expedition = {
+		Wide = {
+			Device = Vector2.new(1600, 900), Window = Vector2.new(1080, 740), Top = 92,
+			Pad = { Top = 34, Side = 20, Bottom = 18 }, Gap = 14,
+			TabTop = -28, TabIcon = 40, TabSize = 30,
+			HeadPad = 10, ZoneSize = 28, SubSize = 14, ModeHeight = 56, ModePadX = 18, ModeIcon = 30, ModeSize = 22,
+			RailPad = { Top = 22, Side = 16, Bottom = 14 }, TrackInset = 60, TrackTop = 86, NodeGap = 14,
+			NodeHeight = 124, NodeHeightBoss = 146, NodeIcon = 50, NodeSize = 22, BadgeSize = 14, BossPortrait = 78,
+			LockIcon = 44, LockSize = 20,
+			Columns = { 1.15, 1, 1 }, ColumnGap = 20, DetailPad = { Top = 14, Side = 18 }, SectionGap = 10, SectionSize = 22,
+			WaveGap = 10, WaveLabel = 62, Monster = 70, TileGap = 12, BossTile = 84, BossSize = 26,
+			BoxPad = 10, BoxSize = 18, Reward = 60, QuantitySize = 18,
+			DropGap = 10, DropIcon = 44, DropSize = 16, ChanceWidth = 52,
+			FootGap = 12, CtaHeight = 66, CtaPadX = 22, CtaSize = 24, LaunchWidth = 210, Slot = 48, TeamSize = 20,
+		},
+		Tablet = {
+			Device = Vector2.new(1180, 820), Gap = 10, ColumnGap = 14, NodeGap = 10, TileGap = 10, Monster = 62,
+			Pad = { Top = 32, Side = 16, Bottom = 14 }, DetailPad = { Top = 10, Side = 14 },
+		},
+		Phone = {
+			Device = Vector2.new(844, 390), Window = Vector2.new(828, 362), Top = 20,
+			Pad = { Top = 14, Side = 10, Bottom = 8 }, Gap = 5,
+			TabTop = -20, TabIcon = 26, TabSize = 18,
+			HeadPad = 3, ZoneSize = 18, SubSize = 0, ModeHeight = 34, ModePadX = 12, ModeIcon = 22, ModeSize = 17,
+			RailPad = { Top = 14, Side = 8, Bottom = 4 }, TrackInset = 40, TrackTop = 40, NodeGap = 8,
+			NodeHeight = 46, NodeHeightBoss = 46, NodeIcon = 0, NodeSize = 18, BadgeSize = 12, BossPortrait = 0,
+			LockIcon = 30, LockSize = 16,
+			Columns = { 1.15, 1.25, 0.9 }, ColumnGap = 10, DetailPad = { Top = 5, Side = 10 }, SectionGap = 3, SectionSize = 15,
+			WaveGap = 4, WaveLabel = 22, Monster = 48, TileGap = 5, BossTile = 40, BossSize = 16,
+			BoxPad = 4, BoxSize = 14, Reward = 40, QuantitySize = 14,
+			DropGap = 4, DropIcon = 28, DropSize = 14, ChanceWidth = 44,
+			FootGap = 8, CtaHeight = 48, CtaPadX = 14, CtaSize = 18, LaunchWidth = 150, Slot = 30, TeamSize = 16,
+		},
+		Breathe = 1.6, -- s d'un battement du bouton mis en avant (scale 1 → 1,04)
+		Shine = 3.2, -- s d'un reflet qui traverse « Lancer »
+		Lift = 6, -- px : la carte choisie se soulève
+	},
 	-- Panneau Quêtes et reveal.
 	Quest = {
 		Width = 600,
@@ -300,6 +353,7 @@ local UITheme = {
 		Menu = table.freeze(Pack.Menu),
 		Currency = table.freeze(Pack.Currency),
 		Quest = table.freeze(Pack.Quest),
+		Expedition = table.freeze(Pack.Expedition),
 	}),
 	Stroke = table.freeze(Stroke),
 	Spacing = table.freeze(Spacing),

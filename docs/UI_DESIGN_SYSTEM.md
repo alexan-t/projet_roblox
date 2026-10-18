@@ -417,9 +417,22 @@ aucune règle de jeu) :
 | --- | --- | --- |
 | `QuestView` | `Show(quest, { OnClaim })`, `Hide()` | `QuestService:GetActiveQuest` : `{ Title, Progress, Target, Completed }` |
 | `CurrencyView` | `Set(currencies, animate?)`, `Hide()` | `PlayerData.Currencies` : `{ Gold, Gems, SummonTickets }` |
-| `ExpeditionView` | `Show(data, { OnLaunch, OnClose, Selected, OnSelect, Team, OnPrepare })`, `Hide()` | `{ Zone, Title, Stages = { { Stage, Unlocked, Cleared, Waves, Enemies } } }` ; ouverte par la pancarte du stage : `OnSelect` → `SelectStage`, `OnLaunch` → `Ready` (exige 1 héros posé si `Team`), `OnPrepare` → dalles en évidence |
+| `ExpeditionView` | `Show(data, { OnLaunch, OnClose, Selected, OnSelect, Team, OnPrepare, Guide })`, `Hide()` | `{ Zone, Title, Subtitle?, Stages, EliteStages?, EliteUnlocked, Mode }`, entrées complètes d’ArenaService (voir `docs/ZONES.md` § Fenêtre Expédition) ; `Team = { Placed, Max, Heroes }` ; ouverte par la pancarte : `OnSelect` → `SelectStage`, `OnLaunch` → `Ready`, `OnPrepare` → dalles en évidence |
 | `SummonView` | `Show(state, { OnSummon(quantity), OnRefresh, OnClose })`, `RevealBatch(batch, { OnContinue, OnAgain })`, `Reveal(hero, options)`, `Hide()` | bannière active, taux serveur, x1/x10/x100 et reveals selon le volume ; design figé #80 |
 | `CollectionView` | `Show(heroes, { OnClose, OnSelect })`, `Hide()` | `{ { Name, Model, ClassId, Count, New, Equipped } }` depuis `Heroes` / la hotbar |
+
+### Expédition (maquette figée « Expedition.dc.html »)
+
+- **Source** : la maquette du ZIP « Mid-century desk lamp » (`Expedition.dc.html`, `assets/expedition/LISEZMOI.txt`). La vue la reproduit sans la redessiner.
+- **Tokens** : `UITheme.Pack.Expedition`. Trois dispositions : `Wide` (PC, écran de référence 1600 × 900), `Tablet` (surcharges d'espacement, 1180 × 820) et `Phone` (844 × 390, ses propres tailles et des sections compactes). Le choix vient de `ExpeditionModel.device` : téléphone si la hauteur est < 520 ; tablette si la largeur est < 1300 ou le ratio < 1,5. Chaque disposition a son UIScale, borné.
+- **Couleurs Élite** : `EliteTop/Bottom`, `EliteFaceTop/Bottom`, `EliteCardTop/Bottom`, `EliteLip`, `ElitePale`, avec l'accent `GoldLight`. L'Élite verrouillée est grise (`LockedTop/Bottom`).
+- **Icônes** : `ExpeditionVisualConfig` (check, crown, lock, skull, swords, xp), seule source de leurs AssetIds.
+- **Portraits** : les portraits du ZIP sont **provisoires**. On affiche les vrais modèles (`Icons.enemyModel`, `Icons.heroModel`) via `UIKit.portrait`.
+- **Rail** : 5 cartes ; badges Disponible / Terminé / Verrouillé / Élite / Boss / Boss · Terminé. La carte choisie est soulevée (`Lift`), avec un contour `Selected` (`GoldLight` en Élite), une lueur et une pointe.
+- **Boutons chunky** : face en dégradé, contour Ink 4 px, lèvre de 5 px, rayon 14.
+  - `Préparer` respire quand aucun héros n'est posé.
+  - `Lancer` respire et brille quand il est actif. Inactif, il est gris, avec un cadenas et la raison.
+- **Logique** : `Shared.Expedition.ExpeditionModel` (pure, testée par `tools/test-expedition.ps1`).
 
 Placement : quête en haut à gauche, monnaies en haut au centre (la liste des joueurs de Roblox
 occupe le haut à droite), fenêtres centrées avec voile.
