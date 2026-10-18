@@ -1,0 +1,336 @@
+﻿{
+  "mine": [
+    {
+      "id": "resource_031",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"0f2458b2-3542-4c76-b152-39e05de1ca04\",\"generationName\":\"Galet de rivière ovale poli, gris-bleu, reflet clair, petite tache de mousse. Single fantasy resource object. Rounded chunky inflated volumes, hand painted natural materials with warm top-left lighting. Earthy desaturated palette, clear silhouette, broad details readable at 32 px. Quality and material language of stylized King Treant and King Orc. No text, no pedestal, no background, no extra objects.\",\"publishedAssetId\":\"135191358991750\",\"tag\":\"Assistant-fb467cd2-cb95-4514-82b2-7a5e917f8804\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Galet de rivière ovale poli, gris-bleu, reflet clair, petite tache de mousse. Single fantasy resource object. Rounded chunky inflated volumes, hand painted natural materials with warm top-left lighting. Earthy desaturated palette, clear silhouette, broad details readable at 32 px. Quality and material language of stylized King Treant and King Orc. No text, no pedestal, no background, no extra objects.\\\",\\\"tag\\\":\\\"Assistant-fb467cd2-cb95-4514-82b2-7a5e917f8804\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_033",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"d90d876e-6cb4-44c1-99c6-bca4f36e38c0\",\"generationName\":\"Pierre grise ronde gravée d'une rune en losange, gravure brun sombre, éclat de mousse. Single fantasy resource object. Rounded chunky inflated volumes, hand painted natural materials with warm top-left lighting. Earthy desaturated palette, clear silhouette, broad details readable at 32 px. Quality and material language of stylized King Treant and King Orc. No text, no pedestal, no background, no extra objects.\",\"publishedAssetId\":\"90333179746653\",\"tag\":\"Assistant-91014846-698c-494e-9816-da328b164ac3\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Pierre grise ronde gravée d'une rune en losange, gravure brun sombre, éclat de mousse. Single fantasy resource object. Rounded chunky inflated volumes, hand painted natural materials with warm top-left lighting. Earthy desaturated palette, clear silhouette, broad details readable at 32 px. Quality and material language of stylized King Treant and King Orc. No text, no pedestal, no background, no extra objects.\\\",\\\"tag\\\":\\\"Assistant-91014846-698c-494e-9816-da328b164ac3\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_034",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"eff807eb-ecb4-4d2a-b547-deb4d7889da1\",\"generationName\":\"Plaque d'ardoise épaisse et ébréchée, gris bleuté sombre, feuillets visibles sur la tranche. Single fantasy resource object. Rounded chunky inflated volumes, hand painted natural materials with warm top-left lighting. Earthy desaturated palette, clear silhouette, broad details readable at 32 px. Quality and material language of stylized King Treant and King Orc. No text, no pedestal, no background, no extra objects.\",\"publishedAssetId\":\"96689184506115\",\"tag\":\"Assistant-d608dc4d-e5b0-43dd-9358-5d7f4433eb5a\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Plaque d'ardoise épaisse et ébréchée, gris bleuté sombre, feuillets visibles sur la tranche. Single fantasy resource object. Rounded chunky inflated volumes, hand painted natural materials with warm top-left lighting. Earthy desaturated palette, clear silhouette, broad details readable at 32 px. Quality and material language of stylized King Treant and King Orc. No text, no pedestal, no background, no extra objects.\\\",\\\"tag\\\":\\\"Assistant-d608dc4d-e5b0-43dd-9358-5d7f4433eb5a\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_036",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"dc5aada9-477d-4504-8033-5aa09efc14d0\",\"generationName\":\"Pépite d'or bosselée et ronde, or chaud, reflet clair en haut à gauche. Single fantasy resource object. Rounded chunky inflated volumes, hand painted natural materials with warm top-left lighting. Earthy desaturated palette, clear silhouette, broad details readable at 32 px. Quality and material language of stylized King Treant and King Orc. No text, no pedestal, no background, no extra objects.\",\"publishedAssetId\":\"135184362597931\",\"tag\":\"Assistant-ca25d834-e368-4637-8a7f-225fd30d2eb1\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Pépite d'or bosselée et ronde, or chaud, reflet clair en haut à gauche. Single fantasy resource object. Rounded chunky inflated volumes, hand painted natural materials with warm top-left lighting. Earthy desaturated palette, clear silhouette, broad details readable at 32 px. Quality and material language of stylized King Treant and King Orc. No text, no pedestal, no background, no extra objects.\\\",\\\"tag\\\":\\\"Assistant-ca25d834-e368-4637-8a7f-225fd30d2eb1\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_037",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"ff8b821b-54ed-4c7d-94a0-0b1495e389b8\",\"generationName\":\"Roche brune arrondie traversée de veines cuivre orangé. Single fantasy resource object. Rounded chunky inflated volumes, hand painted natural materials with warm top-left lighting. Earthy desaturated palette, clear silhouette, broad details readable at 32 px. Quality and material language of stylized King Treant and King Orc. No text, no pedestal, no background, no extra objects.\",\"publishedAssetId\":\"85867087854853\",\"tag\":\"Assistant-ec448479-c995-49b6-afee-11d28239fe0d\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Roche brune arrondie traversée de veines cuivre orangé. Single fantasy resource object. Rounded chunky inflated volumes, hand painted natural materials with warm top-left lighting. Earthy desaturated palette, clear silhouette, broad details readable at 32 px. Quality and material language of stylized King Treant and King Orc. No text, no pedestal, no background, no extra objects.\\\",\\\"tag\\\":\\\"Assistant-ec448479-c995-49b6-afee-11d28239fe0d\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_038",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"bc121505-6ecc-4e3e-ab2b-95ba9cdd61ee\",\"generationName\":\"Morceau de charbon noir à facettes adoucies, une petite braise orange sur une arête. Single fantasy resource object. Rounded chunky inflated volumes, hand painted natural materials with warm top-left lighting. Earthy desaturated palette, clear silhouette, broad details readable at 32 px. Quality and material language of stylized King Treant and King Orc. No text, no pedestal, no background, no extra objects.\",\"publishedAssetId\":\"77053140391921\",\"tag\":\"Assistant-d58ff33b-b175-49f0-9e54-1c8283b502f1\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Morceau de charbon noir à facettes adoucies, une petite braise orange sur une arête. Single fantasy resource object. Rounded chunky inflated volumes, hand painted natural materials with warm top-left lighting. Earthy desaturated palette, clear silhouette, broad details readable at 32 px. Quality and material language of stylized King Treant and King Orc. No text, no pedestal, no background, no extra objects.\\\",\\\"tag\\\":\\\"Assistant-d58ff33b-b175-49f0-9e54-1c8283b502f1\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_040",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"328ab630-e4aa-4a58-9578-debbbef26a9d\",\"generationName\":\"Motte d'argile rouge-brun ronde, empreinte de pouce sur le dessus. Single fantasy resource object. Rounded chunky inflated volumes, hand painted natural materials with warm top-left lighting. Earthy desaturated palette, clear silhouette, broad details readable at 32 px. Quality and material language of stylized King Treant and King Orc. No text, no pedestal, no background, no extra objects.\",\"publishedAssetId\":\"101691447863292\",\"tag\":\"Assistant-d010f918-2184-4611-9cbc-1dc4889802b8\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Motte d'argile rouge-brun ronde, empreinte de pouce sur le dessus. Single fantasy resource object. Rounded chunky inflated volumes, hand painted natural materials with warm top-left lighting. Earthy desaturated palette, clear silhouette, broad details readable at 32 px. Quality and material language of stylized King Treant and King Orc. No text, no pedestal, no background, no extra objects.\\\",\\\"tag\\\":\\\"Assistant-d010f918-2184-4611-9cbc-1dc4889802b8\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    }
+  ],
+  "other": [
+    {
+      "id": "resource_020",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_025",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_029",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_030",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_041",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_044",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_045",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_046",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_047",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_048",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_049",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_050",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_051",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_052",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_054",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_055",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_057",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_058",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Failed\",\"jobResult\":{\"content\":[{\"text\":\"Mesh generation failed with error: Unable to generate Model\",\"type\":\"text\"}],\"isError\":true}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_059",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"de5167e4-2c5c-499d-a498-5bf7003a3185\",\"generationName\":\"Bannière bleu royal pliée en carré, liseré or, emblème de tour à moitié visible. Single isolated fantasy inventory resource prop. Respect the exact object description. Rounded chunky natural volumes and rich hand painted texture, earthy desaturated palette, warm light upper left, clear silhouette, broad details readable at 32px. Finish like stylized King Treant, King Slime and King Orc. No text, no pedestal, no background, no extra objects.\",\"publishedAssetId\":\"136893599861651\",\"tag\":\"Assistant-3a9c812d-1669-4128-a949-ec03693f509a\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Bannière bleu royal pliée en carré, liseré or, emblème de tour à moitié visible. Single isolated fantasy inventory resource prop. Respect the exact object description. Rounded chunky natural volumes and rich hand painted texture, earthy desaturated palette, warm light upper left, clear silhouette, broad details readable at 32px. Finish like stylized King Treant, King Slime and King Orc. No text, no pedestal, no background, no extra objects.\\\",\\\"tag\\\":\\\"Assistant-3a9c812d-1669-4128-a949-ec03693f509a\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "id": "resource_060",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"Completed\",\"jobResult\":{\"structuredContent\":{\"generationId\":\"c1ec7cd9-c100-45c9-aa7e-d2f143216c0c\",\"generationName\":\"Pierre d'angle taillée beige, emblème du royaume en or incrusté sur la face avant. Single isolated fantasy inventory resource prop. Respect the exact object description. Rounded chunky natural volumes and rich hand painted texture, earthy desaturated palette, warm light upper left, clear silhouette, broad details readable at 32px. Finish like stylized King Treant, King Slime and King Orc. No text, no pedestal, no background, no extra objects.\",\"publishedAssetId\":\"129387877068494\",\"tag\":\"Assistant-8e7aaf3f-3679-456c-b468-58bffcb7393c\"},\"content\":[{\"text\":\"{\\\"generationName\\\":\\\"Pierre d'angle taillée beige, emblème du royaume en or incrusté sur la face avant. Single isolated fantasy inventory resource prop. Respect the exact object description. Rounded chunky natural volumes and rich hand painted texture, earthy desaturated palette, warm light upper left, clear silhouette, broad details readable at 32px. Finish like stylized King Treant, King Slime and King Orc. No text, no pedestal, no background, no extra objects.\\\",\\\"tag\\\":\\\"Assistant-8e7aaf3f-3679-456c-b468-58bffcb7393c\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+          }
+        ],
+        "isError": false
+      }
+    }
+  ],
+  "rivets": {
+    "jobId": "d58b3429-b8c2-4381-a47d-6e425b918a29",
+    "modelAssetId": "102805344103198",
+    "verdict": "FIX",
+    "reason": "Deux têtes visibles au lieu de trois"
+  }
+}

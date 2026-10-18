@@ -9,7 +9,7 @@ ressources sont réparties, **où le worker pose chaque icône** et comment la p
 | | État |
 | --- | --- |
 | Catalogue défini (60 ressources, `ResourceConfig`, `resources.json`) | **OUI** |
-| Icônes 2D livrées (AssetId publié, vitrine remplie) | **PARTIEL : 32/60** ; 28 restent sans `Icon` (bilan : `docs/RESOURCE_ICONS_QA.md`) |
+| Icônes 2D livrées (AssetId publié, vitrine remplie) | **PARTIEL : 36/60** ; 24 restent sans `Icon` (bilan : `docs/RESOURCE_ICONS_QA.md`) |
 | Stockage dans `PlayerData` | **NON** |
 | Obtention (récompenses, butin, récolte) | **NON** |
 | Recettes, crafting | **NON** |

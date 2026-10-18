@@ -1,8 +1,78 @@
 # Icônes des ressources — bilan Studio du 18 octobre 2026
 
 Place : **test 3**, placeId `120616399792561`. Aucun push ni changement de branche.
-La mission reste **incomplète : 32/60 icônes renseignées**, dont 30 présentes dans les deux
-commits précédents de la mission et deux ajoutées pendant cette reprise.
+La mission reste **incomplète : 36/60 icônes renseignées**. Le bilan de la dernière reprise
+figure ci-dessous ; les sections suivantes conservent les preuves de la reprise précédente.
+
+## Troisième passe de production — état de référence
+
+Les 28 identifiants restants ont tous été retentés. Quatre nouvelles icônes sont livrées :
+
+| Ressource | AssetId image final | Verdict |
+| --- | --- | --- |
+| 033 — Pierre Runique | `rbxassetid://101845461360071` | **PASS** |
+| 034 — Plaque d'Ardoise | `rbxassetid://112375498120224` | **PASS** |
+| 037 — Minerai de Cuivre | `rbxassetid://126822675435008` | **PASS** |
+| 038 — Morceau de Charbon | `rbxassetid://71582478481177` | **PASS** |
+
+Sources finales : `assets/icons/resources/resource_{033,034,037,038}.png` ; PNG transparents
+512 × 512 avec contour Ink, issus de captures Studio de modèles dans `Workspace.AtelierIcones`.
+Captures : `automation/screenshots/resources/resource_NNN-third.jpg`,
+`cardNNN-third.jpg`, `minerow-third.jpg`, `minefamily-third.jpg` et
+`reference-orc-third.jpg`. Le montage `delivered-readability.png` montre les 36 PNG à 96 et 32 px.
+
+| Critère adapté aux objets | 033 | 034 | 037 | 038 |
+| --- | --- | --- | --- | --- |
+| Silhouette, lecture à 32 px | OK : pierre et rune | OK : plaque en couches | OK : roche veinée | OK : charbon et braise |
+| Volumes et vue trois quarts | OK | OK | OK | OK |
+| Matières, palette, cohérence avec les voisines et référence Orc | OK | OK | OK | OK |
+| Contour Ink, transparence, cadrage | OK | OK | OK | OK |
+| Géométrie, détails attachés, point focal unique au plus | OK | OK | OK | OK |
+| Brief, aucune rareté, texte ni quantité dans l'image | OK | OK | OK | OK |
+| Carte, Image = AssetId = Icon Git | OK | OK | OK | OK |
+
+Les critères de visage, membres et posture ne s'appliquent pas. La pierre runique et le charbon
+ont été tournés de 180° pour exposer leur motif. Le contrôle des 60 cartes contre le catalogue Git
+donne **36 images, 24 vides, zéro divergence** (identifiant, index, nom, Image et AssetId).
+Les quatre cartes et leur rangée ont été contrôlées sur captures après publication.
+
+### Travail restant après cette passe
+
+| Famille | Livrées | Manquantes — lot FIX |
+| --- | --- | --- |
+| Forêt | 10/10 | aucune ; production précédente conservée |
+| Slimes | 9/10 | 020 |
+| Horde | 6/10 | 025, 026, 029, 030 |
+| Mine | 7/10 | 031, 036, 040 |
+| Arcane | 2/10 | 041, 044, 045, 046, 047, 048, 049, 050 |
+| Royaume | 2/10 | 051, 052, 054, 055, 057, 058, 059, 060 |
+
+Six modèles refusés, avec preuves `resource_NNN-third*.jpg` conservées hors des assets livrés :
+
+| Ressource | Défaut visible (FIX) | Correction requise |
+| --- | --- | --- |
+| 026 | Deux têtes de rivets visibles, même en plongée | Construire trois rivets distincts et les disposer sans occultation |
+| 031 | Galet cylindrique à faces planes ; rotation insuffisante pour le rendre poli | Refaire un galet ovale aplati, surface lisse et mousse limitée à un coin |
+| 036 | Sphère orange trouée, lecture de fromage | Refaire une pépite irrégulière pleine, bosses arrondies et reflets dorés |
+| 040 | Empreinte de main entière sur une motte dressée | Refaire une motte basse avec une seule empreinte de pouce sur le dessus |
+| 059 | Bannière suspendue sur une barre, emblème entier | Refaire un carré de tissu plié avec demi-emblème caché |
+| 060 | Pilier haut à socle, écusson en relief | Refaire un bloc d'angle trapu avec emblème incrusté |
+
+Les 18 autres essais ont échoué avec **Unable to generate Model** : 020, 025, 029, 030,
+041, 044, 045, 046, 047, 048, 049, 050, 051, 052, 054, 055, 057 et 058.
+Résultats bruts : `automation/screenshots/resources/generation-third-2026-10-18.json`.
+Les identifiants de modèles générés ne sont pas des identifiants d'image à reporter dans le code.
+Ne pas relancer indéfiniment : cette troisième tentative succède aux essais consignés dans
+`generation-results.json` et `generation-retry-2026-10-18.json`. Les 24 ressources restantes
+nécessitent une reprise contrôlée avec revue humaine des briefs/modèles refusés selon
+`automation/TASK_FORMAT.md`, puis PNG, publication, carte, code et QA. Le catalogue de tâches
+reste au format initial attendu par les tests ; ce rapport fait foi pour l'état de livraison.
+
+Nettoyage de fin : atelier vidé, aucun script laissé, caméra recréée puis remise en `Fixed`.
+Aucun push, changement de branche ou publication de la place. Seules les images validées ont été
+publiées, conformément à la mission. Les 13 tests Node du catalogue passent ; 36 PNG en 512 × 512.
+
+## Historique — reprise précédente (32/60)
 
 ## Contrôle des nouvelles livraisons
 
