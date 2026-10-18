@@ -28,6 +28,21 @@ local TutorialController = {}
 
 -- Drapeaux vus ou conditions changés (badges du menu).
 TutorialController.changed = Instance.new("BindableEvent")
+-- Cible de la flèche UI (nom GuideTargets, nil : aucune) : le menu met en avant le bouton visé
+-- (MenuController.SetHighlighted), sans connaître la logique du tutoriel.
+TutorialController.pointing = Instance.new("BindableEvent")
+local pointed: string? = nil
+
+local function point(id: string?)
+	if pointed ~= id then
+		pointed = id
+		TutorialController.pointing:Fire(id)
+	end
+end
+
+function TutorialController.Pointed(): string?
+	return pointed
+end
 
 local REFRESH = 0.1 -- s entre deux décisions
 local MISSING = 1 -- s d'attente d'une cible absente avant de sauter l'étape
@@ -173,13 +188,16 @@ local function update()
 	end)
 	if not chosen then
 		GuidePointer.hide()
+		point(nil)
 		return
 	end
 	local target = GuideTargets.get(chosen.Target)
 	if not target then
 		GuidePointer.hide()
+		point(nil)
 		return
 	end
+	point(chosen.Target)
 	local fromSequence = chosen.Source == "FirstOpen"
 	GuidePointer.show(target, {
 		Text = chosen.Text,
