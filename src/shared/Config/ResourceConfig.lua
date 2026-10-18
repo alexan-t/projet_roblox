@@ -87,7 +87,7 @@ resource("resource_028", "Planche de Bouclier", "horde", "rbxassetid://875525867
 resource("resource_029", "Défense d'Orc", "horde")
 resource("resource_030", "Corne du Roi Orc", "horde")
 -- Pierres et minerais
-resource("resource_031", "Galet de Rivière", "mine")
+resource("resource_031", "Galet de Rivière", "mine", "rbxassetid://124890748158418")
 resource("resource_032", "Bloc de Pierre", "mine", "rbxassetid://125262800064343")
 resource("resource_033", "Pierre Runique", "mine", "rbxassetid://101845461360071")
 resource("resource_034", "Plaque d'Ardoise", "mine", "rbxassetid://112375498120224")
