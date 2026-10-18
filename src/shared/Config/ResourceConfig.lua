@@ -84,7 +84,7 @@ resource("resource_025", "Plume de Guetteur", "horde", "rbxassetid://80948233125
 resource("resource_026", "Rivets de Fer Usé", "horde", "rbxassetid://81824142166302")
 resource("resource_027", "Fer de Lance Ébréché", "horde", "rbxassetid://90611132056356")
 resource("resource_028", "Planche de Bouclier", "horde", "rbxassetid://87552586783738")
-resource("resource_029", "Défense d'Orc", "horde")
+resource("resource_029", "Défense d'Orc", "horde", "rbxassetid://102084442095235")
 resource("resource_030", "Corne du Roi Orc", "horde")
 -- Pierres et minerais
 resource("resource_031", "Galet de Rivière", "mine", "rbxassetid://124890748158418")
