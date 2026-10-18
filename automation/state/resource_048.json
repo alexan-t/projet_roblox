@@ -1,13 +1,13 @@
 {
     "task_id":  "resource_048",
-    "status":  "in_progress",
-    "stage":  "production",
+    "status":  "human_review",
+    "stage":  "review",
     "iteration":  3,
     "max_iterations":  3,
-    "last_completed_step":  "final_restart_generation_started",
-    "next_step":  "inspect_final_generation_and_capture",
+    "last_completed_step":  "final_restart_generation_failed",
+    "next_step":  "human_review_generation_failure",
     "studio_target":  "Workspace.Bestiaire.Inventaire.Ressources.Panneau.Affichage.Fond.Emplacements.Ressource_048",
-    "latest_review":  "docs/RESOURCE_ICONS_QA.md",
+    "latest_review":  "automation/reviews/resource_048-final-resume.md",
     "evidence":  [
                      "automation/screenshots/resources/generation-results.json",
                      "automation/screenshots/resources/generation-retry-2026-10-18.json",
@@ -15,14 +15,10 @@
                      "automation/screenshots/resources/generation-resume-2026-10-18.json",
                      "automation/screenshots/resources/generation-final-resume-2026-10-18.json"
                  ],
-    "notes":  "Dernière passe : Unable to generate Model. Revoir le brief et la méthode de construction avant une nouvelle production.",
+    "notes":  "Nouvelle série autorisée terminée sans PASS. Dernier appel generate_mesh : Mesh generation failed with error: Unable to generate Model. Aucun nouveau modèle ni PNG ; carte et Icon restent vides. Historique et captures antérieures conservés.",
     "remaining_steps":  [
-                            "Revue du brief et des essais précédents",
-                            "Construction 3D dans Workspace.AtelierIcones",
-                            "Capture Studio trois quarts et export PNG transparent 512 × 512",
-                            "Publication upload_image et renseignement de la carte réservée",
-                            "Report de Icon dans ResourceConfig.lua",
-                            "Captures carte et famille, VISUAL_QA PASS, nettoyage et réinitialisation caméra"
+                            "Revue humaine : résoudre le blocage de génération ou choisir une construction alternative conforme au brief",
+                            "Après décision : modèle Studio, capture, PNG transparent 512 × 512 et contour Ink, import image, carte et famille, QA PASS et Icon Git"
                         ],
     "restart_authorization":  "Mission utilisateur du 18 octobre 2026 : nouvelle s?rie de passes explicitement autoris?e apr?s max_iterations.",
     "previous_series":  {
