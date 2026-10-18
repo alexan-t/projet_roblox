@@ -51,19 +51,32 @@ return function(StagePreview: any, Model: any, configs: any)
 		assert(table.concat(elite, ",") == "60,80,110,150,220", table.concat(elite, ","))
 	end)
 
-	test("rewards: 1-1 first clear 100 Or / 10 Gemmes / 1 Ticket, replay 20 Or; 1-2..1-5 and Elite: nothing invented", function()
+	-- Récompense de replay = exactement un ticket d'invocation du montant attendu, rien d'autre.
+	local function onlyTickets(list: { any }, amount: number, label: string)
+		assert(#list == 1 and list[1].Kind == "SummonTicket" and list[1].Amount == amount,
+			`{label}: expected +{amount} SummonTicket, got {#list} reward(s)`)
+	end
+
+	test("rewards: 1-1 first clear 100 Or / 10 Gemmes / 1 Ticket, replay 20 Or; 1-2..1-5 and Elite: replay tickets only (#80)", function()
 		local p = preview(1)
 		local fc = {}
 		for _, r in p.FirstClearRewards do fc[r.Kind] = r.Amount end
 		assert(fc.Gold == 100 and fc.Gems == 10 and fc.SummonTicket == 1 and #p.FirstClearRewards == 3)
 		assert(#p.RepeatRewards == 1 and p.RepeatRewards[1].Kind == "Gold" and p.RepeatRewards[1].Amount == 20)
+		-- Valeurs ALPHA 0.0.2 de RewardConfig.TicketEconomy : aucun First Clear, aucun or/gemme inventé.
+		local economy = configs.Rewards.TicketEconomy
+		local normal, elite = { [2] = 1, [3] = 1, [4] = 2, [5] = 5 }, { 2, 2, 2, 2, 10 }
 		for stage = 2, 5 do
 			local q = preview(stage)
-			assert(#q.FirstClearRewards == 0 and #q.RepeatRewards == 0, `1-{stage}: no stage reward configured`)
+			assert(#q.FirstClearRewards == 0, `1-{stage}: no first clear reward configured`)
+			assert(economy.Normal[stage] == normal[stage], `1-{stage}: TicketEconomy.Normal`)
+			onlyTickets(q.RepeatRewards, normal[stage], `1-{stage} replay`)
 		end
 		for stage = 1, 5 do
 			local e = preview(stage, "Elite")
-			assert(#e.FirstClearRewards == 0 and #e.RepeatRewards == 0, `1-{stage}E: no Elite reward configured`)
+			assert(#e.FirstClearRewards == 0, `1-{stage}E: no Elite first clear reward configured`)
+			assert(economy.Elite[stage] == elite[stage], `1-{stage}E: TicketEconomy.Elite`)
+			onlyTickets(e.RepeatRewards, elite[stage], `1-{stage}E replay`)
 		end
 	end)
 
@@ -158,8 +171,16 @@ return function(StagePreview: any, Model: any, configs: any)
 		assert(#before.Repeat == 1 and before.Repeat[1].Amount == 20 and before.HeroXP == 25)
 		local after = Model.rewards(stages(1)[1], true)
 		assert(after.FirstClearDone == true and after.RepeatTitle == "À chaque victoire")
-		local empty = Model.rewards(stages(1)[2], false)
-		assert(#empty.FirstClear == 0 and #empty.Repeat == 0 and empty.HeroXP == 35 and empty.RepeatTitle == "Rejouer")
+		-- 1-2 : pas de First Clear (aucune boîte « Première victoire »), replay = le vrai ticket de TicketEconomy
+		local replay = Model.rewards(stages(1)[2], false)
+		assert(#replay.FirstClear == 0 and replay.HeroXP == 35 and replay.RepeatTitle == "Rejouer")
+		onlyTickets(replay.Repeat, 1, "1-2 replay")
+		local boss = Model.rewards(stages(4)[5], true)
+		assert(#boss.FirstClear == 0 and boss.HeroXP == 100)
+		onlyTickets(boss.Repeat, 5, "1-5 replay")
+		local eliteBoss = Model.rewards(stages(4, "Elite")[5], true)
+		assert(#eliteBoss.FirstClear == 0 and eliteBoss.HeroXP == 220)
+		onlyTickets(eliteBoss.Repeat, 10, "1-5E replay")
 	end)
 
 	test("default stage: preferred, else first open not cleared, else last open", function()
