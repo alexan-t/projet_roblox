@@ -8,7 +8,8 @@
 -- cartes Item_NNN) ; aucun fichier de catalogue de production dans le dépôt. Référence des assets :
 -- la vitrine de la DEV Studio actuelle (tools/studio-items-vitrine.luau). Identifiants par rareté
 -- croissante, en paliers contigus. La rareté est celle du catalogue : ne pas l'inventer ni la
--- modifier, et pas de couleur de rareté sur les cartes (cadre neutre Ink, comme les héros).
+-- modifier. Cadre de carte neutre (Ink, comme les héros) ; la case de l'icône porte le fond et l'aura
+-- de la rareté (ItemAuraConfig, src/client/UI/ItemAura.lua, docs/ITEMS.md § 7).
 --   Rarity   = Id de RarityConfig (repris de l'attribut « Rarete » de la vitrine) ;
 --   SlotType = clé de SlotTypes (weapon, armor, ...) ;
 --   Index    = numéro NNN de l'emplacement Item_NNN de la vitrine ;
