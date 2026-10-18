@@ -9,7 +9,7 @@ une icône.
 | | État |
 | --- | --- |
 | Catalogue défini (100 items, `ItemConfig`) | **OUI** |
-| Icônes 2D livrées (AssetId publié, vitrine remplie) | **NON** : `Icon = nil` partout |
+| Icônes 2D livrées (AssetId publié, vitrine remplie) | **PARTIEL : 58 / 100** (`item_035` à `item_044`, `item_053` à `item_100`) ; `item_001` à `item_034` et `item_045` à `item_052` : `Icon = nil` |
 | Stockage dans `PlayerData` | **NON** |
 | Obtention (récompenses, butin) | **NON** |
 | Équipement des héros, statistiques | **NON** |

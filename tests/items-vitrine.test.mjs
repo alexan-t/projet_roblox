@@ -283,7 +283,10 @@ test(`Snapshot historique (${SNAPSHOT}): ItemId, Index, Rarete, SlotType and Nom
 	assert(problems.length === 0, `${problems.length} écart(s) : ${problems.slice(0, 5).join(' ; ')}`);
 });
 
-test(`Snapshot historique (${SNAPSHOT}): every card has Illustration.Icone; AssetId agrees with Icone.Image and ItemConfig.Icon`, () => {
+// Le snapshot est antérieur aux icônes livrées (référence des assets : la vitrine de la DEV Studio,
+// tools/studio-items-vitrine.luau). Une carte sans icône dans le snapshot n'interdit donc pas une icône
+// livrée depuis dans ItemConfig ; une carte qui en a une doit concorder.
+test(`Snapshot historique (${SNAPSHOT}): every card has Illustration.Icone; AssetId agrees with Icone.Image (and ItemConfig.Icon when set)`, () => {
 	if (vitrineError) throw vitrineError;
 	const problems = [];
 	for (const info of items) {
@@ -297,7 +300,7 @@ test(`Snapshot historique (${SNAPSHOT}): every card has Illustration.Icone; Asse
 		const image = card.icone.props.Image?.toString('utf8') ?? '';
 		const assetId = card.attrs.AssetId ?? '';
 		if (image !== assetId) problems.push(`${slotName} Icone.Image = ${image}, AssetId = ${assetId}`);
-		if ((info.icon ?? '') !== assetId) problems.push(`${slotName} AssetId = ${assetId}, ItemConfig.Icon = ${info.icon}`);
+		if (assetId !== '' && (info.icon ?? '') !== assetId) problems.push(`${slotName} AssetId = ${assetId}, ItemConfig.Icon = ${info.icon}`);
 	}
 	assert(problems.length === 0, `${problems.length} écart(s) : ${problems.slice(0, 5).join(' ; ')}`);
 });
