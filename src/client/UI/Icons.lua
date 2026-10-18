@@ -5,8 +5,8 @@
 -- d'en haut à gauche.
 --   Classes de héros : Archer (arc), Epeiste (épée), Barbare (hache), Paladin (bouclier),
 --   Magicien (bâton), Tireur (cible).
---   Objets : Parchemin (quête), Or (pièce), Gemmes, Ticket (invocation), Combat (épées croisées),
---   Cadenas (verrouillé).
+--   Objets : Combat (épées croisées), Cadenas (verrouillé). Les monnaies et l'icône Quête sont des PNG du
+--   pack validé (Shared.Config.CurrencyVisualConfig, MenuIconConfig), plus des icônes 3D.
 --   Guidage : Fleche (flèche du tutoriel, pointe vers le bas). Les icônes du menu principal sont des PNG
 --   (Shared.Config.MenuIconConfig), pas des icônes 3D.
 -- API : Icons.viewport(parent, id) -> ViewportFrame ; Icons.model(id) -> Model.
@@ -94,35 +94,6 @@ local SHAPES: { [string]: (part: (Props) -> Part) -> () } = {
 		for i, ring in rings do
 			part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.2 + i * 0.05, ring[1], ring[1]), Color = ring[2], CFrame = FACE })
 		end
-	end,
-	-- parchemin : feuille crème entre deux rouleaux de bois, lignes dorées, ruban rouge
-	Parchemin = function(part)
-		part({ Size = Vector3.new(1.7, 1.9, 0.12), Color = Colors.Cream })
-		for _, y in { 1.0, -1.0 } do
-			part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(2.1, 0.42, 0.42), Color = Colors.WoodLight, CFrame = CFrame.new(0, y, 0) })
-		end
-		part({ Size = Vector3.new(1.1, 0.12, 0.16), Color = Colors.SandGold, CFrame = CFrame.new(0, 0.35, -0.02) })
-		part({ Size = Vector3.new(0.8, 0.12, 0.16), Color = Colors.SandGold, CFrame = CFrame.new(-0.15, 0, -0.02) })
-		part({ Size = Vector3.new(0.3, 0.7, 0.18), Color = Colors.RoyalRed, CFrame = CFrame.new(0.55, -0.45, -0.05) })
-	end,
-	-- pièce d'or : disque doré, liseré foncé, centre clair
-	Or = function(part)
-		part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.35, 2.2, 2.2), Color = Colors.GoldDeep, CFrame = FACE })
-		part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.42, 1.8, 1.8), Color = Colors.Gold, CFrame = FACE })
-		part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.46, 1.1, 1.1), Color = Colors.GoldLight, CFrame = FACE })
-	end,
-	-- gemme : cube posé sur la pointe, facette haute plus claire
-	Gemmes = function(part)
-		local tilt = CFrame.Angles(math.rad(45), 0, math.rad(45))
-		part({ Size = Vector3.new(1.5, 1.5, 1.5), Color = Colors.CurrencyGems, CFrame = tilt })
-		part({ Size = Vector3.new(0.8, 0.8, 0.8), Color = Colors.Foam, CFrame = CFrame.new(-0.25, 0.35, -0.3) * tilt })
-	end,
-	-- ticket d'invocation : toile rouge sur cadre doré, sceau crème
-	Ticket = function(part)
-		local tilt = CFrame.Angles(0, 0, math.rad(-12))
-		part({ Size = Vector3.new(2.6, 1.6, 0.2), Color = Colors.Gold, CFrame = tilt })
-		part({ Size = Vector3.new(2.3, 1.3, 0.26), Color = Colors.RoyalRed, CFrame = tilt })
-		part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.3, 0.7, 0.7), Color = Colors.Cream, CFrame = tilt * FACE })
 	end,
 	-- combat : deux épées croisées
 	Combat = function(part)
