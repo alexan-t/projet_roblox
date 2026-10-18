@@ -103,7 +103,7 @@ resource("resource_042", "Grappe de Cristal Brut", "arcane", "rbxassetid://88264
 resource("resource_043", "Poussière Runique", "arcane", "rbxassetid://80977543784086")
 resource("resource_044", "Cœur de Tréant", "arcane", "rbxassetid://102068554185533")
 resource("resource_045", "Braise Captive", "arcane", "rbxassetid://93037340060778")
-resource("resource_046", "Rosée de Lune", "arcane")
+resource("resource_046", "Rosée de Lune", "arcane", "rbxassetid://127339387884826")
 resource("resource_047", "Essence Sylvestre", "arcane", "rbxassetid://128441665886090")
 resource("resource_048", "Galet Spirale", "arcane")
 resource("resource_049", "Encre Ancienne", "arcane", "rbxassetid://116209265150473")
