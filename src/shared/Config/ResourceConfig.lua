@@ -54,16 +54,16 @@ end
 -- Ordre de la vitrine (Ressource_001 à Ressource_060). Une icône livrée s'ajoute en quatrième
 -- argument : resource("resource_036", "Pépite d'Or", "mine", "rbxassetid://...").
 -- Forêt et tréants
-resource("resource_001", "Bûche de Chêne", "foret")
-resource("resource_002", "Écorce de Tréant", "foret")
-resource("resource_003", "Branche Noueuse", "foret")
-resource("resource_004", "Feuille de Tréant", "foret")
-resource("resource_005", "Touffe de Mousse", "foret")
-resource("resource_006", "Gland Massif", "foret")
-resource("resource_007", "Racine Tordue", "foret")
+resource("resource_001", "Bûche de Chêne", "foret", "rbxassetid://123355664297943")
+resource("resource_002", "Écorce de Tréant", "foret", "rbxassetid://72789972478807")
+resource("resource_003", "Branche Noueuse", "foret", "rbxassetid://132800021487287")
+resource("resource_004", "Feuille de Tréant", "foret", "rbxassetid://117914456964972")
+resource("resource_005", "Touffe de Mousse", "foret", "rbxassetid://98250548441668")
+resource("resource_006", "Gland Massif", "foret", "rbxassetid://70674732956680")
+resource("resource_007", "Racine Tordue", "foret", "rbxassetid://83797606175709")
 resource("resource_008", "Sève Ambrée", "foret")
-resource("resource_009", "Champignon des Sous-Bois", "foret")
-resource("resource_010", "Bois du King Tréant", "foret")
+resource("resource_009", "Champignon des Sous-Bois", "foret", "rbxassetid://113718692737784")
+resource("resource_010", "Bois du King Tréant", "foret", "rbxassetid://110650700122688")
 -- Slimes
 resource("resource_011", "Gelée d'Eau", "slime")
 resource("resource_012", "Gelée de Lave", "slime")
