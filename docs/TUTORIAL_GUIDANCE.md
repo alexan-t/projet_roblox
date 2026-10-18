@@ -14,7 +14,7 @@ permanent.
 | Données | étapes, drapeaux, rappels, entrées du menu | `src/shared/Config/TutorialConfig.lua` |
 | Règles | validation, priorités, première fois, badges (pur, testé) | `src/shared/Tutorial/TutorialRules.lua` |
 | Mémoire | drapeaux « vu une fois » | `PlayerData.Tutorial.Seen`, `TutorialService` |
-| Menu | icônes PNG du ZIP « Icones Menu » : Boutique, Sac, Index, Guilde, Stats | `MenuController`, `UI/Views/MenuView`, `UI/Views/InfoView`, `Shared/Config/MenuIconConfig` |
+| Menu | icônes PNG du pack : Boutique, Sac, Index, Guilde, Stats, Quêtes | `MenuController`, `UI/Views/MenuView`, `UI/Views/InfoView`, `Shared/Config/MenuIconConfig` |
 
 Aucune coordonnée en dur : le monde vise des cibles de `Shared.Quests.QuestGuide` (toujours dans le plot
 du joueur), l'interface vise des cibles enregistrées par les vues (`GuideTargets.register`).
@@ -60,30 +60,37 @@ Conditions, toujours venues du serveur : `HasHero` et `SecondHero` (collection `
 
 ## Menu principal
 
-Icônes : les PNG du ZIP « Icones Menu » (512 x 512, fond transparent), publiés **tels quels** sur Roblox ;
-les SVG du ZIP ne sont que la source. Tous les AssetIds sont dans `src/shared/Config/MenuIconConfig.lua`
-(aucun ailleurs : vérifié par `tests/menu-icons.test.mjs`).
+Reproduit le menu de la maquette « Quêtes HUD » du pack visuel validé (ZIP « Icones Menu », PNG 512 x 512 à
+fond transparent, publiés **tels quels**, sans retouche ; les SVG ne sont que la source). Tous les AssetIds
+sont dans `src/shared/Config/MenuIconConfig.lua` (aucun ailleurs : `tests/ui-assets.test.mjs`), les
+mesures dans `UITheme.Pack.Menu`.
 
-| Entrée | PNG normal / attention | Ouvre |
+| Entrée | PNG | Ouvre |
 | --- | --- | --- |
-| Boutique | `shop.png` / `shop-badge.png` | « Bientôt disponible » (InfoView) |
-| Sac | `bag.png` / `bag-badge.png` | LA Sacoche existante (`HeroBarController.SetBag`) ; bouton sélectionné tant qu'elle est ouverte |
-| Index | `index.png` / `index-badge.png` | catalogue des 60 héros (CollectionView) : possédés (vrai modèle, ×n), les autres « ??? » + cadenas |
-| Guilde | `guild.png` / `guild-badge.png` | « Bientôt disponible » |
-| Stats | `stats.png` / `stats-badge.png` | statistiques du serveur : héros, niveau max, stages, Élite, invocations, royaume |
+| Boutique | `shop.png` | « Bientôt disponible » (InfoView) |
+| Sac | `bag.png` | LA Sacoche existante (`HeroBarController.SetBag`) ; bouton sélectionné tant qu'elle est ouverte |
+| Index | `index.png` | catalogue des 60 héros (CollectionView) : possédés (vrai modèle, ×n), les autres « ??? » + cadenas |
+| Guilde | `guild.png` | « Bientôt disponible » |
+| Stats | `stats.png` | statistiques du serveur : héros, niveau max, stages, Élite, invocations, royaume |
+| Quêtes | `quest.png` | le panneau Quêtes (`QuestController.OpenPanel`, voir `docs/QUESTS.md` § Panneau) |
 
-`badge.png` (le « ! » seul) n'est pas utilisé : chaque variante `*-badge.png` l'intègre déjà.
-
-- Disposition : grille de 2 colonnes (Boutique Sac / Index Guilde / Stats), sans panneau, nom sous
-  l'icône. Placée dans la bande libre entre le suivi de quête et la hotbar (sur écran tactile, au-dessus
-  de 62 % de la hauteur : joystick), agrandie jusqu'à x1,3 si la place le permet ; bande trop basse
-  (téléphone en paysage) : les 5 icônes sur une seule ligne.
-- États : survol (léger gonflement), enfoncé, sélectionné (pastille bois sombre, contour doré), attention
-  (variante PNG « ! » + petit rebond toutes les 3 s), mis en avant (halo doré qui respire).
-- Masqué pendant tout autre écran modal (ScreenState : Expédition, invocation, récompenses…).
+- Disposition : grille de 2 colonnes x 3 lignes (Boutique Sac / Index Guilde / Stats Quêtes). Chaque entrée :
+  tuile chunky (face Cream → Sand sur lèvre WoodDark, contour Ink), icône qui déborde au-dessus, nom dessous.
+  Placée, centrée, dans la bande libre sous le suivi de quête **et sous la fenêtre de chat de Roblox** (elle
+  capte les clics : un bouton dessous ne répondrait pas), au-dessus de la hotbar (sur écran tactile,
+  au-dessus de 62 % de la hauteur : joystick) ; agrandie jusqu'à x1,3 si la place le permet ; bande trop
+  basse (téléphone en paysage) : les 6 icônes sur une seule ligne.
+- États : survol (léger gonflement), enfoncé, sélectionné (face dorée, contour Selected), attention (le
+  « ! » du pack, `badge.png`, au coin haut droit, qui flotte doucement, comme la maquette), mis en avant
+  (halo doré qui respire). Les variantes `*-badge.png` sont publiées et gardées dans la config mais la
+  maquette affiche l'icône normale + `badge.png` : on ne cumule pas les deux.
+- Visible sous le voile de ses propres fenêtres (Menu, Quêtes : bouton sélectionné) ; caché pendant tout
+  autre écran modal (ScreenState : Expédition, invocation, récompenses…). Un écran modal qui s'ouvre ferme
+  la Sacoche (jamais de fenêtre par-dessus elle).
 - API : `MenuController.SetAttention(id, on)`, `MenuController.SetHighlighted(id, on)`,
-  `MenuController.GetButton(id)`. Le tutoriel s'y branche sans y mettre sa logique : attention = drapeaux
-  non vus (`TutorialController.Badge`), halo = bouton visé par la flèche UI (`TutorialController.pointing`).
+  `MenuController.GetButton(id)`. Aucune règle de quête dans le menu : attention = drapeaux non vus
+  (`TutorialController.Badge`) ou `QuestController.attention` (récompense à récupérer, nouvelle quête) ;
+  halo = bouton visé par la flèche UI (`TutorialController.pointing`).
 - Aperçu Studio : attribut `Workspace.ApercuMenu`, ex. `"Bag=attention,Index=halo"` (vide : normal).
 
 Le bouton texte « Sac » à côté de la hotbar est remplacé par l'entrée Sac du menu ; la Sacoche s'ouvre
@@ -92,7 +99,7 @@ juste à droite du menu (cible `Menu.Area`, sa taille réelle).
 ### Publier une nouvelle version d'icône
 
 1. Téléverser le PNG sur Roblox (Asset Manager ou Creator Hub), sans le retoucher.
-2. Coller `rbxassetid://<id>` dans `MenuIconConfig` (`Icon` ou `BadgeIcon` de l'entrée).
+2. Coller `rbxassetid://<id>` dans `MenuIconConfig` (ou `CurrencyVisualConfig` pour une monnaie).
 3. `node --test tests/`.
 
 ## Ajouter un guidage

@@ -173,6 +173,24 @@ lumineux vers la pancarte, stage suivant déjà sélectionné (voir ARENA_PROTOT
 Le suivi est en haut à gauche, sous la fenêtre de chat Roblox et sa barre de saisie quand elles y
 sont. Sans cela, le chat recouvre le suivi et capte le clic sur « Récupérer ».
 
+## Panneau Quêtes
+
+Représentation UI du système existant (aucune logique de quête côté client) :
+
+- `Remotes.GetQuestLog` (lecture seule) : les quêtes réclamées de la chaîne puis la quête active (jamais
+  les suivantes), avec `Description` (QuestConfig, optionnelle), progression, état et récompenses.
+- `QuestPanelView` (bouton Quêtes du menu, ou « Récupérer » du suivi) : à récupérer, puis en cours, puis
+  récupérées (`Shared.Quests.QuestLog`, pur et testé : `tools/test-ui.ps1`).
+- **Une seule interface réclame** : « Récupérer » du panneau envoie `ClaimQuest(questId)` — uniquement
+  l'Id ; le serveur revérifie tout et ajoute les récompenses de QuestConfig, une fois. Le suivi du HUD ne
+  réclame plus : son bouton ouvre le panneau.
+- Après un claim réussi : reveal (`QuestRewardView`), monnaies 3D qui volent vers le HUD (feedback seulement,
+  le serveur a déjà attribué), puis le HUD relit le serveur ; le panneau montre « ✓ Récupéré » et la suite.
+- Notification du bouton Quêtes (`QuestController.attention`) : récompense à récupérer (priorité absolue),
+  ou nouvelle quête activée pendant la session et pas encore vue dans le panneau ; elle disparaît après le
+  claim (s'il ne reste rien à récupérer).
+- Test en Studio : `DebugData:Invoke(player, "SetQuestState", questId, progression, réclamée)`.
+
 ## Onboarding : premier spawn
 
 `src/client/Controllers/OnboardingCameraController.lua` (+ `Arena/OnboardingView.lua`, pur et testé).
