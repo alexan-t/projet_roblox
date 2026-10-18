@@ -95,6 +95,10 @@ test('resource icons: decoder rejects corrupted PNG chunk data', () => {
 	// Alter the IHDR checksum itself to exercise integrity validation independently.
 	damaged[29] ^= 1;
 	assert.throws(() => pixels(damaged), /invalid CRC/);
+	const original = read(directory + files[0]);
+	// Preserve the complete IHDR, then truncate the next chunk header or payload.
+	assert.throws(() => pixels(original.subarray(0, 34)), /truncated PNG chunk header/);
+	assert.throws(() => pixels(original.subarray(0, original.length - 1)), /truncated PNG chunk/);
 });
 
 test('resource icons: delivered PNGs decode at 512 x 512 with visible content and transparent background', () => {
