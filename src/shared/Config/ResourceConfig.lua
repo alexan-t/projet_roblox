@@ -110,7 +110,7 @@ resource("resource_049", "Encre Ancienne", "arcane", "rbxassetid://1078401120406
 resource("resource_050", "Orbe de Verre Trouble", "arcane")
 -- Royaume et artisanat
 resource("resource_051", "Pile de Planches", "royaume")
-resource("resource_052", "Lingot de Fer", "royaume")
+resource("resource_052", "Lingot de Fer", "royaume", "rbxassetid://136456405227147")
 resource("resource_053", "Lingot d'Or", "royaume", "rbxassetid://120285479420139")
 resource("resource_054", "Corde de Chanvre", "royaume")
 resource("resource_055", "Rouleau de Toile", "royaume")
