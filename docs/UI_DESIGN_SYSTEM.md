@@ -417,8 +417,8 @@ aucune règle de jeu) :
 | --- | --- | --- |
 | `QuestView` | `Show(quest, { OnClaim })`, `Hide()` | `QuestService:GetActiveQuest` : `{ Title, Progress, Target, Completed }` |
 | `CurrencyView` | `Set(currencies, animate?)`, `Hide()` | `PlayerData.Currencies` : `{ Gold, Gems, SummonTickets }` |
-| `ExpeditionView` | `Show(data, { OnLaunch, OnClose, Selected, OnSelect, Team, OnPrepare, Guide })`, `Hide()` | `{ Zone, Title, Subtitle?, Stages, EliteStages?, EliteUnlocked, Mode }`, entrées complètes d'ArenaService (voir `docs/ZONES.md` § Fenêtre Expédition) ; `Team = { Placed, Max, Heroes }` ; ouverte par la pancarte : `OnSelect` → `SelectStage`, `OnLaunch` → `Ready`, `OnPrepare` → dalles en évidence |
-| `SummonView` | `Show({ Tickets, Cost, Banners?, Rates?, Selected? }, { OnSummon(bannerId), OnClose })`, `Reveal({ Name, Model, New, Rarity }, { OnContinue })`, `Hide()` | ouverte au portail par `SummonController` ; bannières (onglets, héros mis en avant), taux par rareté ; `Reveal` après l'effet 3D du portail (`SummonEffectController`) |
+| `ExpeditionView` | `Show(data, { OnLaunch, OnClose, Selected, OnSelect, Team, OnPrepare, Guide })`, `Hide()` | `{ Zone, Title, Subtitle?, Stages, EliteStages?, EliteUnlocked, Mode }`, entrées complètes d’ArenaService (voir `docs/ZONES.md` § Fenêtre Expédition) ; `Team = { Placed, Max, Heroes }` ; ouverte par la pancarte : `OnSelect` → `SelectStage`, `OnLaunch` → `Ready`, `OnPrepare` → dalles en évidence |
+| `SummonView` | `Show(state, { OnSummon(quantity), OnRefresh, OnClose })`, `RevealBatch(batch, { OnContinue, OnAgain })`, `Reveal(hero, options)`, `Hide()` | bannière active, taux serveur, x1/x10/x100 et reveals selon le volume ; design figé #80 |
 | `CollectionView` | `Show(heroes, { OnClose, OnSelect })`, `Hide()` | `{ { Name, Model, ClassId, Count, New, Equipped } }` depuis `Heroes` / la hotbar |
 
 ### Expédition (maquette figée « Expedition.dc.html »)
@@ -456,7 +456,7 @@ Le client ne reçoit que des **vues en lecture seule**, jamais `PlayerData`. L'i
 | Héros / hotbar | `GetHeroes`, `HeroesChanged`, `HotbarAction` (HeroService) | `HeroBarController` (via `ArenaStore`) | hotbar, sacoche |
 | Arène / stage | `GetArenaState`, `ArenaState`, `ArenaAction` (ArenaService) | `ArenaPlacementController` | pancarte, `ExpeditionView` |
 | Combat, fin, récompenses | `CombatEvent` (CombatService, RewardService) | `ArenaPlacementController`, `CombatViewController` | HUD combat, `RewardScreenController` |
-| Invocation | `GetSummonState`, `RequestSummon`, `HeroObtained` (HeroService) | `SummonController` | `SummonView`, `SummonEffectController` |
+| Invocation | `GetSummonState`, `RequestSummon`, `HeroObtained` (HeroService) | `SummonController` | `SummonView`, `SummonReveal` |
 
 **Monnaies.** `CurrencyController` relit `GetCurrencies`, sans jamais calculer de valeur :
 - au join ;
@@ -480,3 +480,12 @@ Le client ne reçoit que des **vues en lecture seule**, jamais `PlayerData`. L'i
 | KingdomController | Pas d'action joueur : KingdomService (serveur) place les héros et l'état du royaume ; `KingdomChangeController` et `KingdomAmbientController` animent côté client. Pas de nouveau contrôleur. |
 | Collection | La sacoche et la hotbar (`HeroBarController`) servent de collection ; le nouveau héros y apparaît via `HeroesChanged` après sa carte. `CollectionView` reste une vue de design non branchée. |
 | QuestController, CurrencyController, SummonController | Créés (#11, #50), voir le tableau ci-dessus. |
+
+
+## Invocation V2 — référence figée (#80)
+
+Le ZIP final est archivé dans `docs/references/ui/invocation-v2` : `Invocation.dc.html`, `HeroCard.dc.html`, README et PNG d'invocation, monnaies et manifest SHA-256. Ce design est figé ; toute évolution visuelle doit partir de ces sources.
+
+`HeroCard` emploie les dix cadres PNG par rang RarityConfig, les zones portrait/plaque fournies et les effets teintés par UITheme. Les identifiants sont centralisés dans `InvocationVisualConfig`. Le PNG bannière @2x importé est réduit par Roblox à 1024×580 : son SliceCenter est ajusté proportionnellement à `Rect(102,102,922,478)` ; SliceScale réduit les coins à la taille de la maquette.
+
+`SummonView` compose la bannière unique et les commandes x1/x10/x100 ; `SummonLayout` porte la géométrie et la vue Taux ; `SummonReveal` porte les phases visuelles. UIKit fournit fenêtres, textes, boutons et portraits, ScreenState réserve le modal. La grille x100 a un scroll et deux onglets (regroupés/tous). Les vrais résultats et les taux viennent du serveur, les données factices du prototype ne sont jamais employées en gameplay. Voir `SUMMON.md` et `INVOCATION_V2_QA.md`.
