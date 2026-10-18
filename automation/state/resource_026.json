@@ -1,11 +1,11 @@
 {
   "task_id": "resource_026",
-  "status": "human_review",
-  "stage": "review",
-  "iteration": 3,
+  "status": "in_progress",
+  "stage": "production",
+  "iteration": 0,
   "max_iterations": 3,
-  "last_completed_step": "third_production_pass_recorded",
-  "next_step": "review_brief_and_previous_failures_before_resuming_production",
+  "last_completed_step": "authorized_restart_brief_reviewed",
+  "next_step": "generate_corrected_3d_model_in_test_3",
   "studio_target": "Workspace.Bestiaire.Inventaire.Ressources.Panneau.Affichage.Fond.Emplacements.Ressource_026",
   "latest_review": "docs/RESOURCE_ICONS_QA.md",
   "evidence": [
@@ -21,5 +21,16 @@
     "Publication upload_image et renseignement de la carte réservée",
     "Report de Icon dans ResourceConfig.lua",
     "Captures carte et famille, VISUAL_QA PASS, nettoyage et réinitialisation caméra"
-  ]
+  ],
+  "restart_authorization": "Mission utilisateur du 18 octobre 2026 : nouvelle s?rie de passes explicitement autoris?e apr?s max_iterations.",
+  "previous_series": {
+    "iteration": 3,
+    "max_iterations": 3,
+    "latest_review": "docs/RESOURCE_ICONS_QA.md",
+    "evidence": [
+      "automation/screenshots/resources/generation-results.json",
+      "automation/screenshots/resources/generation-retry-2026-10-18.json",
+      "automation/screenshots/resources/generation-third-2026-10-18.json"
+    ]
+  }
 }
