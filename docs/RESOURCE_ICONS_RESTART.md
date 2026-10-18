@@ -1,5 +1,15 @@
 # Reprise des 24 icônes en revue humaine
 
+## Clôture — 19 octobre 2026
+
+Cette reprise est terminée : **60/60 icônes de ressources sont livrées**.
+Les neuf ressources débloquées lors de la première reprise et les quinze dernières construites
+manuellement sont toutes à l'état `done`. Les quinze rapports
+`automation/reviews/resource_NNN-handbuilt.md` sont PASS et les AssetIds finaux sont renseignés dans
+`ResourceConfig.lua`.
+
+Le plan ci-dessous est conservé comme historique des corrections qui ont mené à cette livraison.
+
 Revue des briefs du catalogue et des états persistants le 18 octobre 2026.
 Ce document prépare la reprise ; il ne constitue ni une validation humaine,
 ni un PASS, ni une remise à zéro des trois itérations consommées.
