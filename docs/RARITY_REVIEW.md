@@ -31,8 +31,17 @@ items sur la carte et jamais dans l'icône.
 4. **#62** (grille VISUAL_QA), rebasée, wording corrigé.
 5. **#65** (tokens d'effets), rebasée : vérifier qu'elle ne touche pas la rareté.
 
-Une PR n'est relue qu'une fois rebasée et verte (`node tests/*.test.mjs`). Chaque relecteur
-coche les points de sa PR ci-dessous dans son commentaire de revue.
+Une PR n'est relue qu'une fois rebasée et verte (`node --test "tests/*.test.mjs"` ; sans
+`--test`, node ne lance que le premier fichier). Chaque relecteur coche les points de sa PR
+ci-dessous dans son commentaire de revue.
+
+`tests/rarity-rules.test.mjs` contrôle, sans Studio, les règles vérifiables dans le code et la
+doc : palette calée sur `RarityConfig` et items sur ses paliers (1), libellé ou repère dans toute
+vue qui montre une couleur de rareté (2), aucun accès direct à `UITheme.Rarity` (3), aucun badge
+ajouté sur les écrans Invocation V2 (5), icône d'item sans couleur de rareté dans `ITEMS.md` (6),
+et la ligne « État au » du § 2 : dès que `RarityStyle.mark` ou `chip` existe, elle doit être
+mise à jour. Les règles 4 (état ≠ rareté) et 7 (capture désaturée) restent à la relecture et à
+la capture.
 
 ## Changements demandés par PR
 
@@ -47,6 +56,8 @@ coche les points de sa PR ci-dessous dans son commentaire de revue.
   ajouté sur `HeroCard` : les cadres PNG et le libellé portent la rareté.
 - Le test « no client view shows a rarity by its color alone » doit passer sur `develop` tel
   qu'il est (accès directs déjà retirés ici). Garder le point 8 du § 11 tel que rédigé ici.
+- Mettre à jour la ligne « État au » du § 2 (règle 2 tenue par le repère de forme) : le test
+  « § 2 status line matches RarityStyle » échoue tant qu'elle dit « arrive avec #75 ».
 - Captures avant/après de la fenêtre Taux et du résumé x10, en couleur et désaturées.
 
 ### #61 — couleurs de rareté des items
