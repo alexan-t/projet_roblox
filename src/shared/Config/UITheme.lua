@@ -66,8 +66,10 @@ local Colors = {
 	DisabledLip = hex("#5A524A"), -- lèvre d'un bouton gris « En cours » (pack « Quêtes HUD »)
 }
 
--- Raretés des héros (RarityConfig) : badge, cadre de carte, lumière de l'invocation. Les monstres
--- n'ont aucune rareté. Transcendant n'a pas une couleur mais un dégradé qui tourne (RarityPrism).
+-- Raretés (RarityConfig), communes aux héros et aux items : badge, lumière de l'invocation et, sur une
+-- carte d'item, zone d'illustration teintée (Transparency.RarityTint) et cerclée (Stroke.Regular) ; le
+-- cadre extérieur de la carte reste Ink, Selected y est réservé. Les monstres et les ressources n'ont
+-- aucune rareté. Transcendant n'a pas une couleur mais un dégradé qui tourne (RarityPrism).
 local Rarity = {
 	Commun = hex("#B9B0A3"), -- pierre claire
 	PeuCommun = hex("#6CC04A"), -- vert prairie
@@ -97,6 +99,7 @@ local Transparency = {
 	Empty = 0.85, -- raccourci vide
 	Art = 0.35, -- zone d'illustration d'une carte
 	Pulse = 0.45, -- creux de la pulsation d'une jauge pleine
+	RarityTint = 0.6, -- zone d'illustration d'une carte d'item, teintée de sa rareté
 }
 
 -- Éléments dans le monde : grille de l'arène et surbrillances (Highlight), sans néon.
