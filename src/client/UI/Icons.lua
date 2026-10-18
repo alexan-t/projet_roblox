@@ -7,8 +7,8 @@
 --   Magicien (bâton), Tireur (cible).
 --   Objets : Parchemin (quête), Or (pièce), Gemmes, Ticket (invocation), Combat (épées croisées),
 --   Cadenas (verrouillé).
---   Guidage et menu : Fleche (flèche du tutoriel, pointe vers le bas), Boutique (étal), Sac (sacoche),
---   Index (livre), Guilde (bannière), Stats (barres sur un socle).
+--   Guidage : Fleche (flèche du tutoriel, pointe vers le bas). Les icônes du menu principal sont des PNG
+--   (Shared.Config.MenuIconConfig), pas des icônes 3D.
 -- API : Icons.viewport(parent, id) -> ViewportFrame ; Icons.model(id) -> Model.
 -- Identifiant inconnu : petit losange doré neutre.
 
@@ -165,72 +165,6 @@ SHAPES.Fleche = function(part)
 	end
 	-- reflet clair sur la tige (volume « jouet »)
 	part({ Size = Vector3.new(0.28, 1.1, 0.32), Color = Colors.Cream, CFrame = CFrame.new(0.2, 0.9, -0.01) })
-end
-
--- étal de marché : comptoir bois, auvent rayé rouge et crème, pièce d'or posée
-SHAPES.Boutique = function(part)
-	part({ Size = Vector3.new(2.3, 0.9, 0.5), Color = Colors.Wood, CFrame = CFrame.new(0, -0.85, 0) })
-	part({ Size = Vector3.new(2.4, 0.2, 0.55), Color = Colors.WoodLight, CFrame = CFrame.new(0, -0.35, 0) })
-	for _, x in { -1.0, 1.0 } do
-		part({ Size = Vector3.new(0.22, 1.5, 0.3), Color = Colors.WoodDark, CFrame = CFrame.new(x, 0.35, 0.05) })
-	end
-	for i = 0, 4 do
-		part({ Size = Vector3.new(0.52, 0.75, 0.3), Color = if i % 2 == 0 then Colors.RoyalRed else Colors.Cream,
-			CFrame = CFrame.new(1.04 - i * 0.52, 1.1, 0) * CFrame.Angles(math.rad(-12), 0, 0) })
-	end
-	part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.3, 0.8, 0.8), Color = Colors.Gold, CFrame = CFrame.new(0, -0.05, -0.1) * FACE })
-	part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.34, 0.45, 0.45), Color = Colors.GoldLight, CFrame = CFrame.new(0, -0.05, -0.1) * FACE })
-end
-
--- sacoche de cuir : corps bois clair, rabat bois, boucle dorée, poche
-SHAPES.Sac = function(part)
-	part({ Size = Vector3.new(1.9, 1.8, 0.6), Color = Colors.WoodLight, CFrame = CFrame.new(0, -0.3, 0) })
-	part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.6, 1.9, 1.0), Color = Colors.WoodLight, CFrame = CFrame.new(0, 0.55, 0) * CFrame.Angles(0, math.rad(90), 0) })
-	part({ Size = Vector3.new(1.95, 0.85, 0.66), Color = Colors.Wood, CFrame = CFrame.new(0, 0.55, -0.02) })
-	part({ Size = Vector3.new(0.5, 0.45, 0.7), Color = Colors.Gold, CFrame = CFrame.new(0, 0.15, -0.04) })
-	part({ Size = Vector3.new(0.22, 0.2, 0.74), Color = Colors.WoodDeep, CFrame = CFrame.new(0, 0.15, -0.05) })
-	part({ Size = Vector3.new(1.1, 0.6, 0.64), Color = Colors.Wood, CFrame = CFrame.new(0, -0.75, -0.03) })
-	part({ Size = Vector3.new(1.3, 0.22, 0.3), Color = Colors.WoodDark, CFrame = CFrame.new(0, 1.15, 0) })
-end
-
--- livre (index) : couverture bleu royal, dos bois, tranche crème, emblème et coins dorés
-SHAPES.Index = function(part)
-	local tilt = CFrame.Angles(0, 0, math.rad(-8))
-	part({ Size = Vector3.new(1.75, 2.2, 0.3), Color = Colors.Cream, CFrame = tilt * CFrame.new(0.08, 0, 0.1) })
-	part({ Size = Vector3.new(1.8, 2.25, 0.2), Color = Colors.RoyalBlue, CFrame = tilt })
-	part({ Size = Vector3.new(0.32, 2.3, 0.3), Color = Colors.WoodDark, CFrame = tilt * CFrame.new(0.9, 0, 0) })
-	part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.26, 0.85, 0.85), Color = Colors.Gold, CFrame = tilt * CFrame.new(-0.05, 0.15, -0.05) * FACE })
-	part({ Shape = Enum.PartType.Ball, Size = Vector3.one * 0.38, Color = Colors.GoldLight, CFrame = tilt * CFrame.new(-0.05, 0.15, -0.2) })
-	for _, y in { 1.0, -1.0 } do
-		part({ Size = Vector3.new(0.34, 0.34, 0.24), Color = Colors.Gold, CFrame = tilt * CFrame.new(-0.78, y, -0.01) })
-	end
-	part({ Size = Vector3.new(0.9, 0.14, 0.24), Color = Colors.SandGold, CFrame = tilt * CFrame.new(-0.05, -0.65, -0.02) })
-end
-
--- bannière de guilde : hampe bois, toile rouge à queue d'aronde, écu doré
-SHAPES.Guilde = function(part)
-	part({ Size = Vector3.new(0.22, 2.7, 0.22), Color = Colors.WoodDark, CFrame = CFrame.new(0.95, -0.05, 0) })
-	part({ Shape = Enum.PartType.Ball, Size = Vector3.one * 0.42, Color = Colors.Gold, CFrame = CFrame.new(0.95, 1.38, 0) })
-	part({ Size = Vector3.new(1.9, 0.22, 0.24), Color = Colors.WoodLight, CFrame = CFrame.new(0.05, 1.05, 0) })
-	part({ Size = Vector3.new(1.55, 1.6, 0.16), Color = Colors.RoyalRed, CFrame = CFrame.new(-0.05, 0.2, 0) })
-	for _, x in { -0.5, 0.4 } do
-		part({ Size = Vector3.new(0.6, 0.55, 0.16), Color = Colors.RoyalRed, CFrame = CFrame.new(x, -0.8, 0) })
-	end
-	part({ Size = Vector3.new(0.75, 0.6, 0.22), Color = Colors.Gold, CFrame = CFrame.new(-0.05, 0.4, -0.02) })
-	part({ Size = Vector3.new(0.5, 0.5, 0.22), Color = Colors.Gold, CFrame = CFrame.new(-0.05, 0.05, -0.02) * CFrame.Angles(0, 0, math.rad(45)) })
-	part({ Size = Vector3.new(0.3, 0.3, 0.26), Color = Colors.GoldLight, CFrame = CFrame.new(-0.05, 0.3, -0.04) })
-end
-
--- statistiques : trois barres (herbe, rivière, or) de plus en plus hautes sur un socle de pierre
-SHAPES.Stats = function(part)
-	part({ Size = Vector3.new(2.5, 0.35, 0.5), Color = Colors.StoneDark, CFrame = CFrame.new(0, -1.15, 0) })
-	local bars = { { -0.8, 0.9, Colors.Grass }, { 0, 1.5, Colors.River }, { 0.8, 2.1, Colors.Gold } }
-	for _, bar in bars do
-		local x, height, color = bar[1], bar[2], bar[3]
-		-- caméra en -Z : x positif = gauche de l'écran ; la plus haute barre à droite
-		part({ Size = Vector3.new(0.6, height, 0.4), Color = color, CFrame = CFrame.new(-x, -0.97 + height / 2, 0) })
-		part({ Size = Vector3.new(0.18, height - 0.3, 0.42), Color = Colors.Foam, CFrame = CFrame.new(-x + 0.14, -0.97 + height / 2, -0.01) })
-	end
 end
 
 local function fallback(part: (Props) -> Part)

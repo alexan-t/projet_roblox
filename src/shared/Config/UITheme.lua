@@ -188,8 +188,7 @@ local Spacing = {
 	XXL = 32,
 	ScreenMargin = 16, -- marge minimale au bord de l'écran (mobile compris)
 	TouchTarget = 44, -- taille minimale d'une zone tactile
-	MenuButton = 72, -- bouton du menu de navigation (colonne à gauche)
-	MenuColumn = 104, -- largeur réservée à cette colonne (bouton, marge) : la sacoche s'ouvre à côté
+	MenuIcon = 76, -- icône du menu principal (grille de 2 colonnes à gauche), nom dessous
 }
 
 local Shadow = {
@@ -215,6 +214,7 @@ local Animation = {
 		Hover = 1.04,
 		OpenFrom = 0.9,
 		Pop = 1.12, -- gain de monnaie, badge « Nouveau »
+		Highlight = 1.08, -- bouton mis en avant par le tutoriel : léger gonflement qui respire
 	},
 }
 
