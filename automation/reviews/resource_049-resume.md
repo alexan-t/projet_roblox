@@ -20,6 +20,8 @@ Preuves :
 | Lecture 32 px sur montage, carte et famille dans Studio | OK |
 | Géométrie, détails attachés, un point focal au plus | OK |
 | Aucune rareté, quantité ni texte inventés | OK |
-| Icon Git = Image = AssetId | OK : rbxassetid://107840112040690 |
+| Icon Git = Image = AssetId | OK : rbxassetid://116209265150473 |
 
 Visage, membres, posture et accessoires portés : sans objet. Nettoyage global et caméra traités en fin de lot.
+
+Correction de finition : export avec SoftChromaKey pour att?nuer les franges roses ; ancienne image rbxassetid://107840112040690 conserv?e dans cet historique. Captures carte et famille renouvel?es.
