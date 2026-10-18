@@ -155,3 +155,32 @@ test('resource icons acceptance: all 60 resources have a published icon and loca
 	assert.equal(missing.length, 0, `${delivered.length}/60 delivered; missing: ${missing.join(', ')}`);
 	assert.equal(files.length, 60);
 });
+
+test('resource icons hand-built series: the 15 former generation failures are delivered without the generator', () => {
+	const ids = ['020', '030', '036', '040', '041', '044', '045', '046', '048', '050', '051', '054', '055', '059', '060'];
+	for (const n of ids) {
+		const id = `resource_${n}`;
+		const state = JSON.parse(read(`automation/state/${id}.json`));
+		const resource = resources.find((r) => r.id === id);
+		assert.ok(resource && resource.icon, `${id}: published icon in ResourceConfig`);
+		assert.equal(state.status, 'done', id);
+		assert.equal(state.icon, resource.icon, id);
+		assert.equal(state.last_completed_step, 'handbuilt_studio_card_family_capture_pass', id);
+		assert.ok(state.handbuilt_series, `${id}: hand-built series recorded`);
+		assert.match(state.handbuilt_series.authorization, /sans generate_mesh ni generate_procedural_model/, id);
+		assert.match(state.handbuilt_series.method, /AtelierIcones/, id);
+		assert.match(state.handbuilt_series.method, /Archive_ResourceIcons_Handbuilt_\d{8}/, id);
+		// The failed generator history stays as evidence of why the method changed.
+		assert.ok(read(`automation/reviews/${id}-final-resume.md`).length > 0, `${id}: failure history kept`);
+		assert.ok(state.evidence.includes('automation/screenshots/resources/generation-final-resume-2026-10-18.json'), id);
+		assert.equal(state.latest_review, `automation/reviews/${id}-handbuilt.md`, id);
+		const review = read(state.latest_review).toString('utf8');
+		assert.match(review.split('\n')[0], new RegExp(`^# ${id} — .+ — PASS\\s*$`), `${id}: review verdict`);
+		assert.doesNotMatch(review, /\bFIX\b/, `${id}: no open FIX`);
+		assert.ok(review.includes(resource.icon), `${id}: review cites Icon Git = Image = AssetId`);
+		const capture = `automation/screenshots/resources/${id}-handbuilt.png`;
+		assert.ok(state.evidence.includes(capture), `${id}: hand-built capture in evidence`);
+		assert.ok(review.includes(capture), `${id}: review cites its capture`);
+		for (const path of state.evidence) assert.ok(read(path).length > 0, path);
+	}
+});

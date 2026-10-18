@@ -1,8 +1,41 @@
-# Résultats des tests des icônes — 18 octobre 2026
+# Résultats des tests des icônes — 19 octobre 2026
+
+## Série construite à la main — tests — 19 octobre 2026
+
+Résultat actuel : **PASS, 60/60 livrées**. Toutes les sections qui suivent sont historiques.
+
+- `node --test --test-isolation=none tests/*.test.mjs` : **14 entrées réussies,
+  0 échouée**, code 0. Les fichiers historiques comptent aussi 13 assertions
+  catalogue et 9 assertions items, toutes réussies. Les 5 contrôles UI passent.
+- Acceptation des 60 icônes (PNG local + Icon Git publiée) : **PASS**.
+- Les 60 PNG correspondent exactement aux Icon Git, sont uniques (AssetId et
+  contenu) et décodables en RGBA 512 × 512 avec contenu visible et transparence. **PASS**.
+- Test de la reprise (24 dossiers) : les 24 sont désormais `done`, avec capture,
+  rapport PASS et aucune étape restante. **PASS**.
+- Nouveau test `resource icons hand-built series` : pour 020, 030, 036, 040, 041,
+  044, 045, 046, 048, 050, 051, 054, 055, 059, 060, l'état est `done` à l'étape
+  `handbuilt_studio_card_family_capture_pass`, Icon de l'état = Icon Git,
+  autorisation « sans generate_mesh ni generate_procedural_model », méthode
+  AtelierIcones et archive ServerStorage, historique d'échec du générateur
+  conservé (rapport final-resume et job final), rapport `-handbuilt.md` PASS sans
+  FIX, citant l'AssetId et la capture `resource_NNN-handbuilt.png`, preuves
+  présentes. **PASS**.
+- Audit Studio de `tests/resource-icons.studio.luau`, en Edit, place « test 3 »
+  (`120616399792561`), lecture seule, ResourceConfig de Git évalué en mémoire via
+  `loadstring` (annotations de type retirées, mêmes 60 entrées) : **PASS**,
+  60 cartes conformes au Git, 60 images, 0 vide, atelier `AtelierIcones` vide.
+  `ServerStorage.Archive_ResourceIcons_Handbuilt_20261019` contient les 15 modèles
+  (Resource020 … Resource060). Caméra constatée Fixed ; aucune capture prise dans
+  cette étape, donc pas de réinitialisation de caméra nécessaire.
+- `tools/test-resources.ps1` : non relancé, `build/luau-cli/luau.exe` absent
+  de ce worktree.
+
+Ce rapport est technique ; la validation artistique reste dans les rapports
+`automation/reviews/resource_NNN-handbuilt.md` (captures Studio, grille VISUAL_QA).
 
 ## Étape #3 — Tests de la reprise autorisée — 18 octobre 2026
 
-Résultat actuel : **FIX, 45/60 livrées**. Les sections suivantes sont historiques ;
+Résultat de l'époque : **FIX, 45/60 livrées**. Les sections suivantes sont historiques ;
 leurs anciens totaux et listes de travail ne décrivent pas l'état actuel.
 
 - `node --test --test-isolation=none tests/*.test.mjs` : **12 entrées réussies,
