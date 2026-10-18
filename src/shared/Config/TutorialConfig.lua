@@ -22,15 +22,16 @@
 --   Conditions (calculées par TutorialController, valeurs du serveur) : HasHero (au moins un héros),
 --   SecondHero (au moins deux héros), FirstVictory (au moins un stage gagné).
 --
--- Menu.Entries : boutons du menu de navigation (colonne à gauche), dans l'ordre :
---   Id (cible UI « Menu.<Id> »), Label (sous l'icône), Icon (forme de UI/Icons), View (ce qu'ouvre le
---   bouton : "Bag", "Index", "Stats" ou "Soon"), Soon (texte de la fenêtre « Bientôt disponible »),
---   Flag (drapeau dont l'absence montre le badge « ! », avec Badge = condition facultative).
+-- Menu.Entries : boutons du menu principal (grille de 2 colonnes à gauche), dans l'ordre :
+--   Id (cible UI « Menu.<Id> », clé de Shared.Config.MenuIconConfig pour l'icône), Label (sous l'icône),
+--   View (ce qu'ouvre le bouton : "Bag", "Index", "Stats" ou "Soon"), Soon (texte de la fenêtre
+--   « Bientôt disponible »), Flag (drapeau dont l'absence met le bouton en « attention », variante « ! »),
+--   Badge (condition facultative de cette attention).
 
 export type Step = { Target: string, Text: string?, Seconds: number? }
 export type FirstOpen = { Steps: { Step }, Hud: boolean? }
 export type Nudge = { Id: string, Target: string, Flag: string, Condition: string }
-export type Entry = { Id: string, Label: string, Icon: string, View: string, Soon: string?, Flag: string?, Badge: string? }
+export type Entry = { Id: string, Label: string, View: string, Soon: string?, Flag: string?, Badge: string? }
 
 local TutorialConfig = {
 	Flags = {
@@ -97,11 +98,11 @@ local TutorialConfig = {
 
 	Menu = {
 		Entries = {
-			{ Id = "Shop", Label = "Boutique", Icon = "Boutique", View = "Soon", Soon = "La boutique ouvrira bientôt : reviens après tes premières victoires !" },
-			{ Id = "Bag", Label = "Sac", Icon = "Sac", View = "Bag", Flag = "Bag", Badge = "HasHero" },
-			{ Id = "Index", Label = "Index", Icon = "Index", View = "Index", Flag = "Index", Badge = "SecondHero" },
-			{ Id = "Guild", Label = "Guilde", Icon = "Guilde", View = "Soon", Soon = "Les guildes arriveront dans une prochaine version." },
-			{ Id = "Stats", Label = "Stats", Icon = "Stats", View = "Stats", Flag = "Stats", Badge = "FirstVictory" },
+			{ Id = "Shop", Label = "Boutique", View = "Soon", Soon = "La boutique ouvrira bientôt : reviens après tes premières victoires !" },
+			{ Id = "Bag", Label = "Sac", View = "Bag", Flag = "Bag", Badge = "HasHero" },
+			{ Id = "Index", Label = "Index", View = "Index", Flag = "Index", Badge = "SecondHero" },
+			{ Id = "Guild", Label = "Guilde", View = "Soon", Soon = "Les guildes arriveront dans une prochaine version." },
+			{ Id = "Stats", Label = "Stats", View = "Stats", Flag = "Stats", Badge = "FirstVictory" },
 		} :: { Entry },
 	},
 }

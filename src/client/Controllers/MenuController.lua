@@ -1,20 +1,35 @@
 --!strict
--- Menu de navigation (MenuView, colonne à gauche) — voir docs/TUTORIAL_GUIDANCE.md.
--- Les entrées viennent de TutorialConfig.Menu.Entries ; chaque View est branchée ici :
---   Bag   : ouvre / ferme la sacoche (HeroBarController), le bouton reste « sélectionné » tant qu'elle est
---           ouverte ;
---   Index : catalogue des héros (CollectionView) : héros possédés avec leur vrai modèle et leur nombre,
---           les autres « ??? » avec un cadenas (aucun spoil) ; « n / total découverts » ;
+-- Menu principal (MenuView, icônes PNG de Shared.Config.MenuIconConfig) — voir docs/TUTORIAL_GUIDANCE.md.
+-- Les entrées viennent de TutorialConfig.Menu.Entries ; chaque View est branchée sur ce qui existe :
+--   Bag   : ouvre / ferme LA sacoche existante (HeroBarController.SetBag) ; bouton sélectionné tant
+--           qu'elle est ouverte ;
+--   Index : catalogue des héros (CollectionView, la vue « collection » du jeu) : héros possédés avec leur
+--           vrai modèle et leur nombre, les autres « ??? » avec un cadenas (aucun spoil) ;
 --   Stats : statistiques du joueur (InfoView), valeurs du serveur (Remotes.GetPlayerStats) ;
---   Soon  : fenêtre « Bientôt disponible » (Boutique, Guilde) : présentée proprement, sans gameplay.
--- Un seul écran modal à la fois (ScreenState "Menu") ; rien ne s'ouvre par-dessus un combat qui finit,
--- une invocation ou un écran de récompense. Badges « ! » : TutorialController.Badge.
+--   Soon  : fenêtre « Bientôt disponible » (Boutique, Guilde), sans faux contenu.
+-- Un seul écran modal à la fois (ScreenState "Menu"). Le menu se cache pendant tout autre écran modal
+-- (Expédition, invocation, récompenses...) et se place dans la bande libre entre le suivi de quête et la
+-- hotbar (plus haut sur écran tactile : le joystick occupe le bas à gauche).
+-- API de présentation (aucune logique de quête ici) :
+--   MenuController.SetAttention(id, on)   -- variante « ! » de l'icône (ex. quelque chose de nouveau)
+--   MenuController.SetHighlighted(id, on) -- halo doré qui respire (ex. étape du tutoriel)
+--   MenuController.GetButton(id) -> GuiObject? -- pour une flèche UI externe (aussi cible « Menu.<Id> »)
+-- Le tutoriel s'y branche sans y mettre sa logique : badges de TutorialController.Badge (drapeaux non
+-- vus) et halo sur le bouton visé par la flèche UI (TutorialController.pointing).
+-- Aperçu Studio (comme UIPreviewController) : attribut Workspace.ApercuMenu, ex. "Bag=attention,Index=halo"
+-- (vide : tout revient à l'état normal). Studio uniquement.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
 
 local HeroConfig = require(ReplicatedStorage.Shared.Config.HeroConfig)
+local MenuIconConfig = require(ReplicatedStorage.Shared.Config.MenuIconConfig)
 local TutorialConfig = require(ReplicatedStorage.Shared.Config.TutorialConfig)
+local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local ArenaStore = require(script.Parent.Parent.Arena.ArenaStore)
+local GuideTargets = require(script.Parent.Parent.UI.GuideTargets)
 local Icons = require(script.Parent.Parent.UI.Icons)
 local ScreenState = require(script.Parent.Parent.UI.ScreenState)
 local CollectionView = require(script.Parent.Parent.UI.Views.CollectionView)
@@ -26,20 +41,57 @@ local TutorialController = require(script.Parent.TutorialController)
 local MenuController = {}
 
 local SCREEN = "Menu"
+local LAYOUT_EVERY = 0.5 -- s entre deux recalculs de la place libre (chat, quête terminée, écran redimensionné)
+local DEFAULT_TOP = 150 -- px : haut du menu sans suivi de quête (sous la place de la quête)
+local TOUCH_LIMIT = 0.62 -- écran tactile : le menu reste au-dessus de 62 % de la hauteur (joystick dessous)
 
 local entries: { [string]: TutorialConfig.Entry } = {}
 local openId: string? = nil -- entrée dont la fenêtre modale est ouverte
 local statsRemote: RemoteFunction? = nil
+-- Demandes externes (API) et du tutoriel, gardées séparément : l'une n'efface jamais l'autre.
+local attention: { [string]: boolean } = {}
+local highlighted: { [string]: boolean } = {}
+local tutorialPointed: string? = nil
+
+------------------------------------------------------------------ états visuels
 
 local function refreshSelected()
 	MenuView.SetSelected(openId or (if HeroBarController.IsBagOpen() then "Bag" else nil))
 end
 
-local function refreshBadges()
+local function refreshAttention()
 	for id, entry in entries do
-		MenuView.SetBadge(id, TutorialController.Badge(entry))
+		MenuView.SetAttention(id, attention[id] == true or TutorialController.Badge(entry))
 	end
 end
+
+local function refreshHighlight()
+	for id in entries do
+		MenuView.SetHighlighted(id, highlighted[id] == true or tutorialPointed == `Menu.{id}`)
+	end
+end
+
+function MenuController.SetAttention(id: string, on: boolean)
+	if entries[id] == nil and MenuIconConfig[id] == nil then
+		return
+	end
+	attention[id] = if on then true else nil
+	refreshAttention()
+end
+
+function MenuController.SetHighlighted(id: string, on: boolean)
+	if entries[id] == nil then
+		return
+	end
+	highlighted[id] = if on then true else nil
+	refreshHighlight()
+end
+
+function MenuController.GetButton(id: string): GuiObject?
+	return GuideTargets.get(`Menu.{id}`)
+end
+
+------------------------------------------------------------------ fenêtres
 
 local function closed()
 	openId = nil
@@ -56,6 +108,11 @@ local function claim(id: string): boolean
 	openId = id
 	refreshSelected()
 	return true
+end
+
+local function imageOf(id: string): string
+	local config = MenuIconConfig[id]
+	return if config then config.Icon else ""
 end
 
 local function showIndex(entry: TutorialConfig.Entry)
@@ -116,7 +173,7 @@ local function showStats(entry: TutorialConfig.Entry)
 	end
 	InfoView.Show({
 		Title = "Statistiques",
-		Icon = entry.Icon,
+		Image = imageOf(entry.Id),
 		Rows = {
 			{ Label = "Héros possédés", Value = tostring(stats.Heroes) },
 			{ Label = "Héros différents", Value = tostring(stats.UniqueHeroes) },
@@ -133,7 +190,7 @@ local function showSoon(entry: TutorialConfig.Entry)
 	if not claim(entry.Id) then
 		return
 	end
-	InfoView.Show({ Title = entry.Label, Icon = entry.Icon, Message = entry.Soon }, { OnClose = closed })
+	InfoView.Show({ Title = entry.Label, Image = imageOf(entry.Id), Message = entry.Soon }, { OnClose = closed })
 end
 
 local function select(id: string)
@@ -154,16 +211,78 @@ local function select(id: string)
 	end
 end
 
+------------------------------------------------------------------ placement et visibilité
+
+-- Bande libre (px, sous la barre de Roblox) : sous le suivi de quête, au-dessus de la hotbar ; sur écran
+-- tactile, au-dessus de la zone du joystick.
+local function layout()
+	local camera = Workspace.CurrentCamera
+	local height = if camera then camera.ViewportSize.Y else 1080
+	local s = math.clamp(height / 1080, 0.7, 1.25)
+	local gap = UITheme.Spacing.M * s
+	local quest = GuideTargets.get("Quest.Panel")
+	local top = if quest then quest.AbsolutePosition.Y + quest.AbsoluteSize.Y + gap else DEFAULT_TOP * s
+	local bar = GuideTargets.get("Hotbar.Bar")
+	local bottom = if bar then bar.AbsolutePosition.Y - gap else height - gap
+	if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+		bottom = math.min(bottom, height * TOUCH_LIMIT)
+	end
+	MenuView.Fit(top, bottom)
+end
+
+local function refreshVisible()
+	local current = ScreenState.current()
+	-- caché pendant les autres écrans modaux ; visible (sous le voile) pendant ses propres fenêtres
+	MenuView.SetVisible(current == nil or current == SCREEN)
+end
+
+-- Aperçu Studio : l'attribut remplace les demandes externes (attention / halo) par celles qu'il liste.
+local PREVIEW = "ApercuMenu"
+local function preview()
+	local value = Workspace:GetAttribute(PREVIEW)
+	table.clear(attention)
+	table.clear(highlighted)
+	if typeof(value) == "string" then
+		for id, state in value:gmatch("(%a+)=(%a+)") do
+			if state == "attention" then
+				attention[id] = true
+			elseif state == "halo" then
+				highlighted[id] = true
+			end
+		end
+	end
+	refreshAttention()
+	refreshHighlight()
+end
+
 function MenuController:Start()
 	local list: { MenuView.Entry } = {}
 	for _, entry in TutorialConfig.Menu.Entries do
 		entries[entry.Id] = entry
-		table.insert(list, { Id = entry.Id, Label = entry.Label, Icon = entry.Icon })
+		table.insert(list, { Id = entry.Id, Label = entry.Label })
 	end
 	MenuView.Build(list, select)
 	HeroBarController.bagChanged.Event:Connect(refreshSelected)
-	TutorialController.changed.Event:Connect(refreshBadges)
-	refreshBadges()
+	TutorialController.changed.Event:Connect(refreshAttention)
+	TutorialController.pointing.Event:Connect(function(target: string?)
+		tutorialPointed = target
+		refreshHighlight()
+	end)
+	ScreenState.changed.Event:Connect(refreshVisible)
+	if RunService:IsStudio() then
+		Workspace:GetAttributeChangedSignal(PREVIEW):Connect(preview)
+	end
+	refreshAttention()
+	refreshVisible()
+	layout()
+	local elapsed = 0
+	RunService.Heartbeat:Connect(function(dt: number)
+		elapsed += dt
+		if elapsed >= LAYOUT_EVERY then
+			elapsed = 0
+			layout()
+		end
+	end)
 	local remotes = ReplicatedStorage:WaitForChild("Remotes")
 	local stats = remotes:WaitForChild("GetPlayerStats", 30)
 	if stats and stats:IsA("RemoteFunction") then

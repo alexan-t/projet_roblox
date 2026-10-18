@@ -7,6 +7,8 @@
 --   • une légende très courte, facultative, dans une pastille bois.
 -- Elle suit la cible à chaque image (fenêtre qui s'ouvre, liste qui défile) et se cache tant que la cible
 -- n'est pas affichée. Elle ne capte aucun clic : le joueur clique la cible elle-même.
+-- Une cible avec l'attribut GuideGlow = false a sa propre mise en avant (ex. le halo rond du menu) : la
+-- flèche ne dessine alors pas son cadre de lueur.
 -- API :
 --   GuidePointer.show(target, { Text: string?, OnActivated: (() -> ())? }) -- remplace la flèche actuelle
 --   GuidePointer.hide()
@@ -18,6 +20,7 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
+local GuideTargets = require(script.Parent.GuideTargets)
 local Icons = require(script.Parent.Icons)
 local UIKit = require(script.Parent.UIKit)
 
@@ -116,7 +119,9 @@ local function build()
 end
 
 local function setVisible(on: boolean)
-	if glow then glow.Visible = on end
+	local current = state
+	local ownGlow = current ~= nil and current.target:GetAttribute("GuideGlow") == false
+	if glow then glow.Visible = on and not ownGlow end
 	if arrow then arrow.Visible = on end
 	if caption then caption.Visible = on and captionText ~= nil and captionText.Text ~= "" end
 end
@@ -159,12 +164,17 @@ local function step()
 	g.BackgroundTransparency = 0.92 - 0.2 * wave
 	stroke.Transparency = 0.45 * (1 - wave)
 
-	-- côté de la flèche : à droite pour le menu de gauche (au-dessus, elle cacherait le bouton voisin),
-	-- sinon au-dessus, sinon en dessous
+	-- côté de la flèche : menu principal en grille → à droite (au-dessus, elle cacherait le bouton voisin) ;
+	-- menu sur une ligne (petit écran) → en dessous ; ailleurs au-dessus, sinon en dessous
 	local arrowSize = ARROW * s
 	local bob = (0.5 + 0.5 * math.sin(now * BOB_SPEED)) * BOB * s
 	local direction: Vector2, angle: number
-	if center.X < UITheme.Spacing.MenuColumn * s then
+	local menu = GuideTargets.get("Menu.Area")
+	local inMenu = menu ~= nil and center.X >= menu.AbsolutePosition.X and center.X <= menu.AbsolutePosition.X + menu.AbsoluteSize.X
+		and center.Y >= menu.AbsolutePosition.Y and center.Y <= menu.AbsolutePosition.Y + menu.AbsoluteSize.Y
+	if inMenu and menu and menu.AbsoluteSize.X > menu.AbsoluteSize.Y * 1.5 then
+		direction, angle = Vector2.new(0, -1), 180 -- menu sur une ligne : flèche dessous, pointe vers le haut
+	elseif inMenu then
 		direction, angle = Vector2.new(-1, 0), 90 -- pointe vers la gauche
 	elseif position.Y - arrowSize - GAP * s > 0 then
 		direction, angle = Vector2.new(0, 1), 0 -- pointe vers le bas
