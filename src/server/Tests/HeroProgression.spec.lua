@@ -129,6 +129,19 @@ return function(modules: any)
 		for _, hero in view.Heroes do byId[hero.Id] = hero end
 		assert(byId.A.Level == 3 and byId.A.XP == 40 and byId.A.XPToNext == 150 and byId.A.MaxLevel == 20)
 		assert(byId.B.Level == 20 and byId.B.XP == 0 and byId.B.XPToNext == 0, "duplicates keep their own level")
+		assert(byId.A.MaxHealth == nil, "no combat profiles given: no stats")
+	end)
+
+	test("hero view (Sacoche): MaxHealth / AttackDamage = combatStats of the instance at its level", function()
+		local data = { Heroes = { A = { HeroId = "ecuyer_du_rempart", Level = 1, XP = 0 }, B = { HeroId = "ecuyer_du_rempart", Level = 3, XP = 0 }, C = { HeroId = "inconnu", Level = 1 } }, Hotbar = {} }
+		local view = HeroRules.view(data, { rules = Rules, config = Config, heroes = modules.HeroConfig.Heroes, combat = CombatConfig.Heroes })
+		local byId = {}
+		for _, hero in view.Heroes do byId[hero.Id] = hero end
+		local base = CombatConfig.Heroes.Epeiste
+		assert(byId.A.MaxHealth == base.MaxHealth and byId.A.AttackDamage == base.AttackDamage, "Lv1 = base stats")
+		local lv3 = Rules.combatStats(base, 3, Config)
+		assert(byId.B.MaxHealth == lv3.MaxHealth and byId.B.AttackDamage == lv3.AttackDamage, "same as combat")
+		assert(byId.C.MaxHealth == nil and byId.C.AttackDamage == nil, "unknown hero: no invented stats")
 	end)
 
 	print(`HeroProgression: {passed} passed, {failed} failed`)
