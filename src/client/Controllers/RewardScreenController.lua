@@ -6,7 +6,8 @@
 --   1. voile Ink à Overlay (jamais d'écran noir) ;
 --   2. « Victoire ! » (Hero, Gold, contour 4) en pop, rayons dorés lents derrière, étincelles ;
 --   3. badge « Première victoire » si FirstClear ;
---   4. cartes de récompense en cascade (pop décalé de 0,05 s), objet 3D tournant dans la carte,
+--   4. cartes de récompense en cascade (pop décalé de 0,05 s), monnaie 3D du pack qui tourne dans la carte
+--      (CurrencyFx.Preview, modèles ReplicatedStorage.Assets.Currencies ; nom : CurrencyVisualConfig),
 --      quantité qui défile (Count) puis pop de l'icône ; badge « Nouveau » sur une récompense nouvelle ;
 --   5. section « Héros » (#68) : chaque héros engagé (portrait, nom, Nv., « +25 XP », barre qui se
 --      remplit) ; montée de niveau : « NIVEAU SUPÉRIEUR ! », « Nv.1 → Nv.2 », pop et lueur dorée.
@@ -27,8 +28,10 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
+local CurrencyVisualConfig = require(ReplicatedStorage.Shared.Config.CurrencyVisualConfig)
 local HeroConfig = require(ReplicatedStorage.Shared.Config.HeroConfig)
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
+local CurrencyFx = require(script.Parent.Parent.UI.CurrencyFx)
 local Icons = require(script.Parent.Parent.UI.Icons)
 local UIKit = require(script.Parent.Parent.UI.UIKit)
 local AudioController = require(script.Parent.AudioController)
@@ -52,12 +55,6 @@ export type ScreenData = { Result: string, FirstClear: boolean?, Rewards: { Rewa
 
 local HERO_CHIP = Vector2.new(300, 120)
 local HEROES_HEIGHT = 30 + HERO_CHIP.Y -- titre « Héros » + une ligne de héros
-
-local KINDS = {
-	Gold = { Label = "Or", Color = Colors.CurrencyGold },
-	Gems = { Label = "Gemmes", Color = Colors.CurrencyGems },
-	SummonTicket = { Label = "Ticket", Color = Colors.CurrencyTickets },
-}
 
 local RewardScreenController = {}
 
@@ -117,69 +114,6 @@ local function popIn(object: GuiObject, delay: number, peak: number?)
 	end)
 end
 
--- Icône = petit objet du monde (design system § 7), en 3D dans un ViewportFrame, éclairé d'en haut à
--- gauche. La silhouette Ink est une copie sombre légèrement plus grande, placée derrière.
-local function iconModel(kind: string): Model
-	local model = Instance.new("Model")
-	local function part(props: { [string]: any }): Part
-		local p = Instance.new("Part")
-		p.Anchored = true
-		p.Material = Enum.Material.SmoothPlastic
-		for k, v in props do
-			(p :: any)[k] = v
-		end
-		p.Parent = model
-		return p
-	end
-	if kind == "Gold" then
-		-- pièce : disque doré, liseré foncé, centre clair
-		local face = CFrame.Angles(0, math.rad(90), 0)
-		part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.35, 2.2, 2.2), Color = Colors.GoldDeep, CFrame = face })
-		part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.42, 1.8, 1.8), Color = Colors.Gold, CFrame = face })
-		part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.46, 1.1, 1.1), Color = Colors.GoldLight, CFrame = face })
-	elseif kind == "Gems" then
-		-- gemme : cube posé sur la pointe, facette haute plus claire
-		local tilt = CFrame.Angles(math.rad(45), 0, math.rad(45))
-		part({ Size = Vector3.new(1.5, 1.5, 1.5), Color = Colors.CurrencyGems, CFrame = tilt })
-		part({ Size = Vector3.new(0.8, 0.8, 0.8), Color = Colors.Foam, CFrame = CFrame.new(-0.25, 0.35, -0.3) * tilt, Transparency = 0.35 })
-	else
-		-- ticket d'invocation : toile rouge sur cadre doré, sceau crème
-		part({ Size = Vector3.new(2.6, 1.6, 0.2), Color = Colors.Gold })
-		part({ Size = Vector3.new(2.3, 1.3, 0.26), Color = Colors.RoyalRed })
-		part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.3, 0.7, 0.7), Color = Colors.Cream, CFrame = CFrame.Angles(0, math.rad(90), 0) })
-	end
-	-- silhouette Ink derrière (contour « cuit » de l'icône)
-	for _, p in model:GetChildren() do
-		if p:IsA("BasePart") then
-			local back = p:Clone()
-			back.Color = UITheme.Stroke.Color
-			back.Transparency = 0
-			back.Size = p.Size * 1.12
-			back.CFrame = p.CFrame + Vector3.new(0, 0, 0.25)
-			back.Parent = model
-		end
-	end
-	return model
-end
-
-local function icon(parent: Instance, kind: string): (ViewportFrame, Model)
-	local viewport = Instance.new("ViewportFrame")
-	viewport.BackgroundTransparency = 1
-	viewport.Size = UDim2.fromScale(1, 1)
-	viewport.Ambient = Colors.Cream
-	viewport.LightColor = Color3.new(1, 1, 1)
-	viewport.LightDirection = Vector3.new(1, -1, 1) -- lumière chaude d'en haut à gauche
-	viewport.Parent = parent
-	local model = iconModel(kind)
-	model.Parent = viewport
-	local camera = Instance.new("Camera")
-	camera.FieldOfView = 30
-	camera.CFrame = CFrame.lookAt(Vector3.new(0, 0.4, -7), Vector3.zero)
-	camera.Parent = viewport
-	viewport.CurrentCamera = camera
-	return viewport, model
-end
-
 local function badge(parent: GuiObject, text: string, color: Color3): Frame
 	local b = Instance.new("Frame")
 	b.Name = "Badge"
@@ -196,8 +130,8 @@ local function badge(parent: GuiObject, text: string, color: Color3): Frame
 	return b
 end
 
-local function card(parent: Instance, reward: Reward, index: number, start: number, spins: { Model })
-	local info = KINDS[reward.Kind] or KINDS.Gold
+local function card(parent: Instance, reward: Reward, index: number, start: number)
+	local visual = CurrencyVisualConfig.visual(reward.Kind)
 	local frame = Instance.new("Frame")
 	frame.Name = "Carte_" .. reward.Kind
 	frame.Size = UDim2.fromOffset(CARD_SIZE.X, CARD_SIZE.Y)
@@ -220,10 +154,9 @@ local function card(parent: Instance, reward: Reward, index: number, start: numb
 	art.BackgroundTransparency = UITheme.Transparency.PanelStrong
 	art.Parent = frame
 	corner(art, UITheme.Radius.Small)
-	local viewport, model = icon(art, reward.Kind)
-	table.insert(spins, model)
+	local viewport = CurrencyFx.Preview(reward.Kind, art)
 
-	local name = label(frame, info.Label, Typography.Size.Label, Colors.InkSoft)
+	local name = label(frame, if visual then visual.Label else reward.Kind, Typography.Size.Label, Colors.InkSoft)
 	name.Position = UDim2.new(0, Spacing.S, 0.62, Spacing.S + 6)
 	name.Size = UDim2.new(1, -2 * Spacing.S, 0, 22)
 	name.TextXAlignment = Enum.TextXAlignment.Left
@@ -542,7 +475,6 @@ function RewardScreenController.Show(data: ScreenData, onContinue: (() -> ())?)
 
 	-- titre et décor
 	local titleY = 90
-	local spins: { Model } = {}
 	if victory then
 		local r = rays(root)
 		r.Position = UDim2.fromOffset(380, titleY)
@@ -588,20 +520,8 @@ function RewardScreenController.Show(data: ScreenData, onContinue: (() -> ())?)
 	layout.Parent = cards
 	local cardsStart = 0.45
 	for index, reward in rewards do
-		card(cards, reward, index, cardsStart, spins)
+		card(cards, reward, index, cardsStart)
 	end
-
-	-- objets 3D qui tournent doucement dans leurs cartes
-	local spinStart = os.clock()
-	local spinner = RunService.RenderStepped:Connect(function()
-		local angle = (os.clock() - spinStart) * 0.9
-		for i, model in spins do
-			model:PivotTo(CFrame.Angles(0, math.sin(angle + i) * 0.6, 0))
-		end
-	end)
-	gui.Destroying:Connect(function()
-		spinner:Disconnect()
-	end)
 
 	-- héros engagés et leur XP (sous les cartes ; sans carte, juste sous le titre)
 	local heroesY = titleY + 95 + (if #rewards > 0 then CARD_SIZE.Y + 30 else 0)
