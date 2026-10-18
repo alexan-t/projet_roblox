@@ -1,20 +1,21 @@
 --!strict
 -- Guidage du tutoriel (voir docs/QUESTS.md § Guidage), purement visuel, côté client.
 -- La quête active (Remotes.GetActiveQuest / QuestChanged) peut porter GuideTarget (QuestConfig.Guide) :
---   joueur → boules lumineuses dorées (asset Assets.Guide.OrbeGuide) qui flottent un peu au-dessus du sol,
---   régulièrement espacées, avec une vague de lumière qui « avance » vers la cible → la cible elle-même
---   pulse (WorldPulse : voile doré qui respire, lumière, étincelles). Aucune pancarte « OBJECTIF ».
+--   joueur → flèches dorées couchées au sol (GuideArrows, même flèche que la flèche UI), régulièrement
+--   espacées et tournées vers la suite du chemin, avec une vague qui « avance » vers la cible → la cible
+--   elle-même pulse (WorldPulse : voile doré qui respire, lumière, étincelles) et une grosse flèche
+--   rebondit au-dessus d'elle (balise visible de loin). Aucune pancarte « OBJECTIF ».
 -- GuidePlacement (quête DefendDomain) : tant qu'aucun héros n'est posé, une fois arrivé à l'arène, le
 --   guidage apprend la pose : le héros à prendre pulse dans la hotbar (ArenaStore.guide.hotbar) et la dalle
---   ArenaConfig.PlacementSlot pulse ; le joueur pose lui-même (hotbar puis E). Un héros posé : la pancarte
---   pulse de nouveau, la fenêtre Expédition et la pastille « F · Lancer » mettent « Lancer » en avant
---   (ArenaStore.guide.expedition).
+--   ArenaConfig.PlacementSlot pulse, la balise passe au-dessus de la dalle ; le joueur pose lui-même
+--   (hotbar puis E). Un héros posé : la pancarte pulse de nouveau, la fenêtre Expédition et la pastille
+--   « F · Lancer » mettent « Lancer » en avant (ArenaStore.guide.expedition).
 -- La cible est toujours résolue dans le plot du joueur local (PlotView + Shared.Quests.QuestGuide),
 -- jamais Workspace.PlotTravail ni le plot d'un autre joueur.
 -- Masqué pendant le combat, l'outro, les écrans (récompenses, invocation, stages), quête terminée ; près
 -- de la cible le chemin s'efface (la cible pulse plus fort) et l'interaction normale (E) prend le relais.
 -- Chemin : PathfindingService (client), recalculé seulement si la cible change, si le joueur s'est assez
--- déplacé, ou si le chemin a échoué ; rayon vers le sol pour chaque boule. 10 boules au plus.
+-- déplacé, ou si le chemin a échoué ; rayon vers le sol pour chaque flèche. 10 flèches au plus.
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -25,20 +26,20 @@ local Workspace = game:GetService("Workspace")
 
 local ArenaConfig = require(ReplicatedStorage.Shared.Config.ArenaConfig)
 local QuestGuide = require(ReplicatedStorage.Shared.Quests.QuestGuide)
-local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local ArenaStore = require(script.Parent.Parent.Arena.ArenaStore)
 local PlotView = require(script.Parent.Parent.Arena.PlotView)
 local ScreenState = require(script.Parent.Parent.UI.ScreenState)
+local GuideArrows = require(script.Parent.Parent.UI.GuideArrows)
 local WorldPulse = require(script.Parent.Parent.UI.WorldPulse)
 
 local QuestGuideController = {}
 
 local REFRESH = 0.2 -- s entre deux décisions (mode, cible)
-local MARKS = 10 -- boules visibles au plus, devant le joueur
-local SPACING = 4.5 -- studs entre deux boules
-local SKIP = 3.5 -- studs devant le joueur avant la première boule
-local HOVER = 1.6 -- hauteur des boules au-dessus du sol (studs)
-local BOB = 0.25 -- amplitude du flottement (studs)
+local MARKS = 10 -- flèches visibles au plus, devant le joueur
+local SPACING = 4.5 -- studs entre deux flèches
+local SKIP = 3.5 -- studs devant le joueur avant la première flèche
+local HOVER = 0.3 -- hauteur des flèches au-dessus du sol (studs) : posées, sans z-fighting
+local LIFT = 0.25 -- petit soulèvement de la flèche au passage de la vague (studs)
 local REPATH_DISTANCE = 6 -- studs parcourus avant de recalculer le chemin
 local REPATH_RETRY = 3 -- s avant de réessayer un chemin qui a échoué
 local GOAL_OFFSET = 3.5 -- studs devant la cible (côté joueur) : point d'arrivée accessible
@@ -51,6 +52,8 @@ local marks: { Model } = {}
 -- Cibles qui pulsent : la cible de la quête (portail, pancarte) et la dalle du tutoriel.
 local targetPulse: { instance: Instance, pulse: WorldPulse.Pulse }? = nil
 local slabPulse: { instance: Instance, pulse: WorldPulse.Pulse }? = nil
+-- Grosse flèche au-dessus de la cible active (portail, pancarte ou dalle) : une seule.
+local beacon: { instance: Instance, beacon: GuideArrows.Beacon }? = nil
 local path: { Vector3 } = {}
 local pathOrigin: Vector3? = nil
 local pathTarget: Instance? = nil
@@ -72,38 +75,18 @@ local function guideFolder(): Folder
 	return created
 end
 
--- Boule lumineuse : asset Studio Assets.Guide.OrbeGuide (cœur doré, halo, reflet, lumière douce) ;
--- à défaut, une boule dorée simple (le guidage ne doit jamais disparaître faute d'asset).
-local function orb(): Model
-	local assets = ReplicatedStorage:FindFirstChild("Assets")
-	local guide = assets and assets:FindFirstChild("Guide")
-	local template = guide and guide:FindFirstChild("OrbeGuide")
-	local model: Model
-	if template and template:IsA("Model") then
-		model = template:Clone()
-	else
-		model = Instance.new("Model")
-		local core = Instance.new("Part")
-		core.Name = "Coeur"
-		core.Shape = Enum.PartType.Ball
-		core.Size = Vector3.one * 1.1
-		core.Color = UITheme.Colors.GoldLight
-		core.Material = Enum.Material.Neon
-		core.Parent = model
-		model.PrimaryPart = core
-	end
-	model.Name = "Orbe"
-	for _, part in model:GetDescendants() do
-		if part:IsA("BasePart") then
-			part.Anchored = true
-			part.CanCollide, part.CanTouch, part.CanQuery = false, false, false
-			part.CastShadow = false
-		end
-	end
-	return model
-end
+local bases: { [Model]: CFrame } = {}
 
-local bases: { [Model]: Vector3 } = {}
+local function setBeacon(instance: Instance?)
+	local current = beacon
+	if current and current.instance == instance and instance and instance.Parent then
+		return
+	end
+	if current then
+		current.beacon.stop()
+	end
+	beacon = if instance then { instance = instance, beacon = GuideArrows.beacon(instance, guideFolder()) } else nil
+end
 
 local function hideMarks()
 	for _, mark in marks do
@@ -291,17 +274,16 @@ local function placeMarks(from: Vector3)
 	for index, sample in samples do
 		local mark = marks[index]
 		if not mark then
-			mark = orb()
+			mark = GuideArrows.ground()
 			marks[index] = mark
 		end
 		local ground = groundAt(sample.position)
 		if ground then
-			local base = ground + Vector3.new(0, HOVER, 0)
-			bases[mark] = base
-			mark:PivotTo(CFrame.new(base))
+			GuideArrows.place(mark, ground + Vector3.new(0, HOVER, 0), sample.direction)
+			bases[mark] = mark:GetPivot()
 			mark.Parent = parent
 		else
-			mark.Parent = nil -- pas de sol sous ce point : pas de boule perdue dans le vide
+			mark.Parent = nil -- pas de sol sous ce point : pas de flèche perdue dans le vide
 		end
 	end
 	for index = #samples + 1, #marks do
@@ -309,21 +291,15 @@ local function placeMarks(from: Vector3)
 	end
 end
 
--- Les boules flottent doucement ; une vague de lumière avance vers la cible (boules plus loin = plus tard).
+-- Une vague avance vers la cible (flèches plus loin = plus tard) : la flèche au passage de la vague est
+-- pleine et se soulève un peu, les autres s'estompent légèrement. Le sens du chemin se lit d'un coup d'œil.
 local function pulse(now: number)
 	for index, mark in marks do
 		local base = bases[mark]
 		if mark.Parent and base then
-			local wave = 0.5 + 0.5 * math.sin(now * 4 - index * 0.7)
-			mark:PivotTo(CFrame.new(base + Vector3.new(0, BOB * math.sin(now * 2.5 + index * 0.6), 0)))
-			local halo = mark:FindFirstChild("Halo")
-			if halo and halo:IsA("BasePart") then
-				halo.Transparency = 0.75 - 0.3 * wave
-			end
-			local light = mark:FindFirstChildWhichIsA("PointLight", true)
-			if light then
-				light.Brightness = 0.6 + 1.0 * wave
-			end
+			local wave = 0.5 + 0.5 * math.sin(now * 5 - index * 0.8)
+			mark:PivotTo(base + Vector3.new(0, LIFT * wave, 0))
+			GuideArrows.setFade(mark, 0.6 * (1 - wave))
 		end
 	end
 end
@@ -365,6 +341,7 @@ local function update()
 		hideMarks()
 		showTarget(nil, nil, false)
 		showSlab(nil, nil, false)
+		setBeacon(nil)
 		if not targetName or (view and view.Completed) then
 			clearMarks() -- quête terminée ou sans guidage : plus aucun objet
 			path, pathTarget = {}, nil
@@ -376,12 +353,14 @@ local function update()
 		hideMarks()
 		showTarget(nil, nil, false)
 		showSlab(slab, pose, held)
+		setBeacon(pose or slab)
 		return
 	end
 	showSlab(nil, nil, false)
 	-- un héros posé, déjà à l'arène : la pancarte pulse, pas de chemin dans l'arène (F lance aussi)
 	local inArena = teaching and root ~= nil and arenaDistance(root) <= ARENA_NEAR
 	showTarget(target, focus, mode == "Near" or inArena)
+	setBeacon(focus or target)
 	if mode == "Near" or inArena then
 		hideMarks() -- arrivé : le chemin s'efface, l'interaction normale (E) prend le relais
 		return

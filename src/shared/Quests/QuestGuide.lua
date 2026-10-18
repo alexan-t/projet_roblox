@@ -16,8 +16,11 @@ local QuestGuide = {}
 QuestGuide.Targets = table.freeze({
 	-- Pancarte du stage, à l'entrée de l'arène (E : choisir un stage, lancer).
 	StageSign = table.freeze({ Path = table.freeze({ "Arene", "PanneauStage" }), Focus = "Banniere", Arrive = 10 }),
-	-- Portail d'invocation du plot.
-	SummonPortal = table.freeze({ Path = table.freeze({ "PortailInvocation" }), Arrive = 12 }),
+	-- Portail d'invocation du plot. Focus : sa structure (les effets du portail, ex. EffetJackpot, montent
+	-- très haut et fausseraient la balise et la lueur).
+	SummonPortal = table.freeze({ Path = table.freeze({ "PortailInvocation" }), Focus = "Structure", Arrive = 12 }),
+	-- Arène du plot (ses dalles) : « va à l'arène ».
+	Arena = table.freeze({ Path = table.freeze({ "Arene" }), Focus = "Emplacements", Arrive = 25 }),
 	-- Royaume du plot.
 	Kingdom = table.freeze({ Path = table.freeze({ "Royaume" }), Arrive = 14 }),
 	-- Dalles de placement des héros de l'arène.

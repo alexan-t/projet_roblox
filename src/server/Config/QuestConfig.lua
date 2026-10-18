@@ -6,7 +6,7 @@
 --   NextQuestId      : quête activée après la réclamation de celle-ci (nil = fin de la chaîne).
 --   Guide            : optionnel, guidage visuel du client jusqu'à l'objectif (chemin lumineux au sol,
 --                      cible qui pulse).
---     Guide.Target   : cible connue de Shared.Quests.QuestGuide (StageSign, SummonPortal, Kingdom,
+--     Guide.Target   : cible connue de Shared.Quests.QuestGuide (StageSign, SummonPortal, Arena, Kingdom,
 --                      HeroPlacement), toujours résolue dans le plot du joueur.
 --     Guide.Placement : optionnel (true) : tant qu'aucun héros n'est posé, le guidage apprend à poser un
 --                      héros (héros de la hotbar et première dalle libre qui pulsent) avant la cible.

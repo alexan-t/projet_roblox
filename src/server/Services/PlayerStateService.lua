@@ -6,12 +6,23 @@
 --                                     chargées). Le client relit cet état après chaque événement qui
 --                                     change les monnaies (fin de combat, invocation) ; il ne calcule
 --                                     jamais une valeur lui-même.
+--   GetPlayerStats (RemoteFunction) -> Stats (fenêtre « Stats » du menu), ou nil (données non chargées) :
+--                                     comptes simples relus dans PlayerData, rien n'est calculé côté client.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local DataService = require(script.Parent.DataService)
 
 export type Currencies = { Gold: number, Gems: number, SummonTickets: number }
+export type Stats = {
+	Heroes: number, -- exemplaires possédés
+	UniqueHeroes: number, -- héros différents (HeroId)
+	HighestLevel: number, -- meilleur niveau d'un héros
+	StagesCleared: number, -- stages Normal gagnés au moins une fois (First Clears)
+	EliteCleared: number, -- stages Élite gagnés au moins une fois
+	Summons: number, -- invocations réussies
+	KingdomLevel: number,
+}
 
 local PlayerStateService = {}
 
@@ -29,6 +40,50 @@ function PlayerStateService:GetCurrencies(player: Player): Currencies?
 	}
 end
 
+local function count(map: any): number
+	local n = 0
+	if typeof(map) == "table" then
+		for _, value in map do
+			if value == true then
+				n += 1
+			end
+		end
+	end
+	return n
+end
+
+-- Statistiques du joueur (copies et comptes), ou nil si les données ne sont pas chargées.
+function PlayerStateService:GetStats(player: Player): Stats?
+	local data: any = if player:GetAttribute("DataLoaded") == true then DataService:GetData(player) else nil
+	if not data then
+		return nil
+	end
+	local heroes, unique, highest = 0, {}, 0
+	for _, hero in if typeof(data.Heroes) == "table" then data.Heroes else {} do
+		heroes += 1
+		if typeof(hero.HeroId) == "string" then
+			unique[hero.HeroId] = true
+		end
+		if typeof(hero.Level) == "number" then
+			highest = math.max(highest, hero.Level)
+		end
+	end
+	local uniqueCount = 0
+	for _ in unique do
+		uniqueCount += 1
+	end
+	local progression = data.Progression or {}
+	return {
+		Heroes = heroes,
+		UniqueHeroes = uniqueCount,
+		HighestLevel = highest,
+		StagesCleared = count(progression.FirstClears),
+		EliteCleared = count(progression.EliteFirstClears),
+		Summons = if data.Summons and typeof(data.Summons.Total) == "number" then data.Summons.Total else 0,
+		KingdomLevel = if data.Kingdom and typeof(data.Kingdom.Level) == "number" then data.Kingdom.Level else 1,
+	}
+end
+
 function PlayerStateService:Start()
 	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
 	if not remotes then
@@ -43,6 +98,12 @@ function PlayerStateService:Start()
 		return PlayerStateService:GetCurrencies(player)
 	end
 	get.Parent = remotes
+	local stats = Instance.new("RemoteFunction")
+	stats.Name = "GetPlayerStats"
+	stats.OnServerInvoke = function(player: Player): Stats?
+		return PlayerStateService:GetStats(player)
+	end
+	stats.Parent = remotes
 end
 
 return PlayerStateService

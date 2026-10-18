@@ -1,0 +1,148 @@
+--!strict
+-- Règles du guidage du tutoriel (voir docs/TUTORIAL_GUIDANCE.md). Module pur, partagé, sans Instance :
+--   • le serveur (TutorialService) n'enregistre que des drapeaux connus ;
+--   • le client (TutorialController) décide quelles étapes montrer et quelle flèche l'emporte.
+-- Les données viennent de Shared.Config.TutorialConfig (passée en argument : testable avec une autre config).
+
+local TutorialRules = {}
+
+-- Priorités des sources d'une flèche UI : une seule flèche à la fois (pas de spam visuel).
+--   FirstOpen : découverte d'une interface qui vient de s'ouvrir (le regard du joueur y est déjà) ;
+--   Quest     : étape active de la quête (poser le héros, lancer le combat) ;
+--   Nudge     : rappel « ouvre ce menu ».
+local PRIORITY: { [string]: number } = { FirstOpen = 3, Quest = 2, Nudge = 1 }
+TutorialRules.Priority = table.freeze(PRIORITY)
+
+export type Candidate = { Source: string, Target: string, Text: string? }
+
+local MAX_KEY = 32
+
+function TutorialRules.isFlag(config: any, key: any): boolean
+	if typeof(key) ~= "string" or #key == 0 or #key > MAX_KEY then
+		return false
+	end
+	return table.find(config.Flags, key) ~= nil
+end
+
+-- Marque `key` vu dans `seen` (table Tutorial.Seen) ; true si c'est nouveau, false si refusé ou déjà vu.
+function TutorialRules.mark(config: any, seen: { [string]: boolean }, key: any): boolean
+	if not TutorialRules.isFlag(config, key) or seen[key] == true then
+		return false
+	end
+	seen[key] = true
+	return true
+end
+
+-- Copie des seuls drapeaux connus et vrais (vue envoyée au client, jamais la table sauvegardée).
+function TutorialRules.view(config: any, seen: any): { [string]: boolean }
+	local copy = {}
+	if typeof(seen) == "table" then
+		for _, key in config.Flags do
+			if seen[key] == true then
+				copy[key] = true
+			end
+		end
+	end
+	return copy
+end
+
+-- Étapes de première ouverture à montrer pour `key`, ou nil (déjà vu, inconnu, sans étape).
+function TutorialRules.firstOpen(config: any, seen: { [string]: boolean }, key: string): { any }?
+	if not TutorialRules.isFlag(config, key) or seen[key] == true then
+		return nil
+	end
+	local entry = config.FirstOpen[key]
+	if not entry or #entry.Steps == 0 then
+		return nil
+	end
+	return entry.Steps
+end
+
+-- Rappels actifs : drapeau non vu ET condition vraie (conditions = { [nom]: boolean }).
+function TutorialRules.nudges(config: any, seen: { [string]: boolean }, conditions: { [string]: boolean }): { Candidate }
+	local list: { Candidate } = {}
+	for _, nudge in config.Nudges do
+		if seen[nudge.Flag] ~= true and conditions[nudge.Condition] == true then
+			table.insert(list, { Source = "Nudge", Target = nudge.Target })
+		end
+	end
+	return list
+end
+
+-- Badge « ! » d'une entrée du menu : drapeau non vu et condition (si présente) vraie.
+function TutorialRules.badge(entry: any, seen: { [string]: boolean }, conditions: { [string]: boolean }): boolean
+	if typeof(entry.Flag) ~= "string" or seen[entry.Flag] == true then
+		return false
+	end
+	return entry.Badge == nil or conditions[entry.Badge] == true
+end
+
+-- Candidat de plus haute priorité dont la cible est disponible (available(target) -> boolean), ou nil.
+-- À priorité égale, le premier de la liste l'emporte (ordre stable).
+function TutorialRules.pick(candidates: { Candidate }, available: (string) -> boolean): Candidate?
+	local best: Candidate? = nil
+	local bestRank = -math.huge
+	for _, candidate in candidates do
+		local rank = PRIORITY[candidate.Source] or 0
+		if rank > bestRank and available(candidate.Target) then
+			best, bestRank = candidate, rank
+		end
+	end
+	return best
+end
+
+-- Problèmes de la config (liste vide = valide) : drapeaux uniques, étapes et entrées bien formées.
+function TutorialRules.problems(config: any): { string }
+	local problems: { string } = {}
+	local flags: { [string]: boolean } = {}
+	for _, key in config.Flags do
+		if typeof(key) ~= "string" or #key == 0 or #key > MAX_KEY then
+			table.insert(problems, `drapeau invalide : {tostring(key)}`)
+		elseif flags[key] then
+			table.insert(problems, `drapeau en double : {key}`)
+		end
+		flags[key] = true
+	end
+	local function target(where: string, value: any)
+		if typeof(value) ~= "string" or not string.match(value, "^%a+%.%a+$") then
+			table.insert(problems, `{where} : cible invalide ({tostring(value)}), attendu « Zone.Element »`)
+		end
+	end
+	for key, entry in config.FirstOpen do
+		if not flags[key] then
+			table.insert(problems, `FirstOpen.{key} : drapeau inconnu`)
+		end
+		for index, step in entry.Steps do
+			target(`FirstOpen.{key}[{index}]`, step.Target)
+			if step.Seconds ~= nil and (typeof(step.Seconds) ~= "number" or step.Seconds <= 0) then
+				table.insert(problems, `FirstOpen.{key}[{index}] : Seconds doit être > 0`)
+			end
+		end
+	end
+	for index, nudge in config.Nudges do
+		target(`Nudges[{index}]`, nudge.Target)
+		if not flags[nudge.Flag] then
+			table.insert(problems, `Nudges[{index}] : drapeau inconnu ({tostring(nudge.Flag)})`)
+		end
+	end
+	local views = { Bag = true, Index = true, Stats = true, Soon = true }
+	local ids: { [string]: boolean } = {}
+	for index, entry in config.Menu.Entries do
+		if typeof(entry.Id) ~= "string" or ids[entry.Id] then
+			table.insert(problems, `Menu[{index}] : Id manquant ou en double`)
+		end
+		ids[entry.Id] = true
+		if not views[entry.View] then
+			table.insert(problems, `Menu[{index}] : View inconnue ({tostring(entry.View)})`)
+		end
+		if entry.View == "Soon" and typeof(entry.Soon) ~= "string" then
+			table.insert(problems, `Menu[{index}] : texte Soon manquant`)
+		end
+		if entry.Flag ~= nil and not flags[entry.Flag] then
+			table.insert(problems, `Menu[{index}] : drapeau inconnu ({tostring(entry.Flag)})`)
+		end
+	end
+	return problems
+end
+
+return TutorialRules
