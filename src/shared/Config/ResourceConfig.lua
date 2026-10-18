@@ -106,7 +106,7 @@ resource("resource_045", "Braise Captive", "arcane")
 resource("resource_046", "Rosée de Lune", "arcane")
 resource("resource_047", "Essence Sylvestre", "arcane", "rbxassetid://128441665886090")
 resource("resource_048", "Galet Spirale", "arcane")
-resource("resource_049", "Encre Ancienne", "arcane")
+resource("resource_049", "Encre Ancienne", "arcane", "rbxassetid://107840112040690")
 resource("resource_050", "Orbe de Verre Trouble", "arcane")
 -- Royaume et artisanat
 resource("resource_051", "Pile de Planches", "royaume")
