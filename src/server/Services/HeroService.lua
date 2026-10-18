@@ -79,11 +79,15 @@ local function loaded(player: Player): any
 	return DataService:GetData(player)
 end
 
+-- Après tout changement de collection : vue au client, puis les quêtes « avoir N héros » (QuestService).
 local function push(player: Player)
 	local data = DataService:GetData(player)
 	local event = changedEvent
 	if data and event and player.Parent == Players then
 		event:FireClient(player, HeroRules.view(data, PROGRESSION))
+	end
+	if data then
+		QuestService:SyncState(player)
 	end
 end
 

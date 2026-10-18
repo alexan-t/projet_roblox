@@ -1,20 +1,27 @@
 --!strict
 -- Quêtes du joueur (voir docs/QUESTS.md), pilotées par QuestConfig et sauvegardées dans PlayerData.Quests.
--- La quête active se déduit de la chaîne FirstQuestId -> NextQuestId : c'est la première quête
--- de la chaîne qui n'est pas encore réclamée. Aucun champ supplémentaire n'est sauvegardé.
--- Les autres services signalent le gameplay avec HandleGameplayEvent.
+-- Lignes de quêtes (QuestConfig.Lines) : chaque ligne est une chaîne FirstQuestId -> NextQuestId, avec ses
+-- paliers (ex. Défense : 1-1, 1-2… ; Héros : premier héros, 2, 5, 10…). Sa quête active est la première de
+-- sa chaîne pas encore réclamée ; une ligne avec After ne commence qu'une fois cette quête réclamée. Les
+-- lignes avancent en parallèle ; la quête PRINCIPALE (suivi du HUD, guidage) est la quête active de la
+-- première ligne ouverte, dans l'ordre de QuestConfig.Lines. Sans Lines : une seule ligne (FirstQuestId).
+-- Aucun champ supplémentaire n'est sauvegardé.
+-- Les autres services signalent le gameplay avec HandleGameplayEvent ; les objectifs d'état (HeroesOwned :
+-- nombre de héros DIFFÉRENTS possédés) se relisent dans PlayerData (SyncState, appelé par HeroService).
 -- Remotes (lecture seule pour le client, le serveur décide tout) :
 --   GetActiveQuest (RemoteFunction) -> vue de la quête active ({ Id, Title, Description?, Progress, Target,
 --                                      Completed, GuideTarget?, GuidePlacement, AutoClaim, Onboarding }) ou nil ;
---   GetQuestLog (RemoteFunction)    -> journal pour le panneau Quêtes : { Quests = { entrée } }, les quêtes
---                                      déjà réclamées de la chaîne puis la quête active (jamais les suivantes) ;
---                                      entrée = { Id, Title, Description?, Progress, Target, Completed, Claimed,
---                                      AutoClaim, Rewards }. Copies en lecture seule, jamais PlayerData ;
+--   GetQuestLog (RemoteFunction)    -> journal pour le panneau Quêtes : { Quests = { entrée } }, UNE entrée par
+--                                      ligne ouverte : sa quête active, ou la dernière si la ligne est finie
+--                                      (jamais les suivantes) ; entrée = { Id, Title, Description?, Progress,
+--                                      Target, Completed, Claimed, AutoClaim, Rewards, Line, LineTitle, Tier,
+--                                      Tiers }. Copies en lecture seule, jamais PlayerData ;
 --   ClaimQuest (RemoteFunction)     -> (ok, raison?, récompenses?) : le client n'envoie que l'Id de quête,
 --                                      revérifié ici ; les récompenses de la quête (QuestConfig.Rewards)
 --                                      sont ajoutées UNE fois, sans yield, et renvoyées pour l'affichage ;
---   QuestChanged (RemoteEvent)      -> (vue ou nil, terminée?) à l'activation, à chaque progression et à
---                                      la réclamation. Jamais PlayerData. terminée = { Id, Title, Target, Rewards }
+--   QuestChanged (RemoteEvent)      -> (vue principale ou nil, terminée?) à l'activation, à chaque progression
+--                                      et à la réclamation, quelle que soit la ligne (la vue porte ClaimableCount :
+--                                      quêtes à récupérer, toutes lignes). Jamais PlayerData. terminée = { Id, Title, Target, Rewards }
 --                                      quand une quête AutoClaim vient d'être réclamée par le serveur
 --                                      (le client annonce « Quête terminée ! » puis montre la suivante).
 -- AutoClaim (QuestConfig) : la quête est réclamée dès qu'elle est terminée, dans la même section
@@ -61,7 +68,11 @@ export type ActiveQuest = {
 	Onboarding: boolean,
 	-- Récompenses annoncées (copie) : données à la réclamation.
 	Rewards: { Reward },
+	-- Quêtes terminées en attente de « Récupérer », toutes lignes confondues (notification du bouton Quêtes).
+	ClaimableCount: number,
 }
+
+type Line = { Id: string, Title: string, FirstQuestId: string, After: string? }
 
 -- Récompenses de quête : type -> monnaie de PlayerData.Currencies.
 local REWARD_CURRENCY: { [string]: string } = {
@@ -75,8 +86,19 @@ local SCOPE = "QuestService"
 local QuestService = {}
 
 local quests: { [string]: Quest } = {}
-local firstQuestId: string? = nil
+local lines: { Line } = {}
 local changedEvent: RemoteEvent? = nil
+
+-- Objectifs d'état : la progression se relit dans PlayerData (jamais d'événement compté).
+local STATE_OBJECTIVES = { HeroesOwned = true }
+
+-- Lignes de la config : QuestConfig.Lines, ou une seule ligne depuis FirstQuestId.
+local function linesOf(config: any): { Line }
+	if typeof(config.Lines) == "table" then
+		return config.Lines
+	end
+	return { { Id = "Main", Title = "Quêtes", FirstQuestId = config.FirstQuestId } }
+end
 
 export type Finished = { Id: string, Title: string, Target: number, Rewards: { Reward } }
 
@@ -133,17 +155,49 @@ local function validate(config: any): { string }
 	end
 	if typeof(config.FirstQuestId) ~= "string" or config.Quests[config.FirstQuestId] == nil then
 		table.insert(problems, `FirstQuestId {config.FirstQuestId} inconnu`)
-	elseif #problems == 0 then
-		-- La chaîne doit se terminer : sinon la recherche de la quête active ne finirait pas.
-		local seen: { [string]: boolean } = {}
-		local id: string? = config.FirstQuestId
+	end
+	if config.Lines ~= nil and (typeof(config.Lines) ~= "table" or #config.Lines == 0) then
+		table.insert(problems, "Lines doit être une liste non vide")
+		return problems
+	end
+	if #problems > 0 then
+		return problems
+	end
+	-- Chaque ligne : chaîne finie (sinon la recherche de la quête active ne finirait pas), quêtes à une
+	-- seule ligne, After connu.
+	local owner: { [string]: string } = {}
+	local lineIds: { [string]: boolean } = {}
+	for index, line in linesOf(config) do
+		local name = if typeof(line) == "table" and typeof(line.Id) == "string" then line.Id else `#{index}`
+		if typeof(line) ~= "table" or typeof(line.Id) ~= "string" or lineIds[line.Id] then
+			table.insert(problems, `ligne {name} : Id manquant ou en double`)
+			continue
+		end
+		lineIds[line.Id] = true
+		if typeof(line.Title) ~= "string" then
+			table.insert(problems, `ligne {name} : Title manquant`)
+		end
+		if typeof(line.FirstQuestId) ~= "string" or config.Quests[line.FirstQuestId] == nil then
+			table.insert(problems, `ligne {name} : FirstQuestId {tostring(line.FirstQuestId)} inconnu`)
+			continue
+		end
+		if line.After ~= nil and (typeof(line.After) ~= "string" or config.Quests[line.After] == nil) then
+			table.insert(problems, `ligne {name} : After {tostring(line.After)} inconnu`)
+		end
+		local id: string? = line.FirstQuestId
 		while id do
-			if seen[id] then
-				table.insert(problems, `boucle dans NextQuestId à partir de {id}`)
+			if owner[id] then
+				table.insert(problems, if owner[id] == line.Id then `boucle dans NextQuestId à partir de {id}` else `quête {id} dans deux lignes ({owner[id]}, {line.Id})`)
 				break
 			end
-			seen[id] = true
+			owner[id] = line.Id
 			id = config.Quests[id].NextQuestId
+		end
+	end
+	for id, quest in config.Quests do
+		local objective = quest.Objective
+		if STATE_OBJECTIVES[objective.Event] and (objective.Match ~= nil or quest.AutoClaim) then
+			table.insert(problems, `quête {id} : objectif d'état {objective.Event} sans Match ni AutoClaim`)
 		end
 	end
 	return problems
@@ -165,25 +219,80 @@ local function syncCleared(data: PlayerData, id: string)
 	end
 end
 
--- Quête active de la chaîne, activée à Progress 0 si elle n'a jamais été commencée (ou terminée tout
--- de suite si son stage est déjà gagné, voir syncCleared).
+-- Nombre de héros DIFFÉRENTS possédés (HeroId), comme l'Index.
+local function uniqueHeroes(data: PlayerData): number
+	local seen: { [string]: boolean } = {}
+	local count = 0
+	for _, hero in data.Heroes do
+		if typeof(hero) == "table" and typeof(hero.HeroId) == "string" and not seen[hero.HeroId] then
+			seen[hero.HeroId] = true
+			count += 1
+		end
+	end
+	return count
+end
+
+-- Progression relue dans les données (stage déjà gagné, héros possédés). Ne fait que monter, bornée à la
+-- cible. Renvoie true si elle a changé.
+local function syncState(data: PlayerData, id: string): boolean
+	local objective = quests[id].Objective
+	local state = data.Quests[id]
+	local before = state.Progress
+	syncCleared(data, id)
+	if objective.Event == "HeroesOwned" then
+		state.Progress = math.max(state.Progress, math.min(uniqueHeroes(data), objective.Target))
+	end
+	return state.Progress ~= before
+end
+
+-- Quête active d'une ligne, activée à Progress 0 si elle n'a jamais été commencée (puis synchronisée :
+-- stage déjà gagné, héros déjà possédés). nil : ligne pas encore ouverte (After non réclamée) ou finie.
 -- Idempotent : un état déjà sauvegardé n'est jamais réinitialisé.
-local function activeQuestId(data: PlayerData): string?
-	local id = firstQuestId
+local function lineActive(data: PlayerData, line: Line): string?
+	if line.After then
+		local gate = data.Quests[line.After]
+		if not gate or not gate.Claimed then
+			return nil
+		end
+	end
+	local id: string? = line.FirstQuestId
 	while id do
 		local state = data.Quests[id]
 		if not state then
 			data.Quests[id] = { Progress = 0, Claimed = false }
-			syncCleared(data, id)
+			syncState(data, id)
 			return id
 		end
 		if not state.Claimed then
-			syncCleared(data, id)
+			syncState(data, id)
 			return id
 		end
 		id = quests[id].NextQuestId
 	end
 	return nil
+end
+
+-- Quêtes actives de toutes les lignes ouvertes, dans l'ordre des lignes (les active si besoin).
+local function activeIds(data: PlayerData): { string }
+	local list: { string } = {}
+	for _, line in lines do
+		local id = lineActive(data, line)
+		if id then
+			table.insert(list, id)
+		end
+	end
+	return list
+end
+
+-- Quête principale : la quête active de la première ligne ouverte (suivi du HUD, guidage).
+local function activeQuestId(data: PlayerData): string?
+	return activeIds(data)[1]
+end
+
+local function isClaimable(data: PlayerData, id: string): boolean
+	local quest = quests[id]
+	local state = data.Quests[id]
+	return state ~= nil and not state.Claimed and not quest.AutoClaim and state.Progress >= quest.Objective.Target
 end
 
 local function matches(objective: Objective, eventName: string, payload: any): boolean
@@ -217,9 +326,16 @@ end
 -- quêtes désactivées ou chaîne entièrement réclamée.
 function QuestService:GetActiveQuest(player: Player): ActiveQuest?
 	local data = DataService:GetData(player)
-	local id = if data then activeQuestId(data) else nil
+	local ids = if data then activeIds(data) else {}
+	local id = ids[1]
 	if not data or not id then
 		return nil
+	end
+	local claimable = 0
+	for _, active in ids do
+		if isClaimable(data, active) then
+			claimable += 1
+		end
 	end
 	local quest = quests[id]
 	local state = data.Quests[id]
@@ -236,6 +352,7 @@ function QuestService:GetActiveQuest(player: Player): ActiveQuest?
 		AutoClaim = quest.AutoClaim == true,
 		Onboarding = quest.Onboarding == true,
 		Rewards = rewardsOf(quest),
+		ClaimableCount = claimable,
 	}
 end
 
@@ -249,40 +366,55 @@ export type LogEntry = {
 	Claimed: boolean,
 	AutoClaim: boolean,
 	Rewards: { Reward },
+	-- Ligne de la quête (regroupement du panneau) : Id, titre, palier courant (1..Tiers) et nombre de paliers.
+	Line: string,
+	LineTitle: string,
+	Tier: number,
+	Tiers: number,
 }
 
--- Journal du panneau Quêtes : quêtes réclamées de la chaîne (dans l'ordre), puis la quête active.
--- Les quêtes suivantes ne sont jamais envoyées (pas de spoil). Copies uniquement ; nil sans données.
+-- Journal du panneau Quêtes : UNE entrée par ligne ouverte (ordre de QuestConfig.Lines) : sa quête
+-- active, ou la dernière de la chaîne si la ligne est finie. Les quêtes suivantes ne sont jamais envoyées
+-- (pas de spoil), seulement le nombre de paliers. Copies uniquement ; nil sans données.
 function QuestService:GetQuestLog(player: Player): { Quests: { LogEntry } }?
 	local data = DataService:GetData(player)
 	if not data then
 		return nil
 	end
 	local list: { LogEntry } = {}
-	local activeId = activeQuestId(data)
-	local id = firstQuestId
-	while id do
-		local quest = quests[id]
-		local state = data.Quests[id]
-		if not state then
-			break
+	for _, line in lines do
+		local activeId = lineActive(data, line)
+		local shown: string? = nil
+		local tier, tiers = 0, 0
+		local id: string? = line.FirstQuestId
+		while id do
+			tiers += 1
+			local state = data.Quests[id]
+			if state and (id == activeId or (activeId == nil and state.Claimed)) then
+				shown, tier = id, tiers
+			end
+			id = quests[id].NextQuestId
 		end
-		local target = quest.Objective.Target
-		table.insert(list, {
-			Id = id,
-			Title = quest.Title,
-			Description = quest.Description,
-			Progress = math.min(state.Progress, target),
-			Target = target,
-			Completed = state.Progress >= target,
-			Claimed = state.Claimed,
-			AutoClaim = quest.AutoClaim == true,
-			Rewards = rewardsOf(quest),
-		})
-		if id == activeId then
-			break
+		local state = if shown then data.Quests[shown] else nil
+		if shown and state then
+			local quest = quests[shown]
+			local target = quest.Objective.Target
+			table.insert(list, {
+				Id = shown,
+				Title = quest.Title,
+				Description = quest.Description,
+				Progress = math.min(state.Progress, target),
+				Target = target,
+				Completed = state.Progress >= target,
+				Claimed = state.Claimed,
+				AutoClaim = quest.AutoClaim == true,
+				Rewards = rewardsOf(quest),
+				Line = line.Id,
+				LineTitle = line.Title,
+				Tier = tier,
+				Tiers = tiers,
+			})
 		end
-		id = quest.NextQuestId
 	end
 	return { Quests = list }
 end
@@ -305,15 +437,18 @@ end
 -- réclamées au chargement, à la suite. Renvoie la dernière réclamée.
 local function autoClaimPending(data: PlayerData): Finished?
 	local finished: Finished? = nil
-	local id = activeQuestId(data)
-	while id do
-		local quest = quests[id]
-		local state = data.Quests[id]
-		if not quest.AutoClaim or state.Claimed or state.Progress < quest.Objective.Target then
-			break
+	local settled = true
+	while settled do
+		settled = false
+		for _, id in activeIds(data) do
+			local quest = quests[id]
+			local state = data.Quests[id]
+			if quest.AutoClaim and not state.Claimed and state.Progress >= quest.Objective.Target then
+				finished = { Id = id, Title = quest.Title, Target = quest.Objective.Target, Rewards = settle(data, id) }
+				settled = true -- la ligne avance : on relit les quêtes actives
+				break
+			end
 		end
-		finished = { Id = id, Title = quest.Title, Target = quest.Objective.Target, Rewards = settle(data, id) }
-		id = activeQuestId(data)
 	end
 	return finished
 end
@@ -331,37 +466,74 @@ function QuestService:GetQuestState(player: Player, questId: string): QuestState
 end
 
 -- Point d'entrée des événements gameplay (ex. "StageCompleted", { Zone = 1, Stage = 1 } par ZoneService #7).
--- Fait progresser la quête active si l'événement correspond à son objectif, sans dépasser la cible.
+-- Fait progresser les quêtes actives (toutes lignes) dont l'objectif correspond, sans dépasser la cible.
+-- Les objectifs d'état (HeroesOwned) ne se comptent jamais par événement : voir SyncState.
 -- Renvoie true si une progression a été enregistrée.
 function QuestService:HandleGameplayEvent(player: Player, eventName: string, payload: { [string]: any }?): boolean
 	local data = DataService:GetData(player)
-	local id = if data then activeQuestId(data) else nil
-	if not data or not id then
+	if not data or STATE_OBJECTIVES[eventName] then
 		return false
 	end
-	local objective = quests[id].Objective
-	local state = data.Quests[id]
-	if not matches(objective, eventName, payload) or state.Progress >= objective.Target then
+	local progressed = false
+	local finished: { Finished } = {}
+	for _, id in activeIds(data) do
+		local quest = quests[id]
+		local objective = quest.Objective
+		local state = data.Quests[id]
+		if matches(objective, eventName, payload) and state.Progress < objective.Target then
+			progressed = true
+			state.Progress = math.min(state.Progress + 1, objective.Target)
+			Log.debug(SCOPE, `{id} : {state.Progress}/{objective.Target} pour {player.Name}`)
+			if quest.AutoClaim and state.Progress >= objective.Target then
+				-- Même section synchrone : terminée, réclamée, suivante activée.
+				local granted = settle(data, id)
+				Log.info(SCOPE, `{id} terminée et réclamée automatiquement pour {player.Name}`)
+				table.insert(finished, { Id = id, Title = quest.Title, Target = objective.Target, Rewards = granted })
+			end
+		end
+	end
+	if not progressed then
 		return false
 	end
-	state.Progress = math.min(state.Progress + 1, objective.Target)
-	Log.debug(SCOPE, `{id} : {state.Progress}/{objective.Target} pour {player.Name}`)
-	local quest = quests[id]
-	if quest.AutoClaim and state.Progress >= objective.Target then
-		-- Même section synchrone : terminée, réclamée, suivante activée.
-		local granted = settle(data, id)
-		local nextId = activeQuestId(data)
-		Log.info(SCOPE, `{id} terminée et réclamée automatiquement pour {player.Name}{if nextId then `, quête suivante : {nextId}` else ""}`)
-		push(player, { Id = id, Title = quest.Title, Target = objective.Target, Rewards = granted })
-		return true
+	if #finished == 0 then
+		push(player)
 	end
-	push(player)
+	for _, done in finished do
+		push(player, done)
+	end
 	return true
+end
+
+-- Objectifs d'état (HeroesOwned) : relus dans PlayerData après un changement (HeroService : héros
+-- ajouté, retiré). Pousse la vue si une progression a changé. Renvoie true dans ce cas.
+function QuestService:SyncState(player: Player): boolean
+	local data = DataService:GetData(player)
+	if not data then
+		return false
+	end
+	-- activeIds resynchronise déjà les quêtes actives : on compare avant / après
+	local before: { [string]: number } = {}
+	for id, state in data.Quests do
+		before[id] = state.Progress
+	end
+	local changed = false
+	for _, id in activeIds(data) do
+		if STATE_OBJECTIVES[quests[id].Objective.Event] then
+			syncState(data, id)
+			if data.Quests[id].Progress ~= before[id] then
+				changed = true
+			end
+		end
+	end
+	if changed then
+		push(player)
+	end
+	return changed
 end
 
 -- Marque une quête terminée comme réclamée, une seule fois, ajoute ses récompenses (QuestConfig.Rewards,
 -- définies ici côté serveur, jamais par le client) et active la suivante (NextQuestId), sans yield.
--- Seules la quête ACTIVE et terminée peuvent être réclamées. Renvoie false et la raison en cas de refus.
+-- Seule la quête ACTIVE de sa ligne, terminée, peut être réclamée. Renvoie false et la raison en cas de refus.
 function QuestService:ClaimQuest(player: Player, questId: string): (boolean, string?, { Reward }?)
 	local data = DataService:GetData(player)
 	local quest = quests[questId]
@@ -378,7 +550,7 @@ function QuestService:ClaimQuest(player: Player, questId: string): (boolean, str
 	if state.Claimed then
 		return false, "déjà réclamée", nil
 	end
-	if activeQuestId(data) ~= questId then
+	if not table.find(activeIds(data), questId) then
 		return false, "quête non active", nil
 	end
 	if state.Progress < quest.Objective.Target then
@@ -386,8 +558,7 @@ function QuestService:ClaimQuest(player: Player, questId: string): (boolean, str
 	end
 	-- Section critique, sans yield : réclamée, puis récompenses ajoutées une seule fois.
 	local granted = settle(data, questId)
-	local nextId = activeQuestId(data)
-	Log.info(SCOPE, `{questId} réclamée par {player.Name}{if nextId then `, quête suivante : {nextId}` else ""}`)
+	Log.info(SCOPE, `{questId} réclamée par {player.Name}`)
 	push(player)
 	return true, nil, granted
 end
@@ -402,7 +573,7 @@ function QuestService:Init()
 		return
 	end
 	quests = QuestConfig.Quests :: any
-	firstQuestId = QuestConfig.FirstQuestId
+	lines = linesOf(QuestConfig)
 end
 
 function QuestService:Start()
@@ -441,7 +612,7 @@ function QuestService:Start()
 	claim.Parent = remotes
 
 	DataService:OnPlayerReady(function(player: Player, data: PlayerData)
-		activeQuestId(data)
+		activeIds(data)
 		autoClaimPending(data)
 		push(player)
 	end)

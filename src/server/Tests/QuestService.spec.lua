@@ -138,13 +138,25 @@ return function(createService: any, productionConfig: any, QuestGuide: any, aren
 		return true
 	end
 
-	test("production config: Zone 1 chain SummonStarter -> 1-1 -> 1-2 -> 1-3 -> 1-4 -> Roi Orc, rewards in QuestConfig only", function()
+	test("production config: lines Défense (1-1 -> Roi Orc, after SummonStarter) and Héros (SummonStarter -> 2 -> 5 -> ...)", function()
 		local e = fixture(productionConfig)
 		e.start()
 		assert(#e.warnings == 0, "production config valid")
 		assert(productionConfig.FirstQuestId == "SummonStarter")
 		local first = productionConfig.Quests.SummonStarter
-		assert(first.Title == "Invoque ton premier héros" and first.NextQuestId == "DefendDomain")
+		assert(first.Title == "Invoque ton premier héros" and first.NextQuestId == "OwnHeroes2", "the Heroes line continues")
+		local lines = productionConfig.Lines
+		assert(#lines == 2 and lines[1].Id == "Stages" and lines[1].FirstQuestId == "DefendDomain" and lines[1].After == "SummonStarter")
+		assert(lines[2].Id == "Heroes" and lines[2].FirstQuestId == "SummonStarter" and lines[2].After == nil)
+		local tiers, id = {}, "OwnHeroes2"
+		while id do
+			local quest = productionConfig.Quests[id]
+			assert(quest.Objective.Event == "HeroesOwned" and quest.Objective.Match == nil and quest.AutoClaim == nil, id)
+			assert(quest.Rewards and #quest.Rewards >= 1, id .. " rewards")
+			table.insert(tiers, quest.Objective.Target)
+			id = quest.NextQuestId
+		end
+		assert(table.concat(tiers, ",") == "2,5,10,20,30,45,60", table.concat(tiers, ","))
 		assert(first.Objective.Event == "StarterHeroSummoned" and first.Objective.Target == 1 and first.Objective.Match == nil)
 		assert(first.Guide.Target == "SummonPortal" and first.AutoClaim == true and first.Onboarding == true)
 		assert(first.Rewards == nil, "the Ecuyer and its reveal are the reward")
@@ -192,7 +204,8 @@ return function(createService: any, productionConfig: any, QuestGuide: any, aren
 		local data = e.join(p)
 		assert(s:HandleGameplayEvent(p, "StageCompleted", STAGE_1_1) == false, "DefendDomain not active yet")
 		assert(s:HandleGameplayEvent(p, "StarterHeroSummoned") == true)
-		assert(deepEqual(data.Quests, { SummonStarter = { Progress = 1, Claimed = true }, DefendDomain = { Progress = 0, Claimed = false } }))
+		assert(deepEqual(data.Quests, { SummonStarter = { Progress = 1, Claimed = true }, DefendDomain = { Progress = 0, Claimed = false },
+			OwnHeroes2 = { Progress = 0, Claimed = false } }), "Défense opens, Héros goes on to its next tier")
 		local active = s:GetActiveQuest(p)
 		assert(active and active.Id == "DefendDomain" and active.Title == "Gagne la défense 1-1" and active.Progress == 0)
 		assert(active.GuideTarget == "StageSign" and active.GuidePlacement == true and active.Onboarding == false)
@@ -247,9 +260,10 @@ return function(createService: any, productionConfig: any, QuestGuide: any, aren
 			local c = data.Currencies
 			assert(c.Gold == totals[stage][1] and c.Gems == totals[stage][2] and c.SummonTickets == totals[stage][3], `{id} totals {c.Gold}/{c.Gems}/{c.SummonTickets}`)
 		end
-		assert(s:GetActiveQuest(p) == nil, "Zone 1 chain finished")
+		local after = s:GetActiveQuest(p)
+		assert(after and after.Id == "OwnHeroes2", "Défense finished: the Heroes line becomes the main quest")
 		local sent = e.sent(p)
-		assert(sent[#sent] == false, "nil view sent at the end of the chain")
+		assert(sent[#sent] and sent[#sent].Id == "OwnHeroes2")
 	end)
 
 	test("#12 Zone 1 quest claims: forged / not active / not finished / spam -> refused, rewards only from QuestConfig", function()
@@ -330,8 +344,9 @@ return function(createService: any, productionConfig: any, QuestGuide: any, aren
 		done.Quests = { SummonStarter = { Progress = 1, Claimed = true }, DefendDomain = { Progress = 1, Claimed = true },
 			DefendStage12 = { Progress = 1, Claimed = true }, DefendStage13 = { Progress = 1, Claimed = true },
 			DefendStage14 = { Progress = 1, Claimed = true }, DefeatRoiOrc = { Progress = 1, Claimed = true } }
-		e.join(q, done)
-		assert(s:GetActiveQuest(q) == nil, "Zone 1 already finished: nothing to do, nothing given")
+		local doneData = e.join(q, done)
+		local main = s:GetActiveQuest(q)
+		assert(main and main.Id == "OwnHeroes2" and doneData.Currencies.Gold == 0, "Zone 1 finished: Heroes line next, nothing given")
 	end)
 	test("AutoClaim quest saved completed but unclaimed (older version) is settled at load, once", function()
 		local e = fixture(productionConfig)
@@ -736,20 +751,22 @@ return function(createService: any, productionConfig: any, QuestGuide: any, aren
 		assert(view and view.GuideTarget == nil)
 	end)
 
-	test("quest log: claimed quests then the active one, never the next ones; copies only", function()
+	test("quest log: one entry per open line (current tier), never the next ones; copies only", function()
 		local e = fixture(productionConfig)
 		local s = e.start()
 		local p = e.player("A")
 		local data = e.join(p)
 		local log = e.remote("GetQuestLog").OnServerInvoke(p)
-		assert(log and #log.Quests == 1 and log.Quests[1].Id == "SummonStarter" and log.Quests[1].Claimed == false)
+		assert(log and #log.Quests == 1 and log.Quests[1].Id == "SummonStarter" and log.Quests[1].Claimed == false, "Défense not open yet")
 		assert(log.Quests[1].AutoClaim == true and log.Quests[1].Description ~= nil and log.Quests[1].Completed == false)
+		assert(log.Quests[1].Line == "Heroes" and log.Quests[1].Tier == 1 and log.Quests[1].Tiers == 8)
 		s:HandleGameplayEvent(p, "StarterHeroSummoned")
 		win(s, p, data, 1)
 		log = s:GetQuestLog(p)
-		assert(#log.Quests == 2, "SummonStarter (claimed) + DefendDomain (active), nothing after")
-		local first, active = log.Quests[1], log.Quests[2]
-		assert(first.Id == "SummonStarter" and first.Claimed == true and first.Completed == true)
+		assert(#log.Quests == 2, "two lines: Défense (DefendDomain) and Héros (OwnHeroes2)")
+		local active, heroes = log.Quests[1], log.Quests[2]
+		assert(heroes.Id == "OwnHeroes2" and heroes.Line == "Heroes" and heroes.LineTitle == "Collection de héros" and heroes.Tier == 2)
+		assert(active.Line == "Stages" and active.Tier == 1 and active.Tiers == 5)
 		assert(active.Id == "DefendDomain" and active.Completed == true and active.Claimed == false and active.Progress == 1 and active.Target == 1)
 		assert(active.Rewards[1].Kind == "Gold" and active.Rewards[1].Amount == 50)
 		-- copie : modifier la vue ne touche ni les données ni la config
@@ -762,7 +779,80 @@ return function(createService: any, productionConfig: any, QuestGuide: any, aren
 		local ok = e.remote("ClaimQuest").OnServerInvoke(p, "DefendDomain")
 		assert(ok == true and data.Currencies.Gold == 50, "the claim still uses QuestConfig, never the view")
 		log = s:GetQuestLog(p)
-		assert(#log.Quests == 3 and log.Quests[2].Claimed == true and log.Quests[3].Id == "DefendStage12" and log.Quests[3].Completed == false)
+		assert(#log.Quests == 2 and log.Quests[1].Id == "DefendStage12" and log.Quests[1].Tier == 2 and log.Quests[1].Completed == false,
+			"the Défense card moves to its next tier")
+	end)
+
+	test("lines: a finished line shows its last tier as claimed", function()
+		local e = fixture(productionConfig)
+		local s = e.start()
+		local p = e.player("A")
+		local done = e.freshData()
+		done.Quests = { SummonStarter = { Progress = 1, Claimed = true }, DefendDomain = { Progress = 1, Claimed = true },
+			DefendStage12 = { Progress = 1, Claimed = true }, DefendStage13 = { Progress = 1, Claimed = true },
+			DefendStage14 = { Progress = 1, Claimed = true }, DefeatRoiOrc = { Progress = 1, Claimed = true } }
+		e.join(p, done)
+		local log = s:GetQuestLog(p)
+		assert(log.Quests[1].Id == "DefeatRoiOrc" and log.Quests[1].Claimed == true and log.Quests[1].Tier == 5 and log.Quests[1].Tiers == 5)
+		assert(log.Quests[2].Id == "OwnHeroes2")
+	end)
+
+	test("heroes line: distinct heroes owned, synced from PlayerData (duplicates count once), tier by tier", function()
+		local e = fixture(productionConfig)
+		local s = e.start()
+		local p = e.player("A")
+		local data = e.join(p)
+		s:HandleGameplayEvent(p, "StarterHeroSummoned")
+		data.Heroes = { H1 = { HeroId = "ecuyer_du_rempart", Level = 1, XP = 0 }, H2 = { HeroId = "ecuyer_du_rempart", Level = 1, XP = 0 } }
+		assert(s:SyncState(p) == true and data.Quests.OwnHeroes2.Progress == 1, "a duplicate is not a new hero")
+		assert(s:HandleGameplayEvent(p, "HeroesOwned", { Count = 99 }) == false, "never counted from an event")
+		data.Heroes.H3 = { HeroId = "tireuse_des_faubourgs", Level = 1, XP = 0 }
+		assert(s:SyncState(p) == true and data.Quests.OwnHeroes2.Progress == 2)
+		assert(s:SyncState(p) == false, "nothing new: no push")
+		local view = s:GetActiveQuest(p)
+		assert(view.Id == "DefendDomain" and view.ClaimableCount == 1, "main quest stays Défense; one reward waits in Héros")
+		local ok, _, granted = e.remote("ClaimQuest").OnServerInvoke(p, "OwnHeroes2")
+		assert(ok == true and granted[1].Kind == "Gold" and granted[1].Amount == 100 and data.Currencies.Gold == 100)
+		assert(data.Quests.OwnHeroes5 and data.Quests.OwnHeroes5.Progress == 2, "next tier synced at activation")
+		assert(e.remote("ClaimQuest").OnServerInvoke(p, "OwnHeroes5") == false, "2/5: not finished")
+		assert(e.remote("ClaimQuest").OnServerInvoke(p, "OwnHeroes10") == false, "a later tier is never claimable")
+		data.Heroes = {}
+		s:SyncState(p)
+		assert(data.Quests.OwnHeroes5.Progress == 2, "progress never goes down")
+	end)
+
+	test("lines in parallel: claiming one line never touches the other; ClaimableCount counts every line", function()
+		local e = fixture(productionConfig)
+		local s = e.start()
+		local p = e.player("A")
+		local data = e.join(p)
+		s:HandleGameplayEvent(p, "StarterHeroSummoned")
+		win(s, p, data, 1)
+		data.Heroes = { H1 = { HeroId = "a", Level = 1, XP = 0 }, H2 = { HeroId = "b", Level = 1, XP = 0 } }
+		s:SyncState(p)
+		assert(s:GetActiveQuest(p).ClaimableCount == 2)
+		assert(e.remote("ClaimQuest").OnServerInvoke(p, "OwnHeroes2") == true)
+		assert(data.Quests.DefendDomain.Claimed == false and s:GetActiveQuest(p).Id == "DefendDomain" and s:GetActiveQuest(p).ClaimableCount == 1)
+		assert(e.remote("ClaimQuest").OnServerInvoke(p, "DefendDomain") == true and data.Currencies.Gold == 150)
+	end)
+
+	test("config: line errors (quest in two lines, unknown After, unknown FirstQuestId) disable quests", function()
+		local base = { Title = "Q", Objective = { Event = "E", Target = 1 } }
+		local function cfg(lines: any): any
+			return { FirstQuestId = "A", Lines = lines, Quests = { A = table.clone(base), B = table.clone(base) } }
+		end
+		for _, broken in {
+			cfg({ { Id = "L1", Title = "1", FirstQuestId = "A" }, { Id = "L2", Title = "2", FirstQuestId = "A" } }),
+			cfg({ { Id = "L1", Title = "1", FirstQuestId = "A", After = "Nope" } }),
+			cfg({ { Id = "L1", Title = "1", FirstQuestId = "Nope" } }),
+			cfg({}),
+		} do
+			local e = fixture(broken)
+			e.start()
+			local p = e.player("A")
+			e.join(p)
+			assert(e.service:GetActiveQuest(p) == nil and #e.warnings > 0, "invalid lines")
+		end
 	end)
 
 	test("quest log: no data -> nil; arguments sent by the client are ignored", function()
