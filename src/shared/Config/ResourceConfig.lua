@@ -115,7 +115,7 @@ resource("resource_053", "Lingot d'Or", "royaume", "rbxassetid://120285479420139
 resource("resource_054", "Corde de Chanvre", "royaume")
 resource("resource_055", "Rouleau de Toile", "royaume")
 resource("resource_056", "Clous de Forge", "royaume", "rbxassetid://134105028055466")
-resource("resource_057", "Tuiles d'Argile", "royaume")
+resource("resource_057", "Tuiles d'Argile", "royaume", "rbxassetid://76235642508162")
 resource("resource_058", "Parchemin Vierge", "royaume")
 resource("resource_059", "Bannière Royale Pliée", "royaume")
 resource("resource_060", "Pierre d'Angle du Royaume", "royaume")
