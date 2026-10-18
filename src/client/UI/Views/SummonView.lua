@@ -8,7 +8,7 @@
 --   sans ticket, avec une aide pour en gagner).
 --   Sans bannière (aperçu) : gros ticket 3D, compteur, coût, « Invoquer ».
 --   Reveal : voile, rayons de la couleur de la rareté, la carte du héros se retourne (largeur 0 →
---   pleine), portrait 3D en pied, nom, rareté, badge « Nouveau » (premier exemplaire), « Continuer ».
+--   pleine), portrait 3D en pied, nom, rareté (libellé + repère de forme), badge « Nouveau » (premier exemplaire), « Continuer ».
 -- API : SummonView.Show(data, options) ; SummonView.Reveal(hero, options) ; SummonView.Hide().
 --   Reveal cède la main le temps du retournement (≈ 0,3 s) : l'appeler dans un task.spawn au besoin.
 --   data = { Tickets, Cost?, Banners?: { { Id, Name, Subtitle?, Featured: { { Name, Rarity, Model? } } } },
@@ -128,22 +128,19 @@ local function ratesPanel(parent: Instance, rates: { Rate }): Frame
 		line.Size = UDim2.new(0.5, -2 * Spacing.L, 0, 36)
 		line.ZIndex = 9
 		line.Parent = panel
-		local dot = Instance.new("Frame")
-		dot.AnchorPoint = Vector2.new(0, 0.5)
-		dot.Position = UDim2.fromScale(0, 0.5)
-		dot.Size = UDim2.fromOffset(22, 22)
-		dot.ZIndex = 9
-		dot.Parent = line
-		UIKit.corner(dot, UITheme.Radius.Pill)
-		UIKit.stroke(dot, UITheme.Stroke.Thin)
-		RarityStyle.paint(dot, rate.Id)
+		-- pastille couleur + forme : la rareté se lit aussi sans distinguer les couleurs
+		local chip = RarityStyle.chip(line, rate.Id, Typography.Size.Caption)
+		chip.AnchorPoint = Vector2.new(0, 0.5)
+		chip.Position = UDim2.fromScale(0, 0.5)
+		chip.ZIndex = 9
+		local nameX = chip.Size.X.Offset + Spacing.S
 		local name = UIKit.text(line, rate.Name, Typography.Size.Label, { Align = Enum.TextXAlignment.Left })
-		name.Position = UDim2.fromOffset(34, 0)
-		name.Size = UDim2.new(0.65, -34, 1, 0)
+		name.Position = UDim2.fromOffset(nameX, 0)
+		name.Size = UDim2.new(0.75, -nameX, 1, 0) -- la pastille élargie laisse la place à « Transcendant »
 		name.ZIndex = 9
 		local value = UIKit.text(line, rate.Percent, Typography.Size.Label, { Align = Enum.TextXAlignment.Right })
-		value.Position = UDim2.fromScale(0.65, 0)
-		value.Size = UDim2.fromScale(0.35, 1)
+		value.Position = UDim2.fromScale(0.75, 0)
+		value.Size = UDim2.fromScale(0.25, 1)
 		value.ZIndex = 9
 	end
 	local note = UIKit.text(panel, "Les héros mis en avant sortent une fois sur deux dans leur rareté", Typography.Size.Caption, { Color = Colors.TextMuted })
@@ -470,6 +467,13 @@ function SummonView.Reveal(hero: Hero, options: RevealOptions?)
 		UIKit.corner(chip, UITheme.Radius.Pill)
 		UIKit.stroke(chip, UITheme.Stroke.Thin)
 		Icons.viewport(chip, hero.ClassId)
+	end
+	if hero.Rarity then
+		-- repère de rareté (forme) en face de la classe : le contour coloré ne suffit pas seul
+		local rarityChip = RarityStyle.chip(card, hero.Rarity, Typography.Size.Label)
+		rarityChip.AnchorPoint = Vector2.new(1, 1)
+		rarityChip.Position = UDim2.new(1, -Spacing.S, 0.78, 0)
+		rarityChip.ZIndex = 3
 	end
 	local name = UIKit.text(card, hero.Name, Typography.Size.Heading, { Color = Colors.InkSoft, Stroke = false })
 	name.Position = UDim2.new(0, Spacing.S, 0.78, Spacing.XS)

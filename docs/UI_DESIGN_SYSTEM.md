@@ -72,24 +72,47 @@ Monnaies : `CurrencyGold #E6B23A`, `CurrencyGems #48C8E8`, `CurrencyTickets #B83
 
 **Rareté des héros** (`UITheme.Rarity`, paliers de `RarityConfig`, voir `docs/HEROES.md`) :
 
-| Rareté | Couleur |
-| --- | --- |
-| Commun | `#B9B0A3` (pierre claire) |
-| Peu commun | `#6CC04A` (vert prairie) |
-| Rare | `#46A2EC` (bleu rivière) |
-| Épique | `#A45BE0` (violet) |
-| Légendaire | `#F5C542` (or) |
-| Mythique | `#FF5A8A` (rose rubis) |
-| Maudit | `#7B2FA8` (violet sombre), avec de l'ombre (`Ink`) plutôt que de la lumière |
-| Suprême | `#EAF3FF` (blanc céleste) |
-| Calamité | `#D2321E` (braise rouge) |
-| Transcendant | dégradé `UITheme.RarityPrism` qui tourne (jamais une seule couleur) |
+| Rareté | Couleur | Repère (`UITheme.RarityMark`) |
+| --- | --- | --- |
+| Commun | `#B9B0A3` (pierre claire) | 1 rond |
+| Peu commun | `#6CC04A` (vert prairie) | 2 ronds |
+| Rare | `#46A2EC` (bleu rivière) | 3 ronds |
+| Épique | `#A45BE0` (violet) | 1 losange |
+| Légendaire | `#F5C542` (or) | 2 losanges |
+| Mythique | `#FF5A8A` (rose rubis) | 3 losanges |
+| Maudit | `#7B2FA8` (violet sombre), avec de l'ombre (`Ink`) plutôt que de la lumière | 1 croix (X) |
+| Suprême | `#EAF3FF` (blanc céleste) | 1 anneau |
+| Calamité | `#D2321E` (braise rouge) | 1 éclat (6 branches) |
+| Transcendant | dégradé `UITheme.RarityPrism` qui tourne (jamais une seule couleur) | 1 étoile (8 branches) |
+
+**La couleur n'est jamais le seul repère d'une rareté** (daltonisme : Épique et Maudit sont deux
+violets, Calamité est proche d'`Error`). Chaque rareté a aussi un **repère de forme** :
+
+- une forme claire (`TextLight`) à silhouette `Ink` derrière (même contour « cuit » que les
+  icônes, § 7), répétée 1 à 3 fois ; jamais un emoji ni un caractère de police ;
+- chaque couple (forme, nombre) est unique ; la logique se lit d'un coup d'œil : ronds pour les
+  trois premiers paliers, losanges pour les trois suivants, puis une forme propre à chacun des
+  quatre derniers ;
+- le repère ne dépend pas de la couleur de fond : il reste lisible sur la pastille d'Épique comme
+  sur celle de Suprême (presque blanche) ;
+- `Error` et les autres couleurs sémantiques ne portent **aucun** repère de rareté.
 
 Usage :
 
-- badge de rareté (pastille contourée `Ink`, texte clair) ;
-- contour de carte et rayons du reveal ;
-- lumière de l'effet d'invocation.
+- badge de rareté (pastille contourée `Ink`, **repère puis libellé** clair : `RarityStyle.badge`,
+  `RarityStyle.edgeBadge`) ;
+- pastille sans texte (`RarityStyle.chip`, fond couleur + repère, largeur commune à toutes les
+  raretés) : liste des chances, coin de la carte du reveal en face de l'icône de classe ;
+- contour de carte et rayons du reveal (couleur seule, toujours accompagnés d'un badge, d'une
+  pastille ou du libellé) ;
+- lumière de l'effet d'invocation (le nom de la rareté est annoncé en texte).
+
+Toute nouvelle vue qui affiche une rareté (inventaire, équipement, Bestiaire…) passe par ces
+fonctions : pas de pastille de couleur seule. Test : `./tools/test-ui-theme.ps1 -LuauPath
+<chemin-vers-luau.exe>` (un repère unique par palier de `RarityConfig`, formes dessinées par
+`RarityStyle`, ce tableau aligné sur `UITheme.RarityMark`) ; sans Luau : `node
+tests/rarity-mark.test.mjs` (mêmes règles, plus : aucune vue client n'affiche une rareté par sa
+couleur seule).
 
 Rendu commun : `src/client/UI/RarityStyle.lua`. Hors invocation, le cadre des cartes reste
 neutre (`Ink`). Les **monstres n'ont aucune rareté**.
@@ -295,6 +318,8 @@ UITheme = {
 	Colors = { Ink, InkSoft, TextLight, TextMuted, Cream, Sand, …, Success, Error, Warning,
 		Info, Disabled, Selected, Health, HealthLow, EnemyHealth, Energy, EnergyFull, Progress,
 		BarTrack, CurrencyGold, CurrencyGems, CurrencyTickets },
+	Rarity = { Commun, PeuCommun, …, Transcendant }, RarityPrism = { … },
+	RarityMark = { Commun = { Shape = "Circle", Count = 1 }, …, Transcendant = { Shape = "Star", Count = 1 } },
 	Transparency = { Panel = 0.25, PanelStrong = 0.12, HUD = 0.45, Overlay = 0.5,
 		Tooltip = 0.04, Track = 0.35, Shadow = 0.75, Disabled = 0.45, Hover = 0.08 },
 	Typography = { Display (Fredoka One), Body / BodyBold (Builder Sans), Size = {…},
@@ -357,6 +382,9 @@ Moins de fenêtres, plus d'interaction avec le monde : on **prend** un héros et
 5. Un seul bouton principal visible ; zones tactiles ≥ 44 px.
 6. Aucune valeur de style en dur dans le Controller : tout vient de `UITheme`.
 7. Pas d'emoji ni d'icône générique dans une version livrée.
+8. Aucune information portée par la couleur seule : une rareté a toujours son repère de forme
+   (§ 2) ou son libellé ; contrôle en niveaux de gris (simulateur de daltonisme ou capture
+   désaturée) : Épique / Maudit et Calamité / `Error` restent distincts.
 
 ## 12. Implémentation : UIKit (issue #19)
 
