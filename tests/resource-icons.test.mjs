@@ -113,6 +113,42 @@ test('resource icons: delivered PNGs decode at 512 x 512 with visible content an
 	}
 });
 
+test('resource icons restart: tracked deliveries and blocked resources have consistent reviews and evidence', () => {
+	const states = readdirSync(fileURLToPath(new URL('automation/state/', root)))
+		.filter((file) => /^resource_\d{3}\.json$/.test(file))
+		.map((file) => JSON.parse(read(`automation/state/${file}`)));
+	assert.equal(states.length, 24, 'the authorized restart tracks 24 resources');
+	assert.equal(new Set(states.map((state) => state.task_id)).size, 24);
+	const jobs = JSON.parse(read('automation/screenshots/resources/generation-final-resume-2026-10-18.json')).jobs;
+	for (const state of states) {
+		const resource = resources.find((r) => r.id === state.task_id);
+		assert.ok(resource, state.task_id);
+		assert.ok(state.restart_authorization && state.previous_series, `${state.task_id}: restart history`);
+		assert.ok(state.iteration <= state.max_iterations, `${state.task_id}: iteration limit`);
+		const review = read(state.latest_review).toString('utf8');
+		assert.ok(state.evidence.length > 0, `${state.task_id}: evidence required`);
+		for (const path of state.evidence) assert.ok(read(path).length > 0, path);
+		if (resource.icon) {
+			assert.equal(state.status, 'done', state.task_id);
+			assert.equal(state.icon, resource.icon, state.task_id);
+			assert.match(review, /\bPASS\b/, state.task_id);
+			assert.ok(state.evidence.some((path) => /\.(jpg|png)$/.test(path)), `${state.task_id}: capture required`);
+			assert.deepEqual(state.remaining_steps, [], state.task_id);
+		} else {
+			assert.equal(state.status, 'human_review', state.task_id);
+			assert.equal(state.iteration, state.max_iterations, state.task_id);
+			assert.match(review, /\bFIX\b/, state.task_id);
+			assert.ok(state.remaining_steps.length > 0, state.task_id);
+			const job = jobs.find((job) => job.id === state.task_id);
+			assert.ok(job, `${state.task_id}: final generation proof`);
+			assert.equal(job.pass, state.iteration, state.task_id);
+			const result = JSON.parse(job.result.content[0].text);
+			assert.equal(result.status, 'Failed', state.task_id);
+			assert.match(JSON.stringify(result.jobResult), /Unable to generate Model/, state.task_id);
+		}
+	}
+});
+
 test('resource icons acceptance: all 60 resources have a published icon and local PNG', () => {
 	const missing = resources.filter((r) => !r.icon).map((r) => r.id);
 	assert.equal(resources.length, 60);

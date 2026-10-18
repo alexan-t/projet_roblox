@@ -1,6 +1,37 @@
 # Résultats des tests des icônes — 18 octobre 2026
 
-## Dernière reprise — 45/60
+## Étape #3 — Tests de la reprise autorisée — 18 octobre 2026
+
+Résultat actuel : **FIX, 45/60 livrées**. Les sections suivantes sont historiques ;
+leurs anciens totaux et listes de travail ne décrivent pas l'état actuel.
+
+- `node --test --test-isolation=none tests/*.test.mjs` : **12 entrées réussies,
+  1 échouée**, code 1. Les fichiers historiques comptent aussi 13 assertions
+  catalogue et 9 assertions items, toutes réussies. Les 5 contrôles UI passent.
+- Nouveau test : les 24 dossiers de reprise conservent autorisation et historique ;
+  états, Icon Git, rapports PASS/FIX, fichiers de preuve et travaux restants sont
+  cohérents. Les 9 livraisons ont leur capture et les 15 blocages leur job final
+  Failed à la dernière passe, avec « Unable to generate Model ». **PASS**.
+- Les 45 PNG correspondent exactement aux Icon Git, sont uniques et décodables
+  en RGBA 512 × 512 avec contenu visible et transparence. **PASS**.
+- Acceptation des 60 : **échec maintenu**, 15 icônes absentes. Aucun test ignoré
+  ni seuil abaissé pour masquer cette livraison incomplète.
+- `tools/test-resources.ps1` : exécutable `build/luau-cli/luau.exe` absent.
+  Remplacement exécuté : `src/server/Tests/ResourceConfig.spec.lua` avec le vrai
+  ResourceConfig Git évalué en mémoire via `loadstring` dans Studio Edit :
+  **5 contrôles réussis, 0 échoué**. Aucun Script créé dans la scène.
+- `tests/resource-icons.studio.luau`, même méthode, place « test 3 »
+  (`120616399792561`) : **PASS**, 60 cartes conformes au Git, 45 images,
+  15 vides, atelier vide ; caméra constatée Fixed. Aucune capture prise lors de
+  ces tests ; aucune nouvelle validation artistique ni vérification des commandes souris.
+
+Restent en `human_review` après 3/3 passes : **020, 030, 036, 040, 041, 044,
+045, 046, 048, 050, 051, 054, 055, 059, 060**. Résoudre le blocage de génération
+ou décider d'une construction alternative, puis produire et capturer dans Studio,
+exporter, renseigner carte et Icon Git, obtenir PASS et relancer les tests.
+Pas de nouvelle série lancée pendant cette étape de tests.
+
+## Historique : dernière reprise — 45/60
 
 Cette section remplace les totaux historiques à 36/60 conservés plus bas.
 
