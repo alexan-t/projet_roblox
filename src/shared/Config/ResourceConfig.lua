@@ -74,7 +74,7 @@ resource("resource_016", "Fiole de Mucus", "slime", "rbxassetid://10194719184147
 resource("resource_017", "Perle de Gelée", "slime", "rbxassetid://112115913740754")
 resource("resource_018", "Liane de Couronne", "slime", "rbxassetid://80833359295616")
 resource("resource_019", "Cristal Flottant", "slime", "rbxassetid://84378247299023")
-resource("resource_020", "Couronne Fondue", "slime")
+resource("resource_020", "Couronne Fondue", "slime", "rbxassetid://104772860969453")
 -- Gobelins et orcs
 resource("resource_021", "Lambeau de Tissu Rouge", "horde", "rbxassetid://86238190807240")
 resource("resource_022", "Lanière de Cuir", "horde", "rbxassetid://124467689473100")
