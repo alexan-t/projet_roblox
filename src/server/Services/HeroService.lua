@@ -61,8 +61,9 @@ local random = Random.new()
 local pool: SummonRules.Pool = SummonRules.buildPool(RarityConfig.Tiers, HeroConfig.Heroes)
 
 local idSequence = 0
--- Règles + config de progression, pour les vues envoyées au client (Level, XP, XPToNext, MaxLevel).
-local PROGRESSION = { rules = HeroProgressionRules, config = HeroProgressionConfig }
+-- Règles + config de progression, pour les vues envoyées au client (Level, XP, XPToNext, MaxLevel, et
+-- MaxHealth / AttackDamage de l'exemplaire à son niveau : fiche de la Sacoche).
+local PROGRESSION = { rules = HeroProgressionRules, config = HeroProgressionConfig, heroes = HeroConfig.Heroes, combat = CombatConfig.Heroes }
 
 -- Identifiant d'exemplaire unique, horodaté (largeur fixe) : KingdomService range les héros dans
 -- l'ordre d'obtention (anciens "H_<GUID>" d'abord, puis "H_T…" par date) ; le premier héros reste sur Heros_1.

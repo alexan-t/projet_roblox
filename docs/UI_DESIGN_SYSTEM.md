@@ -318,9 +318,7 @@ Moins de fenêtres, plus d'interaction avec le monde : on **prend** un héros et
 - **Hotbar** : panneau `HUD` en bas, 10 raccourcis `Cream` semi-transparents, contour Ink,
   numéro de touche en `Caption`. Raccourci choisi : surélevé, contour `Selected` épais, pop.
   Héros posé sur l'arène : pastille `Selected`. Grisée pendant le combat.
-- **Sacoche** : bouton bois à gauche de la hotbar ; panneau `Panel` à gauche de l'écran,
-  bandeau titre en bois, onglet Héros (doré), cartes standard (§ 6) avec badge « Posé »,
-  bouton principal **Placer** (désactivé sans sélection).
+- **Sacoche** : ouverte par le bouton Sac du menu, fenêtre **centrée** (voir § Sacoche ci-dessous).
 - **Placement** : feedback dans le monde (états des cases en surbrillance claire, `Selected`
   doré, `Error` discret), petit aperçu du héros au curseur, pastille de statut `HUD`
   (« Archer en main · choisis une case 2/4 », boutons secondaires Retirer / Annuler).
@@ -420,6 +418,31 @@ aucune règle de jeu) :
 | `ExpeditionView` | `Show(data, { OnLaunch, OnClose, Selected, OnSelect, Team, OnPrepare, Guide })`, `Hide()` | `{ Zone, Title, Subtitle?, Stages, EliteStages?, EliteUnlocked, Mode }`, entrées complètes d’ArenaService (voir `docs/ZONES.md` § Fenêtre Expédition) ; `Team = { Placed, Max, Heroes }` ; ouverte par la pancarte : `OnSelect` → `SelectStage`, `OnLaunch` → `Ready`, `OnPrepare` → dalles en évidence |
 | `SummonView` | `Show(state, { OnSummon(quantity), OnRefresh, OnClose })`, `RevealBatch(batch, { OnContinue, OnAgain })`, `Reveal(hero, options)`, `Hide()` | bannière active, taux serveur, x1/x10/x100 et reveals selon le volume ; design figé #80 |
 | `CollectionView` | `Show(heroes, { OnClose, OnSelect })`, `Hide()` | `{ { Name, Model, ClassId, Count, New, Equipped } }` depuis `Heroes` / la hotbar |
+
+### Sacoche (maquette figée « Sacoche.dc.html »)
+
+- **Source** : `Sacoche.dc.html` et `assets/sacoche/LISEZMOI.txt` (ZIP « Mid-century desk lamp (1) »). La vue `Views.SacocheView` la reproduit, avec une différence voulue : la maquette colle la fenêtre au menu (`winL` = 130 / 96 / 10 px), le jeu la **centre**.
+- **Centrage** (`Shared.Sacoche.SacocheModel.frame`) :
+  - AnchorPoint (0,5 ; 0,5) ;
+  - X = milieu de l'écran ; Y = milieu de la zone libre entre le bas des monnaies (`Currency.*`, plaque « Sacoche » comprise) et le haut de la hotbar (`Hotbar.Bar`) ;
+  - UIScale pour tenir dans cette zone (bornes `MinScale` / `MaxScale`) ;
+  - sur téléphone, la fenêtre prend presque tout l'écran au-dessus de la hotbar.
+  - Note : `AbsolutePosition` est mesurée sous la barre Roblox ; on ajoute `GuiService:GetGuiInset()`.
+- **Ouverture** : scale 0,94 → 1,01 → 1 + fondu, au centre, sans glissement. Le menu principal se masque tant que la Sacoche est ouverte et revient à sa fermeture.
+- **Écrans** : la Sacoche s'ouvre seulement si `ScreenState` est libre, et se ferme dès qu'un écran modal s'ouvre (Expédition, invocation, récompenses, Quêtes). `DisplayOrder` : HUD 2, menu 3, Sacoche 3, hotbar 4 (fantôme du drag visible au-dessus de la fenêtre).
+- **Tokens** : `UITheme.Pack.Sacoche` (`Wide`, surcharges `Tablet`, `Phone` avec onglets verticaux et fiche compacte). Aucune couleur nouvelle : toutes celles de la maquette existent dans `UITheme.Colors`.
+- **Icônes** : `SacocheVisualConfig` (onglets, 7 emplacements, raccourci, loupe, PV, ATK).
+  - Réutilisées : icône Sac (`MenuIconConfig`), coche (`ExpeditionVisualConfig.Check`), items (`ItemConfig.Items[id].Icon`).
+  - Les portraits du ZIP sont provisoires : on affiche les vrais modèles (`UIKit.portrait`).
+- **Héros** :
+  - cartes avec vrai modèle, Nv., touche du raccourci, « Nouveau » (exemplaire apparu pendant la session) et « Posé » ;
+  - carte choisie : soulevée de 6 px, contour `Selected`, lueur et pop ;
+  - fiche : nom, rareté, Nv., XP, PV et ATK (`HeroesChanged`, calcul serveur `combatStats`) ;
+  - **une** action principale : **Placer**, ou **Retirer de l'arène** (`Remove`) pour un héros posé ;
+  - action raccourci secondaire : les cases pulsent et « Choisis une case / Annuler » s'affiche, ce qui sert d'alternative au drag ;
+  - le drag reste possible.
+- **Équipement / Ressources** : #72 et #73 ne sont pas livrés, donc états vides honnêtes (poupée aux 7 emplacements vides, « Aucun équipement », « Tes ressources apparaîtront ici »), sans aucun faux inventaire.
+- **Guidage** : `Bag.FirstHero` (première carte), `Bag.Place` (action principale, ou la première carte tant qu'aucun héros n'est choisi), `Hotbar.Guide`, `Menu.Bag`, drapeau « Bag ».
 
 ### Expédition (maquette figée « Expedition.dc.html »)
 

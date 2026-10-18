@@ -110,8 +110,10 @@ ont chacun leur niveau. `HeroId` (catalogue) ≠ `HeroInstanceId` (exemplaire) �
   une seule fois (session verrouillée). Le client n'envoie ni exemplaire, ni XP, ni niveau : **aucune
   remote d'XP**. `HeroesChanged` est poussé après la mutation ; `CombatEnded.HeroProgression` donne à
   l'écran de fin `{ InstanceId, HeroId, XPGranted, LevelBefore, LevelAfter, XP, XPToNext, MaxLevel }`.
-- **Vue client** (`HeroesChanged` / `GetHeroes`) : `{ Id, HeroId, Level, XP, XPToNext, MaxLevel }` par
-  exemplaire (Lv20 : `XP = 0`, `XPToNext = 0`).
+- **Vue client** (`HeroesChanged` / `GetHeroes`) : `{ Id, HeroId, Level, XP, XPToNext, MaxLevel, MaxHealth, AttackDamage }`
+  par exemplaire (Lv20 : `XP = 0`, `XPToNext = 0`). `MaxHealth` / `AttackDamage` = `HeroProgressionRules.combatStats`
+  du profil de combat au niveau de l'exemplaire (les mêmes valeurs qu'en combat), pour la fiche de la Sacoche ;
+  lecture seule, aucun calcul côté client.
 - **Interface** : « Nv. n » sur chaque raccourci et chaque carte de la sacoche ; la carte choisie montre
   « 40 / 150 XP » et une barre ; l'écran de fin a une section « Héros » (portrait, nom, Nv., « +25 XP »,
   barre qui se remplit ; montée : « NIVEAU SUPÉRIEUR ! », « Nv.1 → Nv.2 », pop et lueur dorée).

@@ -121,8 +121,11 @@ function HeroRules.combatHero(data: any, instanceId: any, catalog: { [string]: a
 end
 
 -- Vue envoyée au client : exemplaires possédés (triés) et hotbar. Avec la config de progression :
--- XP (dans le niveau courant), XPToNext (0 au niveau max) et MaxLevel, par exemplaire.
-export type HeroView = { Id: string, HeroId: string, Level: number, XP: number?, XPToNext: number?, MaxLevel: number? }
+-- XP (dans le niveau courant), XPToNext (0 au niveau max) et MaxLevel, par exemplaire. Avec aussi les
+-- profils de combat (progression.heroes = HeroConfig.Heroes, progression.combat = CombatConfig.Heroes) :
+-- MaxHealth et AttackDamage de CET exemplaire à son niveau (combatStats, les mêmes qu'en combat ; lecture seule).
+export type HeroView = { Id: string, HeroId: string, Level: number, XP: number?, XPToNext: number?, MaxLevel: number?,
+	MaxHealth: number?, AttackDamage: number? }
 
 function HeroRules.view(data: any, progression: any?): { Heroes: { HeroView }, Hotbar: { string } }
 	local heroes: { HeroView } = {}
@@ -134,6 +137,13 @@ function HeroRules.view(data: any, progression: any?): { Heroes: { HeroView }, H
 			entry.XP = xp
 			entry.XPToNext = progression.rules.xpToNext(level, progression.config)
 			entry.MaxLevel = progression.config.MaxLevel
+			local info = progression.heroes and progression.heroes[hero.HeroId]
+			local base = info and progression.combat and progression.combat[info.CombatProfile]
+			if base then
+				local stats = progression.rules.combatStats(base, level, progression.config)
+				entry.MaxHealth = stats.MaxHealth
+				entry.AttackDamage = stats.AttackDamage
+			end
 		end
 		table.insert(heroes, entry)
 	end

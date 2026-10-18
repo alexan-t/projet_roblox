@@ -9,7 +9,8 @@ local HeroConfig = require(ReplicatedStorage.Shared.Config.HeroConfig)
 local PlacementState = require(script.Parent.PlacementState)
 
 -- Level / XP / XPToNext / MaxLevel : vue serveur de la progression de CET exemplaire (#68), jamais calculée ici.
-export type HeroView = { Id: string, HeroId: string, Level: number, XP: number?, XPToNext: number?, MaxLevel: number? }
+export type HeroView = { Id: string, HeroId: string, Level: number, XP: number?, XPToNext: number?, MaxLevel: number?,
+	MaxHealth: number?, AttackDamage: number? }
 
 local ArenaStore = {}
 
@@ -45,6 +46,8 @@ end
 local actionRemote: RemoteFunction? = nil
 local hotbarRemote: RemoteFunction? = nil
 ArenaStore.busy = false
+-- Collection reçue au moins une fois du serveur (la Sacoche marque « Nouveau » ce qui arrive ensuite).
+ArenaStore.heroesLoaded = false
 local started = false
 local heldCount = 0 -- invocations en cours : la collection reçue attend (holdHeroes / releaseHeroes)
 local pendingView: any = nil
@@ -101,6 +104,7 @@ local function applyHeroes(view: any)
 		ArenaStore.heroes[hero.Id] = hero
 	end
 	ArenaStore.hotbar = view.Hotbar
+	ArenaStore.heroesLoaded = true
 	ArenaStore.notify()
 end
 
