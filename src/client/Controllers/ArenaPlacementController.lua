@@ -381,15 +381,31 @@ local function openStageMenu()
 		return
 	end
 	local zone = state.Zone or ArenaConfig.Zone
+	-- Entrées complètes d'ArenaService (statut, vagues, boss, XP par héros, récompenses, multiplicateurs Élite,
+	-- butin éventuel) : la vue ne fait que les présenter.
 	local function cards(entries: { any }?): { any }
 		local list = {}
 		for _, entry in entries or {} do
 			if entry.Zone == zone then
-				table.insert(list, { Stage = entry.Stage, Unlocked = entry.Status == "Unlocked", Cleared = entry.Cleared,
-					Waves = entry.Waves, Enemies = entry.Enemies })
+				table.insert(list, entry)
 			end
 		end
+		table.sort(list, function(a, b)
+			return (a.Stage :: number) < (b.Stage :: number)
+		end)
 		return list
+	end
+	-- Héros posés (portraits du pied « Équipe X/4 »), dans l'ordre des cases.
+	local placed = table.clone(state.Formation or {})
+	table.sort(placed, function(a, b)
+		return (a.Slot :: number) < (b.Slot :: number)
+	end)
+	local heroes = {}
+	for _, entry in placed do
+		local hero = ArenaStore.heroInfo(entry.HeroInstanceId)
+		if hero then
+			table.insert(heroes, hero.HeroId)
+		end
 	end
 	local stages = cards(state.Stages)
 	local eliteStages = cards(state.EliteStages)
@@ -421,11 +437,11 @@ local function openStageMenu()
 	end
 	ExpeditionView.Show({ Zone = zone, Title = title, Stages = stages,
 		EliteStages = if #eliteStages > 0 then eliteStages else nil, EliteUnlocked = state.EliteUnlocked == true,
-		Mode = state.Mode }, {
+		Mode = state.Mode, Subtitle = ArenaConfig.ZoneSubtitles[zone] }, {
 		OnClose = closed,
 		Guide = ArenaStore.guide.expedition,
 		Selected = state.Stage,
-		Team = { Placed = ArenaStore.placedCount(), Max = state.MaxHeroes or ArenaConfig.MaxHeroes },
+		Team = { Placed = ArenaStore.placedCount(), Max = state.MaxHeroes or ArenaConfig.MaxHeroes, Heroes = heroes },
 		OnSelect = function(z: number, stage: number, mode: string)
 			if differs(z, stage, mode) then
 				ArenaStore.request("SelectStage", z, stage, mode)

@@ -166,6 +166,18 @@ end
 
 -- Modèle réel d'un héros activé, copié par HeroService dans ReplicatedStorage.Assets.Heros
 -- (attribut HeroId), ou nil s'il n'est pas (encore) répliqué.
+-- Modèle réel d'un ennemi (EnemyId : "Slime", "Gobelin", "Boss") : le gabarit de combat
+-- ReplicatedStorage.Assets.Combat.<ArenaConfig.EnemyTemplates[EnemyId]>, ou nil. Pour un portrait
+-- (UIKit.portrait copie le modèle) : jamais le modèle de gameplay lui-même.
+function Icons.enemyModel(enemyId: string): Model?
+	local ArenaConfig = require(ReplicatedStorage.Shared.Config.ArenaConfig)
+	local name = ArenaConfig.EnemyTemplates[enemyId]
+	local assets = ReplicatedStorage:FindFirstChild("Assets")
+	local combat = assets and assets:FindFirstChild("Combat")
+	local model = if name and combat then combat:FindFirstChild(name) else nil
+	return if model and model:IsA("Model") then model else nil
+end
+
 function Icons.heroModel(heroId: string): Model?
 	local assets = ReplicatedStorage:FindFirstChild("Assets")
 	local heroes = assets and assets:FindFirstChild("Heros")
