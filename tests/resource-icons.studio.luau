@@ -4,6 +4,7 @@ return function(config)
 	assert(game.PlaceId == 120616399792561, "Expected test 3")
 	local slots = workspace.Bestiaire.Inventaire.Ressources.Panneau.Affichage.Fond.Emplacements
 	local count, delivered = 0, 0
+	local missingIds = {}
 	for _, child in slots:GetChildren() do
 		if child:IsA("GuiObject") then
 			count += 1
@@ -21,11 +22,15 @@ return function(config)
 		assert(card.Nom.Text == info.Name, info.Id .. ": Nom")
 		assert(card.Illustration.Icone.Image == (info.Icon or ""), info.Id .. ": Image != Git")
 		assert(card:GetAttribute("AssetId") == (info.Icon or ""), info.Id .. ": AssetId != Git")
-		if info.Icon then delivered += 1 end
+		if info.Icon then
+			delivered += 1
+		else
+			table.insert(missingIds, info.Id)
+		end
 	end
 	local atelier = workspace:FindFirstChild("AtelierIcones")
 	assert(atelier and #atelier:GetChildren() == 0, "AtelierIcones must be empty")
 	local camera = workspace.CurrentCamera
 	print(`PASS Studio: {count} cards match Git, {delivered} images, {count - delivered} empty; atelier empty`)
-	return { cards = count, delivered = delivered, missing = count - delivered, cameraType = camera and tostring(camera.CameraType) }
+	return { cards = count, delivered = delivered, missing = count - delivered, missingIds = missingIds, cameraType = camera and tostring(camera.CameraType) }
 end

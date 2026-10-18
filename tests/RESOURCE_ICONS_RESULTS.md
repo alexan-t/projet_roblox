@@ -48,6 +48,24 @@ Suite Luau relancée : 5 réussites, 0 échec. Aucun nouveau PASS artistique.
 
 ## Travail restant
 
+## Recontrôle de la tentative 4/5 — 18 octobre 2026
+
+- Suite Node réexécutée : **11 réussites, 1 échec**, code de sortie 1.
+  Seule l'acceptation des 60 icônes échoue : 36 livrées, 24 manquantes.
+- Suite Luau ressources réexécutée avec le chemin explicite ci-dessus :
+  **5 réussites, 0 échec**, code de sortie 0.
+- Audit Studio réexécuté dans « test 3 », avec le catalogue Git en mémoire :
+  **60 cartes conformes, 36 images, 24 vides, atelier vide**.
+  Le test retourne maintenant aussi `missingIds`, pour rendre le relevé exploitable.
+  Cette version complétée a été exécutée avec succès dans Studio.
+- Caméra constatée Scriptable au début de l'audit, puis recréée selon la procédure :
+  le dernier appel confirme **Fixed**. Persistance entre appels et commandes souris
+  toujours non validées ; aucune nouvelle capture ni validation artistique.
+- Les 24 ressources restent en revue humaine selon la reprise de mission.
+  Aucun nouvel essai de production, aucun upload et aucune publication Git.
+
+## Actions après revue humaine
+
 Produire, capturer, exporter, publier et valider les ressources suivantes,
 puis renseigner leur carte et leur Icon :
 
