@@ -61,6 +61,14 @@ return function(QuestLog: any)
 		assert(QuestLog.attention(q("S", 1, 1, false, true), "X") == false, "auto-claimed quest: no badge")
 	end)
 
+	test("attention: a reward waiting in another line (ClaimableCount) also calls the player", function()
+		local main = q("Q3", 0, 1)
+		main.ClaimableCount = 1
+		assert(QuestLog.attention(main, "Q3") == true, "hero tier to claim while the main quest is in progress")
+		main.ClaimableCount = 0
+		assert(QuestLog.attention(main, "Q3") == false)
+	end)
+
 	test("after a successful claim the next view drops the badge (unless it is new)", function()
 		-- serveur : Q2 réclamée, Q3 active à 0 ; le panneau était ouvert (Q3 vue en direct)
 		assert(QuestLog.attention(q("Q3", 0, 1), "Q3") == false)

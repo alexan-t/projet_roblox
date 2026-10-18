@@ -6,8 +6,10 @@
 --   sorted(list)      -> copie triée : à récupérer, puis en cours, puis récupérées (ordre de la chaîne) ;
 --   claimable(list)   -> nombre de quêtes à récupérer ;
 --   summary(list)     -> ligne sous le titre du panneau ;
---   attention(active, seenId) -> le bouton Quêtes doit-il appeler le joueur : récompense à récupérer
---                        (priorité absolue), ou nouvelle quête active pas encore vue dans le panneau.
+--   attention(active, seenId) -> le bouton Quêtes doit-il appeler le joueur : récompense à récupérer, dans
+--                        n'importe quelle ligne (priorité absolue : ClaimableCount de la vue principale),
+--                        ou nouvelle quête principale pas encore vue dans le panneau.
+-- Le journal est regroupé par ligne (QuestService) : une entrée par ligne, son palier courant.
 
 export type Entry = {
 	Id: string,
@@ -16,6 +18,8 @@ export type Entry = {
 	Completed: boolean,
 	Claimed: boolean?,
 	AutoClaim: boolean?,
+	-- vue principale : quêtes à récupérer, toutes lignes confondues
+	ClaimableCount: number?,
 }
 
 local QuestLog = {}
@@ -96,7 +100,7 @@ function QuestLog.attention(active: Entry?, seenId: string?): boolean
 	if not active then
 		return false
 	end
-	if QuestLog.state(active) == "Claimable" then
+	if QuestLog.state(active) == "Claimable" or (active.ClaimableCount or 0) > 0 then
 		return true
 	end
 	return seenId ~= nil and active.Id ~= seenId and QuestLog.state(active) == "InProgress"

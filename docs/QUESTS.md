@@ -173,6 +173,30 @@ lumineux vers la pancarte, stage suivant déjà sélectionné (voir ARENA_PROTOT
 Le suivi est en haut à gauche, sous la fenêtre de chat Roblox et sa barre de saisie quand elles y
 sont. Sans cela, le chat recouvre le suivi et capte le clic sur « Récupérer ».
 
+## Lignes de quêtes (regroupement)
+
+Les quêtes sont regroupées en **lignes** (`QuestConfig.Lines`) : chaque ligne est une chaîne de paliers
+(`NextQuestId`) qui avance en parallèle des autres. Le panneau montre **une carte par ligne**, au palier
+courant (« Défense du domaine · Palier 3/5 ») ; une ligne finie montre son dernier palier « ✓ Récupéré ».
+
+| Ligne | Ouverte | Paliers |
+| --- | --- | --- |
+| Défense du domaine (`Stages`) | après `SummonStarter` | 1-1 → 1-2 → 1-3 → 1-4 → Roi Orc (1-5) |
+| Collection de héros (`Heroes`) | dès le début | premier héros (tutoriel) → 2 → 5 → 10 → 20 → 30 → 45 → 60 héros |
+
+- « Possède N héros » : objectif d'état `HeroesOwned` = nombre de héros **différents** (HeroId) possédés,
+  relu dans PlayerData à chaque changement de collection (`HeroService` → `QuestService:SyncState`) et à
+  l'activation du palier ; ne fait que monter ; jamais compté depuis un événement. Récompenses ALPHA
+  PROVISOIRES (QuestConfig).
+- Quête **principale** (suivi du HUD, guidage, caméra d'accueil) : la quête active de la première ligne
+  ouverte. Nouveau profil : seule la ligne Héros est ouverte (SummonStarter), puis la Défense s'ouvre et
+  devient principale : le tutoriel est inchangé. Défense finie : le palier Héros devient principal.
+- Réclamation : seule la quête active de SA ligne, terminée, est réclamable ; les autres lignes ne bougent
+  pas. La vue principale porte `ClaimableCount` (quêtes à récupérer, toutes lignes) pour le « ! » du bouton
+  Quêtes.
+- Ajouter une ligne : une entrée dans `Lines` (Id, Title, FirstQuestId, After?) et ses quêtes chaînées ; une
+  quête n'appartient qu'à une ligne (validé au démarrage).
+
 ## Panneau Quêtes
 
 Représentation UI du système existant (aucune logique de quête côté client) :

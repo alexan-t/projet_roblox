@@ -5,8 +5,10 @@
 -- tout et décide des récompenses). Mesures : UITheme.Pack.Quest.
 --   Voile sombre → fenêtre bois (WoodDeep) qui s'ouvre (0,9 → 1) ; en tête, plaque bois avec l'icône
 --   Quête du pack et « Quêtes », bouton X rouge royal au coin ; une ligne de résumé.
---   Une carte par quête (à récupérer, puis en cours, puis récupérées) :
---     titre (+ pastille « Terminée »), description, barre de progression + compteur X/Y, récompenses
+--   Une carte par LIGNE de quêtes (QuestService regroupe : Défense, Collection de héros…), avec son palier
+--   courant ; à récupérer, puis en cours, puis lignes terminées :
+--     ligne et palier (« Défense du domaine · Palier 3/5 »), titre (+ pastille « Terminée »), description,
+--     barre de progression + compteur X/Y, récompenses
 --     (tuile sable, icône _small du pack, « ×n ») et l'état :
 --       en cours     : barre partielle Progress, bouton gris « En cours » ;
 --       à récupérer  : barre pleine Success, carte dorée, bouton « Récupérer » doré qui pulse doucement ;
@@ -40,6 +42,9 @@ export type Reward = { Kind: string, Amount: number }
 export type Entry = {
 	Id: string,
 	Title: string,
+	LineTitle: string?,
+	Tier: number?,
+	Tiers: number?,
 	Description: string?,
 	Progress: number,
 	Target: number,
@@ -224,6 +229,20 @@ local function card(c: Current, entry: Entry, order: number)
 	layout.Padding = UDim.new(0, 6)
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = info
+	if entry.LineTitle then
+		-- ligne de quêtes et palier : la carte « s'incrémente » d'un palier à l'autre
+		local tier = Instance.new("TextLabel")
+		tier.Name = "Palier"
+		tier.LayoutOrder = 0
+		tier.BackgroundTransparency = 1
+		tier.FontFace = Typography.Display
+		tier.TextSize = Typography.Size.Caption
+		tier.TextColor3 = if claimable then Colors.GoldLight else Colors.TextMuted
+		tier.TextXAlignment = Enum.TextXAlignment.Left
+		tier.Size = UDim2.new(1, 0, 0, 16)
+		tier.Text = if entry.Tier and entry.Tiers then `{entry.LineTitle}  ·  Palier {entry.Tier}/{entry.Tiers}` else entry.LineTitle
+		tier.Parent = info
+	end
 	local head = Instance.new("Frame")
 	head.Name = "Entete"
 	head.BackgroundTransparency = 1

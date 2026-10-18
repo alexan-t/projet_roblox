@@ -63,9 +63,9 @@ function QuestController.HasAttention(): boolean
 	return attentionOn
 end
 
--- La quête active attend « Récupérer » (vue du serveur).
+-- Une quête attend « Récupérer », dans n'importe quelle ligne (vue du serveur).
 function QuestController.Claimable(): boolean
-	return active ~= nil and QuestLog.state(active) == "Claimable"
+	return active ~= nil and (QuestLog.state(active) == "Claimable" or (active.ClaimableCount or 0) > 0)
 end
 
 local function receiveActive(view: any)
