@@ -1,20 +1,28 @@
 --!strict
--- Hotbar (10 raccourcis, touches 1..9 puis 0) et sacoche (onglets Héros, Équipement, Ressources ;
--- seuls les héros ont déjà des données), côté client. L'ordre de la hotbar vient du serveur et
--- n'est jamais retrié ici.
--- Choisir un héros (raccourci, ou sacoche > Placer) le met « en main » : le joueur le pose
--- ensuite lui-même sur une case de l'arène (ArenaPlacementController). Pendant un combat, la
--- hotbar reste visible mais ne modifie plus la formation.
--- Style : design system (UITheme via UIKit) ; légère, transparente, la map reste visible.
--- Tutoriel : le raccourci du héros à prendre (ArenaStore.guide.hotbar) s'entoure d'une lueur dorée qui
--- respire, jusqu'à ce que le héros soit en main ou posé ; il est aussi la cible « Hotbar.Guide » de la
--- flèche UI. La sacoche est la cible des guidages « Bag.* » (GuideTargets) et signale son ouverture
--- (drapeau « Bag »). Elle s'ouvre depuis le menu de navigation (MenuController, bouton Sac) :
--- HeroBarController.SetBag(open), HeroBarController.IsBagOpen(), HeroBarController.bagChanged.
--- Niveaux (#68) : « Nv. n » discret sur chaque raccourci et chaque carte (par exemplaire : deux doublons
--- peuvent avoir des niveaux différents) ; la carte choisie montre son XP (« 40 / 150 XP » et une barre).
--- Valeurs reçues du serveur (HeroesChanged), jamais calculées ici.
+-- Hotbar (10 raccourcis, touches 1..9 puis 0) et Sacoche (onglets Héros, Équipement, Ressources ; seuls les
+-- héros ont déjà des données côté serveur), côté client. L'ordre de la hotbar vient du serveur et n'est
+-- jamais retrié ici.
+-- Choisir un héros (raccourci, ou Sacoche > Placer) le met « en main » : le joueur le pose ensuite lui-même
+-- sur une case de l'arène (ArenaPlacementController, sa pastille « en main » avec Annuler). Pendant un combat,
+-- la hotbar reste visible mais ne modifie plus la formation.
+-- Sacoche (maquette figée « Sacoche.dc.html », vue Views.SacocheView) : fenêtre CENTRÉE dans la zone libre
+-- entre le HUD du haut (monnaies) et la hotbar ; le menu principal se masque tant qu'elle est ouverte
+-- (MenuController). Elle s'ouvre seulement si aucun écran modal n'est ouvert (ScreenState) et se ferme dès
+-- qu'un autre en ouvre un (Expédition, invocation, récompenses, Quêtes...) : jamais deux fenêtres à la fois.
+--   Héros : carte → fiche ; UNE action principale : Placer (héros libre : en main, la Sacoche se ferme, le
+--   monde reprend la priorité) ou Retirer de l'arène (héros posé : requête « Remove » d'ArenaService) ;
+--   action raccourci secondaire : Ajouter (les raccourcis pulsent, « Choisis une case » : alternative au
+--   drag, mobile compris) ou Retirer. Le drag carte → raccourci (HeroDrag) est conservé.
+--   « Nouveau » : exemplaire apparu dans HeroesChanged pendant la session (vraies données), jusqu'à ce qu'il
+--   soit vu ; il allume le « ! » du bouton Sac (HeroBarController.newChanged).
+-- Tutoriel : le raccourci du héros à prendre (ArenaStore.guide.hotbar) s'entoure d'une lueur dorée qui respire,
+-- cible « Hotbar.Guide » ; la Sacoche est la cible des guidages « Bag.* » (Bag.FirstHero, Bag.Place) et signale
+-- son ouverture (drapeau « Bag »). API : HeroBarController.SetBag(open), HeroBarController.IsBagOpen(),
+-- HeroBarController.bagChanged, HeroBarController.HasNew(), HeroBarController.newChanged.
+-- Niveaux (#68) : « Nv. n » sur chaque raccourci et chaque carte (par exemplaire) ; XP, PV et ATK de la
+-- fiche reçus du serveur (HeroesChanged), jamais calculés ici.
 
+local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterGui = game:GetService("StarterGui")
@@ -22,6 +30,7 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local HeroConfig = require(ReplicatedStorage.Shared.Config.HeroConfig)
+local SacocheModel = require(ReplicatedStorage.Shared.Sacoche.SacocheModel)
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local ArenaStore = require(script.Parent.Parent.Arena.ArenaStore)
 local ScreenState = require(script.Parent.Parent.UI.ScreenState)
@@ -29,6 +38,7 @@ local PlacementState = require(script.Parent.Parent.Arena.PlacementState)
 local UIKit = require(script.Parent.Parent.UI.UIKit)
 local Icons = require(script.Parent.Parent.UI.Icons)
 local GuideTargets = require(script.Parent.Parent.UI.GuideTargets)
+local SacocheView = require(script.Parent.Parent.UI.Views.SacocheView)
 
 local Drag = require(script.Parent.Parent.UI.HeroDrag)
 
@@ -40,10 +50,13 @@ end
 local C = UITheme.Colors
 local T = UITheme.Transparency
 local S = UITheme.Spacing
+local PACK = UITheme.Pack.Sacoche
 
 local HeroBarController = {}
--- Sacoche ouverte / fermée (true / false) : le menu met son bouton Sac en « sélectionné ».
+-- Sacoche ouverte / fermée (true / false) : le menu met son bouton Sac en « sélectionné » et se masque.
 HeroBarController.bagChanged = Instance.new("BindableEvent")
+-- Il y a (ou non) un héros nouveau pas encore vu : « ! » du bouton Sac.
+HeroBarController.newChanged = Instance.new("BindableEvent")
 
 local SLOT = 64 -- taille d'un raccourci (px), au-dessus de la zone tactile minimale
 local KEYS = {
@@ -53,21 +66,25 @@ local KEYS = {
 
 -- portrait : vrai modèle du héros (UIKit.portrait) ; à défaut, monogramme provisoire.
 type SlotUI = { frame: TextButton, stroke: UIStroke, icon: TextLabel, placed: Frame, offset: number, level: TextLabel,
-	portrait: ViewportFrame?, portraitHero: string?, guide: { frame: Frame, tween: Tween }? }
-type CardUI = { frame: TextButton, stroke: UIStroke, placed: Frame, shortcut: TextLabel, portrait: boolean, level: TextLabel, xp: UIKit.Bar }
-
--- Onglets de la sacoche. Équipement et Ressources n'ont pas encore de données.
-local TABS = {
-	{ Id = "Heroes", Label = "Héros" },
-	{ Id = "Equipment", Label = "Équipement", Soon = "Les équipements arriveront dans une prochaine version." },
-	{ Id = "Resources", Label = "Ressources", Soon = "Les ressources arriveront dans une prochaine version." },
-}
-local currentTab = "Heroes"
+	portrait: ViewportFrame?, portraitHero: string?, guide: { frame: Frame, tween: Tween }?, pick: { frame: Frame, tweens: { Tween } }? }
 
 local slots: { SlotUI } = {}
-local cards: { [string]: CardUI } = {}
 local ui: { [string]: any } = {}
-local chosen: string? = nil -- héros choisi dans la sacoche (avant Placer)
+
+-- état de la Sacoche (présentation ; aucune donnée de jeu)
+local bag = {
+	open = false,
+	tab = "Heroes",
+	chosen = nil :: string?, -- héros choisi dans la Sacoche
+	filter = "all",
+	query = "",
+	search = false,
+	picking = false, -- « Ajouter au raccourci » : choisir une case de la hotbar
+	equip = 1, -- héros montré par la poupée d'équipement
+}
+-- « Nouveau » : exemplaires apparus après le premier chargement, pas encore vus.
+local known: { [string]: boolean }? = nil
+local fresh: { [string]: boolean } = {}
 
 local function placedSet(): { [string]: boolean }
 	local set = {}
@@ -82,9 +99,58 @@ local function heldId(): string?
 	return if held then held.instanceId else nil
 end
 
+function HeroBarController.HasNew(): boolean
+	return next(fresh) ~= nil
+end
+
+local render: () -> ()
+
 ------------------------------------------------------------------ hotbar
 
+local function stopPicking()
+	if bag.picking then
+		bag.picking = false
+		ArenaStore.notify()
+	end
+end
+
+-- Choix d'une case pour le héros de la fiche : Assign (hors hotbar) ou Swap (déjà dans la hotbar).
+local function assignTo(index: number)
+	local id = bag.chosen
+	bag.picking = false
+	if not id then
+		ArenaStore.notify()
+		return
+	end
+	local origin = table.find(ArenaStore.hotbar, id)
+	if origin then
+		if origin ~= index then
+			ArenaStore.hotbarAction("Swap", origin, index)
+		end
+	else
+		ArenaStore.hotbarAction("Assign", id, index)
+	end
+	if slots[index] then
+		UIKit.pop(slots[index].frame)
+	end
+	ArenaStore.notify()
+end
+
 local function selectSlot(index: number)
+	if bag.picking then
+		assignTo(index)
+		return
+	end
+	if bag.open then
+		-- Sacoche ouverte : le raccourci montre son héros dans la fiche (pas de prise en main)
+		local id = ArenaStore.hotbar[index]
+		if id and id ~= "" then
+			bag.tab, bag.chosen = "Heroes", id
+			fresh[id] = nil
+			ArenaStore.notify()
+		end
+		return
+	end
 	if ArenaStore.inCombat() or ArenaStore.busy then
 		return
 	end
@@ -105,7 +171,7 @@ local function buildHotbar(screen: ScreenGui)
 	bar.Position = UDim2.new(0.5, 0, 1, -S.ScreenMargin)
 	bar.Size = UDim2.fromOffset(width, SLOT + 2 * S.M)
 	ui.bar = bar
-	GuideTargets.register("Hotbar.Bar", bar) -- le menu principal s'arrête au-dessus
+	GuideTargets.register("Hotbar.Bar", bar) -- le menu principal et la Sacoche s'arrêtent au-dessus
 	for index = 1, count do
 		local frame = Instance.new("TextButton")
 		frame.Name = `Raccourci{index}`
@@ -147,6 +213,39 @@ local function buildHotbar(screen: ScreenGui)
 		Drag.bind(frame, function() return { slot = index, id = ArenaStore.hotbar[index] } end)
 		slots[index] = { frame = frame, stroke = stroke, icon = icon, placed = placed, offset = x, level = level }
 	end
+
+	-- « Choisis une case ↓ Annuler » : au-dessus de la hotbar pendant le choix d'un raccourci
+	local pick = UIKit.panel(screen, T.HUD, UITheme.Radius.Pill, UITheme.Stroke.Regular)
+	pick.Name = "ChoixCase"
+	pick.AnchorPoint = Vector2.new(0.5, 1)
+	pick.Position = UDim2.new(0.5, 0, 1, -(S.ScreenMargin + SLOT + 2 * S.M + S.M))
+	pick.AutomaticSize = Enum.AutomaticSize.X
+	pick.Size = UDim2.fromOffset(0, 52)
+	pick.Visible = false
+	pick.ZIndex = 8
+	local pickStroke = pick:FindFirstChildOfClass("UIStroke")
+	if pickStroke then pickStroke.Color = C.Selected end
+	local pad = Instance.new("UIPadding")
+	pad.PaddingLeft, pad.PaddingRight = UDim.new(0, 16), UDim.new(0, 6)
+	pad.Parent = pick
+	local row = Instance.new("UIListLayout")
+	row.FillDirection = Enum.FillDirection.Horizontal
+	row.VerticalAlignment = Enum.VerticalAlignment.Center
+	row.Padding = UDim.new(0, 10)
+	row.SortOrder = Enum.SortOrder.LayoutOrder
+	row.Parent = pick
+	local label = UIKit.text(pick, "Choisis une case", PACK.Wide.PickSize)
+	label.AutomaticSize = Enum.AutomaticSize.X
+	label.Size = UDim2.fromOffset(0, 24)
+	label.LayoutOrder = 1
+	local down = UIKit.text(pick, "↓", 22)
+	down.AutomaticSize = Enum.AutomaticSize.X
+	down.Size = UDim2.fromOffset(0, 24)
+	down.LayoutOrder = 2
+	local cancel = UIKit.button(pick, "Annuler", "Secondary", UDim2.fromOffset(110, 40), stopPicking)
+	cancel.holder.LayoutOrder = 3
+	cancel.label.TextSize = 16
+	ui.pick = pick
 end
 
 -- Lueur dorée qui respire autour d'un raccourci (guidage du tutoriel) ; nil = aucune.
@@ -187,6 +286,38 @@ local function setGuided(slot: SlotUI, on: boolean)
 	GuideTargets.register("Hotbar.Guide", slot.frame)
 end
 
+-- Pulsation dorée d'un raccourci pendant le choix d'une case (maquette : slotPulse).
+local function setPicking(slot: SlotUI, on: boolean)
+	local current = slot.pick
+	if (current ~= nil) == on then
+		return
+	end
+	if current then
+		for _, t in current.tweens do t:Cancel() end
+		current.frame:Destroy()
+		slot.pick = nil
+		return
+	end
+	local glow = Instance.new("Frame")
+	glow.Name = "Choix"
+	glow.BackgroundColor3 = C.GoldLight
+	glow.BackgroundTransparency = 1
+	glow.Position = UDim2.fromOffset(-S.XS, -S.XS)
+	glow.Size = UDim2.new(1, 2 * S.XS, 1, 2 * S.XS)
+	glow.ZIndex = 5
+	glow.Active = false
+	glow.Parent = slot.frame
+	UIKit.corner(glow, UITheme.Radius.Medium)
+	local stroke = UIKit.stroke(glow, UITheme.Stroke.Thick, C.GoldLight)
+	stroke.Transparency = 0.6
+	local info = TweenInfo.new(PACK.SlotPulse / 2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
+	local a = TweenService:Create(glow, info, { BackgroundTransparency = 0.7 })
+	local b = TweenService:Create(stroke, info, { Transparency = 0 })
+	a:Play()
+	b:Play()
+	slot.pick = { frame = glow, tweens = { a, b } }
+end
+
 local function renderHotbar()
 	local held = heldId()
 	local placed = placedSet()
@@ -194,7 +325,7 @@ local function renderHotbar()
 	for index, slot in slots do
 		local id = ArenaStore.hotbar[index]
 		local hero, info = ArenaStore.heroInfo(if id ~= "" then id else nil)
-		local selected = id ~= "" and id == held
+		local selected = id ~= "" and (id == held or (bag.open and id == bag.chosen))
 		local heroId = if hero and info then hero.HeroId else nil
 		if slot.portraitHero ~= heroId or (heroId and not slot.portrait) then
 			if slot.portrait then slot.portrait:Destroy() end
@@ -213,31 +344,64 @@ local function renderHotbar()
 		slot.frame.BackgroundTransparency = if info then T.Slot else T.Empty
 		slot.frame.BackgroundColor3 = if info then C.Cream else C.WoodDeep
 		slot.icon.TextTransparency = if locked then T.Disabled else 0
-		slot.stroke.Color = if selected then C.Selected else UITheme.Stroke.Color
+		slot.stroke.Color = if selected or bag.picking then C.Selected else UITheme.Stroke.Color
 		slot.stroke.Thickness = if selected then UITheme.Stroke.Thick else UITheme.Stroke.Regular
 		slot.frame.Position = UDim2.fromOffset(slot.offset, if selected then S.M - 8 else S.M)
 		slot.placed.Visible = info ~= nil and placed[id] == true
 		slot.level.Text = if hero then `Nv. {hero.Level}` else ""
 		slot.level.TextTransparency = if locked then T.Disabled else 0
-		setGuided(slot, id ~= "" and id == ArenaStore.guide.hotbar and not held and not locked and not placed[id])
+		setGuided(slot, id ~= "" and id == ArenaStore.guide.hotbar and not held and not locked and not placed[id] and not bag.picking)
+		setPicking(slot, bag.picking)
 	end
+	ui.pick.Visible = bag.picking
 end
 
------------------------------------------------------------------- sacoche
+------------------------------------------------------------------ Sacoche
 
-local function setBag(open: boolean)
-	if not ui.bag or ui.bag.Visible == open then
+-- Zone libre où centrer la Sacoche : bas des monnaies (HUD du haut) → haut de la hotbar, en px écran.
+local function placeBag()
+	local screen = ui.bagScreen
+	if not screen then
 		return
 	end
-	ui.bag.Visible = open
+	local viewport = screen.AbsoluteSize
+	if viewport.X <= 0 then
+		return
+	end
+	-- AbsolutePosition est mesurée sous la barre de Roblox (même pour un écran IgnoreGuiInset) ; la Sacoche
+	-- est placée dans un écran IgnoreGuiInset : on ajoute l'inset aux deux repères.
+	local inset = GuiService:GetGuiInset().Y
+	local top = 0
+	for _, key in { "Gold", "Gems", "SummonTickets" } do
+		local pill = GuideTargets.get(`Currency.{key}`)
+		if pill then
+			top = math.max(top, pill.AbsolutePosition.Y + pill.AbsoluteSize.Y + inset)
+		end
+	end
+	local bar = ui.bar
+	local bottom = if bar then bar.AbsolutePosition.Y + inset else viewport.Y
+	SacocheView.Layout(viewport, top, bottom)
+end
+
+local function setBag(open: boolean)
+	if bag.open == open then
+		return
+	end
+	if open and not ScreenState.free() then
+		return -- un autre écran modal est ouvert : jamais deux fenêtres à la fois
+	end
+	bag.open = open
+	bag.picking = false
 	if open then
-		ui.placeBag()
-		UIKit.pop(ui.bag)
+		placeBag()
+		SacocheView.Open()
 		GuideTargets.open("Bag")
 	else
+		SacocheView.Close()
 		GuideTargets.close("Bag")
 	end
 	HeroBarController.bagChanged:Fire(open)
+	render()
 end
 
 function HeroBarController.SetBag(open: boolean)
@@ -245,295 +409,189 @@ function HeroBarController.SetBag(open: boolean)
 end
 
 function HeroBarController.IsBagOpen(): boolean
-	return ui.bag ~= nil and ui.bag.Visible
+	return bag.open
 end
 
-local function buildBag(screen: ScreenGui)
-	-- Panneau à gauche, à côté du menu de navigation (bouton Sac), transparent : la map reste visible.
-	local bag = UIKit.panel(screen, T.Panel)
-	bag.Name = "Sacoche"
-	bag.AnchorPoint = Vector2.new(0, 0.5)
-	bag.Position = UDim2.new(0, S.ScreenMargin, 0.5, -40)
-	bag.Size = UDim2.fromOffset(372, 620)
-	bag.Visible = false
-	ui.bag = bag
-	local scale = Instance.new("UIScale")
-	scale.Parent = bag
-	local function resize()
-		scale.Scale = math.min(1, math.max(0.5, (screen.AbsoluteSize.Y - 130) / 620))
-		-- la sacoche s'ouvre juste à droite du menu principal (cible « Menu.Area », sa taille réelle)
-		local menu = GuideTargets.get("Menu.Area")
-		local x = if menu then menu.AbsolutePosition.X + menu.AbsoluteSize.X + S.M else S.ScreenMargin
-		bag.Position = UDim2.new(0, x, 0.5, -40)
+local function context(): SacocheModel.Context
+	return {
+		Infos = HeroConfig.Heroes :: any,
+		Placed = placedSet(),
+		Hotbar = ArenaStore.hotbar,
+		New = fresh,
+		Selected = bag.chosen,
+		Filter = bag.filter,
+		Query = if bag.search then bag.query else "",
+		InCombat = ArenaStore.inCombat(),
+		Busy = ArenaStore.busy,
+	}
+end
+
+-- Exemplaires apparus depuis le premier chargement (vraies données de HeroesChanged) : « Nouveau ».
+local function trackNew()
+	if not ArenaStore.heroesLoaded then
+		return
 	end
-	screen:GetPropertyChangedSignal("AbsoluteSize"):Connect(resize)
-	task.defer(resize)
-	ui.placeBag = resize
-
-	local title = Instance.new("Frame")
-	title.BackgroundColor3 = C.Wood
-	title.AnchorPoint = Vector2.new(0.5, 0.5)
-	title.Position = UDim2.fromScale(0.5, 0)
-	title.Size = UDim2.fromOffset(190, 44)
-	title.Parent = bag
-	UIKit.corner(title, UITheme.Radius.Medium)
-	UIKit.stroke(title, UITheme.Stroke.Thick)
-	UIKit.text(title, "Sacoche", UITheme.Typography.Size.Title)
-
-	local close = UIKit.button(bag, "X", "Danger", UDim2.fromOffset(44, 44 + UITheme.Shadow.ButtonLip), function()
-		setBag(false)
-	end)
-	close.holder.AnchorPoint = Vector2.new(0.5, 0.5)
-	close.holder.Position = UDim2.new(1, -6, 0, 0)
-
-	-- Onglets. Seul Héros a des données ; Équipement et Ressources sont des emplacements prévus.
-	ui.tabs = {}
-	local tabWidth = (bag.Size.X.Offset - 2 * S.L - 2 * S.S) / #TABS
-	for index, tabInfo in TABS do
-		local tab = UIKit.button(bag, tabInfo.Label, "Tab", UDim2.fromOffset(tabWidth, 40 + UITheme.Shadow.ButtonLip), function()
-			currentTab = tabInfo.Id
-			ArenaStore.notify()
-		end)
-		tab.holder.Name = `Onglet{tabInfo.Id}`
-		tab.holder.Position = UDim2.fromOffset(S.L + (index - 1) * (tabWidth + S.S), 36)
-		tab.label.TextSize = UITheme.Typography.Size.Label
-		ui.tabs[tabInfo.Id] = tab
-	end
-
-	-- Contenu provisoire des onglets sans données (texte long : sur un sous-panneau renforcé).
-	local soon = Instance.new("Frame")
-	soon.Name = "BientotDisponible"
-	soon.BackgroundColor3 = C.WoodDeep
-	soon.BackgroundTransparency = T.PanelStrong
-	soon.Position = UDim2.fromOffset(S.L, 100)
-	soon.Size = UDim2.new(1, -2 * S.L, 0, 120)
-	soon.Visible = false
-	soon.Parent = bag
-	UIKit.corner(soon, UITheme.Radius.Medium)
-	UIKit.stroke(soon, UITheme.Stroke.Regular)
-	local soonTitle = UIKit.text(soon, "Bientôt disponible", UITheme.Typography.Size.Heading)
-	soonTitle.Position = UDim2.fromOffset(0, S.M)
-	soonTitle.Size = UDim2.new(1, 0, 0, 32)
-	local soonText = Instance.new("TextLabel")
-	soonText.BackgroundTransparency = 1
-	soonText.FontFace = UITheme.Typography.Body
-	soonText.TextSize = UITheme.Typography.Size.Body
-	soonText.TextColor3 = C.TextMuted
-	soonText.TextWrapped = true
-	soonText.Position = UDim2.fromOffset(S.L, 52)
-	soonText.Size = UDim2.new(1, -2 * S.L, 0, 56)
-	soonText.Parent = soon
-	ui.soon = soon
-	ui.soonText = soonText
-
-	local list = Instance.new("ScrollingFrame")
-	list.BackgroundTransparency = 1
-	list.BorderSizePixel = 0
-	list.Position = UDim2.fromOffset(S.L, 92)
-	list.Size = UDim2.new(1, -2 * S.L, 1, -92 - 232)
-	list.ScrollBarThickness = UITheme.Stroke.ScrollBar
-	list.ScrollBarImageColor3 = C.Cream
-	list.AutomaticCanvasSize = Enum.AutomaticSize.Y
-	list.CanvasSize = UDim2.new()
-	list.Parent = bag
-	local grid = Instance.new("UIGridLayout")
-	grid.CellSize = UDim2.fromOffset(100, 132) -- portrait, nom sur deux lignes, raccourci
-	grid.CellPadding = UDim2.fromOffset(S.M, S.L)
-	grid.SortOrder = Enum.SortOrder.LayoutOrder
-	grid.Parent = list
-	local padding = Instance.new("UIPadding")
-	padding.PaddingTop = UDim.new(0, S.M) -- place pour les badges à cheval sur le bord
-	padding.PaddingLeft = UDim.new(0, 4)
-	padding.Parent = list
-	ui.list = list
-
-	local place = UIKit.button(bag, "Placer", "Primary", UDim2.new(1, -2 * S.L, 0, 56 + UITheme.Shadow.ButtonLip), function()
-		local id = chosen
-		if id and not ArenaStore.inCombat() then
-			PlacementState.selectCollection(ArenaStore.placement, id, ArenaStore.formation())
-			setBag(false) -- le joueur choisit maintenant sa case dans le monde
-			ArenaStore.notify()
+	local before = HeroBarController.HasNew()
+	if not known then
+		known = {}
+		for id in ArenaStore.heroes do
+			(known :: any)[id] = true
 		end
-	end)
-	place.holder.AnchorPoint = Vector2.new(0, 1)
-	place.holder.Position = UDim2.new(0, S.L, 1, -168)
-	ui.place = place
-	GuideTargets.register("Bag.Place", place.holder)
-	local chooser = UIKit.panel(bag, T.PanelStrong)
-	chooser.Name = "ChoixRaccourci"
-	chooser.Position = UDim2.new(0, S.L, 1, -76)
-	chooser.Size = UDim2.new(1, -2 * S.L, 0, 60)
-	chooser.Visible = false
-	ui.chooser = chooser
-	ui.chooseMode = "Assign"
-	for index = 1, 10 do
-		local pick = UIKit.button(chooser, tostring(index % 10), "Tab", UDim2.fromOffset(30, 44), function()
-			if not chosen then return end
-			local origin = table.find(ArenaStore.hotbar, chosen)
-			if ui.chooseMode == "Swap" and origin then ArenaStore.hotbarAction("Swap", origin, index)
-			else ArenaStore.hotbarAction("Assign", chosen, index) end
-			chooser.Visible = false
-		end)
-		pick.holder.Name = `Choisir{index}`
-		pick.holder.Position = UDim2.fromOffset(5 + (index - 1) * 32, 8)
-		pick.label.TextSize = 16
+	else
+		local seen = known :: { [string]: boolean }
+		for id in ArenaStore.heroes do
+			if not seen[id] then
+				seen[id] = true
+				fresh[id] = true
+			end
+		end
 	end
-	local assign = UIKit.button(bag, "Placer dans le raccourci", "Secondary", UDim2.new(1, -2 * S.L, 0, 44), function()
-		ui.chooseMode = "Assign"
-		chooser.Visible = not chooser.Visible
-	end)
-	assign.holder.Name, assign.holder.Position = "AssignerRaccourci", UDim2.new(0, S.L, 1, -160)
-	assign.label.TextSize = 18
-	ui.assign = assign
-	local clear = UIKit.button(bag, "Retirer du raccourci", "Secondary", UDim2.fromOffset(218, 44), function()
-		local slot = chosen and table.find(ArenaStore.hotbar, chosen)
-		if slot then ArenaStore.hotbarAction("Clear", slot) end
-	end)
-	clear.holder.Name, clear.holder.Position = "RetirerRaccourci", UDim2.new(0, S.L, 1, -112)
-	clear.label.TextSize = 16
-	ui.clear = clear
-	local swap = UIKit.button(bag, "Échanger", "Secondary", UDim2.fromOffset(108, 44), function()
-		ui.chooseMode = "Swap"
-		chooser.Visible = not chooser.Visible
-	end)
-	swap.holder.Position = UDim2.new(0, S.L + 226, 1, -112)
-	swap.label.TextSize = 16
-	ui.swap = swap
+	for id in fresh do
+		if not ArenaStore.heroes[id] then
+			fresh[id] = nil
+		end
+	end
+	if HeroBarController.HasNew() ~= before then
+		HeroBarController.newChanged:Fire(HeroBarController.HasNew())
+	end
 end
 
-local function card(hero: ArenaStore.HeroView): CardUI
-	local existing = cards[hero.Id]
-	if existing then
-		return existing
-	end
-	local info = HeroConfig.Heroes[hero.HeroId]
-	local frame = Instance.new("TextButton")
-	frame.Name = hero.Id
-	frame.AutoButtonColor = false
-	frame.Text = ""
-	frame.BackgroundColor3 = C.Cream
-	frame.BackgroundTransparency = T.PanelStrong
-	frame.LayoutOrder = if info then info.Order else 99
-	frame.Parent = ui.list
-	UIKit.corner(frame, UITheme.Radius.Medium)
-	local stroke = UIKit.stroke(frame, UITheme.Stroke.Regular)
-	local art = Instance.new("Frame")
-	art.BackgroundColor3 = C.Sand
-	art.BackgroundTransparency = T.Art
-	art.Position = UDim2.fromOffset(8, 8)
-	art.Size = UDim2.new(1, -16, 0, 66)
-	art.Parent = frame
-	UIKit.corner(art, UITheme.Radius.Small)
-	local portrait = heroPortrait(art, hero.HeroId)
-	if not portrait then
-		UIKit.text(art, if info then info.PlaceholderIcon else "?", UITheme.Typography.Size.IconLarge)
-	end
-	local name = UIKit.text(frame, if info then info.Name else hero.HeroId, UITheme.Typography.Size.Label)
-	-- Vrais noms de héros (« Tireuse des Faubourgs ») : deux lignes dans la carte, réduits si besoin.
-	name.Position = UDim2.fromOffset(4, 76)
-	name.Size = UDim2.new(1, -8, 0, 34)
-	name.TextWrapped = true
-	name.TextScaled = true
-	local fit = Instance.new("UITextSizeConstraint")
-	fit.MaxTextSize = UITheme.Typography.Size.Label
-	fit.Parent = name
-	local placed = UIKit.badge(frame, "Posé", C.Gold)
-	placed.AnchorPoint = Vector2.new(0.5, 0.5)
-	placed.Position = UDim2.fromScale(0.5, 0)
-	frame.Activated:Connect(function()
-		if Drag.suppressed() then return end
-		chosen = hero.Id
-		ArenaStore.notify()
-	end)
-	local shortcut = UIKit.text(frame, "", 13)
-	shortcut.Position = UDim2.new(0, 0, 1, -18)
-	shortcut.Size = UDim2.new(1, 0, 0, 18)
-	-- niveau de CET exemplaire (coin haut gauche de l'illustration)
-	local level = UIKit.text(art, "", UITheme.Typography.Size.Caption, { Align = Enum.TextXAlignment.Left })
-	level.Name = "Niveau"
-	level.Position = UDim2.fromOffset(4, 2)
-	level.Size = UDim2.new(1, -8, 0, 16)
-	level.ZIndex = 3
-	-- XP (carte choisie seulement) : petite barre au pied de l'illustration
-	local xp = UIKit.bar(art, { Color = C.Progress, Size = UDim2.new(1, -8, 0, 6) })
-	xp.Frame.Name = "XP"
-	xp.Frame.AnchorPoint = Vector2.new(0.5, 1)
-	xp.Frame.Position = UDim2.new(0.5, 0, 1, -3)
-	xp.Frame.ZIndex = 3
-	xp.Fill.ZIndex = 4
-	xp.Frame.Visible = false
-	Drag.bind(frame, function() return { id = hero.Id } end)
-	local entry = { frame = frame, stroke = stroke, placed = placed, shortcut = shortcut, portrait = portrait ~= nil, level = level, xp = xp }
-	cards[hero.Id] = entry
-	return entry
+local function sortedHeroes(): { SacocheModel.Card }
+	return SacocheModel.cards(ArenaStore.heroes :: any, { Infos = HeroConfig.Heroes :: any, Placed = {}, Hotbar = ArenaStore.hotbar })
 end
 
 local function renderBag()
-	if not ui.list then
+	if bag.chosen and not ArenaStore.heroes[bag.chosen] then
+		bag.chosen = nil
+		bag.picking = false
+	end
+	if not bag.open then
 		return
 	end
-	local placed = placedSet()
-	for id, entry in cards do
-		if not ArenaStore.heroes[id] then
-			entry.frame:Destroy()
-			cards[id] = nil
+	local ctx = context()
+	local hero = if bag.chosen then ArenaStore.heroes[bag.chosen] else nil
+	local detail = if hero then SacocheModel.detail(hero :: any, HeroConfig.Heroes[hero.HeroId] :: any, ctx) else nil
+	local all = sortedHeroes()
+	local equipCard = all[math.clamp(bag.equip, 1, math.max(#all, 1))]
+	local equipHero = equipCard and ArenaStore.heroes[equipCard.Id]
+	local total = 0
+	for _ in ArenaStore.heroes do total += 1 end
+	SacocheView.Render({
+		Tab = bag.tab,
+		Cards = SacocheModel.cards(ArenaStore.heroes :: any, ctx),
+		Detail = detail,
+		Filter = bag.filter,
+		Query = bag.query,
+		SearchOpen = bag.search,
+		HasNew = HeroBarController.HasNew(),
+		Total = total,
+		EquipHero = if equipCard and equipHero then { HeroId = equipCard.HeroId, Name = equipCard.Name, Level = equipHero.Level } else nil,
+		Picking = bag.picking,
+	})
+end
+
+-- Actions de la fiche : contrats existants (PlacementState, ArenaService « Remove », HotbarAction).
+local function onPrimary(action: string)
+	local id = bag.chosen
+	if not id or ArenaStore.inCombat() or ArenaStore.busy then
+		return
+	end
+	if action == "Place" then
+		PlacementState.selectCollection(ArenaStore.placement, id, ArenaStore.formation())
+		setBag(false) -- le monde redevient prioritaire : le joueur choisit sa dalle (pastille « en main »)
+		ArenaStore.notify()
+	elseif action == "Remove" then
+		for slot, placed in ArenaStore.formation() do
+			if placed == id then
+				ArenaStore.request("Remove", slot)
+				break
+			end
 		end
 	end
-	if chosen and not ArenaStore.heroes[chosen] then
-		chosen = nil
+end
+
+local function onSecondary(action: string)
+	local id = bag.chosen
+	if not id or ArenaStore.busy then
+		return
 	end
-	-- guidage : la première carte de la grille (ordre du catalogue) est la cible « Bag.FirstHero »
-	local first: CardUI? = nil
-	for id, hero in ArenaStore.heroes do
-		local entry = card(hero)
-		if not first or entry.frame.LayoutOrder < first.frame.LayoutOrder then
-			first = entry
-		end
-		local selected = id == chosen
-		entry.stroke.Color = if selected then C.Selected else UITheme.Stroke.Color
-		entry.stroke.Thickness = if selected then UITheme.Stroke.Thick else UITheme.Stroke.Regular
-		entry.placed.Visible = placed[id] == true
+	if action == "PickHotbar" then
+		bag.picking = not bag.picking
+		ArenaStore.notify()
+	elseif action == "ClearHotbar" then
 		local slot = table.find(ArenaStore.hotbar, id)
-		entry.level.Text = `Nv. {hero.Level}`
-		local need = hero.XPToNext or 0
-		local maxed = hero.MaxLevel ~= nil and hero.Level >= hero.MaxLevel
-		entry.xp.Frame.Visible = selected and (need > 0 or maxed)
-		entry.xp.Set(if maxed then 1 elseif need > 0 then (hero.XP or 0) / need else 0)
-		if selected and maxed then
-			entry.shortcut.Text = "Niveau max"
-		elseif selected and need > 0 then
-			entry.shortcut.Text = `{hero.XP or 0} / {need} XP`
-		else
-			entry.shortcut.Text = if slot then `Raccourci {slot % 10}` else "Collection"
+		if slot then
+			ArenaStore.hotbarAction("Clear", slot)
 		end
 	end
-	if first then
-		GuideTargets.register("Bag.FirstHero", first.frame)
-	end
-	ui.place.setEnabled(chosen ~= nil and not ArenaStore.inCombat())
-	local heroes = currentTab == "Heroes"
-	ui.assign.setEnabled(chosen ~= nil and not ArenaStore.busy)
-	local assigned = chosen ~= nil and table.find(ArenaStore.hotbar, chosen) ~= nil
-	ui.clear.setEnabled(assigned and not ArenaStore.busy)
-	ui.swap.setEnabled(assigned and not ArenaStore.busy)
-	ui.assign.holder.Visible, ui.clear.holder.Visible, ui.swap.holder.Visible = heroes, heroes, heroes
-	if not heroes or not chosen then ui.chooser.Visible = false end
-	for id, tab in ui.tabs do
-		tab.setSelected(id == currentTab)
-	end
-	ui.list.Visible = heroes
-	ui.place.holder.Visible = heroes
-	ui.soon.Visible = not heroes
-	for _, tabInfo in TABS do
-		if tabInfo.Id == currentTab and tabInfo.Soon then
-			ui.soonText.Text = tabInfo.Soon
-		end
-	end
+end
+
+local function mountBag()
+	local screen = Instance.new("ScreenGui")
+	screen.Name = "Sacoche"
+	screen.ResetOnSpawn = false
+	screen.IgnoreGuiInset = true
+	screen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	screen.DisplayOrder = 3 -- au-dessus du HUD (2) ; le menu (3) est masqué tant qu'elle est ouverte
+	ui.bagScreen = screen
+	SacocheView.Mount(screen, {
+		OnClose = function()
+			setBag(false)
+		end,
+		OnTab = function(tab: string)
+			bag.tab = tab
+			bag.picking = false
+			ArenaStore.notify()
+		end,
+		OnSelect = function(id: string)
+			if Drag.suppressed() then
+				return
+			end
+			bag.chosen = id
+			bag.picking = false
+			if fresh[id] then
+				fresh[id] = nil
+				HeroBarController.newChanged:Fire(HeroBarController.HasNew())
+			end
+			ArenaStore.notify()
+		end,
+		OnFilter = function(filter: string)
+			bag.filter = filter
+			ArenaStore.notify()
+		end,
+		OnQuery = function(query: string)
+			bag.query = query
+			ArenaStore.notify()
+		end,
+		OnSearch = function(open: boolean)
+			bag.search = open
+			bag.query = ""
+			ArenaStore.notify()
+		end,
+		OnPrimary = onPrimary,
+		OnSecondary = onSecondary,
+		OnEquipHero = function(step: number)
+			local count = #sortedHeroes()
+			if count > 0 then
+				bag.equip = (bag.equip - 1 + step) % count + 1
+				ArenaStore.notify()
+			end
+		end,
+		BindDrag = function(frame: GuiObject, id: string)
+			Drag.bind(frame, function()
+				bag.chosen = id
+				return { id = id }
+			end)
+		end,
+	})
+	screen.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+	screen:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeBag)
 end
 
 ------------------------------------------------------------------ démarrage
 
-local function render()
+function render()
+	trackNew()
 	renderHotbar()
 	renderBag()
 end
@@ -548,12 +606,13 @@ function HeroBarController:Start()
 	screen.ResetOnSpawn = false
 	screen.IgnoreGuiInset = false
 	screen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	screen.DisplayOrder = 4 -- au-dessus de la Sacoche (3) : le fantôme du drag et les raccourcis restent visibles
 	buildHotbar(screen)
-	buildBag(screen)
 	screen.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
 	local frames = {}
 	for index, slot in slots do frames[index] = slot.frame end
 	Drag.start(screen, frames)
+	mountBag()
 
 	UserInputService.InputBegan:Connect(function(input: InputObject, processed: boolean)
 		if processed then
@@ -565,34 +624,32 @@ function HeroBarController:Start()
 		end
 	end)
 	ArenaStore.changed.Event:Connect(render)
-	-- un écran modal s'ouvre (Quêtes, Expédition, invocation, récompenses...) : la sacoche se ferme, jamais
+	-- un écran modal s'ouvre (Quêtes, Expédition, invocation, récompenses...) : la Sacoche se ferme, jamais
 	-- de fenêtre par-dessus elle
 	ScreenState.changed.Event:Connect(function(current: string?)
 		if current ~= nil then
 			setBag(false)
 		end
 	end)
+	-- le HUD du haut et la hotbar bougent (résolution, monnaies) : la Sacoche reste centrée entre eux
+	task.spawn(function()
+		while true do
+			task.wait(0.5)
+			if bag.open then placeBag() end
+		end
+	end)
 	render()
 	ArenaStore.start()
 	-- Portraits : les modèles des héros arrivent par réplication (ReplicatedStorage.Assets.Heros,
-	-- copiés par HeroService) ; les cartes créées avec un monogramme sont refaites à leur arrivée.
+	-- copiés par HeroService) ; les raccourcis et cartes sans portrait sont refaits à leur arrivée.
 	task.spawn(function()
 		local assets = ReplicatedStorage:WaitForChild("Assets", 30)
 		local heroes = assets and assets:WaitForChild("Heros", 30)
 		if not heroes then
 			return
 		end
-		local function refresh()
-			for id, entry in cards do
-				if not entry.portrait then
-					entry.frame:Destroy()
-					cards[id] = nil
-				end
-			end
-			render()
-		end
-		heroes.ChildAdded:Connect(refresh)
-		refresh()
+		heroes.ChildAdded:Connect(render)
+		render()
 	end)
 end
 

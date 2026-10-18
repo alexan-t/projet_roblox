@@ -1,8 +1,8 @@
 --!strict
 -- Menu principal (MenuView, icônes PNG de Shared.Config.MenuIconConfig) — voir docs/TUTORIAL_GUIDANCE.md.
 -- Les entrées viennent de TutorialConfig.Menu.Entries ; chaque View est branchée sur ce qui existe :
---   Bag   : ouvre / ferme LA sacoche existante (HeroBarController.SetBag) ; bouton sélectionné tant
---           qu'elle est ouverte ;
+--   Bag   : ouvre LA Sacoche (HeroBarController.SetBag), centrée : le menu se masque tant qu'elle est
+--           ouverte et revient à sa fermeture ; « ! » quand un héros nouveau n'a pas encore été vu ;
 --   Index : catalogue des héros (CollectionView, la vue « collection » du jeu) : héros possédés avec leur
 --           vrai modèle et leur nombre, les autres « ??? » avec un cadenas (aucun spoil) ;
 --   Stats : statistiques du joueur (InfoView), valeurs du serveur (Remotes.GetPlayerStats) ;
@@ -70,7 +70,8 @@ end
 local function refreshAttention()
 	for id, entry in entries do
 		local quest = entry.View == "Quests" and questAttention
-		MenuView.SetAttention(id, attention[id] == true or quest or TutorialController.Badge(entry))
+		local fresh = entry.View == "Bag" and HeroBarController.HasNew()
+		MenuView.SetAttention(id, attention[id] == true or quest or fresh or TutorialController.Badge(entry))
 	end
 end
 
@@ -259,8 +260,9 @@ end
 
 local function refreshVisible()
 	local current = ScreenState.current()
-	-- caché pendant les autres écrans modaux ; visible (sous le voile) pendant ses propres fenêtres
-	MenuView.SetVisible(current == nil or current == SCREEN or current == QUESTS)
+	-- caché pendant les autres écrans modaux et pendant la Sacoche (elle devient la priorité visuelle) ;
+	-- visible (sous le voile) pendant ses propres fenêtres
+	MenuView.SetVisible((current == nil and not HeroBarController.IsBagOpen()) or current == SCREEN or current == QUESTS)
 	refreshSelected()
 end
 
@@ -290,7 +292,8 @@ function MenuController:Start()
 		table.insert(list, { Id = entry.Id, Label = entry.Label })
 	end
 	MenuView.Build(list, select)
-	HeroBarController.bagChanged.Event:Connect(refreshSelected)
+	HeroBarController.bagChanged.Event:Connect(refreshVisible)
+	HeroBarController.newChanged.Event:Connect(refreshAttention)
 	TutorialController.changed.Event:Connect(refreshAttention)
 	TutorialController.pointing.Event:Connect(function(target: string?)
 		tutorialPointed = target

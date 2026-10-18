@@ -302,6 +302,45 @@ local Pack = {
 		Shine = 3.2, -- s d'un reflet qui traverse « Lancer »
 		Lift = 6, -- px : la carte choisie se soulève
 	},
+	-- Fenêtre Sacoche (maquette « Sacoche.dc.html », figée) : mesures des trois dispositions. La position
+	-- gauche du prototype (winL) n'est PAS reprise : la fenêtre est centrée dans la zone libre entre le HUD
+	-- du haut et la hotbar (Shared.Sacoche.SacocheModel.frame), puis mise à l'échelle pour y tenir.
+	Sacoche = {
+		Wide = {
+			Window = Vector2.new(1000, 680), Pad = { Top = 32, Side = 16, Bottom = 16 }, Gap = 14,
+			TabTop = -26, TitleIcon = 52, TitleSize = 30,
+			TabWidth = 230, TabHeight = 58, TabHeightOn = 66, TabIcon = 32, TabIconOn = 40, TabSize = 19, TabSizeOn = 22, TabsGap = 12,
+			ChipHeight = 40, ChipSize = 15, SearchWidth = 200,
+			HeroCols = 5, CardGap = 16, CardName = 30, CardNameSize = 16, LevelSize = 14,
+			DetailWidth = 340, DetailGap = 12, DetailPad = 14, BigWidth = 130, HeroNameSize = 24,
+			StatIcon = 34, StatSize = 26, CtaHeight = 66, CtaSize = 26, Cta2Height = 50, Cta2Size = 18,
+			DollWidth = 360, SlotSize = 84, DollMid = 120, HeroRow = 130, DollGap = 14,
+			EmptyIcon = 96, EmptyTitle = 22,
+			PickBottom = 118, PickSize = 20,
+		},
+		Tablet = {
+			Window = Vector2.new(970, 610), HeroCols = 4, DetailWidth = 320, DollWidth = 340, TabWidth = 210,
+		},
+		Phone = {
+			Window = Vector2.new(824, 290), Pad = { Top = 8, Side = 10, Bottom = 8 }, Gap = 8,
+			TabTop = -6, TitleIcon = 0, TitleSize = 0,
+			TabWidth = 64, TabHeight = 72, TabHeightOn = 84, TabIcon = 36, TabIconOn = 44, TabSize = 0, TabSizeOn = 0, TabsGap = 8,
+			ChipHeight = 36, ChipSize = 15, SearchWidth = 120,
+			HeroCols = 4, CardGap = 10, CardName = 22, CardNameSize = 13, LevelSize = 13,
+			DetailWidth = 290, DetailGap = 6, DetailPad = 8, BigWidth = 56, HeroNameSize = 18,
+			StatIcon = 24, StatSize = 19, CtaHeight = 52, CtaSize = 20, Cta2Height = 52, Cta2Size = 15,
+			DollWidth = 250, SlotSize = 44, DollMid = 64, HeroRow = 58, DollGap = 8,
+			EmptyIcon = 64, EmptyTitle = 18,
+			PickBottom = 76, PickSize = 17,
+		},
+		Margin = 16, -- px : marge minimale autour de la fenêtre centrée (écran, HUD, hotbar)
+		MinScale = 0.5,
+		MaxScale = 1.25,
+		Open = 0.22, -- s : ouverture scale 0,94 → 1,01 → 1 + fondu (aucun glissement horizontal)
+		Lift = 6, -- px : la carte choisie se soulève
+		Breathe = 1.8, -- s : respiration de « Placer »
+		SlotPulse = 1.4, -- s : pulsation des raccourcis pendant le choix d'une case
+	},
 	-- Panneau Quêtes et reveal.
 	Quest = {
 		Width = 600,
@@ -354,6 +393,7 @@ local UITheme = {
 		Currency = table.freeze(Pack.Currency),
 		Quest = table.freeze(Pack.Quest),
 		Expedition = table.freeze(Pack.Expedition),
+		Sacoche = table.freeze(Pack.Sacoche),
 	}),
 	Stroke = table.freeze(Stroke),
 	Spacing = table.freeze(Spacing),
