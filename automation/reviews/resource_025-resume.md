@@ -1,6 +1,6 @@
 # resource_025 — Plume de Guetteur — PASS
 
-Nouvelle série autorisée par la mission du 18 octobre 2026, historique conservé dans l'état. Passe 1 : erreur de génération ; passe 2 : objet capturé et livré.
+Nouvelle série autorisée par la mission du 18 octobre 2026, historique conservé dans l'état. Passe 1 : erreur de service ; passe 2 : lien de cuir peu lisible ; passe 3 : plume avec lien visible.
 
 Troisième passe : plume brun-roux courbe, pointe rouge et gros lien de cuir à la base. Détourage doux pour supprimer les franges magenta.
 

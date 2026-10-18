@@ -2,7 +2,7 @@
   "task_id": "resource_025",
   "status": "done",
   "stage": "review",
-  "iteration": 2,
+  "iteration": 3,
   "max_iterations": 3,
   "last_completed_step": "studio_card_family_capture_pass",
   "next_step": null,
