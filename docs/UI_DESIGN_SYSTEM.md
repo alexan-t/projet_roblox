@@ -5,8 +5,17 @@ dans le monde. Les valeurs vivent dans un seul module, `src/shared/Config/UIThem
 (`ReplicatedStorage.Shared.Config.UITheme`). **Aucune couleur, transparence, police, rayon ou
 durée en dur dans un Controller** : on lit `UITheme`.
 
-Maquette de validation, construite en Studio avec ces tokens par-dessus l'arène :
-`docs/references/ui/maquette_v1.jpg`.
+Maquette de validation, construite en Studio avec les vraies vues par-dessus l'arène :
+`docs/references/ui/maquette_v2.jpg` (démo `Workspace.ApercuUI = "Maquette"`, § 12 ; contenu et
+procédure : § 14).
+
+`docs/references/ui/maquette_v1.jpg` est **obsolète**, gardée pour l'historique : elle montre
+une infobulle « Ultime prêt — Touchez le héros » (l'ultime est automatique, § 10 et § 13), les
+monnaies en haut à gauche (elles sont en haut au centre, § 12), un texte Builder Sans posé sur un
+`Panel` (interdit, § 3), une pastille « Quête terminée » isolée en haut au centre (la quête
+terminée s'affiche dans son suivi, § 6 Quêtes), des monogrammes et des icônes-lettres au lieu des
+portraits 3D et des objets (§ 7), et la barre de combat avec une fenêtre ouverte (un écran modal à
+la fois, § 13). Ne pas s'en servir comme référence.
 
 ## 1. Charte en une phrase
 
@@ -427,7 +436,8 @@ occupe le haut à droite), fenêtres centrées avec voile.
 ### Démonstrations Studio (sans serveur)
 
 `Workspace.ApercuUI` = `Quete`, `Monnaies`, `Expedition`, `Invocation`, `Collection`,
-`Transition` ou `Tout` (`UIPreviewController`) ; modifiable en cours de Play. Les héros de
+`Transition`, `Tout` ou `Maquette` (composition figée de la maquette de validation, § 14)
+(`UIPreviewController`) ; modifiable en cours de Play. Les héros de
 démonstration sont les copies de `ReplicatedStorage.AtelierInvocation` (attributs `NomAffiche`,
 `Classe`). Écran de fin : `Workspace.ApercuEcranRecompenses = true`.
 
@@ -467,3 +477,37 @@ Le client ne reçoit que des **vues en lecture seule**, jamais `PlayerData`. L'i
 | KingdomController | Pas d'action joueur : KingdomService (serveur) place les héros et l'état du royaume ; `KingdomChangeController` et `KingdomAmbientController` animent côté client. Pas de nouveau contrôleur. |
 | Collection | La sacoche et la hotbar (`HeroBarController`) servent de collection ; le nouveau héros y apparaît via `HeroesChanged` après sa carte. `CollectionView` reste une vue de design non branchée. |
 | QuestController, CurrencyController, SummonController | Créés (#11, #50), voir le tableau ci-dessus. |
+
+## 14. Maquette de validation (v2)
+
+La maquette est une **capture réelle** du jeu, pas un dessin : elle n'utilise que les vues de § 12,
+chacune à sa place. Elle remplace `maquette_v1.jpg` (écarts listés en tête de ce document).
+
+### Contenu attendu
+
+| Élément | Où | Source |
+| --- | --- | --- |
+| Suivi de quête **terminée** : badge `Success` + bouton principal « Récupérer » | haut gauche, sous le chat | `QuestView` |
+| Monnaies or / gemmes / tickets (12 450 · 85 · 3), icônes-objets qui débordent | **haut centre** | `CurrencyView` |
+| Fenêtre « Collection » : portraits 3D, badges « Équipé » (contour `Selected`) et « Nouveau », « ×2 » | centre, voile `Overlay` | `CollectionView` (copies de `ReplicatedStorage.AtelierInvocation`) |
+| Fiche du héros : nom Fredoka + **texte long Builder Sans dans un sous-panneau `PanelStrong`** | droite, au-dessus du voile | démo `Maquette` |
+| Ultime **automatique** : « ULTIME ! » doré, colonne de lumière et onde au sol sur le héros | dans le monde, sur l'arène | héros tagué `ApercuUltime` (`UltimateEffectController`) |
+
+Ce qui ne doit **pas** apparaître : bouton, consigne ou infobulle d'ultime (« Ultime prêt »,
+« Touchez le héros »…), monnaies en haut à gauche, texte Builder Sans posé sur un `Panel`,
+pastille de quête isolée, monogramme ou icône-lettre, barre de combat en même temps qu'une
+fenêtre, plus d'un bouton principal par fenêtre, emoji.
+
+### Procédure (Studio, MCP)
+
+1. Rojo connecté, place partagée ouvert, caméra cadrée sur l'arène du plot comme pour la v1.
+2. Dans `Workspace.AtelierAnimation`, poser une **copie** d'un héros riggé ayant une animation
+   « Ultime » (jamais le modèle du Bestiaire), visible dans le cadre, et lui ajouter le tag
+   `ApercuUltime`.
+3. `Workspace:SetAttribute("ApercuUI", "Maquette")`, puis Play.
+4. Capturer au moment où « ULTIME ! » est au-dessus du héros (la boucle relance l'ultime toutes
+   les 2 s environ) : 1920 × 1080, sur un fond clair puis sur un fond sombre (§ 11).
+5. Enregistrer la capture sur fond clair dans `docs/references/ui/maquette_v2.jpg`.
+6. Contrôle § 11 + `docs/VISUAL_QA.md` : **PASS** ou **FIX**.
+7. Réinitialiser la caméra (`docs/MONSTER_PRODUCTION.md`, Outils § A), retirer le tag et vider
+   l'attribut `ApercuUI`.
