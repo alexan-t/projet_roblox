@@ -98,7 +98,7 @@ resource("resource_038", "Morceau de Charbon", "mine", "rbxassetid://71582478481
 resource("resource_039", "Sac de Sable Doré", "mine", "rbxassetid://112315969053738")
 resource("resource_040", "Motte d'Argile", "mine")
 -- Cristaux et magie
-resource("resource_041", "Éclat de Cristal Cyan", "arcane")
+resource("resource_041", "Éclat de Cristal Cyan", "arcane", "rbxassetid://86535229030136")
 resource("resource_042", "Grappe de Cristal Brut", "arcane", "rbxassetid://88264082868996")
 resource("resource_043", "Poussière Runique", "arcane", "rbxassetid://80977543784086")
 resource("resource_044", "Cœur de Tréant", "arcane", "rbxassetid://102068554185533")
