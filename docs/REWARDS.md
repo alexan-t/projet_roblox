@@ -101,7 +101,7 @@ La fenêtre montre les récompenses **réelles** du stage, sans rien inventer (`
   - Une fois le First Clear obtenu, la boîte reste visible, grisée, avec « ✓ Obtenue ».
   - Le titre suivant devient alors « À chaque victoire ».
 - **« Ensuite, à chaque victoire »** présente l'XP par héros posé (`HeroProgressionConfig`), puis `RepeatReward`.
-- **Après #80** : les replays 1-2 à 1-5 Normal et les replays Élite peuvent afficher les tickets configurés dans `TicketEconomy` ; l'interface lit la vraie config et n'invente aucun montant.
+- **Tickets de replay (#80)** : 1-2 à 1-5 Normal et tous les stages Élite n'ont pas de First Clear, donc pas de boîte « Première victoire ». Leur boîte de replay affiche l'XP puis la tuile ticket (`CurrencyVisualConfig.SummonTicket`, « +n ») avec le montant de `TicketEconomy`. L'interface lit la vraie config et n'invente aucun montant. `Expedition.spec.lua` vérifie ces valeurs.
 - **Bonus de quête** : jamais mélangé aux récompenses de stage. La quête garde son propre panneau.
 
 ## Validation
