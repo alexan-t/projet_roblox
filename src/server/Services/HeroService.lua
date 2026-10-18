@@ -6,12 +6,11 @@
 --   GetHeroes (RemoteFunction)     -> vue { Heroes, Hotbar } du joueur ;
 --   HeroesChanged (RemoteEvent)    -> nouvelle vue après tout changement ;
 --   HotbarAction (RemoteFunction)  -> Assign / Clear / Swap, revérifiés ;
---   RequestSummon (RemoteFunction) -> invocation ; le client n'envoie que l'Id de la bannière
---                                     (validé) : héros, rareté, coût et résultat sont décidés ici ;
---   HeroObtained (RemoteEvent)     -> { InstanceId, HeroId, Name, New, Rarity } au seul joueur concerné ;
---   GetSummonState (RemoteFunction) -> { Tickets, Cost, Starter } pour la fenêtre d'invocation (lecture
---                                     seule ; Starter = { Active, HeroId, Name, Rarity } : invocation
---                                     tutorielle disponible et héros présenté, sinon { Active = false }) ;
+--   RequestSummon (RemoteFunction) -> lot V2 { BannerId, Slot, Quantity, ExpectedTotal } ;
+--                                     serveur : coût, RNG, garantie, exemplaires, débit ;
+--   HeroObtained (RemoteEvent)     -> starter et adaptateur interne x1 ; le lot V2 est sa réponse ;
+--   GetSummonState (RemoteFunction) -> tickets, coût, starter, bannière/créneau/bornes UTC,
+--                                     version persistée, garantie et probabilités exactes.
 --   RequestStarterSummon (RemoteFunction) -> invocation tutorielle (onboarding) : aucun argument, le
 --                                     serveur revérifie tout et donne SummonConfig.Starter.HeroId, gratuit,
 --                                     une seule fois, pendant la quête SummonConfig.Starter.QuestId.
@@ -321,7 +320,7 @@ local function announce(player: Player, result: SummonRules.Result, origin: stri
 	return obtained
 end
 
--- Invocation autoritaire. Section critique synchrone (aucun yield) entre la vérification du ticket
+-- Adaptateur serveur x1 historique (aucune remote ne l’appelle). Section critique synchrone (aucun yield) entre la vérification du ticket
 -- et les mutations : deux demandes simultanées avec un seul ticket donnent une seule réussite.
 -- bannerId : Id de SummonBannerConfig (nil = bannière par défaut) ; tout autre valeur est refusée.
 function HeroService:RequestSummon(player: Player, bannerId: any?): (Obtained?, string?)
@@ -348,6 +347,36 @@ function HeroService:RequestSummon(player: Player, bannerId: any?): (Obtained?, 
 		return nil, why
 	end
 	return announce(player, result, banner.Id), nil
+end
+
+-- Réseau V2 : validation et consommation de version synchrones, puis une seule publication du lot.
+function HeroService:RequestSummonBatch(player: Player, request: any): (any, string?)
+	local data, reason = atPortal(player)
+	if not data then return nil, reason end
+	local banner, slot = SummonBannerConfig.active(os.time())
+	local valid, why = SummonRules.validateRequest(request, data, banner.Id, slot)
+	if not valid then return nil, why end
+	summoning[player] = true
+	local ok, batch, failure = pcall(SummonRules.batch, data, SummonConfig, request.Quantity, newId, function(n: number): number
+		return random:NextInteger(1, n)
+	end, pool, banner)
+	summoning[player] = nil
+	if not ok then
+		Log.warn(SCOPE, `Invocation par lot en échec : {tostring(batch)}`)
+		return nil, "invocation impossible"
+	end
+	if not batch then return nil, failure end
+	batch.BannerId, batch.Slot = banner.Id, slot
+	for _, result in batch.Results do
+		local info = HeroConfig.Heroes[result.HeroId]
+		result.Name, result.Rarity = info.Name, info.Rarity
+	end
+	KingdomService:Refresh(player)
+	push(player)
+	for _, result in batch.Results do
+		for _, callback in obtainedCallbacks do task.spawn(callback, player, table.clone(result)) end
+	end
+	return batch, nil
 end
 
 -- Invocation tutorielle (onboarding) : le héros de départ, gratuit, garanti, une seule fois.
@@ -479,11 +508,12 @@ function HeroService:Start()
 		return ok, reason, if data then HeroRules.view(data, PROGRESSION) else nil
 	end
 	edit.Parent = remotes
-	-- Seul l'Id de bannière est lu (validé) : HeroId, rareté, coût et résultat sont décidés par le serveur.
+	-- Requête V2 strictement validée : aucune donnée de coût, HeroId ou taux venant du client.
 	local summon = Instance.new("RemoteFunction")
 	summon.Name = "RequestSummon"
-	summon.OnServerInvoke = function(player: Player, bannerId: any): (boolean, any)
-		local result, reason = HeroService:RequestSummon(player, bannerId)
+	summon.OnServerInvoke = function(player: Player, request: any, ...: any): (boolean, any)
+		if select("#", ...) > 0 then return false, "arguments d'invocation interdits" end
+		local result, reason = HeroService:RequestSummonBatch(player, request)
 		if result then
 			return true, result
 		end
@@ -515,7 +545,12 @@ function HeroService:Start()
 			local info = HeroConfig.Heroes[heroId]
 			starter = { Active = true, HeroId = heroId, Name = info.Name, Rarity = info.Rarity }
 		end
-		return { Tickets = data.Currencies.SummonTickets, Cost = SummonConfig.Cost, Starter = starter }
+		local banner, slot, endsAt = SummonBannerConfig.active(os.time())
+		local total = if typeof(data.Summons) == "table" then data.Summons.Total or 0 else 0
+		return { Tickets = data.Currencies.SummonTickets, Cost = SummonConfig.Cost, Starter = starter,
+			BannerId = banner.Id, Slot = slot, EndsAt = endsAt, ServerNow = os.time(), ExpectedTotal = total,
+			Guarantee = total == 0, Rates = SummonRules.rates(pool, banner),
+			GuaranteeRates = SummonRules.rates(SummonRules.guaranteePool(pool, SummonConfig.GuaranteeRank), banner) }
 	end
 	state.Parent = remotes
 	Players.PlayerRemoving:Connect(function(player)

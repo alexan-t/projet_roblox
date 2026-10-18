@@ -25,7 +25,7 @@ export type Hero = {
 }
 
 export type Summons = {
-	Total: number, -- invocations réussies ; 0 = la prochaine est la première (tirage garanti)
+	Total: number, -- résultats payants ; starter exclu ; 0 = garantie Épique ou mieux + version de requête
 }
 
 export type Kingdom = {

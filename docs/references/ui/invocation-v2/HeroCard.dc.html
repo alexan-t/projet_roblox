@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet"><style>
+@keyframes hcSpin{to{transform:rotate(360deg)}}
+@keyframes hcGlow{0%,100%{opacity:.5}50%{opacity:1}}
+@keyframes hcTw{0%,100%{transform:scale(.2) rotate(0);opacity:0}50%{transform:scale(1) rotate(45deg);opacity:1}}
+@keyframes hcShine{0%,55%{transform:translateX(-180%) skewX(-20deg)}100%{transform:translateX(320%) skewX(-20deg)}}
+@keyframes hcPrism{to{filter:hue-rotate(360deg)}}
+</style></helmet>
+<div style="position:relative;width:100%;aspect-ratio:200/266;font-family:Fredoka,sans-serif;color:#FFF6E4">
+  <sc-if value="{{ rays }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:-45%;top:-21%;width:190%;aspect-ratio:1;animation:{{ prismAnim }};pointer-events:none">
+      <div style="position:absolute;inset:0;border-radius:50%;background:repeating-conic-gradient({{ rayColor }} 0 10deg,transparent 10deg 22.5deg);-webkit-mask:radial-gradient(circle,#000 25%,transparent 70%);mask:radial-gradient(circle,#000 25%,transparent 70%);opacity:{{ rayOp }};animation:hcSpin 18s linear infinite"></div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ glow }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:4% 2% 3% 2%;border-radius:11%;animation:{{ prismAnim }};pointer-events:none">
+      <div style="position:absolute;inset:0;border-radius:inherit;box-shadow:0 0 {{ glowPx }} {{ glowColor }},0 0 {{ glowPx }} {{ glowColor }};animation:hcGlow 1.8s ease-in-out infinite"></div>
+    </div>
+  </sc-if>
+  <img src="{{ frame }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;display:block"></img>
+  <div style="position:absolute;left:9.5%;right:9.5%;top:9.4%;bottom:28%;overflow:hidden;border-radius:5% 5% 0 0;display:flex;align-items:flex-end;justify-content:center">
+    <img src="assets/invocation/hero_placeholder.svg" alt="" style="width:84%;opacity:.42;display:block"></img>
+    <sc-if value="{{ shine }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;top:-10%;bottom:-10%;left:0;width:34%;background:linear-gradient(90deg,transparent,rgba(255,246,228,.55),transparent);animation:hcShine 3.2s ease-in-out infinite"></div>
+    </sc-if>
+  </div>
+  <sc-for list="{{ sparkles }}" as="s" hint-placeholder-count="0">
+    <img src="assets/invocation/sparkle.svg" alt="" style="position:absolute;left:{{ s.x }};top:{{ s.y }};width:{{ s.w }};filter:drop-shadow(0 0 4px {{ s.c }});animation:hcTw 2.2s ease-in-out {{ s.d }} infinite both;pointer-events:none"></img>
+  </sc-for>
+  <sc-if value="{{ showName }}" hint-placeholder-val="{{ true }}">
+    <div style="position:absolute;left:{{ nameInset }};right:{{ nameInset }};bottom:6%;min-height:17%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;line-height:1.02;gap:2px">
+      <span style="font-size:{{ nameFs }};font-weight:600;-webkit-text-stroke:{{ stroke }} #1F1A17;paint-order:stroke fill;text-wrap:balance">{{ name }}</span>
+      <sc-if value="{{ showRar }}" hint-placeholder-val="{{ false }}">
+        <span style="font-size:{{ rarFs }};font-weight:700;color:{{ textColor }};-webkit-text-stroke:3px #1F1A17;paint-order:stroke fill;text-transform:uppercase;letter-spacing:.04em;animation:{{ prismAnim }}">{{ rarName }}</span>
+      </sc-if>
+    </div>
+  </sc-if>
+  <sc-if value="{{ isNew }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:50%;top:-1%;transform:translate(-50%,-50%);padding:0 8px;border-radius:999px;background:#B83E30;border:2px solid #1F1A17;font-size:{{ tagFs }};font-weight:700;-webkit-text-stroke:3px #1F1A17;paint-order:stroke fill;white-space:nowrap;z-index:2">Nouveau</div>
+  </sc-if>
+  <sc-if value="{{ count }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;right:-7%;bottom:-11%;min-width:30%;padding:0 6px;box-sizing:border-box;text-align:center;border-radius:999px;background:#3E2A1C;border:3px solid #1F1A17;font-size:{{ countFs }};font-weight:700;-webkit-text-stroke:3px #1F1A17;paint-order:stroke fill">{{ count }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:240,&quot;height&quot;:330},&quot;hero&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Dame aux Mille Bannières&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;tier&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:5,&quot;min&quot;:1,&quot;max&quot;:10,&quot;tsType&quot;:&quot;number&quot;},&quot;size&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;lg&quot;,&quot;md&quot;,&quot;sm&quot;,&quot;xs&quot;],&quot;default&quot;:&quot;lg&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;fx&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;count&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;isNew&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+// Couleurs = UITheme.Rarity ; rang = RarityConfig (1 Commun → 10 Transcendant)
+const RC = {1:'#B9B0A3',2:'#6CC04A',3:'#46A2EC',4:'#A45BE0',5:'#F5C542',6:'#FF5A8A',7:'#7B2FA8',8:'#EAF3FF',9:'#D2321E',10:'#FF7A7A'};
+const RN = {1:'Commun',2:'Peu commun',3:'Rare',4:'Épique',5:'Légendaire',6:'Mythique',7:'Maudit',8:'Suprême',9:'Calamité',10:'Transcendant'};
+const SZ = {lg:{n:'19px',r:'14px',g:'28px',k:'18px',t:'14px'},md:{n:'14px',r:'12px',g:'18px',k:'15px',t:'12px'},sm:{n:'11px',r:null,g:'12px',k:'13px',t:'10px'},xs:{n:null,r:null,g:'8px',k:'11px',t:'8px'}};
+const SP = [['8%','12%','16%','0s'],['76%','26%','12%','.8s'],['16%','50%','10%','1.4s'],['70%','4%','14%','.4s']];
+class Component extends DCLogic {
+  renderVals() {
+    const t = Math.max(1, Math.min(10, +(this.props.tier ?? 5)));
+    const size = SZ[this.props.size] ? this.props.size : 'lg';
+    const z = SZ[size], fx = this.props.fx ?? true, big = size === 'lg' || size === 'md';
+    const nSp = fx && size !== 'xs' && t >= 4 ? Math.min(4, t - 2) : 0;
+    const cursed = t === 7;
+    return {
+      name: this.props.hero ?? 'Dame aux Mille Bannières', rarName: RN[t],
+      textColor: cursed ? '#C08AF0' : RC[t],
+      frame: `assets/invocation/card_frame_${t}.svg`,
+      rays: fx && big && t >= 5, rayColor: cursed ? '#1F1A17' : RC[t], rayOp: cursed ? 0.85 : 0.7,
+      glow: fx && t >= 4, glowPx: z.g, glowColor: cursed ? '#3A1458' : RC[t],
+      prismAnim: t === 10 ? 'hcPrism 3s linear infinite' : 'none',
+      shine: fx && size !== 'xs' && t >= 5 && !cursed,
+      sparkles: SP.slice(0, nSp).map(([x, y, w, d]) => ({ x, y, w, d, c: cursed ? '#7B2FA8' : t >= 8 ? '#8FE6FA' : '#F5CB5C' })),
+      showName: !!z.n, nameInset: size === 'sm' ? '5%' : '8%', nameFs: z.n, stroke: size === 'lg' ? '4px' : '3px', showRar: !!z.r, rarFs: z.r,
+      isNew: !!this.props.isNew, tagFs: z.t, count: this.props.count || null, countFs: z.k,
+    };
+  }
+}
+</script>
+</body>
+</html>

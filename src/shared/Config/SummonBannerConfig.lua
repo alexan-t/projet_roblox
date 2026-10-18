@@ -3,13 +3,14 @@
 -- le serveur valide l'Id reçu et applique la mise en avant.
 -- Toutes les bannières tirent dans le même pool (tous les héros de HeroConfig) avec les mêmes chances
 -- par rareté (RarityConfig). Mise en avant : quand la rareté tirée contient des héros Featured de la
--- bannière, l'un d'eux sort avec la probabilité FeaturedShare (sinon un héros quelconque de ce palier).
+-- bannière, la branche FeaturedShare choisit leur sous-pool ; l'autre branche choisit le palier
+-- complet, qui inclut aussi ces vedettes. Les probabilités totales sont publiées par le serveur.
 
 export type Banner = {
 	Id: string,
 	Name: string,
 	Subtitle: string,
-	Featured: { string }, -- HeroId mis en avant (affichés en grand, du plus rare au moins rare)
+	Featured: { string }, -- vedette principale, puis les deux secondaires ; ordre visuel contractuel
 	FeaturedShare: number, -- 0..1
 }
 
@@ -37,6 +38,8 @@ local Banners: { Banner } = {
 	},
 }
 
+local ROTATION_SECONDS, EPOCH = 15 * 60, 0
+
 local ById: { [string]: Banner } = {}
 for _, banner in Banners do
 	ById[banner.Id] = banner
@@ -49,4 +52,10 @@ return table.freeze({
 	ById = table.freeze(ById),
 	-- Bannière utilisée quand le client n'en précise aucune.
 	Default = "royaume",
+	RotationSeconds = ROTATION_SECONDS,
+	Epoch = EPOCH, -- UTC Unix : même créneau sur chaque serveur et après reconnexion
+	active = function(now: number): (Banner, number, number)
+		local slot = math.floor((now - EPOCH) / ROTATION_SECONDS)
+		return Banners[slot % #Banners + 1], slot, EPOCH + (slot + 1) * ROTATION_SECONDS
+	end,
 })

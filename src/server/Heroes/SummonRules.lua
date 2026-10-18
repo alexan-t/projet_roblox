@@ -11,8 +11,9 @@ export type Result = {
 	HeroId: string,
 	New: boolean, -- premier exemplaire de ce HeroId pour le joueur
 	Slot: number?, -- raccourci de hotbar utilisé, nil si la hotbar était pleine
-	First: boolean, -- première invocation payante du profil (Summons.Total était 0) ; ne décide pas du héros
+	First: boolean, -- premier résultat payé du profil ; pool garanti Épique ou mieux
 	KingdomChanged: boolean, -- Kingdom.VisualState vient de passer de KingdomFrom à KingdomTo
+	Guaranteed: boolean?,
 }
 
 -- Pool de tirage : un palier par rareté (ordre de RarityConfig), avec son poids effectif (les
@@ -117,9 +118,83 @@ function SummonRules.configProblems(config: any, catalog: { [string]: any }, tie
 end
 
 -- Le joueur a-t-il de quoi payer une invocation ?
-function SummonRules.canPay(data: any, config: any): boolean
+function SummonRules.canPay(data: any, config: any, quantity: number?): boolean
 	local tickets = data.Currencies.SummonTickets
-	return typeof(tickets) == "number" and tickets >= config.Cost
+	return typeof(tickets) == "number" and tickets >= config.Cost * (quantity or 1)
+end
+
+function SummonRules.guaranteePool(pool: Pool, minimumRank: number): Pool
+	local tiers, total = {}, 0
+	for rank, tier in pool.Tiers do
+		local weight = if rank >= minimumRank then tier.Weight else 0
+		table.insert(tiers, { Id = tier.Id, Weight = weight, Heroes = tier.Heroes })
+		total += weight
+	end
+	return { Tiers = tiers, Total = total }
+end
+
+-- Probabilités EXACTES du même mélange que roll : le pool normal contient aussi les vedettes.
+function SummonRules.rates(pool: Pool, banner: Banner): any
+	local tiers, heroes = {}, {}
+	for _, tier in pool.Tiers do
+		local featured = 0
+		for _, id in tier.Heroes do
+			if table.find(banner.Featured, id) then featured += 1 end
+		end
+		local share = if featured > 0 then math.floor(banner.FeaturedShare * 100 + 0.5) / 100 else 0
+		local chance = if pool.Total > 0 then tier.Weight / pool.Total else 0
+		table.insert(tiers, { Id = tier.Id, Probability = chance })
+		for _, id in tier.Heroes do
+			heroes[id] = chance * ((1 - share) / #tier.Heroes + (if table.find(banner.Featured, id) then share / featured else 0))
+		end
+	end
+	return { Tiers = tiers, Heroes = heroes }
+end
+
+-- Le compteur payé est aussi la version de transaction persistée : une requête rejouée est refusée,
+-- même après un rejoin. Aucun champ de coût, héros ou taux n'est accepté du client.
+function SummonRules.validateRequest(request: any, data: any, bannerId: string, slot: number): (boolean, string?)
+	if typeof(request) ~= "table" then return false, "requête invalide" end
+	for key in request do
+		if key ~= "BannerId" and key ~= "Slot" and key ~= "Quantity" and key ~= "ExpectedTotal" then
+			return false, "champ d'invocation interdit"
+		end
+	end
+	if request.Quantity ~= 1 and request.Quantity ~= 10 and request.Quantity ~= 100 then return false, "quantité invalide" end
+	if request.BannerId ~= bannerId or request.Slot ~= slot then return false, "bannière expirée, rouvre le portail" end
+	local total = if typeof(data.Summons) == "table" then data.Summons.Total or 0 else 0
+	if request.ExpectedTotal ~= total then return false, "invocation déjà traitée ou état périmé" end
+	return true, nil
+end
+
+function SummonRules.batch(data: any, config: any, quantity: number, makeId: () -> string, pick: (number) -> number, pool: Pool, banner: Banner?): (any, string?)
+	if quantity ~= 1 and quantity ~= 10 and quantity ~= 100 then return nil, "quantité invalide" end
+	if not SummonRules.canPay(data, config, quantity) then return nil, "pas assez de tickets d'invocation" end
+	local total = if typeof(data.Summons) == "table" then data.Summons.Total or 0 else 0
+	local guaranteed = total == 0
+	local firstPool = if guaranteed then SummonRules.guaranteePool(pool, config.GuaranteeRank or 4) else pool
+	if firstPool.Total <= 0 then return nil, "aucun héros éligible à la garantie" end
+	local results, ids, owned = {}, {}, {}
+	for _, hero in data.Heroes do owned[hero.HeroId] = true end
+	-- Prépare tout le lot avant la moindre mutation (y compris erreurs RNG/ID au 100e résultat).
+	for index = 1, quantity do
+		local heroId = SummonRules.roll(if index == 1 then firstPool else pool, banner, pick)
+		local id = makeId()
+		assert(typeof(id) == "string" and id ~= "" and not ids[id] and not data.Heroes[id], "identifiant d'exemplaire dupliqué")
+		ids[id] = true
+		table.insert(results, { InstanceId = id, HeroId = heroId, New = not owned[heroId], First = guaranteed and index == 1,
+			Guaranteed = guaranteed and index == 1, KingdomChanged = false })
+		owned[heroId] = true
+	end
+	for _, result in results do result.Slot = HeroRules.addHero(data, result.InstanceId, result.HeroId) end
+	data.Currencies.SummonTickets -= config.Cost * quantity
+	data.Summons = data.Summons or {}
+	data.Summons.Total = total + quantity
+	if guaranteed and data.Kingdom.VisualState == config.KingdomFrom then
+		data.Kingdom.VisualState = config.KingdomTo
+		results[1].KingdomChanged = true
+	end
+	return { Results = results, Quantity = quantity, Tickets = data.Currencies.SummonTickets, Total = total + quantity, Guaranteed = guaranteed }, nil
 end
 
 -- Tirage : un palier selon les poids effectifs, puis un héros de ce palier (un héros mis en avant par
@@ -152,40 +227,10 @@ function SummonRules.roll(pool: Pool, banner: Banner?, pick: (number) -> number)
 	return heroes[math.clamp(pick(#heroes), 1, #heroes)]
 end
 
--- Transaction complète, synchrone : revérifie le ticket, tire le héros dans `pool` (bannière
--- facultative), prépare l'identifiant, crée l'exemplaire (hotbar si une case est libre), débite, compte
--- l'invocation et, à la première invocation payante, fait évoluer le royaume une seule fois. Aucun héros
--- garanti : la première invocation payante tire comme toutes les autres.
--- Renvoie le résultat, ou nil et la raison sans rien modifier.
+-- Adaptateur interne x1 ; le réseau passe par validateRequest + batch.
 function SummonRules.summon(data: any, config: any, makeId: () -> string, pick: (number) -> number, pool: Pool, banner: Banner?): (Result?, string?)
-	if not SummonRules.canPay(data, config) then
-		return nil, "pas de ticket d'invocation"
-	end
-	local summons = data.Summons
-	local total = if typeof(summons) == "table" and typeof(summons.Total) == "number" then summons.Total else 0
-	local firstPaid = total == 0
-	local heroId = SummonRules.roll(pool, banner, pick)
-	local new = not HeroRules.owns(data, heroId)
-	-- Tout ce qui peut échouer (identifiant, tirage) est prêt AVANT la première mutation : une
-	-- erreur ici laisse le ticket intact. Ensuite le héros est ajouté puis le ticket débité.
-	local instanceId = makeId()
-
-	local slot = HeroRules.addHero(data, instanceId, heroId)
-	data.Currencies.SummonTickets -= config.Cost
-	data.Summons = { Total = total + 1 }
-	local kingdomChanged = false
-	if firstPaid and data.Kingdom.VisualState == config.KingdomFrom then
-		data.Kingdom.VisualState = config.KingdomTo
-		kingdomChanged = true
-	end
-	return {
-		InstanceId = instanceId,
-		HeroId = heroId,
-		New = new,
-		Slot = slot,
-		First = firstPaid,
-		KingdomChanged = kingdomChanged,
-	}, nil
+	local batch, reason = SummonRules.batch(data, config, 1, makeId, pick, pool, banner)
+	return if batch then batch.Results[1] else nil, reason
 end
 
 -- Invocation tutorielle encore possible ? Jamais si le profil possède déjà le héros de départ.

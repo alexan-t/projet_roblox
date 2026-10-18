@@ -261,6 +261,23 @@ return function(createService: any, RewardRules: any, productionConfig: any)
 		assert(productionConfig.EliteStages["1-5"] and #productionConfig.EliteStages["1-5"].FirstClearReward == 0, "Elite rewards: architecture ready, empty")
 	end)
 
+	test("#80 ALPHA 0.0.2 provisional replay economy: normal, boss, Elite, no duplicate rewards",function()
+		local e=fixture();local service=e.start();local p=e.player("Economy")
+		local expected={Normal={0,1,1,2,5},Elite={2,2,2,2,10}}
+		for mode,amounts in expected do
+			for stage,amount in amounts do
+				local session=1000+(if mode=="Elite" then 100 else 0)+stage*2
+				service:HandleStageCompleted(p,1,stage,session,mode)
+				local before=e.data[p].Currencies.SummonTickets
+				local replay=service:HandleStageCompleted(p,1,stage,session+1,mode)
+				assert(replay and not replay.FirstClear)
+				assert(e.data[p].Currencies.SummonTickets==before+amount)
+				assert(service:HandleStageCompleted(p,1,stage,session+1,mode)==nil)
+				assert(e.data[p].Currencies.SummonTickets==before+amount)
+			end
+		end
+	end)
+
 	print(`RewardService: {passed} passed, {failed} failed`)
 	if failed > 0 then
 		error(`{failed} RewardService test(s) failed`)

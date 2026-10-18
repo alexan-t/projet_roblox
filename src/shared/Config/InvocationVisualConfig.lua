@@ -1,0 +1,25 @@
+--!strict
+-- PNG originaux du ZIP final, sans retouche. Voir docs/references/ui/invocation-v2.
+return table.freeze({
+	banner_frame = "rbxassetid://80394995585868",
+	card_back = "rbxassetid://109034468021646",
+	card_frame_1 = "rbxassetid://85529149244956",
+	card_frame_2 = "rbxassetid://117300764061437",
+	card_frame_3 = "rbxassetid://127868924163938",
+	card_frame_4 = "rbxassetid://127218046096174",
+	card_frame_5 = "rbxassetid://75777692428750",
+	card_frame_6 = "rbxassetid://81299251918564",
+	card_frame_7 = "rbxassetid://131258037933152",
+	card_frame_8 = "rbxassetid://127504935763126",
+	card_frame_9 = "rbxassetid://125216646823206",
+	card_frame_10 = "rbxassetid://108134865852288",
+	hero_placeholder = "rbxassetid://105102467276271",
+	hourglass = "rbxassetid://133411037464266",
+	portal = "rbxassetid://102773163580019",
+	rays = "rbxassetid://109253669606586",
+	ribbon_garanti = "rbxassetid://134949584031319",
+	ribbon_taux = "rbxassetid://117301172728331",
+	seal_garanti = "rbxassetid://140217278593831",
+	sparkle = "rbxassetid://88852781567912",
+	star = "rbxassetid://106859489834274",
+})
