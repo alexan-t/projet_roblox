@@ -151,6 +151,24 @@ local ok, reason = Remotes.RequestStartStage:InvokeServer(1, 1)
 
 Le jeu passe par l'arène (#11) : la pancarte du stage envoie `ArenaAction("SelectStage", zone, stage)`, qui revalide avec `ListStages` ; le premier héros posé lance la session via `StartStage` (voir `docs/ARENA_PROTOTYPE.md`).
 
+## Fenêtre Expédition — aperçu des stages (lecture seule)
+
+`ArenaState.Stages` et `ArenaState.EliteStages` contiennent, par stage, ce que fournit `ArenaService.stagesOf`. Ce sont des données en **lecture seule** : rien n'est accordé ni modifié côté gameplay.
+
+| Champ | Source réelle |
+| --- | --- |
+| `Zone`, `Stage`, `Mode`, `Status`, `Cleared` | ZoneService (`FirstClears` / `EliteFirstClears`) |
+| `Waves = { { Enemies = { { EnemyId, Count } } } }` | `StageConfig`, vague par vague |
+| `Boss` | `MiniBoss.EnemyId` (1-5 : Roi Orc) |
+| `HeroXP` | `HeroProgressionConfig`, XP **par héros posé** |
+| `FirstClearRewards`, `RepeatRewards` | `RewardConfig` (vide = rien affiché) |
+| `Multipliers = { MaxHealth, AttackDamage }` | `EliteConfig` (Élite seulement) |
+| `PotentialDrops?` | table de butin réelle (#72) : `{ Kind = "Resource" \| "Item", Id, Chance 0..1, Min?, Max? }` |
+
+- **Construction** : `Server.Arena.StagePreview.build`, un module pur qui copie les configs (testé).
+- **Butin** : sans table de butin réelle, `PotentialDrops` vaut `nil` et la fenêtre affiche « Butin à venir ». Aucun pourcentage n'est inventé.
+- **Élite verrouillée** : le message de déblocage utilise la vraie progression Normal (`X/5 stages terminés`).
+
 ## Contrats
 
 - **QuestService (#6)** : sur une **victoire** uniquement, ZoneService appelle
