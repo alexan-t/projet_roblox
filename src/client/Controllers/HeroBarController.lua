@@ -24,6 +24,7 @@ local UserInputService = game:GetService("UserInputService")
 local HeroConfig = require(ReplicatedStorage.Shared.Config.HeroConfig)
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local ArenaStore = require(script.Parent.Parent.Arena.ArenaStore)
+local ScreenState = require(script.Parent.Parent.UI.ScreenState)
 local PlacementState = require(script.Parent.Parent.Arena.PlacementState)
 local UIKit = require(script.Parent.Parent.UI.UIKit)
 local Icons = require(script.Parent.Parent.UI.Icons)
@@ -564,6 +565,13 @@ function HeroBarController:Start()
 		end
 	end)
 	ArenaStore.changed.Event:Connect(render)
+	-- un écran modal s'ouvre (Quêtes, Expédition, invocation, récompenses...) : la sacoche se ferme, jamais
+	-- de fenêtre par-dessus elle
+	ScreenState.changed.Event:Connect(function(current: string?)
+		if current ~= nil then
+			setBag(false)
+		end
+	end)
 	render()
 	ArenaStore.start()
 	-- Portraits : les modèles des héros arrivent par réplication (ReplicatedStorage.Assets.Heros,

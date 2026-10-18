@@ -158,6 +158,12 @@ return function(createService: any, modules: any)
 			local id = env.quest[p]
 			return if id then { Id = id, Completed = false } else nil
 		end
+		-- objectifs d'état (« avoir N héros ») : relus après chaque changement de collection
+		env.questSyncs = 0
+		function questService:SyncState(_p: any): boolean
+			env.questSyncs += 1
+			return false
+		end
 		function questService:HandleGameplayEvent(p: any, name: string, payload: any?): boolean
 			table.insert(env.questEvents, { player = p, name = name, payload = payload })
 			if name == SummonConfig.Starter.Event and env.quest[p] == SummonConfig.Starter.QuestId then

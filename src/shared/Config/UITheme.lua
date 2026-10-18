@@ -62,6 +62,8 @@ local Colors = {
 	CurrencyGold = hex("#E6B23A"),
 	CurrencyGems = hex("#48C8E8"),
 	CurrencyTickets = hex("#B83E30"),
+	TicketLight = hex("#D8584A"), -- montant d'un ticket dans un reveal (pack « Monnaies »)
+	DisabledLip = hex("#5A524A"), -- lèvre d'un bouton gris « En cours » (pack « Quêtes HUD »)
 }
 
 -- Raretés des héros (RarityConfig) : badge, cadre de carte, lumière de l'invocation. Les monstres
@@ -188,7 +190,6 @@ local Spacing = {
 	XXL = 32,
 	ScreenMargin = 16, -- marge minimale au bord de l'écran (mobile compris)
 	TouchTarget = 44, -- taille minimale d'une zone tactile
-	MenuIcon = 76, -- icône du menu principal (grille de 2 colonnes à gauche), nom dessous
 }
 
 local Shadow = {
@@ -215,6 +216,56 @@ local Animation = {
 		OpenFrom = 0.9,
 		Pop = 1.12, -- gain de monnaie, badge « Nouveau »
 		Highlight = 1.08, -- bouton mis en avant par le tutoriel : léger gonflement qui respire
+	},
+}
+
+-- Pack visuel validé (ZIP « Icones Menu », « Monnaies », « Quêtes HUD ») : mesures relevées dans les
+-- maquettes HTML, en px pour un écran de 1080 px de haut (UIScale adapte le reste).
+local Pack = {
+	-- Menu principal : tuile chunky (face crème sur lèvre bois), icône PNG qui déborde en haut, nom dessous.
+	Menu = {
+		Column = 84, -- largeur d'une colonne
+		Tile = Vector2.new(72, 68), -- tuile derrière l'icône
+		Icon = 84, -- icône (déborde de la tuile)
+		IconRise = 14, -- px dont l'icône dépasse en haut de la tuile
+		Label = 16, -- taille du nom
+		LabelHeight = 20,
+		GapX = 14,
+		GapY = 18,
+		Badge = Vector2.new(22, 40), -- « ! » (badge.png) à cheval sur le coin haut droit
+		BadgeOffset = Vector2.new(-12, -20), -- depuis le coin haut droit de la tuile
+		BadgeBob = 5, -- px de flottement du « ! »
+		BadgePeriod = 1.2, -- s par flottement
+	},
+	-- HUD des monnaies : capsules sombres, icône qui dépasse à gauche.
+	Currency = {
+		Height = 36,
+		Icon = 50,
+		IconLeft = -22, -- px : l'icône dépasse à gauche de la capsule
+		PadLeft = 34,
+		PadRight = 18,
+		Gap = 28,
+		Top = 16,
+		ValueMin = 44, -- largeur minimale de la valeur
+		Fill = 0.45, -- transparence du fond WoodDeep
+	},
+	-- Panneau Quêtes et reveal.
+	Quest = {
+		Width = 600,
+		Padding = Vector2.new(20, 20), -- côtés, bas
+		PaddingTop = 44,
+		Fill = 0.12, -- fond WoodDeep de la fenêtre
+		RowFill = 0.65, -- fond Ink d'une quête
+		RowClaimableFill = 0.78, -- fond SandGold d'une quête à récupérer
+		ClaimedFade = 0.45, -- quête récupérée : contenu estompé
+		Track = 0.35, -- fond Ink de la barre
+		TileFill = 0.1, -- fond Sand d'une récompense
+		Tile = 52,
+		TileIcon = 38,
+		Button = Vector2.new(128, 44),
+		RevealGlow = 150, -- px de l'icône Glow dans le reveal
+		RevealRays = 420,
+		Toast = 2.6, -- s d'affichage du résumé après le reveal
 	},
 }
 
@@ -245,6 +296,11 @@ local UITheme = {
 		TextStroke = table.freeze(Typography.TextStroke),
 	}),
 	Radius = table.freeze(Radius),
+	Pack = table.freeze({
+		Menu = table.freeze(Pack.Menu),
+		Currency = table.freeze(Pack.Currency),
+		Quest = table.freeze(Pack.Quest),
+	}),
 	Stroke = table.freeze(Stroke),
 	Spacing = table.freeze(Spacing),
 	Shadow = table.freeze(Shadow),

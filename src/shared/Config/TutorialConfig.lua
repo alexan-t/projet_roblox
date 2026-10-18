@@ -20,11 +20,12 @@
 -- Nudges : rappels « ouvre ce menu », une flèche UI sur une entrée tant que son drapeau n'est pas vu et
 --   que la condition est remplie, seulement quand aucun écran n'est ouvert et hors combat.
 --   Conditions (calculées par TutorialController, valeurs du serveur) : HasHero (au moins un héros),
---   SecondHero (au moins deux héros), FirstVictory (au moins un stage gagné).
+--   SecondHero (au moins deux héros), FirstVictory (au moins un stage gagné), QuestClaimable (la quête
+--   active attend « Récupérer », vue du serveur).
 --
--- Menu.Entries : boutons du menu principal (grille de 2 colonnes à gauche), dans l'ordre :
+-- Menu.Entries : boutons du menu principal (grille de 2 colonnes x 3 lignes à gauche), dans l'ordre :
 --   Id (cible UI « Menu.<Id> », clé de Shared.Config.MenuIconConfig pour l'icône), Label (sous l'icône),
---   View (ce qu'ouvre le bouton : "Bag", "Index", "Stats" ou "Soon"), Soon (texte de la fenêtre
+--   View (ce qu'ouvre le bouton : "Bag", "Index", "Stats", "Quests" ou "Soon"), Soon (texte de la fenêtre
 --   « Bientôt disponible »), Flag (drapeau dont l'absence met le bouton en « attention », variante « ! »),
 --   Badge (condition facultative de cette attention).
 
@@ -42,6 +43,7 @@ local TutorialConfig = {
 		"Index", -- Index des héros ouvert
 		"Stats", -- Statistiques ouvertes
 		"Currencies", -- première monnaie gagnée : les pastilles du HUD
+		"Quests", -- panneau Quêtes ouvert
 	},
 
 	-- Durée d'une étape par défaut (s) et pause entre deux étapes.
@@ -82,6 +84,11 @@ local TutorialConfig = {
 		Stats = {
 			Steps = {},
 		},
+		Quests = {
+			Steps = {
+				{ Target = "Quests.Claim", Text = "Récupère !" },
+			},
+		},
 		Currencies = {
 			Hud = true,
 			Steps = {
@@ -94,6 +101,8 @@ local TutorialConfig = {
 		-- Premier stage gagné, Sacoche jamais ouverte : la flèche montre le bouton Sac (pas avant : pendant
 		-- la première défense, le guidage de quête montre déjà la hotbar et la pancarte).
 		{ Id = "OpenBag", Target = "Menu.Bag", Flag = "Bag", Condition = "FirstVictory" },
+		-- Première récompense de quête à récupérer, panneau jamais ouvert : la flèche montre le bouton Quêtes.
+		{ Id = "OpenQuests", Target = "Menu.Quest", Flag = "Quests", Condition = "QuestClaimable" },
 	} :: { Nudge },
 
 	Menu = {
@@ -103,6 +112,8 @@ local TutorialConfig = {
 			{ Id = "Index", Label = "Index", View = "Index", Flag = "Index", Badge = "SecondHero" },
 			{ Id = "Guild", Label = "Guilde", View = "Soon", Soon = "Les guildes arriveront dans une prochaine version." },
 			{ Id = "Stats", Label = "Stats", View = "Stats", Flag = "Stats", Badge = "FirstVictory" },
+			-- attention : quête à récupérer ou nouvelle quête (QuestController), pas de drapeau
+			{ Id = "Quest", Label = "Quêtes", View = "Quests" },
 		} :: { Entry },
 	},
 }

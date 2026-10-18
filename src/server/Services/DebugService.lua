@@ -13,6 +13,9 @@
 --   game.ServerStorage.DebugData:Invoke(player, "QuestEvent", "StageCompleted", { Zone = 1, Stage = 1 })
 --                                                                             -> QuestService:HandleGameplayEvent (simule ZoneService #7)
 --   game.ServerStorage.DebugData:Invoke(player, "ClaimQuest", "DefendDomain") -> succès, raison du refus
+--   game.ServerStorage.DebugData:Invoke(player, "SetQuestState", "DefeatRoiOrc", 1, false)
+--                                                                             -> remet l'état d'UNE quête (test du panneau
+--                                                                                Quêtes : terminée non réclamée) et pousse la vue
 --   game.ServerStorage.DebugData:Invoke(player, "StartStage", 1, 1)         -> ZoneService:StartStage (session ou raison)
 --   game.ServerStorage.DebugData:Invoke(player, "GetStageSession")          -> ZoneService:GetSession
 --   game.ServerStorage.DebugData:Invoke(player, "CompleteStage", true)      -> fin de la session active (simule CombatService #8)
@@ -69,6 +72,14 @@ local function handle(player: Player, command: string, ...: any): any
 		local questId = ...
 		local ok, reason = QuestService:ClaimQuest(player, questId)
 		return { Success = ok, Reason = reason }
+	elseif command == "SetQuestState" then
+		local questId, progress, claimed = ...
+		if typeof(questId) ~= "string" or typeof(progress) ~= "number" or typeof(claimed) ~= "boolean" or data.Quests[questId] == nil then
+			return `Quête, progression ou état invalide : {questId}, {progress}, {claimed}`
+		end
+		data.Quests[questId] = { Progress = progress, Claimed = claimed }
+		QuestService:Notify(player)
+		return QuestService:GetActiveQuest(player)
 	elseif command == "StartStage" then
 		local zone, stage = ...
 		local session, reason = ZoneService:StartStage(player, zone, stage)

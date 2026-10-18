@@ -1,177 +1,92 @@
 --!strict
--- Révélation des récompenses de quête (« Récupérer ») : un moment court, unique et très visible.
--- Présentation seulement : QuestService a déjà ajouté les récompenses (ClaimQuest) ; cette vue montre
--- celles qu'il a renvoyées, puis les fait voler jusqu'au compteur du HUD des monnaies.
---   1. voile + « QUÊTE ACCOMPLIE ! » qui jaillit, rayons dorés qui tournent ;
---   2. chaque carte tombe du haut, rebondit, tremble, éclate (flash + confettis aux couleurs de la map) ;
---   3. elle se retourne et révèle l'objet (icône 3D, « x1 », nom), étoiles qui scintillent ;
---   4. « Récupérer ! » (clic / toucher / Entrée) : la carte file vers son compteur du HUD, qui s'anime.
--- Styles : UITheme et UIKit uniquement. API : QuestRewardView.Play(rewards, onDone?).
+-- Révélation des récompenses de quête (« Récupérer ») — reproduit le reveal de la maquette « Quêtes HUD ».
+-- Présentation seulement : QuestService a DÉJÀ ajouté les récompenses (ClaimQuest) ; cette vue montre
+-- celles qu'il a renvoyées. Rien ici ne donne de monnaie.
+--   1. voile sombre, rayons dorés qui tournent lentement ;
+--   2. chaque récompense jaillit (pop, 0,08 s d'écart) : icône « Glow » du pack (CurrencyVisualConfig) et
+--      montant « +150 » à la couleur de la monnaie ; « Récompense ! » ; « Toucher pour continuer » ;
+--   3. toucher / clic / Entrée : les monnaies 3D (CurrencyFx) s'envolent vers leur compteur du HUD, qui
+--      rebondit à chaque arrivée ; une pastille verte résume le gain (« +150 Or · +1 Ticket ») ;
+--   4. onDone() quand les monnaies sont arrivées (le HUD relit alors le serveur et fait défiler les montants).
+-- Styles : UITheme (Pack.Quest) et UIKit. API : QuestRewardView.Play(rewards, onDone?, sounds?).
 
 local ContextActionService = game:GetService("ContextActionService")
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
 
+local CurrencyVisualConfig = require(ReplicatedStorage.Shared.Config.CurrencyVisualConfig)
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
-local Icons = require(script.Parent.Parent.Icons)
+local CurrencyFx = require(script.Parent.Parent.CurrencyFx)
 local UIKit = require(script.Parent.Parent.UIKit)
+local CurrencyView = require(script.Parent.CurrencyView)
 
 local Colors = UITheme.Colors
 local Size = UITheme.Typography.Size
-local Animation = UITheme.Animation
+local PACK = UITheme.Pack.Quest
 
 export type Reward = { Kind: string, Amount: number }
 
-local KINDS: { [string]: { Icon: string, Label: string, Color: Color3, Hud: string } } = {
-	Gold = { Icon = "Or", Label = "Or", Color = Colors.CurrencyGold, Hud = "Gold" },
-	Gems = { Icon = "Gemmes", Label = "Gemmes", Color = Colors.CurrencyGems, Hud = "Gems" },
-	SummonTicket = { Icon = "Ticket", Label = "Ticket d'invocation", Color = Colors.CurrencyTickets, Hud = "SummonTickets" },
-}
-
--- Couleurs des confettis : matières et accents de la map (design system).
-local CONFETTI = { Colors.Gold, Colors.GoldLight, Colors.RoyalRed, Colors.RoyalBlue, Colors.Grass, Colors.Crystal, Colors.Cream }
-
-local CARD = Vector2.new(200, 250)
-local ACTION = "RecupererRecompenseQuete"
+local ACTION = "ContinuerRecompenseQuete"
+local POP = TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+local STAGGER = 0.08 -- s entre deux récompenses (maquette)
+local TITLE_SIZE = 40
+local AMOUNT_SIZE = 30
 
 local QuestRewardView = {}
 
-local function tween(instance: Instance, seconds: number, goal: { [string]: any }, style: Enum.EasingStyle?, direction: Enum.EasingDirection?): Tween
-	local t = TweenService:Create(instance, TweenInfo.new(seconds, style or Enum.EasingStyle.Quad, direction or Enum.EasingDirection.Out), goal)
-	t:Play()
-	return t
+-- Nombre de modèles 3D qui volent pour un gain : quelques pièces, pas une pluie illisible.
+local function flyCount(kind: string, amount: number): number
+	if kind == "Gold" then
+		return math.clamp(math.ceil(amount / 25), 3, 8)
+	elseif kind == "Gems" then
+		return math.clamp(math.ceil(amount / 5), 2, 6)
+	end
+	return math.clamp(amount, 1, 3)
 end
+QuestRewardView.flyCount = flyCount
 
-local function scaleOf(object: GuiObject): UIScale
+local function pop(object: GuiObject, delay: number)
 	local scale = object:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
+	scale.Scale = 0.6
 	scale.Parent = object
-	return scale
-end
-
--- Confettis : petits rectangles qui jaillissent, tournent, retombent et s'effacent (nettoyés ensuite).
-local function confetti(parent: GuiObject, count: number)
-	local random = Random.new()
-	for i = 1, count do
-		local bit = Instance.new("Frame")
-		bit.AnchorPoint = Vector2.new(0.5, 0.5)
-		bit.Position = UDim2.fromScale(0.5, 0.5)
-		bit.Size = UDim2.fromOffset(random:NextInteger(10, 18), random:NextInteger(6, 10))
-		bit.BackgroundColor3 = CONFETTI[(i - 1) % #CONFETTI + 1]
-		bit.BorderSizePixel = 0
-		bit.Rotation = random:NextNumber(0, 360)
-		bit.ZIndex = 30
-		bit.Parent = parent
-		UIKit.corner(bit, UITheme.Radius.Pill)
-		local angle = random:NextNumber(0, math.pi * 2)
-		local distance = random:NextNumber(160, 380)
-		local out = UDim2.new(0.5, math.cos(angle) * distance, 0.5, math.sin(angle) * distance - 90)
-		local fall = UDim2.new(0.5, math.cos(angle) * distance * 1.15, 0.5, math.sin(angle) * distance + random:NextNumber(140, 260))
-		tween(bit, 0.45, { Position = out, Rotation = bit.Rotation + random:NextNumber(-360, 360) }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-		task.delay(0.45, function()
-			if bit.Parent then
-				tween(bit, 0.9, { Position = fall, BackgroundTransparency = 1, Rotation = bit.Rotation + random:NextNumber(-540, 540) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-			end
-		end)
-		task.delay(1.5, function()
-			bit:Destroy()
-		end)
-	end
-end
-
--- Étoiles dorées qui scintillent autour de la carte révélée.
-local function twinkles(parent: GuiObject, count: number): { Tween }
-	local tweens = {}
-	local random = Random.new()
-	for i = 1, count do
-		local star = Instance.new("Frame")
-		star.AnchorPoint = Vector2.new(0.5, 0.5)
-		local angle = (i / count) * math.pi * 2 + random:NextNumber(-0.3, 0.3)
-		star.Position = UDim2.new(0.5, math.cos(angle) * random:NextNumber(130, 170), 0.5, math.sin(angle) * random:NextNumber(150, 190))
-		star.Size = UDim2.fromOffset(14, 14)
-		star.Rotation = 45
-		star.BackgroundColor3 = Colors.GoldLight
-		star.BorderSizePixel = 0
-		star.BackgroundTransparency = 1
-		star.ZIndex = 25
-		star.Parent = parent
-		UIKit.stroke(star, UITheme.Stroke.Thin)
-		local t = TweenService:Create(star, TweenInfo.new(0.5 + random:NextNumber(0, 0.4), Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true, random:NextNumber(0, 0.6)),
-			{ BackgroundTransparency = 0, Size = UDim2.fromOffset(20, 20) })
-		t:Play()
-		table.insert(tweens, t)
-	end
-	return tweens
-end
-
--- Carte face cachée (« ? » doré), qui tombe, rebondit, tremble, éclate puis se retourne.
-local function card(parent: Instance, reward: Reward, x: number): (Frame, () -> ())
-	local info = KINDS[reward.Kind] or KINDS.Gold
-	local holder = Instance.new("Frame")
-	holder.Name = "Carte_" .. reward.Kind
-	holder.AnchorPoint = Vector2.new(0.5, 0.5)
-	holder.Size = UDim2.fromOffset(CARD.X, CARD.Y)
-	holder.Position = UDim2.new(0.5, x, -0.4, 0)
-	holder.BackgroundTransparency = 1
-	holder.ZIndex = 20
-	holder.Parent = parent
-
-	local face = Instance.new("Frame")
-	face.Name = "Face"
-	face.AnchorPoint = Vector2.new(0.5, 0.5)
-	face.Position = UDim2.fromScale(0.5, 0.5)
-	face.Size = UDim2.fromScale(1, 1)
-	face.BackgroundColor3 = Colors.WoodDeep
-	face.ZIndex = 21
-	face.Parent = holder
-	UIKit.corner(face, UITheme.Radius.Large)
-	UIKit.stroke(face, UITheme.Stroke.Thick, Colors.Gold)
-	local mystery = UIKit.text(face, "?", 96, Colors.Gold)
-	mystery.ZIndex = 22
-
-	-- révélation : fond crème, icône 3D, quantité, nom
-	local function reveal()
-		mystery:Destroy()
-		face.BackgroundColor3 = Colors.Cream
-		local ring = face:FindFirstChildOfClass("UIStroke")
-		if ring then
-			ring.Color = info.Color
+	task.delay(delay, function()
+		if scale.Parent then
+			UIKit.tween(scale, POP, { Scale = 1 })
 		end
-		local art = Instance.new("Frame")
-		art.BackgroundTransparency = 1
-		art.Position = UDim2.fromScale(0.1, 0.06)
-		art.Size = UDim2.fromScale(0.8, 0.56)
-		art.ZIndex = 22
-		art.Parent = face
-		Icons.viewport(art, info.Icon)
-		local amount = UIKit.text(face, `x{reward.Amount}`, Size.Hero, info.Color)
-		amount.Position = UDim2.fromScale(0, 0.58)
-		amount.Size = UDim2.fromScale(1, 0.22)
-		amount.ZIndex = 23
-		local name = UIKit.text(face, info.Label, Size.Label, { Color = Colors.InkSoft, Stroke = false })
-		name.Position = UDim2.fromScale(0, 0.8)
-		name.Size = UDim2.fromScale(1, 0.14)
-		name.ZIndex = 23
-		UIKit.pop(amount)
-	end
-	return holder, reveal
+	end)
 end
 
-local function hudTarget(kind: string): GuiObject?
-	local info = KINDS[kind]
-	local gui = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
-	if not info or not gui then
-		return nil
-	end
-	for _, item in gui:GetDescendants() do
-		if item:IsA("GuiObject") and item.Name == info.Hud and item.Parent and item.Parent.Name == "Monnaies" then
-			return item
+-- Résumé du gain en pastille verte, en haut (maquette : toast).
+local function toast(screen: ScreenGui, text: string)
+	local pill = Instance.new("Frame")
+	pill.Name = "Resume"
+	pill.AnchorPoint = Vector2.new(0.5, 0)
+	pill.Position = UDim2.new(0.5, 0, 0, 72)
+	pill.AutomaticSize = Enum.AutomaticSize.X
+	pill.Size = UDim2.fromOffset(0, 40)
+	pill.BackgroundColor3 = Colors.Success
+	pill.ZIndex = 60
+	pill.Parent = screen
+	UIKit.corner(pill, UITheme.Radius.Pill)
+	UIKit.stroke(pill, UITheme.Stroke.Regular)
+	local padding = Instance.new("UIPadding")
+	padding.PaddingLeft = UDim.new(0, UITheme.Spacing.XL)
+	padding.PaddingRight = UDim.new(0, UITheme.Spacing.XL)
+	padding.Parent = pill
+	local label = UIKit.text(pill, text, 20)
+	label.AutomaticSize = Enum.AutomaticSize.X
+	label.Size = UDim2.fromScale(0, 1)
+	label.ZIndex = 61
+	pop(pill, 0)
+	task.delay(PACK.Toast, function()
+		if pill.Parent then
+			UIKit.tween(pill, UITheme.Animation.Fade, { BackgroundTransparency = 1 })
+			UIKit.tween(label, UITheme.Animation.Fade, { TextTransparency = 1 })
+			task.wait(UITheme.Animation.Fade.Time)
+			pill:Destroy()
 		end
-	end
-	return nil
+	end)
 end
 
--- Joue la révélation. onDone est appelé une fois la dernière carte arrivée dans le HUD.
 function QuestRewardView.Play(rewards: { Reward }, onDone: (() -> ())?, sounds: ((name: string) -> ())?)
 	local play = sounds or function(_name: string) end
 	if #rewards == 0 then
@@ -180,168 +95,130 @@ function QuestRewardView.Play(rewards: { Reward }, onDone: (() -> ())?, sounds: 
 		end
 		return
 	end
-	local screen = UIKit.screen("RecompenseQuete", 30)
-	local scale = screen:FindFirstChildOfClass("UIScale")
+	local screen = UIKit.screen("RecompenseQuete", 55)
 	local veil = UIKit.overlay(screen)
-	tween(veil, 0.25, { BackgroundTransparency = UITheme.Transparency.Overlay })
+	UIKit.tween(veil, UITheme.Animation.Fade, { BackgroundTransparency = UITheme.Transparency.Overlay - 0.05 })
 
-	-- 1. titre + rayons
 	local center = Instance.new("Frame")
+	center.Name = "Reveal"
 	center.BackgroundTransparency = 1
-	center.Size = UDim2.fromScale(1, 1)
+	center.AnchorPoint = Vector2.new(0.5, 0.5)
+	center.Position = UDim2.fromScale(0.5, 0.46)
+	center.Size = UDim2.fromOffset(PACK.RevealRays, PACK.RevealGlow + 60)
 	center.ZIndex = 10
 	center.Parent = screen
-	local rays = UIKit.rays(center, 420, 14, Colors.GoldLight)
-	rays.Position = UDim2.fromScale(0.5, 0.5)
-	rays.ZIndex = 11
-	scaleOf(rays).Scale = 0
-	tween(scaleOf(rays), 0.5, { Scale = 1 }, Enum.EasingStyle.Back)
-	local title = UIKit.text(center, "QUÊTE ACCOMPLIE !", Size.Hero, Colors.Gold)
-	title.AnchorPoint = Vector2.new(0.5, 0.5)
-	title.Position = UDim2.fromScale(0.5, 0.16)
-	title.Size = UDim2.fromOffset(900, Size.Hero + 20)
-	title.ZIndex = 40
-	local titleScale = scaleOf(title)
-	titleScale.Scale = 0
-	tween(titleScale, 0.35, { Scale = 1.15 }, Enum.EasingStyle.Back)
-	task.delay(0.35, function()
-		tween(titleScale, 0.2, { Scale = 1 })
-	end)
-	title.Rotation = -6
-	tween(title, 0.5, { Rotation = 0 }, Enum.EasingStyle.Elastic)
-	play("Victoire")
+	local rays = UIKit.rays(center, PACK.RevealRays / 2, 18, Colors.GoldLight)
+	rays.Position = UDim2.fromScale(0.5, 0.42)
+	rays.ZIndex = 9
+	pop(rays, 0)
 
-	-- 2. cartes : chute, rebond, tremblement, éclat, retournement
-	local spacing = CARD.X + 40
-	local cards: { { holder: Frame, kind: string } } = {}
-	local stars: { Tween } = {}
+	-- 2. les récompenses jaillissent, côte à côte
+	local row = Instance.new("Frame")
+	row.Name = "Recompenses"
+	row.BackgroundTransparency = 1
+	row.AnchorPoint = Vector2.new(0.5, 0.5)
+	row.Position = UDim2.fromScale(0.5, 0.5)
+	row.AutomaticSize = Enum.AutomaticSize.X
+	row.Size = UDim2.fromOffset(0, PACK.RevealGlow + 40)
+	row.ZIndex = 20
+	row.Parent = center
+	local layout = Instance.new("UIListLayout")
+	layout.FillDirection = Enum.FillDirection.Horizontal
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	layout.VerticalAlignment = Enum.VerticalAlignment.Center
+	layout.Padding = UDim.new(0, 28)
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Parent = row
+	local glows: { { image: ImageLabel, reward: Reward } } = {}
+	local parts: { string } = {}
 	for index, reward in rewards do
-		local x = (index - (#rewards + 1) / 2) * spacing
-		local holder, reveal = card(center, reward, x)
-		table.insert(cards, { holder = holder, kind = reward.Kind })
-		local start = 0.35 + (index - 1) * 0.45
-		task.delay(start, function()
-			tween(holder, 0.55, { Position = UDim2.new(0.5, x, 0.55, 0) }, Enum.EasingStyle.Bounce)
-			play("Impact")
-			task.wait(0.6)
-			-- tremblement : quelque chose est dedans !
-			for i = 1, 4 do
-				tween(holder, 0.06, { Rotation = if i % 2 == 0 then 8 else -8 })
-				task.wait(0.07)
-			end
-			tween(holder, 0.06, { Rotation = 0 })
-			task.wait(0.1)
-			-- éclat : flash, confettis, retournement
-			local flash = Instance.new("Frame")
-			flash.AnchorPoint = Vector2.new(0.5, 0.5)
-			flash.Position = UDim2.fromScale(0.5, 0.5)
-			flash.Size = UDim2.fromScale(1.4, 1.4)
-			flash.BackgroundColor3 = Colors.TextLight
-			flash.BackgroundTransparency = 0.1
-			flash.ZIndex = 29
-			flash.Parent = holder
-			UIKit.corner(flash, UITheme.Radius.Pill)
-			tween(flash, 0.35, { BackgroundTransparency = 1, Size = UDim2.fromScale(2.4, 2.4) })
-			task.delay(0.4, function()
-				flash:Destroy()
-			end)
-			confetti(holder, 28)
-			play("InvocationEclat")
-			local holderScale = scaleOf(holder)
-			tween(holderScale, 0.12, { Scale = 1.18 })
-			-- retournement : la carte s'amincit, change de face, revient
-			tween(holder, 0.14, { Size = UDim2.fromOffset(4, CARD.Y) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-			task.wait(0.15)
-			reveal()
-			tween(holder, 0.2, { Size = UDim2.fromOffset(CARD.X, CARD.Y) }, Enum.EasingStyle.Back)
-			tween(holderScale, 0.3, { Scale = 1 }, Enum.EasingStyle.Back)
-			play("Revelation")
-			for _, t in twinkles(holder, 8) do
-				table.insert(stars, t)
-			end
-		end)
+		local visual = CurrencyVisualConfig.visual(reward.Kind)
+		local item = Instance.new("Frame")
+		item.Name = reward.Kind
+		item.BackgroundTransparency = 1
+		item.LayoutOrder = index
+		item.Size = UDim2.fromOffset(PACK.RevealGlow, PACK.RevealGlow + 40)
+		item.Parent = row
+		local image = Instance.new("ImageLabel")
+		image.Name = "Glow"
+		image.BackgroundTransparency = 1
+		image.Image = if visual then visual.Glow else ""
+		image.ScaleType = Enum.ScaleType.Fit
+		image.Size = UDim2.fromOffset(PACK.RevealGlow, PACK.RevealGlow)
+		image.ZIndex = 21
+		image.Parent = item
+		local amount = UIKit.text(item, `+{CurrencyView.format(reward.Amount)}`, AMOUNT_SIZE, { Color = if visual then visual.Color else Colors.TextLight })
+		amount.Name = "Montant"
+		amount.Position = UDim2.fromOffset(0, PACK.RevealGlow)
+		amount.Size = UDim2.new(1, 0, 0, 40)
+		amount.ZIndex = 22
+		pop(item, (index - 1) * STAGGER)
+		table.insert(glows, { image = image, reward = reward })
+		table.insert(parts, `+{CurrencyView.format(reward.Amount)} {if visual then visual.Label else reward.Kind}`)
 	end
+	play("Recompense")
 
-	-- 3. « Récupérer ! » une fois toutes les cartes révélées
-	local revealDone = 0.35 + (#rewards - 1) * 0.45 + 1.55
+	local title = UIKit.text(screen, "Récompense !", TITLE_SIZE, Colors.GoldLight)
+	title.Name = "Titre"
+	title.AnchorPoint = Vector2.new(0.5, 0.5)
+	title.Position = UDim2.new(0.5, 0, 0.46, PACK.RevealGlow / 2 + 70)
+	title.Size = UDim2.fromOffset(600, TITLE_SIZE + 12)
+	title.ZIndex = 30
+	pop(title, 0.1)
+	local hint = UIKit.text(screen, "Toucher pour continuer", Size.Body, { Color = Colors.TextMuted, Font = UITheme.Typography.Body, Stroke = false })
+	hint.Name = "Continuer"
+	hint.AnchorPoint = Vector2.new(0.5, 0.5)
+	hint.Position = UDim2.new(0.5, 0, 0.46, PACK.RevealGlow / 2 + 112)
+	hint.Size = UDim2.fromOffset(600, 24)
+	hint.ZIndex = 30
+
+	-- 3. continuer : les monnaies 3D volent vers le HUD, puis tout s'efface
 	local finished = false
-	local button: UIKit.Button? = nil
-	local function collect()
+	local function continue()
 		if finished then
 			return
 		end
 		finished = true
 		ContextActionService:UnbindAction(ACTION)
-		if button then
-			button.holder:Destroy()
+		local longest = 0
+		for _, entry in glows do
+			local kind = entry.reward.Kind
+			local duration = CurrencyFx.SpawnCurrencyReward(kind, entry.image, CurrencyView.IconOf(kind), {
+				Count = flyCount(kind, entry.reward.Amount),
+				OnArrive = function()
+					CurrencyView.Bump(kind)
+					play("Recompense")
+				end,
+			})
+			longest = math.max(longest, duration)
 		end
-		for _, t in stars do
-			t:Cancel()
+		toast(screen, table.concat(parts, " · "))
+		for _, object in { title, hint } :: { TextLabel } do
+			UIKit.tween(object, UITheme.Animation.Fade, { TextTransparency = 1 })
 		end
-		local s = if scale then scale.Scale else 1
-		local arrivals = 0
-		for index, entry in cards do
-			task.delay((index - 1) * 0.12, function()
-				local target = hudTarget(entry.kind)
-				local goal = UDim2.fromScale(0.5, 0.05)
-				if target then
-					local p = target.AbsolutePosition + target.AbsoluteSize / 2
-					goal = UDim2.fromOffset(p.X / s, p.Y / s)
-				end
-				-- la carte rapetisse et file vers son compteur
-				entry.holder.AnchorPoint = Vector2.new(0.5, 0.5)
-				tween(entry.holder, 0.55, { Position = goal, Rotation = 20 }, Enum.EasingStyle.Back, Enum.EasingDirection.In)
-				tween(scaleOf(entry.holder), 0.55, { Scale = 0.15 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-				task.wait(0.56)
-				play("Recompense")
-				if target then
-					UIKit.pop(target)
-				end
-				entry.holder:Destroy()
-				arrivals += 1
-				if arrivals == #cards then
-					tween(veil, 0.25, { BackgroundTransparency = 1 })
-					tween(title, 0.25, { TextTransparency = 1 })
-					tween(scaleOf(rays), 0.25, { Scale = 0 })
-					task.delay(0.3, function()
-						screen:Destroy()
-					end)
-					if onDone then
-						onDone()
-					end
-				end
-			end)
+		for _, entry in glows do
+			UIKit.tween(entry.image, UITheme.Animation.Fade, { ImageTransparency = 1 })
 		end
-	end
-	task.delay(revealDone, function()
-		if finished then
-			return
-		end
-		local b = UIKit.button(center, "Récupérer !", "Primary", UDim2.fromOffset(260, 56 + UITheme.Shadow.ButtonLip), collect)
-		b.holder.AnchorPoint = Vector2.new(0.5, 0.5)
-		b.holder.Position = UDim2.fromScale(0.5, 0.77) -- sous la carte, au-dessus de la hotbar
-		b.holder.ZIndex = 40
-		b.label.TextSize = Size.Button
-		UIKit.popIn(b.holder, 0, Animation.Scale.Pop)
-		-- le bouton respire : on a envie de cliquer
-		task.delay(0.4, function()
-			if b.holder.Parent then
-				TweenService:Create(scaleOf(b.holder), Animation.Pulse, { Scale = Animation.Scale.Hover + 0.04 }):Play()
+		row.Visible = false
+		rays:Destroy()
+		UIKit.tween(veil, UITheme.Animation.Fade, { BackgroundTransparency = 1 })
+		veil.Active = false
+		task.delay(longest, function()
+			if onDone then
+				onDone()
 			end
 		end)
-		button = b
-		ContextActionService:BindActionAtPriority(ACTION, function(_name, state)
-			if state == Enum.UserInputState.Begin then
-				collect()
-			end
-			return Enum.ContextActionResult.Sink
-		end, false, Enum.ContextActionPriority.High.Value, Enum.KeyCode.Return, Enum.KeyCode.Space, Enum.KeyCode.ButtonA)
-	end)
-	veil.Activated:Connect(function()
-		if button then
-			collect() -- toucher n'importe où une fois le bouton là
+		task.delay(math.max(longest, PACK.Toast) + 0.4, function()
+			screen:Destroy()
+		end)
+	end
+	veil.Activated:Connect(continue)
+	ContextActionService:BindActionAtPriority(ACTION, function(_name, state)
+		if state == Enum.UserInputState.Begin then
+			continue()
 		end
-	end)
+		return Enum.ContextActionResult.Sink
+	end, false, Enum.ContextActionPriority.High.Value, Enum.KeyCode.Return, Enum.KeyCode.Space, Enum.KeyCode.ButtonA)
 end
 
 return QuestRewardView

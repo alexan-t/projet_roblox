@@ -24,8 +24,20 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local CurrencyVisualConfig = require(ReplicatedStorage.Shared.Config.CurrencyVisualConfig)
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local Icons = require(script.Parent.Parent.Icons)
+
+-- Icône du ticket d'invocation : PNG du pack « Monnaies » (CurrencyVisualConfig), fond transparent.
+local function ticketIcon(parent: Instance)
+	local image = Instance.new("ImageLabel")
+	image.Name = "Icone"
+	image.BackgroundTransparency = 1
+	image.Size = UDim2.fromScale(1, 1)
+	image.Image = CurrencyVisualConfig.Kinds.SummonTicket.Normal
+	image.ScaleType = Enum.ScaleType.Fit
+	image.Parent = parent
+end
 local RarityStyle = require(script.Parent.Parent.RarityStyle)
 local UIKit = require(script.Parent.Parent.UIKit)
 local GuideTargets = require(script.Parent.Parent.GuideTargets)
@@ -275,7 +287,7 @@ local function showBanners(content: Frame, data: Data, opts: ShowOptions, cost: 
 	ticket.BackgroundTransparency = 1
 	ticket.Size = UDim2.fromOffset(64, 56)
 	ticket.Parent = bottom
-	Icons.viewport(ticket, "Ticket")
+	ticketIcon(ticket)
 	local count = UIKit.text(bottom, if free then "Invocation gratuite !" else `Tickets : {data.Tickets}`, Typography.Size.Heading,
 		{ Color = if free then Colors.Success elseif enough then Colors.TextLight else Colors.Warning, Align = Enum.TextXAlignment.Left })
 	count.Position = UDim2.fromOffset(72, 0)
@@ -329,7 +341,7 @@ local function showSimple(content: Frame, data: Data, opts: ShowOptions, cost: n
 	ticket.Position = UDim2.new(0.5, 0, 0, Spacing.S)
 	ticket.Size = UDim2.fromOffset(120, 100)
 	ticket.Parent = content
-	Icons.viewport(ticket, "Ticket")
+	ticketIcon(ticket)
 
 	local free = data.Free == true
 	local count = UIKit.text(content, if free then "Invocation gratuite !" else `Tickets : {data.Tickets}`, Typography.Size.Heading,

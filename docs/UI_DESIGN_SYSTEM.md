@@ -210,16 +210,28 @@ l'énergie ; PV `HealthLow` sous 30 % ; énergie pleine `EnergyFull` qui pulse. 
 `EnemyHealth`. Mini-boss : barre plus large. Progression (quêtes, niveau) : `Progress`.
 
 ### Monnaies
-Pastille `HUD` (`WoodDeep` à 0,45, contour `Regular`) avec l'**icône qui déborde** à gauche et le
-montant en `Label`. Gain : le montant défile (`Animation.Count`) et l'icône fait un pop.
+Capsule (`WoodDeep` à 0,45, contour `Regular`, mesures `Pack.Currency`) avec l'**icône PNG « _small »**
+du pack (`CurrencyVisualConfig`) qui déborde à gauche et le montant en `Label`. Gain : le montant défile
+(`Animation.Count`) et l'icône fait un pop. Icônes : `Small` (HUD, < 64 px), `Normal` (fenêtres),
+`Glow` (gain, reveal). Monnaies 3D (`ReplicatedStorage.Assets.Currencies` : Gold, Gems, SummonTicket,
+reproduites d'après « Monnaies 3D.html ») : feedback seulement (`UI/CurrencyFx` :
+`SpawnCurrencyReward(kind, origin, destination?)`, `Preview(kind, parent)`), jamais une attribution.
 
 ### Récompenses
-Cartes de récompense = cartes standard, l'icône au centre, quantité en bas à droite (« ×3 »).
-Apparition en cascade (pop décalé de 0,05 s par carte).
+Cartes de récompense = cartes standard, la monnaie 3D du pack qui tourne au centre, quantité en bas à
+droite (« ×3 »). Apparition en cascade (pop décalé de 0,05 s par carte). Reveal de quête (maquette
+« Quêtes HUD ») : voile, rayons dorés, icônes `Glow` qui jaillissent avec le montant coloré,
+« Récompense ! », « Toucher pour continuer » ; puis les monnaies 3D volent vers le HUD et une pastille
+verte résume le gain.
 
 ### Quêtes
-Ligne = sous-panneau `PanelStrong` : icône, titre `Label`, barre `Progress`, compteur
-« 3/5 ». Terminée : badge `Success` et bouton principal « Récupérer ».
+Suivi (HUD) = sous-panneau : icône Quête du pack, titre `Label`, barre `Progress`, compteur « 3/5 ».
+Terminée : badge `Success` et bouton « Récupérer » qui ouvre le panneau Quêtes.
+Panneau Quêtes (maquette « Quêtes HUD », mesures `Pack.Quest`) : voile, fenêtre `WoodDeep`, plaque
+bois avec l'icône Quête et « Quêtes », X rouge royal ; une carte par quête (à récupérer : fond `SandGold`,
+contour `Selected`, pastille « Terminée », barre `Success`, « Récupérer » doré qui pulse ; en cours :
+barre `Progress`, bouton gris « En cours » ; récupérée : « ✓ Récupéré » vert, carte estompée), récompenses
+en tuiles `Sand` avec l'icône `Small` et « ×n ».
 
 ## 7. Icônes
 
