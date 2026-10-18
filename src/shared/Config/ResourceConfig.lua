@@ -118,7 +118,7 @@ resource("resource_056", "Clous de Forge", "royaume", "rbxassetid://134105028055
 resource("resource_057", "Tuiles d'Argile", "royaume", "rbxassetid://76235642508162")
 resource("resource_058", "Parchemin Vierge", "royaume", "rbxassetid://131342119415574")
 resource("resource_059", "Bannière Royale Pliée", "royaume", "rbxassetid://94605532511849")
-resource("resource_060", "Pierre d'Angle du Royaume", "royaume")
+resource("resource_060", "Pierre d'Angle du Royaume", "royaume", "rbxassetid://91768891355835")
 
 local ResourceConfig = {
 	-- Ressources par ResourceId (« resource_036 »).
