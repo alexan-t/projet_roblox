@@ -493,8 +493,8 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 		local r1 = w.fight(p, PAIR, 1)
 		assert(r1[#r1].FirstClear == false and d.Currencies.Gold == 120 and d.Currencies.SummonTickets == 1)
 		local r5 = w.fight(p, PAIR, 5)
-		assert(r5[#r5].Result == "Victory" and r5[#r5].FirstClear == false and #r5[#r5].Rewards == 0)
-		assert(d.Currencies.Gold == 120 and d.Currencies.SummonTickets == 1)
+		assert(r5[#r5].Result == "Victory" and r5[#r5].FirstClear == false and #r5[#r5].Rewards == 1)
+		assert(d.Currencies.Gold == 120 and d.Currencies.SummonTickets == 6)
 	end)
 
 	test("#69 Elite on the real services: locked until 1-5, then 1-1E with stronger enemies, separate clears, next Elite stage", function()

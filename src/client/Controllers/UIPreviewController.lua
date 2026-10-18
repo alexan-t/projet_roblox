@@ -131,7 +131,9 @@ local function summon(id: number)
 		if not alive(id) then
 			return
 		end
-		SummonView.Show({ Tickets = tickets, Cost = 1 }, {
+		SummonView.Show({ Tickets = tickets, Cost = 1, Free = true,
+			Starter = {Name="Héros de démonstration",Rarity="Commun",Model=if heroes[1] then heroes[1].Model else nil},
+		}, {
 			OnSummon = function()
 				tickets -= 1
 				index = index % math.max(#heroes, 1) + 1

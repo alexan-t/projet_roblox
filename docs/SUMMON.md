@@ -1,157 +1,64 @@
-# Invocation — portail, interface et effet selon la rareté
+# Invocation V2 — Alpha 0.0.2 (#80)
 
-Côté client :
+## Contrat serveur
 
-- `src/client/Controllers/SummonController.lua` : interaction au portail et enchaînement ;
-- `src/client/UI/Views/SummonView.lua` : fenêtre et carte du héros ;
-- `src/client/Controllers/SummonEffectController.lua` : effet 3D au portail.
+`HeroService` décide de la bannière, des coûts, du RNG, de la garantie et des exemplaires. Le client ne simule aucun résultat. Le starter tutoriel reste `RequestStarterSummon()` : Écuyer gratuit, quête vérifiée, aucun ticket ni `Summons.Total` consommé.
 
-Le tirage (quel héros, quelle rareté, doublon ou non) relève de HeroService (voir `docs/HEROES.md`
-§ Invocation, § Raretés, § Bannières).
+`GetSummonState()` publie `Tickets`, `Cost`, `Starter`, `BannerId`, `Slot`, `EndsAt`, `ServerNow`, `ExpectedTotal`, `Guarantee`, `Rates` et `GuaranteeRates`.
 
-## Au portail
+`RequestSummon({ BannerId, Slot, Quantity, ExpectedTotal })` accepte uniquement les quantités **1 / 10 / 100** et ces quatre champs. Réponse : `(true, { Results, Quantity, Tickets, Total, Guaranteed, BannerId, Slot })`, sinon `(false, raison)`. Chaque résultat contient `InstanceId`, `HeroId`, `Name`, `Rarity`, `New`, `Guaranteed` et les indicateurs internes de progression.
 
-1. **E près de SON portail** : `ProximityPrompt` local « Invoquer », sur le voile du `PortailInvocation`
-   de son plot (portée 14 studs ; le serveur accepte 18 studs du pivot). Comme tout prompt Roblox,
-   il n'apparaît que si le portail est à l'écran.
-2. **Fenêtre « Invocation »** (`SummonView.Show`) :
-   - à gauche, un onglet par bannière ;
-   - au centre, la bannière choisie : nom, accroche, 3 héros mis en avant en cartes 3D (vrais
-     modèles), avec le contour et le badge de leur rareté ;
-   - en bas, « Tickets : n » (`Remotes.GetSummonState`), le coût, le bouton **Taux** (chances par
-     rareté, en deux colonnes) et le bouton principal **Invoquer**. Sans ticket, « Invoquer » est
-     désactivé et une aide indique d'en gagner en combattant.
-   Invocation tutorielle (nouveau profil, quête « Invoque ton premier héros », `GetSummonState.Starter`) :
-   bannière spéciale **Premier héros** sélectionnée (« Ton premier défenseur rejoint ton royaume. », le
-   héros présenté par le serveur avec son vrai modèle et sa rareté) ; les vraies bannières restent
-   visibles mais grisées et sans effet au clic (« Disponible après ton premier héros ») ; pas de
-   **Taux** (aucun tirage) ; « Invocation gratuite ! » et **Invoquer · Gratuit** qui respire. Le premier
-   héros est obtenu ici ; voir HEROES.md § Premier héros.
-3. **Invoquer** : `RequestSummon(bannerId)` (gratuit : `RequestStarterSummon()`, sans argument). En cas
-   de refus, un message bref s'affiche. Sinon :
-   - **cinématique**, locale au joueur :
-     - le personnage est caché et immobilisé, et le HUD est masqué ;
-     - la caméra part d'un plan large de trois quarts et avance sur le portail pendant la charge ;
-     - à l'éclat, elle suit le héros jusqu'à sa **place d'invocation** (cercle au sol, liseré de la
-       couleur de la rareté, 7 studs devant le voile) et le cadre en pied, face à lui ;
-   - l'effet se joue selon la rareté ;
-   - la carte du héros apparaît (`SummonView.Reveal` : rayons et contour de la couleur de la rareté,
-     nom, rareté, « Nouveau »).
-4. **Continuer** :
-   - le héros et sa place disparaissent ;
-   - la caméra, le personnage et le HUD reviennent ;
-   - le prompt se réactive.
+Le serveur revérifie le profil chargé, le personnage vivant, le portail du joueur et sa distance horizontale (18 studs), le créneau actif, la version attendue et le solde. Une ancienne version, une bannière expirée, une quantité invalide ou un champ de coût/héros/taux ajouté ne consomme rien. `Summons.Total` sert de version persistée : la même requête ne peut pas être appliquée deux fois, y compris après reconnexion.
 
-**Pas de spoil** : le serveur envoie la collection à jour (`HeroesChanged`) avant même de répondre.
-Le client la met en attente (`ArenaStore.holdHeroes`) et ne la montre qu'à « Continuer »
-(`releaseHeroes`). Le nouveau héros n'apparaît donc dans la hotbar et la sacoche qu'après sa carte.
-Le royaume du plot (héros posés devant le château, serveur) se met à jour tout de suite, mais il est
-hors champ pendant la cinématique.
+La transaction pure `SummonRules.batch` prépare tous les tirages et identifiants avant toute mutation. Une erreur au 100e résultat laisse le lot entier intact. Ensuite elle ajoute les exemplaires, débite `Cost × Quantity`, incrémente `Total` et fait évoluer le royaume 1 → 2 si nécessaire. Les doublons gardent leurs identifiants, niveau et XP indépendants ; `New` est vrai seulement pour le premier exemplaire inconnu, y compris au sein du lot. Le royaume et la collection sont publiés **une fois par lot**. Les callbacks serveur reçoivent chaque résultat ; aucun déluge de 100 événements `HeroObtained` n'est envoyé au client.
 
-**Une seule présentation par héros** : la réponse de `RequestSummon` et `Remotes.HeroObtained`
-passent par la même fonction (`handleObtained`), dédupliquée par `InstanceId`. Le héros est montré
-une seule fois, quel que soit le message arrivé en premier.
+## Rotation et probabilités
 
-**Carte synchronisée sur l'effet** : `SummonEffectController.Play(..., { OnRevealed })` appelle
-`OnRevealed` quand la silhouette du héros s'est effacée. La carte suit après une courte pause pour
-le regarder (`HOLD_ON_HERO`, 0,7 s + 0,1 s par rang de rareté). Il n'y a pas de seconde horloge
-calquée sur la durée de l'effet.
+`SummonBannerConfig` centralise les trois bannières et leur ordre : Royaume → Aube → Éclipse. `Featured[1]` est la vedette principale ; les deux suivants sont les secondaires. Aucun tri de rareté ne modifie cet ordre.
 
-**Contenu de la carte** : son nom, son vrai modèle, l'icône de son profil de combat (`ClassId` =
-`HeroConfig.CombatProfile`), sa rareté et le badge « Nouveau ».
+Créneau = `floor((UTC Unix - Epoch) / RotationSeconds)`, avec `RotationSeconds = 900` et `Epoch = 0`. La prochaine borne est calculée par le serveur. Tous les serveurs voient donc la même bannière au même instant ; le rejoin ne réinitialise rien. Le client affiche `EndsAt - Workspace:GetServerTimeNow()` et recharge l'état à la borne. L'horloge locale ne décide jamais de la rotation ni de l'acceptation d'un achat.
 
-**Après un ticket gagné**, au « Continuer » de l'écran de fin : le portail du plot s'illumine
-quelques secondes (Highlight doré) et une annonce « Nouveau ticket ! Invoque un héros au portail »
-s'affiche (`SummonController.HintPortal`). Rien ne s'ouvre à la place du joueur.
+La rareté est tirée par les poids effectifs de `RarityConfig` (report des paliers vides conservé). Dans une rareté contenant des vedettes, `FeaturedShare = 0,5` choisit le sous-pool vedette ; l'autre moitié choisit le pool complet, qui contient aussi les vedettes. Pour une rareté de probabilité `P`, avec `N` héros et `K` vedettes :
 
-**Un seul écran à la fois** (`src/client/UI/ScreenState.lua`) : la fenêtre d'invocation ne s'ouvre
-pas par-dessus la fenêtre des stages ou l'écran de fin, et le prompt « Invoquer » est désactivé
-tant qu'un écran est ouvert.
+- vedette : `P × (0,5/K + 0,5/N)` ;
+- autre héros : `P × 0,5/N` ;
+- rareté sans vedette : `P/N`.
 
-**Argument de `RequestSummon`** : seul l'Id de la bannière part, choix d'interface validé par le
-serveur (bannière inconnue → refus). Héros, rareté, coût et ticket sont décidés côté serveur.
-Le ticket n'est jamais décrémenté côté client : le HUD des monnaies relit `GetCurrencies`.
+`SummonRules.rates` publie les probabilités du même mélange que `roll`. Le panneau Taux affiche les chances spécifiques des vedettes et les dix raretés ; les taux affichés sont arrondis à cinq décimales de pourcentage. La branche normale du prototype design omettait la contribution du pool complet aux vedettes : seule cette donnée mathématique est corrigée, pas la composition visuelle.
 
-## Effet (rang 1 Commun → 10 Transcendant)
+## Première invocation payante
 
-Tous les rangs suivent la même base :
+`Summons.Total == 0` active une garantie **Épique ou mieux**, conformément au prototype final. Le premier résultat utilise les poids des rangs 4–10 renormalisés ; tous les autres résultats du lot utilisent le pool normal. Aucun HeroId fixe, aucun pity supplémentaire.
 
-| Temps | Étape |
-| --- | --- |
-| 0 → charge | **Charge** : le vortex s'illumine de la couleur de la rareté, des étincelles convergent vers le voile, la lumière monte. La charge dure 1,2 s, plus 0,2 s par rang. |
-| charge | **Éclat** : pic de lumière, gerbe d'étincelles, ondes au sol |
-| + 0,45 s | Le héros **jaillit du voile** en silhouette colorée et se pose à 7 studs devant le portail, pieds sur le dessus de la place d'invocation |
-| + 0,6 s | Poussière, la silhouette s'efface et révèle le héros. Son nom et sa rareté s'affichent au-dessus, avec « Nouveau ». |
+Le compteur payant existait déjà : aucun nouveau flag ni changement de DataVersion n'est nécessaire. Un profil existant avec `Total > 0` n'obtient pas de seconde garantie ; un profil qui n'a reçu que le starter gratuit reste éligible. La garantie survit au rejoin via ce même compteur. Le panneau affiche aussi `G` pour les probabilités conditionnelles du premier résultat tant que cette garantie est disponible.
 
-Plus la rareté est haute, plus l'effet marque le joueur :
+## Interface et reveals
 
-| Rareté | En plus |
-| --- | --- |
-| Commun, Peu commun | la base, à leur couleur |
-| Rare | colonne de lumière vers le ciel (visible de loin), annonce « Rare ! » à l'écran |
-| Épique | deux ondes au sol |
-| Légendaire | kit doré `EffetJackpot` du portail, secousse de caméra, son « Royaume » |
-| Mythique | flash plein écran, grande annonce |
-| Maudit | colonne d'ombre (mate, assombrie), fumée sombre, voile d'ombre plein écran, trois ondes |
-| Suprême | flash blanc céleste, kit doré |
-| Calamité | braises, secousse forte, son « Seisme » |
-| Transcendant | quatre ondes ; toute la lumière, la silhouette et le texte parcourent le prisme `UITheme.RarityPrism` |
+Les sources figées sont conservées dans `docs/references/ui/invocation-v2`. `InvocationVisualConfig` contient les identifiants Roblox des 21 PNG d'origine. Les monnaies réutilisent `CurrencyVisualConfig`. Aucun cadre, ruban, portail, dos de carte ou silhouette livré n'est remplacé par un dessin inventé.
 
-Couleurs : uniquement `UITheme`. Les raretés utilisent `UITheme.Rarity`. Sans rareté, l'effet est
-doré (démonstration). Le kit doré du portail ne sert qu'aux raretés lumineuses (Légendaire,
-Mythique, Suprême).
+`HeroCard` transpose les dix cadres `RarityConfig`, la zone portrait (x19/y25/w162/h165 sur 200×266), la plaque de nom, les badges et les effets de rareté. Il utilise le modèle via `UIKit.portrait`, ou la silhouette fournie quand le modèle manque. Les rayons et sparkles blancs sont teintés par `UITheme`.
 
-Le portail n'est pas modifié (les attributs `Anim*` de `PortalAmbientController` ne sont pas
-touchés) ; seuls des objets temporaires sont ajoutés puis détruits.
+`SummonView` et `SummonLayout` conservent UIKit, Fredoka et UITheme. Desktop : composition 1000×610 avec bannière de 960×430, vedette centrale 196 px, secondaires 140 px et trois boutons en bas. Mobile paysage : 820×354, bannière à gauche et commandes de 250 px à droite, cartes 138/96 px. La fenêtre se met à l'échelle de l'espace disponible et change de composition lorsque nécessaire.
 
-## Pose au sol du héros invoqué
+- **x1** : portail 0,9 s → flash 0,25 s → silhouette 0,75 s → rareté 0,6 s → carte. Toucher passe immédiatement à la carte ; Continuer termine, Encore refait une demande serveur après relecture de l'état.
+- **x10** : portail court et flash, puis grille 5×2 avec les dos fournis et flips échelonnés ; Légendaire+ arrivent plus tard. Toucher révèle tout immédiatement. Aucune répétition de dix cinématiques complètes.
+- **x100** : compteur court, barre par rareté, meilleurs résultats, puis résumé regroupé ou onglet Tous (100) compact et défilant. Le regroupement ne fusionne aucun exemplaire sauvegardé.
 
-`src/client/Summon/SummonLanding.lua` (pur, testé par `tools/test-presentation.ps1`) :
-sol praticable → dessus visible de la place d'invocation → pieds du héros.
+La réponse de l'invocation est l'unique déclencheur du reveal ; le starter ne s'affiche donc pas deux fois à cause de `HeroObtained`. `ArenaStore.holdHeroes/releaseHeroes` retarde l'affichage de la collection. `ScreenState` réserve le modal pendant toute la séquence. Respawn, fermeture ou erreur libèrent cet état ; les timers et connexions visuels sont détruits avec l'écran. L'ancien `SummonEffectController` 3D et `SummonLanding` restent disponibles pour les outils de scène, mais ne pilotent plus la séquence V2.
 
-- **Sol** : rayon vers le bas 7 studs devant le voile. Il s'arrête sur une surface collidable et
-  visible (`isGround`) : le dessus des marches / du socle du portail compte ; effets, pierres en
-  orbite, cristaux, pièces invisibles et personnages sont traversés. Avant, tout le portail était
-  ignoré : le rayon traversait le socle et le héros se posait sur le terrain en dessous, enfoncé
-  d'environ 2 studs dans le socle (mesuré en Studio).
-- **Place d'invocation** : deux disques posés sur ce sol (`SummonLanding.Pad`), dessus = `padTop`.
-- **Pieds** : le bas de la boîte du modèle (vérifié sur les 60 héros : égal au bas de la pièce visible
-  la plus basse) est posé sur `feetY` = dessus de la place + `FootClearance` (0,05 stud, sans
-  z-fighting). Les clones restent ancrés, sans collision ni requête. Aucun décalage par héros.
+## Tickets — ALPHA 0.0.2 PROVISOIRE
 
-## API
+Les nombres de replay sont centralisés dans `RewardConfig.TicketEconomy`. Le contrat du starter et le ticket du premier clear 1-1 restent inchangés. Les quêtes gardent leurs récompenses de progression.
 
-```lua
-SummonEffectController.Play(portal: Model, heroTemplate: Model, options?) -> Model?
--- options = { Name: string?, New: boolean?, Rarity: string?, Jackpot: boolean?, Keep: number?, OnRevealed: (() -> ())? }
-SummonEffectController.Duration(rarity?) -> number -- secondes jusqu'à la révélation du héros
-```
+| Replay | 1-1 | 1-2 | 1-3 | 1-4 | Boss 1-5 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Normal | 0 | 1 | 1 | 2 | 5 |
+| Élite | 2 | 2 | 2 | 2 | 10 |
 
-- `heroTemplate` n'est pas modifié : une copie locale ancrée, sans collision ni requête, est posée.
-- L'avant du héros est déduit de ses bras (`left_arm_geom` / `right_arm_geom`), comme dans
-  AnimationKit, car le pivot des modèles générés est arbitraire.
-- `Keep` : secondes avant de retirer la copie après la révélation (4 par défaut). Avec `0`, la copie
-  reste et l'appelant la détruit lui-même.
-- `src/client/UI/RarityStyle.lua` : couleur, libellé, badge et prisme qui tourne d'une rareté
-  (partagé par la fenêtre et l'effet).
+Ainsi un x10 correspond par exemple à deux boss normaux rejoués, un boss Élite ou dix replays 1-2. Un x100 correspond à vingt boss normaux ou dix boss Élite, hors quêtes. Le First Clear ouvre la progression ; les gains réguliers arrivent sur les replays suivants. Ces valeurs servent la validation Alpha et doivent être réévaluées avec les durées réelles des combats. Aucune monétisation n'est ajoutée.
 
-**Contrat HeroService** :
+## Validation
 
-- le client demande `Remotes.RequestSummon(bannerId)` près du portail de son plot ;
-- le serveur décide et sauvegarde tout, puis rafraîchit le royaume ;
-- il répond `{ InstanceId, HeroId, Name, New, Rarity }`, et envoie la même chose au seul joueur
-  concerné par `Remotes.HeroObtained` ;
-- le modèle à révéler est l'enfant de `ReplicatedStorage.Assets.Heros` dont l'attribut `HeroId`
-  correspond (copie créée par HeroService au démarrage).
+`tools/test-heroes.ps1` couvre le starter, la rotation UTC et ses bornes, les probabilités exactes, les trois volumes, les coûts, l'atomicité, les identifiants distincts, les doublons, la garantie et le rejoin, les requêtes forgées/dupliquées et les profils existants. `tools/test-rewards.ps1` couvre les gains réguliers et l'absence de double attribution. Les suites sécurité, quêtes, progression et tutoriel doivent rester vertes.
 
-## Démonstration Studio
-
-Dossier tagué `ApercuInvocation` (dans Test 3 : `ReplicatedStorage.AtelierInvocation`, rangé hors du
-Workspace pour que les modèles ne soient pas visibles) contenant :
-
-- des copies de héros (jamais ceux du Bestiaire), avec l'attribut `NomAffiche` ;
-- un `ObjectValue` nommé `Portail` pointant vers le portail.
-
-Au Play, un héros sort toutes les `ApercuPause` secondes (6 par défaut, 4 minimum), avec une rareté
-qui monte d'un rang à chaque tour (Commun → Transcendant). Le portail est sur `PlotTravail`, à environ
-170 studs du spawn : s'en approcher.
+La fiche `docs/INVOCATION_V2_QA.md` consigne les contrôles Studio réellement effectués et leurs limites. Aucune commande de QA ne doit donner silencieusement des tickets à un profil réel : utiliser des copies de données pour les tests serveur et des aperçus sans attribution pour le rendu.

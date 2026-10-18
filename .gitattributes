@@ -2,3 +2,6 @@
 # En cas de conflit, on remplace le fichier complet (voir règles du snapshot sandbox).
 *.rbxl binary merge=binary
 *.rbxm binary merge=binary
+
+# Sources design figées : préserver aussi les fins de ligne du ZIP d'origine.
+docs/references/ui/invocation-v2/** -text whitespace=cr-at-eol
