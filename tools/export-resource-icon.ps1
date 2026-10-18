@@ -16,6 +16,8 @@ param(
     [Parameter(Mandatory)][ValidateRange(0, 100000)][int]$CropY,
     [Parameter(Mandatory)][ValidateRange(1, 100000)][int]$CropSize,
     [switch]$ChromaKeyMagenta,
+    # Pour les objets sans violet : élimine aussi les pixels magenta mélangés aux bords JPEG.
+    [switch]$SoftChromaKey,
     [ValidateRange(0, 32)][int]$OutlinePixels = 15,
     [switch]$Force
 )
@@ -35,7 +37,7 @@ if ($ChromaKeyMagenta -and -not ('ResourceIconChroma' -as [type])) {
 using System;
 using System.Drawing;
 public static class ResourceIconChroma {
-    public static Bitmap Apply(Bitmap input, int radius) {
+    public static Bitmap Apply(Bitmap input, int radius, bool softKey) {
         int w = input.Width, h = input.Height;
         var colors = new Color[w * h];
         var mask = new bool[w * h];
@@ -44,7 +46,9 @@ public static class ResourceIconChroma {
             colors[y*w+x] = c;
             // Le fond magenta reste reconnaissable malgré la compression JPEG.
             // Ne pas confondre les ombres violettes du tissu avec le fond saturé.
-            mask[y*w+x] = !(c.R > 200 && c.B > 200 && c.G < 80 && Math.Abs(c.R - c.B) < 60);
+            bool magenta = c.R > 200 && c.B > 200 && c.G < 80 && Math.Abs(c.R - c.B) < 60;
+            if (softKey) magenta |= c.R > 130 && c.B > 130 && c.R > c.G + 30 && c.B > c.G + 30;
+            mask[y*w+x] = !magenta;
         }
         var expanded = (bool[])mask.Clone();
         for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) {
@@ -94,7 +98,7 @@ try {
     if ($ChromaKeyMagenta) {
         $graphics.Dispose()
         $graphics = $null
-        $keyed = [ResourceIconChroma]::Apply($bitmap, $OutlinePixels)
+        $keyed = [ResourceIconChroma]::Apply($bitmap, $OutlinePixels, $SoftChromaKey.IsPresent)
         $bitmap.Dispose()
         $bitmap = $keyed
     }
