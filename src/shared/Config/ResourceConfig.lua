@@ -92,7 +92,7 @@ resource("resource_032", "Bloc de Pierre", "mine", "rbxassetid://125262800064343
 resource("resource_033", "Pierre Runique", "mine", "rbxassetid://101845461360071")
 resource("resource_034", "Plaque d'Ardoise", "mine", "rbxassetid://112375498120224")
 resource("resource_035", "Minerai de Fer", "mine", "rbxassetid://105316081720709")
-resource("resource_036", "Pépite d'Or", "mine")
+resource("resource_036", "Pépite d'Or", "mine", "rbxassetid://130078997029847")
 resource("resource_037", "Minerai de Cuivre", "mine", "rbxassetid://126822675435008")
 resource("resource_038", "Morceau de Charbon", "mine", "rbxassetid://71582478481177")
 resource("resource_039", "Sac de Sable Doré", "mine", "rbxassetid://112315969053738")
