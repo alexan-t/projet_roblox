@@ -37,12 +37,12 @@ return function(Rules: any, config: any, createService: any)
 		end
 	end)
 
-	test("TutorialConfig: the five menu entries, in order, with a view each", function()
+	test("TutorialConfig: the six menu entries (2 columns x 3 rows), in order, with a view each", function()
 		local ids = {}
 		for _, entry in config.Menu.Entries do
 			table.insert(ids, entry.Id)
 		end
-		assert(table.concat(ids, ",") == "Shop,Bag,Index,Guild,Stats", table.concat(ids, ","))
+		assert(table.concat(ids, ",") == "Shop,Bag,Index,Guild,Stats,Quest", table.concat(ids, ","))
 	end)
 
 	------------------------------------------------------------------ règles

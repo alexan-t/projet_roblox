@@ -125,7 +125,7 @@ function TutorialRules.problems(config: any): { string }
 			table.insert(problems, `Nudges[{index}] : drapeau inconnu ({tostring(nudge.Flag)})`)
 		end
 	end
-	local views = { Bag = true, Index = true, Stats = true, Soon = true }
+	local views = { Bag = true, Index = true, Stats = true, Quests = true, Soon = true }
 	local ids: { [string]: boolean } = {}
 	for index, entry in config.Menu.Entries do
 		if typeof(entry.Id) ~= "string" or ids[entry.Id] then
