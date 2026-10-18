@@ -113,7 +113,7 @@ resource("resource_051", "Pile de Planches", "royaume", "rbxassetid://8641281331
 resource("resource_052", "Lingot de Fer", "royaume", "rbxassetid://136456405227147")
 resource("resource_053", "Lingot d'Or", "royaume", "rbxassetid://120285479420139")
 resource("resource_054", "Corde de Chanvre", "royaume", "rbxassetid://95173415042102")
-resource("resource_055", "Rouleau de Toile", "royaume")
+resource("resource_055", "Rouleau de Toile", "royaume", "rbxassetid://102051336742293")
 resource("resource_056", "Clous de Forge", "royaume", "rbxassetid://134105028055466")
 resource("resource_057", "Tuiles d'Argile", "royaume", "rbxassetid://76235642508162")
 resource("resource_058", "Parchemin Vierge", "royaume", "rbxassetid://131342119415574")
