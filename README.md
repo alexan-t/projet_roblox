@@ -177,7 +177,8 @@ HeroId réel ≠ profil de combat temporaire : voir [les données, les règles e
 
 Catalogue de 100 équipements en icônes 2D (10 paliers de rareté, 7 types d'emplacement), partagé
 dans `src/shared/Config/ItemConfig.lua`, relevé sur la vitrine `Workspace.Bestiaire.Inventaire`.
-Aucune icône livrée (`Icon = nil`), pas encore de stockage, d'obtention ni d'équipement en jeu. Voir
+100 icônes livrées : 58 du partenaire (PR #74, `item_035`–`044` et `item_053`–`100`) et 42 produites
+(`assets/icons/items/`, tâches `done` dans `automation/catalogues/items.json`). Pas encore de stockage, d'obtention ni d'équipement en jeu. Voir
 [la provenance, la répartition, la vitrine Studio et la production des icônes](docs/ITEMS.md).
 
 ## Ressources 2D (ResourceConfig)
