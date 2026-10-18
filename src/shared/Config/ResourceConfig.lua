@@ -112,7 +112,7 @@ resource("resource_050", "Orbe de Verre Trouble", "arcane", "rbxassetid://950905
 resource("resource_051", "Pile de Planches", "royaume", "rbxassetid://86412813311630")
 resource("resource_052", "Lingot de Fer", "royaume", "rbxassetid://136456405227147")
 resource("resource_053", "Lingot d'Or", "royaume", "rbxassetid://120285479420139")
-resource("resource_054", "Corde de Chanvre", "royaume")
+resource("resource_054", "Corde de Chanvre", "royaume", "rbxassetid://95173415042102")
 resource("resource_055", "Rouleau de Toile", "royaume")
 resource("resource_056", "Clous de Forge", "royaume", "rbxassetid://134105028055466")
 resource("resource_057", "Tuiles d'Argile", "royaume", "rbxassetid://76235642508162")
