@@ -77,10 +77,14 @@ local Colors = {
 	LockedTop = hex("#9A9086"), -- carte verrouillée (haut)
 	LockedBottom = hex("#776E65"), -- carte verrouillée (bas)
 	SuccessLight = hex("#8FD873"), -- « ✓ Obtenue »
+	DropChanceLow = hex("#A45BE0"), -- chance de butin de 5 à 10 % (fenêtre Expédition, maquette figée)
+	Guarantee = hex("#7B2FA8"), -- bandeau « Épique garanti » (Invocation V2, maquette figée)
 }
 
 -- Raretés des héros (RarityConfig) : badge, cadre de carte, lumière de l'invocation. Les monstres
 -- n'ont aucune rareté. Transcendant n'a pas une couleur mais un dégradé qui tourne (RarityPrism).
+-- Réservées à l'affichage d'une rareté, lues via RarityStyle (jamais UITheme.Rarity dans une vue) ;
+-- une couleur au même hex qui dit autre chose a son propre token dans Colors (docs/UI_DESIGN_SYSTEM.md § 2).
 local Rarity = {
 	Commun = hex("#B9B0A3"), -- pierre claire
 	PeuCommun = hex("#6CC04A"), -- vert prairie
