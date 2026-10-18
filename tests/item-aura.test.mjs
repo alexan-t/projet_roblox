@@ -68,6 +68,12 @@ test('aura never weakens and grows at every tier', () => {
 test('bounds: transparencies in 0..1, at most 2 ray layers and 8 sparkles, only Maudit is dark', () => {
 	for (const [id, aura] of auras) {
 		assert(aura.Fill > 0 && aura.Fill < 1, `${id}.Fill`);
+		for (const field of ['Halo', 'Rays', 'Sparkles', 'Motes']) {
+			assert(Number.isInteger(aura[field]) && aura[field] >= 0, `${id}.${field}: non-negative integer required`);
+		}
+		assert(aura.Stroke > 0 && aura.Sheen > 0, `${id}: positive stroke and sheen period required`);
+		assert(aura.Pulse >= 0 && aura.Spin >= 0, `${id}: negative animation timing`);
+		assert(aura.Halo === 0 || aura.Pulse > 0, `${id}: halo must breathe`);
 		assert(aura.Rays <= 2 && aura.Sparkles <= 8, `${id} rays/sparkles`);
 		assert(aura.Reach >= 1, `${id}.Reach`);
 		assert(aura.Dark === (id === 'Maudit' ? 1 : 0), `${id}.Dark`);
@@ -81,7 +87,22 @@ test('bounds: transparencies in 0..1, at most 2 ray layers and 8 sparkles, only 
 
 test('every catalogue item has an aura', () => {
 	assert(items.length === 100, `${items.length} items`);
+	assert(new Set(items.map((item) => item.id)).size === 100, 'duplicate item IDs');
 	for (const item of items) assert(auras.has(item.rarity), `${item.id}: no aura for ${item.rarity}`);
+	const catalogue = JSON.parse(read('automation/catalogues/items.json')).queue;
+	// Le catalogue de production exclut les 58 icônes livrées par le partenaire.
+	assert(catalogue.length > 0, 'empty production catalogue');
+	assert(new Set(catalogue.map((item) => item.id)).size === catalogue.length, 'duplicate production IDs');
+	assert(catalogue.every((task) => items.some((item) => item.id === task.id)), 'production item missing from aura coverage');
+});
+
+test('preview visits the full catalogue and applies each item rarity', () => {
+	const preview = read('src/client/UI/Views/ItemAuraView.lua');
+	assert(/for _, info in ItemConfig\.Ordered do/.test(preview), 'preview must read all items');
+	assert(/for r, tier in RarityConfig\.Tiers do/.test(preview), 'preview must include all tiers');
+	assert(/ItemAura\.apply\(tile, info\.Rarity,/.test(preview), 'preview must use item rarity');
+	const controller = read('src/client/Controllers/UIPreviewController.lua');
+	assert(/ItemAuraView\.Show\(/.test(controller), 'preview not reachable');
 });
 
 test('ItemAura renderer: colors from RarityStyle / UITheme only, no image asset', () => {
