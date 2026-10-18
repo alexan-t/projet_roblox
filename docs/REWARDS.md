@@ -97,6 +97,17 @@ Raisons de refus :
 
 Aucun affichage permanent des devises n'existe encore : `CurrencyView` ne sert que dans l'aperçu UI. Le solde est visible dans les données du joueur.
 
+## Fenêtre Expédition
+
+La fenêtre montre les récompenses **réelles** du stage, sans rien inventer (`StagePreview`, voir `docs/ZONES.md`).
+
+- **« Première victoire »** (badge « Une fois ») présente `FirstClearReward`.
+  - Une fois le First Clear obtenu, la boîte reste visible, grisée, avec « ✓ Obtenue ».
+  - Le titre suivant devient alors « À chaque victoire ».
+- **« Ensuite, à chaque victoire »** présente l'XP par héros posé (`HeroProgressionConfig`), puis `RepeatReward`.
+- **Stages 1-2 à 1-5 et Élite** : rien n'est configuré, donc seule l'XP s'affiche.
+- **Bonus de quête** : jamais mélangé aux récompenses de stage. La quête garde son propre panneau.
+
 ## Validation
 
 ```powershell
