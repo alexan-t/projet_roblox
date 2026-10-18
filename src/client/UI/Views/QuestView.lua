@@ -1,17 +1,18 @@
 --!strict
 -- Suivi de la quête principale (HUD, en haut à gauche) — issue #19, docs/UI_DESIGN_SYSTEM.md § 6 Quêtes.
--- Présentation seulement : QuestService fournit la quête active (GetActiveQuest) et valide la
--- réclamation ; le contrôleur de #11 appelle cette vue.
---   Ligne = sous-panneau : icône parchemin, titre, barre Progress et compteur « 0/1 ».
+-- Présentation seulement : QuestService fournit la quête active (GetActiveQuest) ; QuestController
+-- appelle cette vue. Le suivi ne réclame JAMAIS lui-même : la réclamation se fait dans le panneau Quêtes
+-- (QuestPanelView), l'unique interface de « Récupérer » ; son bouton « Récupérer » ouvre ce panneau.
+--   Ligne = sous-panneau : icône Quête du pack (MenuIconConfig), titre, barre Progress et compteur « 0/1 ».
 --   Progression : la barre avance (Count) et le compteur fait un pop.
---   Terminée : annonce « Quête terminée ! », badge « Terminée » et bouton principal « Récupérer ».
+--   Terminée : annonce « Quête terminée ! », badge « Terminée » et bouton « Récupérer » (ouvre le panneau).
 --   Récompense à récupérer : la fenêtre attire l'œil tant que le bouton est là (contour doré qui pulse,
 --   rayons dorés derrière le parchemin qui se dandine, bouton qui respire, petit rebond régulier).
 --   Quête réclamée automatiquement (AutoClaim, tutoriel) : Complete montre la quête terminée (barre pleine,
 --   badge « Terminée », annonce « Quête terminée ! », petit rebond), puis la suivante arrive d'elle-même.
 -- API : QuestView.Show(quest, options?) ; QuestView.Complete(title, target, after) ; QuestView.Hide().
 --   quest = { Title: string, Progress: number, Target: number, Completed: boolean }
---   options = { OnClaim: (() -> ())? } (sans OnClaim, pas de bouton)
+--   options = { OnClaim: (() -> ())? } (ouvre le panneau Quêtes ; sans OnClaim, pas de bouton)
 --   after : appelé quand l'annonce est passée (montrer la quête suivante, ou Hide).
 
 local GuiService = game:GetService("GuiService")
@@ -19,8 +20,8 @@ local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TextChatService = game:GetService("TextChatService")
 
+local MenuIconConfig = require(ReplicatedStorage.Shared.Config.MenuIconConfig)
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
-local Icons = require(script.Parent.Parent.Icons)
 local UIKit = require(script.Parent.Parent.UIKit)
 local GuideTargets = require(script.Parent.Parent.GuideTargets)
 
@@ -50,7 +51,7 @@ type Refs = {
 	badge: Frame?,
 	claim: UIKit.Button?,
 	quest: Quest?,
-	icon: Frame,
+	icon: ImageLabel,
 	attention: { tweens: { Tween }, rays: Frame?, token: number }?,
 }
 
@@ -95,13 +96,14 @@ local function build(): Refs
 	panel.Position = UDim2.fromOffset(Spacing.ScreenMargin, TOP)
 	GuideTargets.register("Quest.Panel", panel) -- le menu principal se place dessous
 	panel.BackgroundTransparency = UITheme.Transparency.HUD
-	local icon = Instance.new("Frame")
+	local icon = Instance.new("ImageLabel")
 	icon.Name = "Icone"
 	icon.BackgroundTransparency = 1
+	icon.Image = MenuIconConfig.Buttons.Quest.Icon
+	icon.ScaleType = Enum.ScaleType.Fit
 	icon.Position = UDim2.fromOffset(Spacing.S, Spacing.S)
 	icon.Size = UDim2.fromOffset(56, 56)
 	icon.Parent = panel
-	Icons.viewport(icon, "Parchemin")
 	local caption = UIKit.text(panel, "Quête", Typography.Size.Caption, { Color = Colors.TextMuted, Align = Enum.TextXAlignment.Left })
 	caption.Position = UDim2.fromOffset(72, Spacing.S)
 	caption.Size = UDim2.new(1, -84, 0, 18)
@@ -230,15 +232,9 @@ function QuestView.Show(quest: Quest, options: Options?)
 	if completed and opts.OnClaim then
 		local onClaim = opts.OnClaim
 		local claim: UIKit.Button
-		local pressed = false
 		claim = UIKit.button(r.panel, "Récupérer", "Primary", UDim2.fromOffset(WIDTH - 2 * Spacing.M, 44 + UITheme.Shadow.ButtonLip), function()
-			if pressed then
-				return -- un seul clic : le bouton est désactivé tout de suite (le serveur refuse de toute façon)
-			end
-			pressed = true
-			stopAttention(r)
+			-- ouvre le panneau Quêtes (la réclamation se fait là-bas) ; le bouton reste tant que rien n'a changé
 			UIKit.pop(claim.holder)
-			claim.setEnabled(false)
 			onClaim()
 		end)
 		claim.holder.Position = UDim2.new(0, Spacing.M, 0, HEIGHT - Spacing.XS)

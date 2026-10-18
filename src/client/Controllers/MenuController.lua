@@ -6,21 +6,25 @@
 --   Index : catalogue des héros (CollectionView, la vue « collection » du jeu) : héros possédés avec leur
 --           vrai modèle et leur nombre, les autres « ??? » avec un cadenas (aucun spoil) ;
 --   Stats : statistiques du joueur (InfoView), valeurs du serveur (Remotes.GetPlayerStats) ;
+--   Quests: panneau Quêtes (QuestController.OpenPanel, QuestPanelView) ;
 --   Soon  : fenêtre « Bientôt disponible » (Boutique, Guilde), sans faux contenu.
--- Un seul écran modal à la fois (ScreenState "Menu"). Le menu se cache pendant tout autre écran modal
--- (Expédition, invocation, récompenses...) et se place dans la bande libre entre le suivi de quête et la
--- hotbar (plus haut sur écran tactile : le joystick occupe le bas à gauche).
+-- Un seul écran modal à la fois (ScreenState "Menu" / "Quests"). Le menu reste visible sous le voile de
+-- ses propres fenêtres (bouton sélectionné, comme la maquette) et se cache pendant tout autre écran modal
+-- (Expédition, invocation, récompenses...) ; il se place dans la bande libre entre le suivi de quête et
+-- la hotbar (plus haut sur écran tactile : le joystick occupe le bas à gauche).
 -- API de présentation (aucune logique de quête ici) :
---   MenuController.SetAttention(id, on)   -- variante « ! » de l'icône (ex. quelque chose de nouveau)
+--   MenuController.SetAttention(id, on)   -- « ! » du pack au coin du bouton (ex. quelque chose de nouveau)
 --   MenuController.SetHighlighted(id, on) -- halo doré qui respire (ex. étape du tutoriel)
 --   MenuController.GetButton(id) -> GuiObject? -- pour une flèche UI externe (aussi cible « Menu.<Id> »)
--- Le tutoriel s'y branche sans y mettre sa logique : badges de TutorialController.Badge (drapeaux non
--- vus) et halo sur le bouton visé par la flèche UI (TutorialController.pointing).
+-- Les systèmes s'y branchent sans y mettre leur logique : « ! » de TutorialController.Badge (drapeaux non
+-- vus) et de QuestController.attention (récompense à récupérer, nouvelle quête) ; halo sur le bouton visé
+-- par la flèche UI (TutorialController.pointing).
 -- Aperçu Studio (comme UIPreviewController) : attribut Workspace.ApercuMenu, ex. "Bag=attention,Index=halo"
 -- (vide : tout revient à l'état normal). Studio uniquement.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TextChatService = game:GetService("TextChatService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
@@ -36,11 +40,13 @@ local CollectionView = require(script.Parent.Parent.UI.Views.CollectionView)
 local InfoView = require(script.Parent.Parent.UI.Views.InfoView)
 local MenuView = require(script.Parent.Parent.UI.Views.MenuView)
 local HeroBarController = require(script.Parent.HeroBarController)
+local QuestController = require(script.Parent.QuestController)
 local TutorialController = require(script.Parent.TutorialController)
 
 local MenuController = {}
 
 local SCREEN = "Menu"
+local QUESTS = "Quests" -- écran du panneau Quêtes (QuestController)
 local LAYOUT_EVERY = 0.5 -- s entre deux recalculs de la place libre (chat, quête terminée, écran redimensionné)
 local DEFAULT_TOP = 150 -- px : haut du menu sans suivi de quête (sous la place de la quête)
 local TOUCH_LIMIT = 0.62 -- écran tactile : le menu reste au-dessus de 62 % de la hauteur (joystick dessous)
@@ -52,16 +58,19 @@ local statsRemote: RemoteFunction? = nil
 local attention: { [string]: boolean } = {}
 local highlighted: { [string]: boolean } = {}
 local tutorialPointed: string? = nil
+local questAttention = false -- QuestController.attention (bouton Quêtes)
 
 ------------------------------------------------------------------ états visuels
 
 local function refreshSelected()
-	MenuView.SetSelected(openId or (if HeroBarController.IsBagOpen() then "Bag" else nil))
+	local quests = ScreenState.current() == QUESTS
+	MenuView.SetSelected(openId or (if quests then "Quest" elseif HeroBarController.IsBagOpen() then "Bag" else nil))
 end
 
 local function refreshAttention()
 	for id, entry in entries do
-		MenuView.SetAttention(id, attention[id] == true or TutorialController.Badge(entry))
+		local quest = entry.View == "Quests" and questAttention
+		MenuView.SetAttention(id, attention[id] == true or quest or TutorialController.Badge(entry))
 	end
 end
 
@@ -72,7 +81,7 @@ local function refreshHighlight()
 end
 
 function MenuController.SetAttention(id: string, on: boolean)
-	if entries[id] == nil and MenuIconConfig[id] == nil then
+	if entries[id] == nil and MenuIconConfig.Buttons[id] == nil then
 		return
 	end
 	attention[id] = if on then true else nil
@@ -111,7 +120,7 @@ local function claim(id: string): boolean
 end
 
 local function imageOf(id: string): string
-	local config = MenuIconConfig[id]
+	local config = MenuIconConfig.Buttons[id]
 	return if config then config.Icon else ""
 end
 
@@ -206,6 +215,9 @@ local function select(id: string)
 		showIndex(entry)
 	elseif entry.View == "Stats" then
 		task.spawn(showStats, entry)
+	elseif entry.View == "Quests" then
+		HeroBarController.SetBag(false)
+		task.spawn(QuestController.OpenPanel)
 	else
 		showSoon(entry)
 	end
@@ -213,8 +225,19 @@ end
 
 ------------------------------------------------------------------ placement et visibilité
 
--- Bande libre (px, sous la barre de Roblox) : sous le suivi de quête, au-dessus de la hotbar ; sur écran
--- tactile, au-dessus de la zone du joystick.
+-- Bande libre (px, sous la barre de Roblox) : sous le suivi de quête ET sous la fenêtre de chat de Roblox
+-- (CoreGui, en haut à gauche : elle capte les clics, un bouton dessous ne répondrait pas), au-dessus de
+-- la hotbar ; sur écran tactile, au-dessus de la zone du joystick.
+local function chatBottom(): number
+	local bottom = 0
+	for _, config: any in { TextChatService:FindFirstChildOfClass("ChatWindowConfiguration"), TextChatService:FindFirstChildOfClass("ChatInputBarConfiguration") } do
+		if config and config.Enabled and config.AbsoluteSize.X > 0 then
+			bottom = math.max(bottom, config.AbsolutePosition.Y + config.AbsoluteSize.Y)
+		end
+	end
+	return bottom
+end
+
 local function layout()
 	local camera = Workspace.CurrentCamera
 	local height = if camera then camera.ViewportSize.Y else 1080
@@ -222,6 +245,10 @@ local function layout()
 	local gap = UITheme.Spacing.M * s
 	local quest = GuideTargets.get("Quest.Panel")
 	local top = if quest then quest.AbsolutePosition.Y + quest.AbsoluteSize.Y + gap else DEFAULT_TOP * s
+	local chat = chatBottom()
+	if chat > 0 then
+		top = math.max(top, chat + gap)
+	end
 	local bar = GuideTargets.get("Hotbar.Bar")
 	local bottom = if bar then bar.AbsolutePosition.Y - gap else height - gap
 	if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
@@ -233,7 +260,8 @@ end
 local function refreshVisible()
 	local current = ScreenState.current()
 	-- caché pendant les autres écrans modaux ; visible (sous le voile) pendant ses propres fenêtres
-	MenuView.SetVisible(current == nil or current == SCREEN)
+	MenuView.SetVisible(current == nil or current == SCREEN or current == QUESTS)
+	refreshSelected()
 end
 
 -- Aperçu Studio : l'attribut remplace les demandes externes (attention / halo) par celles qu'il liste.
@@ -269,6 +297,11 @@ function MenuController:Start()
 		refreshHighlight()
 	end)
 	ScreenState.changed.Event:Connect(refreshVisible)
+	QuestController.attention.Event:Connect(function(on: boolean)
+		questAttention = on
+		refreshAttention()
+	end)
+	questAttention = QuestController.HasAttention()
 	if RunService:IsStudio() then
 		Workspace:GetAttributeChangedSignal(PREVIEW):Connect(preview)
 	end

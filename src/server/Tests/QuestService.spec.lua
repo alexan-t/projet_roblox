@@ -736,6 +736,74 @@ return function(createService: any, productionConfig: any, QuestGuide: any, aren
 		assert(view and view.GuideTarget == nil)
 	end)
 
+	test("quest log: claimed quests then the active one, never the next ones; copies only", function()
+		local e = fixture(productionConfig)
+		local s = e.start()
+		local p = e.player("A")
+		local data = e.join(p)
+		local log = e.remote("GetQuestLog").OnServerInvoke(p)
+		assert(log and #log.Quests == 1 and log.Quests[1].Id == "SummonStarter" and log.Quests[1].Claimed == false)
+		assert(log.Quests[1].AutoClaim == true and log.Quests[1].Description ~= nil and log.Quests[1].Completed == false)
+		s:HandleGameplayEvent(p, "StarterHeroSummoned")
+		win(s, p, data, 1)
+		log = s:GetQuestLog(p)
+		assert(#log.Quests == 2, "SummonStarter (claimed) + DefendDomain (active), nothing after")
+		local first, active = log.Quests[1], log.Quests[2]
+		assert(first.Id == "SummonStarter" and first.Claimed == true and first.Completed == true)
+		assert(active.Id == "DefendDomain" and active.Completed == true and active.Claimed == false and active.Progress == 1 and active.Target == 1)
+		assert(active.Rewards[1].Kind == "Gold" and active.Rewards[1].Amount == 50)
+		-- copie : modifier la vue ne touche ni les données ni la config
+		active.Rewards[1].Amount = 999999
+		active.Claimed = true
+		active.Progress = 50
+		assert(data.Quests.DefendDomain.Claimed == false and data.Quests.DefendDomain.Progress == 1)
+		assert(productionConfig.Quests.DefendDomain.Rewards[1].Amount == 50)
+		assert(log.Currencies == nil and log.Quests[1].Quests == nil, "never PlayerData")
+		local ok = e.remote("ClaimQuest").OnServerInvoke(p, "DefendDomain")
+		assert(ok == true and data.Currencies.Gold == 50, "the claim still uses QuestConfig, never the view")
+		log = s:GetQuestLog(p)
+		assert(#log.Quests == 3 and log.Quests[2].Claimed == true and log.Quests[3].Id == "DefendStage12" and log.Quests[3].Completed == false)
+	end)
+
+	test("quest log: no data -> nil; arguments sent by the client are ignored", function()
+		local e = fixture(productionConfig)
+		e.start()
+		local p = e.player("A")
+		assert(e.remote("GetQuestLog").OnServerInvoke(p) == nil)
+		local data = e.join(p)
+		local log = e.remote("GetQuestLog").OnServerInvoke(p, { Claimed = true }, "DefendDomain")
+		assert(log and #log.Quests == 1 and data.Quests.SummonStarter.Claimed == false)
+	end)
+
+	test("double claim from the panel (two fast clicks): one reward only", function()
+		local e = fixture(productionConfig)
+		local s = e.start()
+		local p = e.player("A")
+		local data = e.join(p)
+		s:HandleGameplayEvent(p, "StarterHeroSummoned")
+		win(s, p, data, 1)
+		local claim = e.remote("ClaimQuest")
+		local a = claim.OnServerInvoke(p, "DefendDomain")
+		local b, why = claim.OnServerInvoke(p, "DefendDomain")
+		assert(a == true and b == false and (why == "déjà réclamée" or why == "quête non active"))
+		assert(data.Currencies.Gold == 50)
+	end)
+
+	test("descriptions: every production quest has a short Description; a non-text Description is refused", function()
+		for id, quest in productionConfig.Quests do
+			assert(typeof(quest.Description) == "string" and #quest.Description > 0 and #quest.Description <= 80, id)
+		end
+		local broken = { FirstQuestId = "Q", Quests = { Q = { Title = "Q", Description = 42, Objective = { Event = "E", Target = 1 } } } }
+		local e = fixture(broken)
+		e.start()
+		local p = e.player("A")
+		e.join(p)
+		assert(e.service:GetActiveQuest(p) == nil, "invalid config: quests disabled")
+		local warned = false
+		for _, w in e.warnings do if w:find("Description", 1, true) then warned = true end end
+		assert(warned)
+	end)
+
 	print(`QuestService: {passed} passed, {failed} failed`)
 	if failed > 0 then
 		error(`{failed} QuestService test(s) failed`)

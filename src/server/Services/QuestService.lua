@@ -4,8 +4,12 @@
 -- de la chaîne qui n'est pas encore réclamée. Aucun champ supplémentaire n'est sauvegardé.
 -- Les autres services signalent le gameplay avec HandleGameplayEvent.
 -- Remotes (lecture seule pour le client, le serveur décide tout) :
---   GetActiveQuest (RemoteFunction) -> vue de la quête active ({ Id, Title, Progress, Target, Completed,
---                                      GuideTarget?, GuidePlacement, AutoClaim, Onboarding }) ou nil ;
+--   GetActiveQuest (RemoteFunction) -> vue de la quête active ({ Id, Title, Description?, Progress, Target,
+--                                      Completed, GuideTarget?, GuidePlacement, AutoClaim, Onboarding }) ou nil ;
+--   GetQuestLog (RemoteFunction)    -> journal pour le panneau Quêtes : { Quests = { entrée } }, les quêtes
+--                                      déjà réclamées de la chaîne puis la quête active (jamais les suivantes) ;
+--                                      entrée = { Id, Title, Description?, Progress, Target, Completed, Claimed,
+--                                      AutoClaim, Rewards }. Copies en lecture seule, jamais PlayerData ;
 --   ClaimQuest (RemoteFunction)     -> (ok, raison?, récompenses?) : le client n'envoie que l'Id de quête,
 --                                      revérifié ici ; les récompenses de la quête (QuestConfig.Rewards)
 --                                      sont ajoutées UNE fois, sans yield, et renvoyées pour l'affichage ;
@@ -30,6 +34,7 @@ type Objective = { Event: string, Match: { [string]: any }?, Target: number }
 type Reward = { Kind: string, Amount: number }
 type Quest = {
 	Title: string,
+	Description: string?,
 	Objective: Objective,
 	NextQuestId: string?,
 	Guide: { Target: string, Placement: boolean? }?,
@@ -41,6 +46,8 @@ type Quest = {
 export type ActiveQuest = {
 	Id: string,
 	Title: string,
+	-- Présentation seulement : ce qu'il faut faire, en une phrase (panneau Quêtes).
+	Description: string?,
 	Progress: number,
 	Target: number,
 	Completed: boolean,
@@ -96,6 +103,8 @@ local function validate(config: any): { string }
 		local objective = if typeof(quest) == "table" then quest.Objective else nil
 		if typeof(id) ~= "string" or typeof(quest) ~= "table" or typeof(quest.Title) ~= "string" then
 			table.insert(problems, `quête {id} : Title manquant`)
+		elseif quest.Description ~= nil and typeof(quest.Description) ~= "string" then
+			table.insert(problems, `quête {id} : Description doit être un texte`)
 		elseif typeof(objective) ~= "table" or typeof(objective.Event) ~= "string" or objective.Event == "" then
 			table.insert(problems, `quête {id} : Objective.Event manquant`)
 		elseif not isPositiveInteger(objective.Target) then
@@ -218,6 +227,7 @@ function QuestService:GetActiveQuest(player: Player): ActiveQuest?
 	return {
 		Id = id,
 		Title = quest.Title,
+		Description = quest.Description,
 		Progress = state.Progress,
 		Target = quest.Objective.Target,
 		Completed = completed,
@@ -227,6 +237,54 @@ function QuestService:GetActiveQuest(player: Player): ActiveQuest?
 		Onboarding = quest.Onboarding == true,
 		Rewards = rewardsOf(quest),
 	}
+end
+
+export type LogEntry = {
+	Id: string,
+	Title: string,
+	Description: string?,
+	Progress: number,
+	Target: number,
+	Completed: boolean,
+	Claimed: boolean,
+	AutoClaim: boolean,
+	Rewards: { Reward },
+}
+
+-- Journal du panneau Quêtes : quêtes réclamées de la chaîne (dans l'ordre), puis la quête active.
+-- Les quêtes suivantes ne sont jamais envoyées (pas de spoil). Copies uniquement ; nil sans données.
+function QuestService:GetQuestLog(player: Player): { Quests: { LogEntry } }?
+	local data = DataService:GetData(player)
+	if not data then
+		return nil
+	end
+	local list: { LogEntry } = {}
+	local activeId = activeQuestId(data)
+	local id = firstQuestId
+	while id do
+		local quest = quests[id]
+		local state = data.Quests[id]
+		if not state then
+			break
+		end
+		local target = quest.Objective.Target
+		table.insert(list, {
+			Id = id,
+			Title = quest.Title,
+			Description = quest.Description,
+			Progress = math.min(state.Progress, target),
+			Target = target,
+			Completed = state.Progress >= target,
+			Claimed = state.Claimed,
+			AutoClaim = quest.AutoClaim == true,
+			Rewards = rewardsOf(quest),
+		})
+		if id == activeId then
+			break
+		end
+		id = quest.NextQuestId
+	end
+	return { Quests = list }
 end
 
 -- Réclamation, sans yield : marquée réclamée, récompenses ajoutées une seule fois, suivante activée.
@@ -258,6 +316,11 @@ local function autoClaimPending(data: PlayerData): Finished?
 		id = activeQuestId(data)
 	end
 	return finished
+end
+
+-- Renvoie au client la vue de la quête active (après une modification de test, DebugService).
+function QuestService:Notify(player: Player)
+	push(player)
 end
 
 -- Copie de l'état sauvegardé d'une quête, ou nil si elle n'a jamais été commencée.
@@ -360,6 +423,12 @@ function QuestService:Start()
 		return QuestService:GetActiveQuest(player)
 	end
 	get.Parent = remotes
+	local log = Instance.new("RemoteFunction")
+	log.Name = "GetQuestLog"
+	log.OnServerInvoke = function(player: Player): { Quests: { LogEntry } }?
+		return QuestService:GetQuestLog(player)
+	end
+	log.Parent = remotes
 	-- Le client n'envoie que l'Id de la quête ; état, cible et réclamation sont revérifiés.
 	local claim = Instance.new("RemoteFunction")
 	claim.Name = "ClaimQuest"

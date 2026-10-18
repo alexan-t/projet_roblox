@@ -4,6 +4,7 @@
 --   Objective.Match  : champs que le payload de l'événement doit avoir, à l'identique.
 --   Objective.Target : nombre d'événements correspondants pour terminer la quête.
 --   NextQuestId      : quête activée après la réclamation de celle-ci (nil = fin de la chaîne).
+--   Description      : optionnelle, ce qu'il faut faire en une phrase (panneau Quêtes, sous le titre).
 --   Guide            : optionnel, guidage visuel du client jusqu'à l'objectif (chemin lumineux au sol,
 --                      cible qui pulse).
 --     Guide.Target   : cible connue de Shared.Quests.QuestGuide (StageSign, SummonPortal, Arena, Kingdom,
@@ -35,6 +36,7 @@ local QuestConfig = {
 	Quests = {
 		SummonStarter = {
 			Title = "Invoque ton premier héros",
+			Description = "Invoque gratuitement au portail de ton domaine",
 			Objective = {
 				Event = "StarterHeroSummoned",
 				Target = 1,
@@ -47,6 +49,7 @@ local QuestConfig = {
 		},
 		DefendDomain = {
 			Title = "Gagne la défense 1-1",
+			Description = "Pose un héros dans l'arène et termine le stage 1-1",
 			Objective = {
 				Event = "StageCompleted",
 				Match = { Zone = 1, Stage = 1 },
@@ -59,6 +62,7 @@ local QuestConfig = {
 		},
 		DefendStage12 = {
 			Title = "Gagne la défense 1-2",
+			Description = "Termine le stage 1-2",
 			Objective = { Event = "StageCompleted", Match = { Zone = 1, Stage = 2 }, Target = 1 },
 			Guide = { Target = "StageSign" },
 			Rewards = { { Kind = "Gold", Amount = 75 }, { Kind = "Gems", Amount = 5 } },
@@ -66,6 +70,7 @@ local QuestConfig = {
 		},
 		DefendStage13 = {
 			Title = "Gagne la défense 1-3",
+			Description = "Termine le stage 1-3",
 			Objective = { Event = "StageCompleted", Match = { Zone = 1, Stage = 3 }, Target = 1 },
 			Guide = { Target = "StageSign" },
 			Rewards = { { Kind = "Gold", Amount = 100 }, { Kind = "Gems", Amount = 10 } },
@@ -73,6 +78,7 @@ local QuestConfig = {
 		},
 		DefendStage14 = {
 			Title = "Gagne la défense 1-4",
+			Description = "Termine le stage 1-4",
 			Objective = { Event = "StageCompleted", Match = { Zone = 1, Stage = 4 }, Target = 1 },
 			Guide = { Target = "StageSign" },
 			Rewards = { { Kind = "Gold", Amount = 150 }, { Kind = "Gems", Amount = 15 } },
@@ -82,6 +88,7 @@ local QuestConfig = {
 		-- ArenaConfig.EnemyNames.Boss (vérifié par les tests de QuestService).
 		DefeatRoiOrc = {
 			Title = "Vaincre le Roi Orc",
+			Description = "Termine le stage 1-5 et bats le boss de la zone",
 			Objective = { Event = "StageCompleted", Match = { Zone = 1, Stage = 5 }, Target = 1 },
 			Guide = { Target = "StageSign" },
 			Rewards = { { Kind = "Gold", Amount = 250 }, { Kind = "Gems", Amount = 25 }, { Kind = "SummonTicket", Amount = 1 } },

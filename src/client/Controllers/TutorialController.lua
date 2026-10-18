@@ -23,6 +23,7 @@ local ArenaStore = require(script.Parent.Parent.Arena.ArenaStore)
 local GuidePointer = require(script.Parent.Parent.UI.GuidePointer)
 local GuideTargets = require(script.Parent.Parent.UI.GuideTargets)
 local ScreenState = require(script.Parent.Parent.UI.ScreenState)
+local QuestController = require(script.Parent.QuestController)
 
 local TutorialController = {}
 
@@ -50,7 +51,7 @@ local SEND_GAP = 0.3 -- s entre deux envois de drapeau (le serveur limite la cad
 
 local seen: { [string]: boolean } = {}
 local loaded = false
-local conditions: { [string]: boolean } = { HasHero = false, SecondHero = false, FirstVictory = false }
+local conditions: { [string]: boolean } = { HasHero = false, SecondHero = false, FirstVictory = false, QuestClaimable = false }
 local markRemote: RemoteEvent? = nil
 local outbox: { string } = {}
 local sending = false
@@ -163,6 +164,10 @@ local function candidates(): { TutorialRules.Candidate }
 	if GuideTargets.isOpen("Summon") then
 		table.insert(list, { Source = "Quest", Target = "Summon.Invoke", Text = "Invoque !" })
 	end
+	-- panneau Quêtes ouvert avec une récompense qui attend : « Récupérer » (cible absente sinon)
+	if GuideTargets.isOpen("Quests") then
+		table.insert(list, { Source = "Quest", Target = "Quests.Claim", Text = "Récupère !" })
+	end
 	return list
 end
 
@@ -239,6 +244,16 @@ end
 
 function TutorialController:Start()
 	GuideTargets.opened.Event:Connect(startSequence)
+	-- récompense de quête à récupérer (vue du serveur, QuestController) : condition du rappel « Quêtes »
+	local function questClaimable()
+		local on = QuestController.Claimable()
+		if on ~= conditions.QuestClaimable then
+			conditions.QuestClaimable = on
+			TutorialController.changed:Fire()
+		end
+	end
+	QuestController.attention.Event:Connect(questClaimable)
+	questClaimable()
 	GuideTargets.closed.Event:Connect(function(key: string)
 		pendingOpen[key] = nil
 	end)
