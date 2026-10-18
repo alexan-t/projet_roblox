@@ -1,37 +1,38 @@
 {
-  "task_id": "resource_036",
-  "status": "in_progress",
-  "stage": "production",
-  "iteration": 2,
-  "max_iterations": 3,
-  "last_completed_step": "new_series_generation_attempt_recorded",
-  "next_step": "generate_corrected_3d_model_in_test_3",
-  "studio_target": "Workspace.Bestiaire.Inventaire.Ressources.Panneau.Affichage.Fond.Emplacements.Ressource_036",
-  "latest_review": "docs/RESOURCE_ICONS_QA.md",
-  "evidence": [
-    "automation/screenshots/resources/generation-results.json",
-    "automation/screenshots/resources/generation-retry-2026-10-18.json",
-    "automation/screenshots/resources/generation-third-2026-10-18.json",
-    "automation/screenshots/resources/generation-resume-2026-10-18.json"
-  ],
-  "notes": "Refaire une pépite pleine irrégulière, bosses arrondies et reflets dorés, sans trous.",
-  "remaining_steps": [
-    "Revue du brief et des essais précédents",
-    "Construction 3D dans Workspace.AtelierIcones",
-    "Capture Studio trois quarts et export PNG transparent 512 × 512",
-    "Publication upload_image et renseignement de la carte réservée",
-    "Report de Icon dans ResourceConfig.lua",
-    "Captures carte et famille, VISUAL_QA PASS, nettoyage et réinitialisation caméra"
-  ],
-  "restart_authorization": "Mission utilisateur du 18 octobre 2026 : nouvelle s?rie de passes explicitement autoris?e apr?s max_iterations.",
-  "previous_series": {
-    "iteration": 3,
-    "max_iterations": 3,
-    "latest_review": "docs/RESOURCE_ICONS_QA.md",
-    "evidence": [
-      "automation/screenshots/resources/generation-results.json",
-      "automation/screenshots/resources/generation-retry-2026-10-18.json",
-      "automation/screenshots/resources/generation-third-2026-10-18.json"
-    ]
-  }
+    "task_id":  "resource_036",
+    "status":  "in_progress",
+    "stage":  "production",
+    "iteration":  3,
+    "max_iterations":  3,
+    "last_completed_step":  "final_restart_generation_started",
+    "next_step":  "inspect_final_generation_and_capture",
+    "studio_target":  "Workspace.Bestiaire.Inventaire.Ressources.Panneau.Affichage.Fond.Emplacements.Ressource_036",
+    "latest_review":  "docs/RESOURCE_ICONS_QA.md",
+    "evidence":  [
+                     "automation/screenshots/resources/generation-results.json",
+                     "automation/screenshots/resources/generation-retry-2026-10-18.json",
+                     "automation/screenshots/resources/generation-third-2026-10-18.json",
+                     "automation/screenshots/resources/generation-resume-2026-10-18.json",
+                     "automation/screenshots/resources/generation-final-resume-2026-10-18.json"
+                 ],
+    "notes":  "Refaire une pépite pleine irrégulière, bosses arrondies et reflets dorés, sans trous.",
+    "remaining_steps":  [
+                            "Revue du brief et des essais précédents",
+                            "Construction 3D dans Workspace.AtelierIcones",
+                            "Capture Studio trois quarts et export PNG transparent 512 × 512",
+                            "Publication upload_image et renseignement de la carte réservée",
+                            "Report de Icon dans ResourceConfig.lua",
+                            "Captures carte et famille, VISUAL_QA PASS, nettoyage et réinitialisation caméra"
+                        ],
+    "restart_authorization":  "Mission utilisateur du 18 octobre 2026 : nouvelle s?rie de passes explicitement autoris?e apr?s max_iterations.",
+    "previous_series":  {
+                            "iteration":  3,
+                            "max_iterations":  3,
+                            "latest_review":  "docs/RESOURCE_ICONS_QA.md",
+                            "evidence":  [
+                                             "automation/screenshots/resources/generation-results.json",
+                                             "automation/screenshots/resources/generation-retry-2026-10-18.json",
+                                             "automation/screenshots/resources/generation-third-2026-10-18.json"
+                                         ]
+                        }
 }

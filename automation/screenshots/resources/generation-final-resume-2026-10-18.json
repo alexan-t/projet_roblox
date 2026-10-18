@@ -1,0 +1,80 @@
+{
+  "series": "authorized_restart",
+  "jobs": [
+    {
+      "id": "resource_020",
+      "pass": 3,
+      "jobId": "f7ddd89c-e5b2-4cf8-9e83-b2782884bd7d"
+    },
+    {
+      "id": "resource_030",
+      "pass": 3,
+      "jobId": "58adb2d0-0a1b-475c-868b-a3e03adb09f9"
+    },
+    {
+      "id": "resource_036",
+      "pass": 3,
+      "jobId": "efcfeb89-86e6-4e40-91a6-7d545fda82de"
+    },
+    {
+      "id": "resource_040",
+      "pass": 3,
+      "jobId": "28e18917-b387-4f39-92e3-534452d717ca"
+    },
+    {
+      "id": "resource_041",
+      "pass": 3,
+      "jobId": "9f1aa7e5-96c1-4ead-9a03-ada1cacbbc64"
+    },
+    {
+      "id": "resource_044",
+      "pass": 3,
+      "jobId": "d250d482-2d7a-422b-b959-ffe416bca31f"
+    },
+    {
+      "id": "resource_045",
+      "pass": 3,
+      "jobId": "ccf5c309-ca68-446c-930c-bba82535df63"
+    },
+    {
+      "id": "resource_046",
+      "pass": 3,
+      "jobId": "78b84f40-6c3e-4efd-b47e-1fe05039f6ea"
+    },
+    {
+      "id": "resource_048",
+      "pass": 3,
+      "jobId": "1c66225a-895e-4fcf-b64a-3a6dc2877f4e"
+    },
+    {
+      "id": "resource_050",
+      "pass": 3,
+      "jobId": "62a42995-02c6-4c57-b9fc-d2587a306c40"
+    },
+    {
+      "id": "resource_051",
+      "pass": 3,
+      "jobId": "6d1a95e4-f95d-4790-99e9-87775d5be4cf"
+    },
+    {
+      "id": "resource_054",
+      "pass": 3,
+      "jobId": "b3db858d-7f5c-437a-87ee-12df66a03083"
+    },
+    {
+      "id": "resource_055",
+      "pass": 3,
+      "jobId": "c5a4207c-92d5-4f47-ac50-bf060cc4410b"
+    },
+    {
+      "id": "resource_059",
+      "pass": 3,
+      "jobId": "156f22b1-b8ce-4e3b-b9ec-294dbaa23c1e"
+    },
+    {
+      "id": "resource_060",
+      "pass": 3,
+      "jobId": "99f9982a-a33a-4098-8914-d76c05695440"
+    }
+  ]
+}
