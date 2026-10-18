@@ -43,7 +43,8 @@ public static class ResourceIconChroma {
             Color c = input.GetPixel(x, y);
             colors[y*w+x] = c;
             // Le fond magenta reste reconnaissable malgré la compression JPEG.
-            mask[y*w+x] = !(c.R > c.G + 50 && c.B > c.G + 50 && c.R > 130 && c.B > 130);
+            // Ne pas confondre les ombres violettes du tissu avec le fond saturé.
+            mask[y*w+x] = !(c.R > 200 && c.B > 200 && c.G < 80 && Math.Abs(c.R - c.B) < 60);
         }
         var expanded = (bool[])mask.Clone();
         for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) {
