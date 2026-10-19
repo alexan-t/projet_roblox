@@ -69,8 +69,11 @@ Types d'emplacement (`slot_type`) : arme `weapon` 26, relique `relic` 21, access
 `accessory` 17, armure `armor` 15, casque `helmet` 14, bottes `boots` 5, gants `gloves` 2.
 
 La rareté des items est **celle du catalogue**. On ne l'invente pas et on ne la modifie pas.
-Ses couleurs ne sont pas encore définies dans `UITheme` : ne pas en créer dans les icônes ni
-dans les cartes (cadre neutre `Ink`, comme les héros).
+Arbitrage du 18 octobre (`docs/UI_DESIGN_SYSTEM.md` § 2, « Rendu des raretés ») : les items
+prennent **les couleurs des héros** (`UITheme.Rarity`, aucune seconde palette), posées sur la
+carte (zone d'illustration teintée et cerclée, plus le repère de forme) et **jamais dans
+l'icône**. Tant que la PR #61 n'est pas fusionnée, les cartes gardent le cadre neutre `Ink` et
+personne n'ajoute de couleur de rareté à la main (ni dans les icônes, ni dans la vitrine).
 
 ## 3. Où poser les items créés (directives pour le worker)
 
