@@ -103,6 +103,11 @@ rétabli, aucune capture refaite. Le Play lancé par MCP reste mono-client, mêm
 `TestService.NumberOfPlayers = 2` (un seul joueur présent) ; la valeur 0 a été restaurée.
 Le test à deux joueurs doit être lancé à la main (Test > Clients 2) ou dans la place DEV.
 
+Vérification du 19/10 : les trois images renvoient encore `Failure` dans test 3. Six
+lanceurs rejoués (zones 32, combat 45, arena 14, rewards 17, expedition 15,
+presentation 19) : tous passent. Verdict inchangé : **FIX** tant que les images et le
+test à deux joueurs ne sont pas validés en Studio.
+
 Studio est revenu en Edit. Les huit plots ont retrouvé leur Zone 1, les objets d'aperçu
 temporaires sont retirés, les caméras ont été recréées suivant MONSTER_PRODUCTION § Outils A.
 L'attribut de démonstration initial `ApercuUI = Expedition` est restauré.
