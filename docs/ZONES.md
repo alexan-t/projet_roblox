@@ -29,7 +29,7 @@ Zones = {
   `{ EnemyId: string non vide, Count: entier >= 1 }`.
 - `MiniBoss` : facultatif, `{ EnemyId }`, affronté après la dernière vague.
 - **Convention de progression d'une zone Alpha** : X-1 à X-4 = combats d'ennemis communs, **X-5 =
-  boss de zone** (`MiniBoss`, seulement sur X-5). C'est une convention : seule la Zone 1 existe.
+  boss de zone** (`MiniBoss`, seulement sur X-5). Les six zones suivent cette convention.
 - **Zone 1** (boss = `Boss`, le Roi Orc, modèle `Ennemi_RoiOrc`) :
 
   | Stage | Contenu | PV ennemis |
@@ -197,3 +197,76 @@ En Studio, `ServerStorage.DebugData` (Studio uniquement) simule CombatService de
 ligne de commande côté Serveur : `"StartStage", 1, 1`, `"GetStageSession"`,
 `"CompleteStage", true | false` et `"CancelStage"`. Le vrai combat de Stage 1 (ennemis,
 vagues physiques, mini-boss) ne pourra être testé qu'avec #8.
+
+## Zones 2 à 6 — Alpha provisoire
+
+Le parcours reste celui de WORLD.md : le joueur choisit une expédition depuis **son arène**,
+le décor change sur place. Les plots de démonstration de `Workspace.PlotsZones` ne sont pas
+les points d'accès au gameplay. Les documents antérieurs ne fixaient pas cinq biomes nommés :
+les déclinaisons ci-dessous réutilisent les monstres **validés** de ART_DIRECTION.md § 1.
+Aucun nouveau monstre, aucune rareté de monstre, aucun nouveau système de butin.
+
+| Zone | Ambiance | Ennemis | Boss X-5 | Niveau cible de simulation |
+| --- | --- | --- | --- | --- |
+| 2 · La Mare aux Slimes | Mares, roseaux, champignons | Slime, SlimePlante, SlimeChampignon | KingSlime | 4 |
+| 3 · La Forêt des Tréants | Sous-bois dense, champignons | SlimePlante, Gobelin, Treant | KingTreant | 8 |
+| 4 · Le Camp de la Horde | Tentes, palissades, terre ocre | Gobelin, GobelinDague | Boss (Roi Orc) | 12 |
+| 5 · Les Grottes de Lave | Roche sombre, coulées orange, stalagmites arrondies | SlimeLave, GobelinDague | KingSlime | 16 |
+| 6 · Le Bois Ancien | Grands arbres, mousse, champignons cyan | Treant, TreantArbre, SlimeChampignon | KingTreant | 20 |
+
+Chaque zone comprend cinq stages. X-1 est débloqué par le First Clear de (X-1)-5 ;
+X-2 à X-5 suivent les First Clears de leur prédécesseur. Les trois boss validés reviennent
+une seconde fois, renforcés par la difficulté de zone. Après une victoire, la sélection peut
+passer au premier stage de la zone suivante ; après 6-5, elle reste sur 6-5.
+Les flèches du titre d'Expédition permettent de consulter les zones voisines, y compris
+verrouillées. Les onglets Élite ne sont proposés que pour une zone réellement configurée :
+**seule la Zone 1 possède un mode Élite**.
+
+### Équilibrage
+
+`StageConfig.Zones[zone].Difficulty` multiplie uniquement MaxHealth et AttackDamage.
+Le module pur `Combat/Difficulty` valide ces facteurs et les combine avec ceux de l'Élite.
+Ces valeurs et les niveaux ci-dessus sont **provisoires**. Le test CombatEngine utilise
+cinq graines et trois compositions de quatre héros : chaque stage est gagné au niveau cible,
+et le boss résiste majoritairement aux équipes au niveau cible de la zone précédente.
+Ce test ne garantit pas que toutes les équipes gagnent ; le test Studio utilise une équipe
+au niveau 20 pour contrôler le fonctionnement des cinq boss.
+
+L'XP par héros posé augmente de zone en zone (`HeroProgressionConfig`). Chaque stage a une
+entrée dans RewardConfig afin de sauvegarder son First Clear : récompenses de premier clear
+vides provisoires, replay X-1 = 20 or, X-2..5 = 1/1/2/5 tickets, comme la Zone 1.
+Aucune table de ressources ou d'équipements n'est ajoutée.
+
+### Décor des zones
+
+`Server/Arena/ZoneDecor` conserve un seul décor actif dans `Arene.Zones`. Les décors inactifs
+sont rangés dans `ServerStorage.ZonesRangees_<plot>` et les nouveaux sont copiés depuis
+`ServerStorage.Assets.ZonesArene`. Chaque gabarit porte ZoneId et Nom, et son pivot est celui
+de l'arène de référence. `PivotTo(arena:GetPivot())` conserve les positions relatives sur
+les huit plots. Chaque décor fournit `SourcesEnnemis.FrontEnnemi` et les sources d'entrée.
+
+Le décor reste visible pendant l'outro. Une relance explicite avant sa fin installe néanmoins
+le décor du nouveau combat avant sa création. Un décor ou un front absent refuse le lancement.
+Le serveur et le client lisent les repères du décor courant ; les autres plots ne changent pas.
+
+### Assets Studio
+
+Dans le sandbox « test 3 », exécuter les outils d'assets en mode Edit via MCP ou la barre de
+commande, **sans créer de Script ou modifier de Source** :
+
+1. `tools/studio-zones-assets.luau` copie les huit monstres validés supplémentaires vers
+   `ReplicatedStorage.Assets.Combat` et construit les cinq décors depuis la Zone 1 de Plot_1.
+   Si les modèles de base manquent, il copie Slime_Eau, GobLanceT_A et RoiOrc ; il conserve
+   les versions de combat existantes. Les copies supplémentaires sont statiques et utilisent
+   la mise en scène générique (charge/bascule), pas un nouveau squelette animé.
+2. `tools/studio-zone-stage-signs.luau` installe les pancartes Expédition manquantes sur les
+   huit arènes, relativement à PointEtendard. Il conserve toute pancarte déjà présente.
+   Les textes et interactions viennent du contrôleur client et de UITheme.
+
+Les outils enregistrent une étape ChangeHistoryService. Relancer Rojo depuis ce checkout et
+connecter le plugin avant Play. Aucun asset de map n'est versionné dans Git et rien n'est publié.
+`DebugData("SetHeroLevel", instanceId, niveau)` permet de préparer une équipe de test en Studio ;
+le niveau doit être entier, compris entre 1 et MaxLevel, et le héros doit appartenir au joueur.
+Cette fonction n'existe pas dans une partie publiée et n'ajoute aucune remote client.
+
+Validation datée, limites du sandbox et captures : `docs/ZONES_QA.md`.
