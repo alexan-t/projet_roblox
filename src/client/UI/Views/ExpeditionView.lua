@@ -931,7 +931,7 @@ function ExpeditionView.Show(data: Data, options: Options?)
 					label.Position = UDim2.fromOffset(L.DropIcon + 10, 0)
 					label.Size = UDim2.new(1, -(L.DropIcon + 20 + L.ChanceWidth), 1, 0)
 					local percent = drop.Chance * 100
-					local chanceColor = if drop.Chance >= 1 or percent >= 20 then C.Success elseif percent >= 10 then C.Info elseif percent >= 5 then UITheme.Rarity.Epique else C.Gold
+					local chanceColor = if drop.Chance >= 1 or percent >= 20 then C.Success elseif percent >= 10 then C.Info elseif percent >= 5 then C.DropChanceLow else C.Gold
 					local chance = box(line, "Chance", chanceColor, 0, 999, 2)
 					chance.AnchorPoint = Vector2.new(1, 0.5)
 					chance.Position = UDim2.fromScale(1, 0.5)
