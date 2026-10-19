@@ -32,6 +32,11 @@ Contrat des plots : `docs/PLOTS.md` ; royaume et héros : `docs/KINGDOM.md`.
 | `Arene` (arène de Zone 1, 9 cases `CaseHeros`, `FrontEnnemi`, porche « Zone 1 ») | **point d'Expédition / Stage 1**, 127 studs du spawn |
 | `Nature`, `Bordure`, `Sol`, `Props`, `PanneauProprietaire` | décor |
 
+**Taille** : sol en « stade » de 122 × 178 studs, agrandi pour les combats à 132 × 203 studs par
+`tools/studio-agrandir-plots.luau` (côté ennemi reculé de 20 studs, bords écartés de 5 studs ; détail,
+mesures et captures dans `docs/PLOTS.md` § Agrandissement). Écart minimal entre deux sols voisins :
+15 studs. Spawn, royaume, portail et pancarte ne bougent pas, les distances ci-dessous restent valables.
+
 Les copies d'arène n'ont pas les attributs de démonstration `IntroDemo` / `IntroDemoBoucle`.
 Aucun script dans les plots.
 

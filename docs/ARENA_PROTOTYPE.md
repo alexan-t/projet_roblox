@@ -122,6 +122,8 @@ lu dans l'attribut `Nom` du modèle de zone). Une carte par stage de `StageConfi
   (10 studs) ; Placer / Reprendre exigent aussi d'être à portée de la dalle
   (`ArenaConfig.InteractionDistance`, 14 studs). Règle pure : `ArenaRules.canInteract` (testée).
   Seul Quitter (X) reste possible de partout. Le client applique la même zone (lumières, Prêt).
+  L'agrandissement des plots (`docs/PLOTS.md` § Agrandissement) ne déplace ni les dalles ni la
+  pancarte : la zone reste la même, seul le front ennemi recule de 20 studs.
 - **État versionné** : chaque `ArenaState` porte un `Version` croissant ; le client ignore un état
   plus ancien (évite qu'une réponse initiale en retard masque le panneau).
 - **Pas de prompt serveur « Combattre »** : il a été supprimé.
