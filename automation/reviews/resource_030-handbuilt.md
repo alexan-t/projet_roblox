@@ -22,7 +22,7 @@ Preuves :
 | Lecture 32 px sur planche, carte et famille dans Studio | OK : corne courbe massive, anneau riveté et pic lisibles, distincte de la défense 029 |
 | Géométrie, détails attachés, un point focal lumineux unique | OK |
 | Aucune rareté, quantité ni texte inventés | OK |
-| Icon Git = Image = AssetId | OK : rbxassetid://95288010105910 |
+| Icon Git = Image = AssetId | OK : rbxassetid://100096165201129 |
 
 Visage, membres, posture et accessoires portés : sans objet. Modèle archivé dans
 `ServerStorage.Archive_ResourceIcons_Handbuilt_20261019`. Nettoyage global et caméra en fin de lot.

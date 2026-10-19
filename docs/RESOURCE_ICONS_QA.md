@@ -89,10 +89,10 @@ Les 28 identifiants restants ont tous été retentés. Quatre nouvelles icônes 
 
 | Ressource | AssetId image final | Verdict |
 | --- | --- | --- |
-| 033 — Pierre Runique | `rbxassetid://101845461360071` | **PASS** |
-| 034 — Plaque d'Ardoise | `rbxassetid://112375498120224` | **PASS** |
-| 037 — Minerai de Cuivre | `rbxassetid://126822675435008` | **PASS** |
-| 038 — Morceau de Charbon | `rbxassetid://71582478481177` | **PASS** |
+| 033 — Pierre Runique | `rbxassetid://135985670826077` | **PASS** |
+| 034 — Plaque d'Ardoise | `rbxassetid://89919539137406` | **PASS** |
+| 037 — Minerai de Cuivre | `rbxassetid://84553181426386` | **PASS** |
+| 038 — Morceau de Charbon | `rbxassetid://96000412157071` | **PASS** |
 
 Sources finales : `assets/icons/resources/resource_{033,034,037,038}.png` ; PNG transparents
 512 × 512 avec contour Ink, issus de captures Studio de modèles dans `Workspace.AtelierIcones`.
@@ -157,8 +157,8 @@ publiées, conformément à la mission. Les 13 tests Node du catalogue passent ;
 
 | Ressource | AssetId image final | Verdict |
 | --- | --- | --- |
-| `resource_021` — Lambeau de Tissu Rouge | `rbxassetid://86238190807240` | **PASS** |
-| `resource_022` — Lanière de Cuir | `rbxassetid://124467689473100` | **PASS** |
+| `resource_021` — Lambeau de Tissu Rouge | `rbxassetid://82653946935805` | **PASS** |
+| `resource_022` — Lanière de Cuir | `rbxassetid://127458461513892` | **PASS** |
 
 Sources : `assets/icons/resources/resource_021.png` et `resource_022.png`, PNG transparents
 512 × 512 issus de captures de modèles 3D construits dans `Workspace.AtelierIcones`.
@@ -190,7 +190,7 @@ Les critères de visage, membres, posture et équipement porté ne s'appliquent 
 les tests existants ; les notes 021/022 renvoient à cette review et aux AssetId livrés.
 Le premier export 021 supprimait des reflets violets : le seuil magenta a été resserré,
 puis le PNG réexporté et republié. L'ancienne image `rbxassetid://140086618576004` est remplacée
-par `rbxassetid://86238190807240`. Le cadrage 022 a été tourné pour exposer la boucle.
+par `rbxassetid://82653946935805`. Le cadrage 022 a été tourné pour exposer la boucle.
 
 ## Lots et travail restant
 
