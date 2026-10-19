@@ -400,6 +400,21 @@ return function(createService: any, productionConfig: any, eliteConfig: any, Dif
 		assert(e.rewardCalls[2].completionId == other.Id, "each victory is a distinct completion")
 	end)
 
+
+	test("#72 victory returns the RewardService result untouched, Loot included; a defeat returns nothing", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		e.rewardResult = { FirstClear = false, Rewards = {}, Loot = { Items = { { InstanceId = "I_T1", ItemId = "item_015" } }, Resources = {}, Overflow = false } }
+		local won = s:StartStage(p, 1, 1)
+		assert(won)
+		local ok, reward = s:CompleteStage(p, won.Id, true)
+		assert(ok == true and reward and reward.Loot == e.rewardResult.Loot, "Loot travels with the result, ZoneService adds nothing")
+		local lost = s:StartStage(p, 1, 1)
+		assert(lost)
+		local okLost, rewardLost = s:CompleteStage(p, lost.Id, false)
+		assert(okLost == true and rewardLost == nil, "defeat: no result, hence no loot")
+	end)
 	test("victory refused by RewardService: session still ends, warning logged", function()
 		local e = fixture()
 		local s = e.start()

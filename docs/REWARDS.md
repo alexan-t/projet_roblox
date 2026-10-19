@@ -44,7 +44,7 @@ Une entrée refusée ne donne **rien**, pas même le First Clear. Les autres sta
 **Mode Élite (#69)** : `RewardConfig.EliteStages`, même format et même clé `"<zone>-<stage>"`, lu quand
 ZoneService termine une session Élite (`HandleStageCompleted(..., mode = "Elite")`). Son First Clear est
 enregistré dans `Progression.EliteFirstClears` (il débloque le stage Élite suivant), jamais dans
-`FirstClears` ; les deux progressions sont indépendantes. Les First Clears Élite restent vides ; les replays donnent les tickets définis dans `TicketEconomy` (ALPHA 0.0.2 PROVISOIRE, #80). Équipements et ressources restent à définir dans leurs issues.
+`FirstClears` ; les deux progressions sont indépendantes. Les First Clears Élite restent vides ; les replays donnent les tickets définis dans `TicketEconomy` (ALPHA 0.0.2 PROVISOIRE, #80). Le butin (équipements, ressources) est géré à part par `LootConfig` (§ Loot), jamais dans `RewardConfig`.
 
 ## Flux
 
@@ -54,8 +54,8 @@ CombatEngine : Victory / Defeat
   → ZoneService:CompleteStage(player, sessionId, victory)          -- une seule fois par session
       victoire seulement :
       → QuestService:HandleGameplayEvent(player, "StageCompleted", { Zone, Stage })
-      → RewardService:HandleStageCompleted(player, zone, stage, sessionId)
-  → CombatService envoie au client UN SEUL CombatEnded { Result, FirstClear, Rewards }
+      → RewardService:HandleStageCompleted(player, zone, stage, sessionId)   -- monnaies, First Clear, puis loot (#72)
+  → CombatService envoie au client UN SEUL CombatEnded { Result, FirstClear, Rewards, Loot? }
   → OnCombatEnded (callbacks serveur)
 ```
 
@@ -68,7 +68,7 @@ CombatEngine : Victory / Defeat
 
 | Méthode | Résultat |
 | --- | --- |
-| `HandleStageCompleted(player, zone, stage, completionId)` | `{ FirstClear, Rewards }`, ou `nil` et la raison |
+| `HandleStageCompleted(player, zone, stage, completionId, mode?)` | `{ FirstClear, Rewards, Loot? }`, ou `nil` et la raison |
 
 Raisons de refus :
 - `"données non chargées"` ;
@@ -78,6 +78,119 @@ Raisons de refus :
 - `"completion déjà récompensée"`.
 
 `Rewards` est une **copie** de la liste réellement attribuée, au format attendu par `RewardScreenController.Show`.
+
+## Loot (#72, V1 serveur)
+
+À chaque victoire, RewardService tire aussi un butin (ressources + éventuel équipement), le range dans
+`PlayerData.Inventory` et le joint au résultat. Le client n'envoie jamais `ItemId`, `ResourceId`, quantité, rareté ni
+résultat de tirage ; il n'existe aucun remote `GrantItem` / `GrantResource`.
+
+> **ALPHA 0.0.2 PROVISOIRE — placeholder, à remplacer après simulation.** Toutes les valeurs de
+> `src/server/Config/LootConfig.lua` (chances, quantités, poids de rareté, plafond, garantie) sont des placeholders.
+> Aucune n'est un fait de design. `tools/simulate-loot.ps1` les mesure à la demande ; ses chiffres, tant que la config
+> est un placeholder, ne sont pas des objectifs.
+
+**Les catalogues existent déjà et ne sont pas réinventés.** `ItemConfig` (100 équipements, 7 emplacements, 10 raretés)
+et `ResourceConfig` (60 ressources, 6 familles) sont la source de vérité ; `LootConfig` ne fait que **référencer** leurs
+identifiants. Les ressources n'ont aucune rareté.
+
+### Fichiers
+
+| Fichier | Rôle |
+| --- | --- |
+| `src/server/Config/LootConfig.lua` | Données : `Stages` / `EliteStages` (clé `"<zone>-<stage>"`), `Zones` (règles de zone), `EquipmentCap` |
+| `src/server/Loot/LootRules.lua` | Pur : `problems` (validation), `roll` (tirage), `preview` (aperçu) |
+| `src/server/Inventory/InventoryRules.lua` | Pur : `ensure`, `addEquipment`, `addResource`, `apply`, `view` |
+| `src/server/Services/InventoryService.lua` | Remotes de lecture `GetInventory` / `InventoryChanged`, fabrique d'`ItemInstanceId` |
+| `tools/simulate-loot.ps1` (+ `.luau`) | Simulation déterministe, à la demande (ni test ni CI) |
+
+### Données et contrat
+
+```lua
+PlayerData.Inventory = {
+	Equipment = { [ItemInstanceId] = { ItemId = "item_015", UpgradeLevel = 0 } }, -- une entrée par exemplaire
+	Resources = { ["resource_011"] = 12 },                                         -- piles, entier >= 0
+}
+```
+
+- `DataVersion` **reste 4**, aucune migration : `Inventory` est une clé fixe de `DefaultPlayerData`, `Profile:Reconcile()` l'ajoute
+  vide aux profils existants sans rien toucher d'autre (test de contrat dans `Migrations.spec.lua`, avec le vrai `ReconcileTable`
+  de ProfileStore). Lecture tolérante : une table absente ou de mauvais type est recréée, une entrée invalide est ignorée et
+  jamais supprimée.
+- `ItemInstanceId` = `"I_T"` + `os.time()` (10 chiffres) + séquence (4 chiffres) + `"_"` + GUID, généré côté serveur ; le tri par
+  identifiant donne l'ordre d'obtention.
+- `CombatEnded` gagne un champ **séparé** de `Rewards` (qui reste les monnaies), présent pour une victoire dont le loot a été
+  attribué, **absent** sinon (défaite, zone sans table, LootConfig invalide, erreur de loot) :
+
+```lua
+Loot = {
+	Items = { { InstanceId = "I_T…", ItemId = "item_015" } },            -- uniques
+	Resources = { { ResourceId = "resource_011", Amount = 3 } },         -- empilables, ordre du catalogue
+	Overflow = false,                                                     -- true : plafond d'équipement atteint
+}
+```
+
+  Le serveur n'envoie jamais de rareté : le client lit nom, rareté, emplacement, icône et famille dans `ItemConfig` /
+  `ResourceConfig`. Le loot est sauvegardé (mutation de `PlayerData`) avant l'envoi de `CombatEnded`.
+- Vue lecture seule : `GetInventory` (RemoteFunction) et `InventoryChanged` (RemoteEvent, poussée après chaque mutation) :
+  `{ Equipment = { { InstanceId, ItemId, UpgradeLevel } } (trié par InstanceId), Resources = { { ResourceId, Amount } } (Amount >= 1,
+  ordre du catalogue), Count, Cap }`. Les arguments du client sont ignorés.
+
+### Règles de tirage (`LootRules.roll`)
+
+- Entrée d'un stage : `Equipment = { Chance, Rarities = { { Rarity, Weight } } }`, `FirstClearEquipment = { Rarities }`
+  (facultatif), `Items = { { ItemId, Chance } }` (facultatif), `Resources = { { ResourceId, Chance, Min, Max } }`.
+- Équipement : avec la probabilité `Chance`, UN équipement. **Rareté d'abord** (poids entiers), **puis item uniforme** parmi les items
+  du catalogue de cette rareté (pas de poids par `ItemId`).
+- Ressources : chance indépendante par ressource, quantité entière `Min..Max`.
+- Normal et Élite ont des tables distinctes. Zone 1 Normal : Commun / Peu commun / Rare ; Élite : Rare / Épique / Légendaire ;
+  **jamais au-dessus de Légendaire** (plafond dur dans `LootRules.MAX_RARITY`, indépendant de la config).
+- Ressources de la Zone 1 : familles `slime` et `horde` seulement ; `resource_010` et `resource_020` exclues.
+- **x1 / x2 sans effet** (le tirage ne lit pas la vitesse). **Défaite : aucun loot** (RewardService n'est appelé que sur victoire).
+  **Zone ou stage sans table** (zones 2+ à venir) : aucun loot, aucune erreur.
+- `LootRules.problems` valide toute la config à l'`Init` : rareté inconnue ou hors zone, au-dessus de Légendaire, `ItemId` /
+  `ResourceId` inconnu, famille hors zone, ressource exclue, doublon, chance hors `]0, 1]`, poids ou quantités invalides, plafond
+  invalide, zone sans règle. **LootConfig invalide = warning + aucun loot** ; le First Clear et les monnaies ne sont jamais bloqués.
+
+### Garanties
+
+- Même section synchrone et même identité de completion que le First Clear : une completion = un seul butin (double remote,
+  rappel, rejoin). Le Random est côté serveur.
+- Une erreur du tirage ou du rangement est absorbée (`pcall`) : le First Clear et les monnaies déjà attribués restent acquis.
+- Deux joueurs sont indépendants (inventaires, identifiants, mémoire des completions).
+
+### Choix PROVISOIRES et points ouverts (ALPHA 0.0.2)
+
+1. **Garantie du Roi Orc (Normal)** : 1 équipement garanti au **premier** clear de 1-5 Normal (`result.FirstClear`), tiré dans le pool
+   Normal, **en plus** du tirage normal (donc 1 ou 2 à ce premier clear). Aucune garantie en Élite. Point ouvert : valeur et forme.
+   Pas de rattrapage : si l'équipement garanti est refusé (plafond atteint, `Overflow`) ou si le rangement échoue, le First Clear
+   est tout de même consommé et la garantie est perdue. Si le rangement lève en cours de route (cas théorique : fabrique
+   d'identifiants en erreur), les exemplaires déjà créés restent, les ressources suivantes sont perdues et `Loot` vaut `nil` ;
+   la completion reste marquée (aucun rejeu).
+2. **`resource_030` (Corne du Roi Orc)** : x1 à **chaque** victoire de 1-5 Normal et de 1-5 Élite ; `resource_029` (Défense d'Orc) :
+   chance placeholder en 1-5.
+3. **`resource_010` et `resource_020`** (trophées de boss absents de la Zone 1) : **exclus** du loot Zone 1.
+4. **Plafond d'équipement : 500 instances** (provisoire). Au-delà, l'équipement n'est pas créé (`Overflow = true`) ; ressources et
+   monnaies toujours accordées. Point ouvert : valeur, ou autre mécanisme (la simulation mesure l'accumulation).
+5. **`ItemPool`** : aucune extension du contrat `Drop`. « Butin possible » (`PotentialDrops`) ne liste que les ressources avec leurs
+   chances réelles, plus d'éventuels items précis configurés (`Items`, vide aujourd'hui). L'équipement aléatoire n'est pas listé ligne
+   par ligne.
+6. **`SaveNow`** : pas de sauvegarde forcée (`Profile:Save`) après un loot ; ProfileStore sauvegarde à son rythme et à la
+   fermeture. Point ouvert (risque : perte du dernier loot en cas d'arrêt brutal du serveur).
+7. **Pas de poids par `ItemId`** : uniforme dans la rareté.
+8. **Seuils de simulation** : aucun. Les placeholders ne sont pas calibrés, `tools/simulate-loot.ps1` ne contient aucun seuil
+   d'acceptation. **Constat du catalogue** : aucun `gloves` dans le pool Normal, un seul dans le pool Élite (7/7 emplacements
+   impossible en Normal, très lent en Élite) ; à arbitrer avant de fixer les chances.
+
+### Simulation
+
+```powershell
+./tools/simulate-loot.ps1 -LuauPath <chemin-vers-luau.exe> -Seed 1 -Runs 200 -Mode Elite -Stage 5 [-Players 1000]
+```
+
+Rapport dans `build/loot-sim/` (non versionné) : premier équipement par emplacement (médiane, p10, p90), victoires jusqu'à 7/7,
+répartition des raretés, instances après 10 / 50 / 100 / 500 victoires, ressources par `ResourceId`, part de victoires sans équipement.
+Générateur mulberry32 propre : mêmes paramètres, mêmes chiffres. `-Stage 0` (défaut) cycle 1-1 à 1-5.
 
 ## Garanties
 
@@ -121,3 +234,14 @@ La fenêtre montre les récompenses **réelles** du stage, sans rien inventer (`
   - config invalide ;
   - rejoin.
 - `RewardFlow.spec.lua` est le test d'intégration du vrai chemin CombatEngine → CombatService → ZoneService → QuestService → RewardService → `CombatEnded`. Il couvre la victoire, la défaite, le replay, l'appel en double et deux joueurs.
+
+**Loot et inventaire (#72)** : `RewardService.spec.lua` et `RewardFlow.spec.lua` couvrent aussi le loot (Normal et Élite, 1-5 Normal
+premier clear, `resource_030`, plafond, `LootConfig` invalide, erreur de loot sans blocage du First Clear, anti-double completion,
+x1 / x2, deux joueurs, rejoin, défaite sans loot).
+
+```powershell
+./tools/test-loot.ps1 -LuauPath <chemin-vers-luau.exe>       # LootRules + vraie LootConfig : invariants de zone, graine, garanties
+./tools/test-inventory.ps1 -LuauPath <chemin-vers-luau.exe>  # InventoryRules + InventoryService : remotes en lecture seule
+./tools/test-migrations.ps1 -LuauPath <chemin-vers-luau.exe> # profil v4 sans Inventory + vrai Reconcile
+./tools/simulate-loot.ps1 -LuauPath <chemin-vers-luau.exe>   # outil à la demande, hors CI
+```

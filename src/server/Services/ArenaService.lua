@@ -15,6 +15,11 @@ local EliteConfig = require(script.Parent.Parent.Config.EliteConfig)
 local HeroProgressionConfig = require(script.Parent.Parent.Config.HeroProgressionConfig)
 local StagePreview = require(script.Parent.Parent.Arena.StagePreview)
 local CombatConfig = require(script.Parent.Parent.Config.CombatConfig)
+local LootConfig = require(script.Parent.Parent.Config.LootConfig)
+local LootRules = require(script.Parent.Parent.Loot.LootRules)
+local ItemConfig = require(ReplicatedStorage.Shared.Config.ItemConfig)
+local ResourceConfig = require(ReplicatedStorage.Shared.Config.ResourceConfig)
+local RarityConfig = require(ReplicatedStorage.Shared.Config.RarityConfig)
 local ArenaService = {}
 local manager: ArenaPrep.Manager
 local contexts: { [Player]: any } = {}
@@ -83,9 +88,17 @@ local function canCommand(player: Player, c: any): (boolean, string?)
 	return false, why
 end
 
--- Sources de l'aperçu des stages (StagePreview) : vraies configs serveur. Butin : aucune table de loot
--- tant que #72 (Loot & Inventaire) n'est pas livrée → PotentialDrops absent, section masquée côté UI.
-local PREVIEW_SOURCES = { Rewards = RewardConfig, Progression = HeroProgressionConfig, Elite = EliteConfig }
+-- Sources de l'aperçu des stages (StagePreview) : vraies configs serveur. Butin (#72) : LootRules.preview lit
+-- LootConfig (chances réelles des ressources, items précis s'il y en a ; l'équipement aléatoire n'est pas listé).
+-- Si LootConfig est invalide, RewardService n'accorde aucun loot : l'aperçu n'en promet donc aucun non plus.
+local PREVIEW_SOURCES: any = { Rewards = RewardConfig, Progression = HeroProgressionConfig, Elite = EliteConfig }
+local LOOT_PREVIEW = #LootRules.problems(LootConfig, { Item = ItemConfig, Resource = ResourceConfig, Rarity = RarityConfig }) == 0
+
+local function previewSources(mode: string, zone: number, stage: number): any
+	local sources: any = table.clone(PREVIEW_SOURCES)
+	sources.Drops = if LOOT_PREVIEW then LootRules.preview(LootConfig, mode, `{zone}-{stage}`) else nil
+	return sources
+end
 
 -- Stages proposés au joueur : état serveur (débloqué / verrouillé / terminé), ennemis agrégés (pancarte)
 -- et aperçu de la fenêtre Expédition (vagues, boss, XP par héros, récompenses de stage, Élite), en
@@ -96,7 +109,7 @@ local function stagesOf(player: Player, mode: string?): { any }
 		local view: any = { Zone = entry.Zone, Stage = entry.Stage, Mode = entry.Mode, Status = entry.Status, Cleared = entry.Cleared,
 			Enemies = if entry.Config then ArenaRules.summarize(entry.Config) else {} }
 		if entry.Config then
-			for key, value in StagePreview.build(entry.Config, entry.Zone, entry.Stage, entry.Mode, PREVIEW_SOURCES) do
+			for key, value in StagePreview.build(entry.Config, entry.Zone, entry.Stage, entry.Mode, previewSources(entry.Mode, entry.Zone, entry.Stage)) do
 				view[key] = value
 			end
 		end

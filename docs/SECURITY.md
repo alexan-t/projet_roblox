@@ -23,6 +23,7 @@ de combat, progression de quête) n'est décidée ni envoyée par le client.
 | Actions sur le plot / portail / arène / héros d'un autre | Le serveur résout toujours le plot du joueur (`PlotService:GetPlot`), son portail (distance serveur) et ses propres exemplaires (`data.Heroes`). | `#12 cross-player` (héros, arène) |
 | Entrées absurdes | Types, NaN, ±inf, tables, Instances, chaînes : refus propre, aucune erreur, aucune mutation. | `#12 HotbarAction fuzz`, `#12 invalid slots / ids`, `#12 stage spam` |
 | Monnaies | `GetCurrencies` renvoie une copie ; aucune remote ne modifie une monnaie. | `#12 read-only` |
+| Loot et inventaire (#72) : créer un item, choisir ItemId / ResourceId / quantité / rareté, forcer un drop de boss, rejouer une completion | **Aucune remote d'écriture** : seules `GetInventory` (vue en lecture seule, arguments ignorés) et `InventoryChanged` existent. Le tirage (RNG, rareté, quantité, ItemId) est fait par RewardService dans la section synchrone de la victoire, avec la même identité de completion que le First Clear ; `LootConfig` est validée à l'Init (invalide = aucun loot) ; une erreur de loot ne bloque jamais le First Clear. Point ouvert : pas de sauvegarde forcée après un loot (`SaveNow`). | `#12 exactly two remotes, both read-only`, `#12 GetInventory ignores every client argument`, `#12 #72 no client input`, tests `#72` de `RewardService.spec` / `RewardFlow.spec` |
 
 ## Save / Load (ProfileStore)
 
