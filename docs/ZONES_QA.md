@@ -93,6 +93,9 @@ Neuf lanceurs exécutés avec Luau CLI : `test-zones`, `test-combat`, `test-aren
 `test-rewards`, `test-expedition`, `test-presentation`, `test-heroes`, `test-ui`, `test-security`.
 Tous les cas signalés passent, aucun échec final. Le test Expédition a été rejoué après
 l'ajout de la vérification du message inter-zone. `rojo build` et `git diff --check` passent.
+Les neuf lanceurs ont été rejoués sans Studio lors de la tentative suivante : tous passent
+(ZoneService 32, CombatService 45, RewardFlow 17, Expedition 15, Security 23, etc.).
+Les deux points FIX ci-dessus demandent Studio et ne sont pas levés par ces tests.
 
 Studio est revenu en Edit. Les huit plots ont retrouvé leur Zone 1, les objets d'aperçu
 temporaires sont retirés, les caméras ont été recréées suivant MONSTER_PRODUCTION § Outils A.
