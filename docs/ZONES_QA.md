@@ -97,6 +97,12 @@ Les neuf lanceurs ont été rejoués sans Studio lors de la tentative suivante :
 (ZoneService 32, CombatService 45, RewardFlow 17, Expedition 15, Security 23, etc.).
 Les deux points FIX ci-dessus demandent Studio et ne sont pas levés par ces tests.
 
+Nouvelle vérification Studio (test 3, Edit) : `ContentProvider:PreloadAsync` renvoie toujours
+`Failure` pour `74149875739571`, `99196320622532` et `136778535271316` ; l'accès n'est pas
+rétabli, aucune capture refaite. Le Play lancé par MCP reste mono-client, même avec
+`TestService.NumberOfPlayers = 2` (un seul joueur présent) ; la valeur 0 a été restaurée.
+Le test à deux joueurs doit être lancé à la main (Test > Clients 2) ou dans la place DEV.
+
 Studio est revenu en Edit. Les huit plots ont retrouvé leur Zone 1, les objets d'aperçu
 temporaires sont retirés, les caméras ont été recréées suivant MONSTER_PRODUCTION § Outils A.
 L'attribut de démonstration initial `ApercuUI = Expedition` est restauré.
