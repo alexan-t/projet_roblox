@@ -5,8 +5,10 @@ dans le monde. Les valeurs vivent dans un seul module, `src/shared/Config/UIThem
 (`ReplicatedStorage.Shared.Config.UITheme`). **Aucune couleur, transparence, police, rayon ou
 durée en dur dans un Controller** : on lit `UITheme`.
 
-Maquette de validation, construite en Studio avec ces tokens par-dessus l'arène :
-`docs/references/ui/maquette_v1.jpg`.
+Référence visuelle : les **captures des écrans réels**, une par écran, dans
+`docs/references/ui/ecrans/` (inventaire, procédure et état dans `docs/references/ui/README.md`).
+La maquette `docs/references/ui/maquette_v1.jpg`, construite avant les écrans, est **périmée** :
+ne plus s'en servir pour juger une interface.
 
 ## 1. Charte en une phrase
 
@@ -355,6 +357,9 @@ Moins de fenêtres, plus d'interaction avec le monde : on **prend** un héros et
 5. Un seul bouton principal visible ; zones tactiles ≥ 44 px.
 6. Aucune valeur de style en dur dans le Controller : tout vient de `UITheme`.
 7. Pas d'emoji ni d'icône générique dans une version livrée.
+8. Écran nouveau ou modifié : sa capture de référence est ajoutée ou remplacée dans
+   `docs/references/ui/ecrans/` dans la même PR, et l'inventaire mis à jour
+   (`docs/references/ui/README.md`, contrôle `tools/test-ui-captures.ps1`).
 
 ## 12. Implémentation : UIKit (issue #19)
 
