@@ -22,7 +22,7 @@ $runner = "local CombatEngine = (function()`n$engine`nend)()`n" +
 	"local combatConfig = (function()`n$combatConfig`nend)()`n" +
 	"local stageConfig = (function()`n$stageConfig`nend)()`n" +
 	"local function createService(env)`n    local game, script, require, Instance, Random, Vector3, CFrame, task = env.game, env.script, env.require, env.Instance, env.Random, env.Vector3, env.CFrame, env.task`n$service`nend`n" +
-	"local ok1, err1 = pcall((function()`n$engineSpec`nend)(), CombatEngine, combatConfig, stageConfig)`n" +
+	"local ok1, err1 = pcall((function()`n$engineSpec`nend)(), CombatEngine, combatConfig, stageConfig, Difficulty)`n" +
 	"local ok2, err2 = pcall((function()`n$serviceSpec`nend)(), createService, CombatEngine, combatConfig, stageConfig, Difficulty, eliteConfig)`n" +
 	"if not ok1 then error(err1) end`nif not ok2 then error(err2) end`n"
 $runnerPath = Join-Path $testBuild 'combat-tests.luau'

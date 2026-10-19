@@ -14,6 +14,7 @@ local RewardConfig = require(script.Parent.Parent.Config.RewardConfig)
 local EliteConfig = require(script.Parent.Parent.Config.EliteConfig)
 local HeroProgressionConfig = require(script.Parent.Parent.Config.HeroProgressionConfig)
 local StagePreview = require(script.Parent.Parent.Arena.StagePreview)
+local ZoneDecor = require(script.Parent.Parent.Arena.ZoneDecor)
 local CombatConfig = require(script.Parent.Parent.Config.CombatConfig)
 local ArenaService = {}
 local manager: ArenaPrep.Manager
@@ -31,6 +32,9 @@ local stateVersion: { [Player]: number } = {}
 -- Le choix porte aussi un MODE ("Normal" / "Elite", #69) ; sans choix (join, rejoin) : Normal. En Élite,
 -- la victoire sélectionne le stage Élite suivant (1-1E → 1-2E … 1-5E reste 1-5E).
 local chosen: { [Player]: { mode: string, zone: number, stage: number } } = {}
+-- Fin de combat : le décor ne change pas pendant l'outro (CombatConfig.Presentation.EndHold), même si la
+-- victoire a sélectionné le premier stage de la zone suivante.
+local outroUntil: { [Player]: number } = {}
 
 local function chosenOf(player: Player): (number, number, string)
 	local c = chosen[player]
@@ -198,7 +202,22 @@ local function rebuild(player: Player, w: any, c: any)
 	end
 end
 
+-- Décor de la zone choisie dans l'arène du joueur (ZoneDecor), hors combat et hors outro seulement.
+local function showZone(player: Player)
+	local c, prep = context(player), manager.preps[player]
+	if not c or (prep and prep.phase ~= "Placement") or os.clock() < (outroUntil[player] or 0) then
+		return
+	end
+	local zone = chosenOf(player)
+	if ZoneDecor.current(c.arena) ~= zone and not ZoneDecor.apply(c.arena, zone) then
+		warn(`ArenaService : aucun décor pour la zone {zone} dans {c.plot:GetFullName()}`)
+	end
+	local front = c.arena:FindFirstChild("FrontEnnemi", true)
+	if front and front:IsA("BasePart") then c.front = front end
+end
+
 local function sync(player: Player)
+	showZone(player)
 	local prep, c, w = manager.preps[player], context(player), worlds[player]
 	if w and (w.prep ~= prep or not c or w.folder.Parent ~= c.runtime) then
 		w.folder:Destroy()
@@ -221,6 +240,14 @@ end
 local function startCombat(player: Player, sessionId: number, classes: { [number]: string }): (number?, string?)
 	local c, w = context(player), worlds[player]
 	if not c or not w then return nil, "arène indisponible" end
+	-- Un joueur peut relancer avant la fin de l'outro précédent. Le décor du nouveau combat
+	-- doit être prêt même si showZone avait différé le changement pour conserver l'outro.
+	local zone = chosenOf(player)
+	if not ZoneDecor.apply(c.arena, zone) then return nil, "décor de zone indisponible" end
+	local front = c.arena:FindFirstChild("FrontEnnemi", true)
+	if not front or not front:IsA("BasePart") then return nil, "repère ennemi indisponible" end
+	c.front = front
+	outroUntil[player] = nil
 	local heroPositions, enemyPositions = {}, {}
 	for slot, pose in c.poses do heroPositions[slot] = feet(pose) end
 	for cell = 1, 9 do
@@ -289,6 +316,7 @@ local function setup(player: Player, plot: Model)
 	contexts[player] = { plot = plot, runtime = runtime, arena = arena, poses = poses, front = front,
 		board = if board and board:IsA("BasePart") then board else nil,
 		zone = ArenaRules.zone(points, Config.ZoneMargin) }
+	showZone(player)
 	send(player)
 end
 
@@ -390,13 +418,17 @@ function ArenaService:Start()
 		end
 		-- Le résultat n'est annoncé que par l'écran de fin (RewardScreenController), pas par un message.
 		if manager:combatEnded(player, id) then
+			outroUntil[player] = os.clock() + CombatConfig.Presentation.EndHold
 			send(player)
 			-- Les modèles du combat restent le temps de l'outro du client (morts, sac, « VICTOIRE ! ») ;
 			-- l'équipe est ensuite reposée sur ses dalles. Un nouveau combat lancé entre-temps l'emporte.
 			task.delay(CombatConfig.Presentation.EndHold, function()
+				outroUntil[player] = nil
 				local prep = manager.preps[player]
 				if prep and prep.phase == "Placement" then
 					sync(player)
+				else
+					showZone(player)
 				end
 			end)
 		end
@@ -408,7 +440,7 @@ function ArenaService:Start()
 	end
 	Players.PlayerAdded:Connect(watch)
 	for _, player in Players:GetPlayers() do watch(player) end
-	Players.PlayerRemoving:Connect(function(player) cleanup(player); lastAction[player] = nil; stateVersion[player] = nil; chosen[player] = nil end)
+	Players.PlayerRemoving:Connect(function(player) cleanup(player); lastAction[player] = nil; stateVersion[player] = nil; chosen[player] = nil; outroUntil[player] = nil end)
 	task.spawn(function()
 		while true do
 			task.wait(1)
