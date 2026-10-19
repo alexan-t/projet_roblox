@@ -103,11 +103,11 @@ local function expedition(id: number)
 			Zone = 1,
 			Title = "Zone 1",
 			Stages = {
-				{ Stage = 1, Unlocked = true, Cleared = true, Waves = 1, Enemies = { { EnemyId = "Slime", Count = 2 }, { EnemyId = "Gobelin", Count = 4 }, { EnemyId = "Boss", Count = 1, MiniBoss = true } } },
-				{ Stage = 2, Unlocked = true, Waves = 2, Enemies = { { EnemyId = "Gobelin", Count = 6 }, { EnemyId = "Boss", Count = 1, MiniBoss = true } } },
-				{ Stage = 3, Unlocked = false },
-				{ Stage = 4, Unlocked = false },
-				{ Stage = 5, Unlocked = false },
+				{ Zone = 1, Stage = 1, Status = "Unlocked", Cleared = true, Waves = { { Enemies = { { EnemyId = "Slime", Count = 2 }, { EnemyId = "Gobelin", Count = 2 } } } } },
+				{ Zone = 1, Stage = 2, Status = "Unlocked", Waves = { { Enemies = { { EnemyId = "Slime", Count = 3 }, { EnemyId = "Gobelin", Count = 2 } } } } },
+				{ Zone = 1, Stage = 3, Status = "Locked" },
+				{ Zone = 1, Stage = 4, Status = "Locked" },
+				{ Zone = 1, Stage = 5, Status = "Locked", Boss = "Boss" },
 			},
 		}, {
 			OnLaunch = function(zone: number, stage: number)

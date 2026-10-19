@@ -772,7 +772,8 @@ function ArenaPlacementController:Start()
 	s.MaxActivationDistance = ArenaConfig.SignDistance - 2 -- le serveur vérifie SignDistance (marge réseau)
 	s.RequiresLineOfSight = false
 	s.Enabled = false
-	s.Triggered:Connect(openStageMenu)
+	-- Triggered transmet le joueur ; ce n'est pas le numéro de zone optionnel du menu.
+	s.Triggered:Connect(function() openStageMenu() end)
 	signPrompt = s
 
 	ArenaStore.changed.Event:Connect(function()

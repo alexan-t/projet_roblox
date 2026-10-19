@@ -153,6 +153,11 @@ return function(StagePreview: any, Model: any, configs: any)
 	test("launch: locked stage explains why; no hero -> Pose un héros; ready -> Stage 1-X", function()
 		local list = stages(1)
 		assert(Model.launch(list[4], "Normal", false, 3).Sub == "Termine 1-3")
+		for zone = 2, 6 do
+			local entry = { Zone = zone, Stage = 1, Status = "Locked" }
+			local launch = Model.launch(entry, "Normal", false, 4)
+			assert(not launch.Enabled and launch.Sub == `Termine la zone {zone - 1}`)
+		end
 		assert(Model.launch(list[2], "Normal", false, 0).Enabled == false and Model.launch(list[2], "Normal", false, 0).Sub == "Pose un héros")
 		local ok = Model.launch(list[2], "Normal", false, 1)
 		assert(ok.Enabled and ok.Sub == "Stage 1-2")

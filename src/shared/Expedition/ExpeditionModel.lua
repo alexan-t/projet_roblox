@@ -124,6 +124,9 @@ function ExpeditionModel.launch(stage: Stage?, mode: string, eliteUnlocked: bool
 		return { Enabled = false, Sub = "Élite verrouillée" }
 	end
 	if stage.Status ~= "Unlocked" then
+		if stage.Stage == 1 and stage.Zone > 1 and mode == "Normal" then
+			return { Enabled = false, Sub = `Termine la zone {stage.Zone - 1}` }
+		end
 		return { Enabled = false, Sub = `Termine {stage.Zone}-{stage.Stage - 1}{suffix(mode)}` }
 	end
 	if placed < 1 then
