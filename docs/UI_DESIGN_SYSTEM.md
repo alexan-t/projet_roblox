@@ -89,7 +89,8 @@ Usage :
 
 - badge de rareté (pastille contourée `Ink`, texte clair) ;
 - contour de carte et rayons du reveal ;
-- lumière de l'effet d'invocation.
+- lumière de l'effet d'invocation ;
+- fond et aura de la case d'icône d'un équipement (`src/client/UI/ItemAura.lua`, `docs/ITEMS.md` § 7).
 
 Rendu commun : `src/client/UI/RarityStyle.lua`. Hors invocation, le cadre des cartes reste
 neutre (`Ink`). Les **monstres n'ont aucune rareté**.
@@ -191,9 +192,10 @@ Pastilles `Medium` : actif `Gold` opaque, inactif `WoodDeep` à `PanelStrong`. T
   contour `Selected` sur la carte), `Nouveau` (`RoyalRed`, petit pop), `Verrouillé`
   (`StoneGrey`, carte à 0,4), `Max` (`Gold`).
 - Slot vide : même cadre, fond `WoodDeep` à `PanelStrong`, sans contenu.
-- **Items 2D** (équipements) : même carte, icône dans la zone d'illustration, cadre neutre (pas de
-  couleur de rareté). Vitrine `Workspace.Bestiaire.Inventaire.Equipement` puis Sacoche : voir
-  `docs/ITEMS.md`.
+- **Items 2D** (équipements) : même carte, icône dans la zone d'illustration ; la case de l'icône
+  porte le fond et l'**aura de sa rareté** (`ItemAura`, de plus en plus riche avec le rang, voir
+  `docs/ITEMS.md` § 7). Le cadre de la carte reste neutre (`Ink`). Vitrine
+  `Workspace.Bestiaire.Inventaire.Equipement` (cartes neutres) puis Sacoche : voir `docs/ITEMS.md`.
 - **Ressources 2D** : même carte, icône dans la zone d'illustration, cadre neutre (aucune rareté).
   Catalogue, vitrine `Workspace.Bestiaire.Inventaire.Ressources` et production des icônes : voir
   `docs/RESOURCES.md`.

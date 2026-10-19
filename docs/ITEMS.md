@@ -160,3 +160,36 @@ dans une PR, et ne rien livrer tant qu'il signale un écart.
 
 Un nouvel item s'ajoute **dans le même ordre** aux deux endroits : son emplacement dans la vitrine
 (§ 3) et sa ligne dans `ItemConfig.lua` ; mettre à jour la répartition du § 2 et le test.
+
+## 7. Aura de rareté
+
+En jeu, chaque équipement s'affiche sur un **fond de la couleur de sa rareté** (`UITheme.Rarity`,
+prisme qui tourne pour Transcendant), avec une **aura animée** autour de l'icône, de plus en plus
+impressionnante avec le rang. L'image de l'icône, elle, reste sans couleur de rareté (§ 5) : l'aura
+est ajoutée par l'interface. Les ressources et les monstres n'ont **aucune** rareté, donc aucune aura.
+
+| Rareté | Ce qui s'ajoute |
+| --- | --- |
+| Commun | fond teinté, contour fin, reflet lent qui balaie le fond |
+| Peu commun | contour plus épais, un halo qui respire |
+| Rare | deux anneaux de halo, un éclat qui scintille |
+| Épique | halo plus large, deux éclats |
+| Légendaire | couronne de rayons qui tourne, trois anneaux, trois éclats |
+| Mythique | rayons plus rapides, deux particules en orbite |
+| Maudit | ombre (`Ink`) plutôt que lumière : rayons et halo extérieur sombres, éclats violets |
+| Suprême | seconde couronne de rayons en sens inverse, quatre anneaux, quatre particules |
+| Calamité | tout plus vif et plus rapide, six éclats, cinq particules |
+| Transcendant | tout l'effet aux couleurs du prisme qui tourne, huit éclats, six particules |
+
+- Réglages par rareté : `src/shared/Config/ItemAuraConfig.lua` (une ligne par palier de
+  `RarityConfig`) ; rendu : `src/client/UI/ItemAura.lua`, `ItemAura.apply(case, rarete)` sur la case
+  de l'icône. Aucune image à charger (formes d'interface), couleurs uniquement via `RarityStyle`.
+- Sous 56 px (`Compact`), l'aura reste resserrée pour ne pas gêner le texte voisin (butin
+  d'Expédition). Option `Spread` (0 à 1) pour régler le débordement.
+- Posée aujourd'hui sur le **butin possible** de l'Expédition. La Sacoche l'utilisera dès qu'elle
+  affichera des équipements.
+- Aperçu des 100 items, une rangée par rareté : attribut `Workspace.ApercuUI = "Equipements"` au
+  Play dans Studio (`ItemAuraView`).
+- Test sans Studio : `node tests/item-aura.test.mjs` (un palier par rareté, effet qui ne faiblit
+  jamais d'un palier au suivant, les 100 items couverts).
+- La vitrine `Workspace.Bestiaire.Inventaire` (§ 3) ne change pas : ses cartes restent neutres.

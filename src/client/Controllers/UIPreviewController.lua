@@ -9,6 +9,7 @@
 --   "Invocation" interface → Invoquer → reveal du héros (copies de ReplicatedStorage.AtelierInvocation)
 --   "Collection" collection des héros (mêmes copies)
 --   "Transition" rideau entre deux scènes
+--   "Equipements" les 100 items avec leur aura de rareté (ItemAuraView)
 --   "Tout"       HUD (quête + monnaies) puis chaque fenêtre à la suite
 -- Vide ou absent : rien. Studio uniquement.
 
@@ -20,6 +21,7 @@ local UIKit = require(script.Parent.Parent.UI.UIKit)
 local CollectionView = require(script.Parent.Parent.UI.Views.CollectionView)
 local CurrencyView = require(script.Parent.Parent.UI.Views.CurrencyView)
 local ExpeditionView = require(script.Parent.Parent.UI.Views.ExpeditionView)
+local ItemAuraView = require(script.Parent.Parent.UI.Views.ItemAuraView)
 local QuestView = require(script.Parent.Parent.UI.Views.QuestView)
 local SummonView = require(script.Parent.Parent.UI.Views.SummonView)
 
@@ -194,12 +196,25 @@ local function transition(id: number)
 	end
 end
 
+local function equipment(id: number)
+	local open
+	open = function()
+		if alive(id) then
+			ItemAuraView.Show(function()
+				task.delay(1.5, open)
+			end)
+		end
+	end
+	open()
+end
+
 local function hideAll()
 	QuestView.Hide()
 	CurrencyView.Hide()
 	ExpeditionView.Hide()
 	SummonView.Hide()
 	CollectionView.Hide()
+	ItemAuraView.Hide()
 end
 
 local DEMOS: { [string]: (id: number) -> () } = {
@@ -209,6 +224,7 @@ local DEMOS: { [string]: (id: number) -> () } = {
 	Invocation = summon,
 	Collection = collection,
 	Transition = transition,
+	Equipements = equipment,
 	Tout = function(id: number)
 		task.spawn(quest, id)
 		task.spawn(currencies, id)
