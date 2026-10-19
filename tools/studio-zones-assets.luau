@@ -1,3 +1,4 @@
+--!strict
 -- Zones 2 à 6 (docs/ZONES.md § Assets Studio). À exécuter dans Studio EDIT (barre de commande ou MCP).
 -- Assets uniquement, aucun Source de script. Répétable : reconstruit ses propres objets, ne touche à rien d'autre.
 --   1. ReplicatedStorage.Assets.Combat.Ennemi_<EnemyId> : copies de combat statiques des monstres VALIDÉS
@@ -16,6 +17,10 @@ local recording = ChangeHistoryService:TryBeginRecording("Zones 2 à 6 : assets"
 ------------------------------------------------------------------ 1. modèles de combat
 
 local ENEMIES = {
+	-- Certains sandboxes n'ont que les mannequins. Préserver les versions articulées si présentes.
+	{ Id = "Slime", Source = "Slime_Eau", Color = "#76CCF6", OnlyIfMissing = true },
+	{ Id = "Gobelin", Source = "GobLanceT_A", Color = "#8C8C8C", OnlyIfMissing = true },
+	{ Id = "RoiOrc", Source = "RoiOrc", Color = "#8C8C8C", OnlyIfMissing = true },
 	{ Id = "SlimePlante", Source = "Slime_Plante", Color = "#64B464" },
 	{ Id = "SlimeChampignon", Source = "Slime_Champignon", Color = "#DCB48C" },
 	{ Id = "SlimeLave", Source = "Slime_Lave", Color = "#F08C3C" },
@@ -28,6 +33,7 @@ local ENEMIES = {
 
 local combat = ReplicatedStorage.Assets.Combat
 for _, entry in ENEMIES do
+	if entry.OnlyIfMissing and combat:FindFirstChild(`Ennemi_{entry.Id}`) then continue end
 	local source = workspace:FindFirstChild(entry.Source)
 	assert(source and source:IsA("Model"), `monstre validé introuvable : Workspace.{entry.Source}`)
 	local old = combat:FindFirstChild(`Ennemi_{entry.Id}`)
@@ -46,7 +52,7 @@ for _, entry in ENEMIES do
 	model.WorldPivot = CFrame.new(pivot.Position) * pivot.Rotation * CFrame.Angles(0, math.pi, 0)
 	model:PivotTo(CFrame.new(0, 50, 0))
 	model:SetAttribute("CouleurEffet", Color3.fromHex(entry.Color))
-	model:SetAttribute("EnemyId", entry.Id)
+	model:SetAttribute("EnemyId", if entry.Id == "RoiOrc" then "Boss" else entry.Id)
 	model:SetAttribute("Source", `Workspace.{entry.Source}`)
 	model.Parent = combat
 end
@@ -64,7 +70,6 @@ local assets = ServerStorage:FindFirstChild("Assets") or Instance.new("Folder")
 assets.Name, assets.Parent = "Assets", ServerStorage
 local templates = assets:FindFirstChild("ZonesArene") or Instance.new("Folder")
 templates.Name, templates.Parent = "ZonesArene", assets
-templates:ClearAllChildren()
 
 local function hex(h: string): Color3
 	return Color3.fromHex(h)
@@ -225,8 +230,11 @@ local function spikes(parent: Instance, at: Vector3, color: Color3, material: En
 	for i = 0, 2 do
 		local h = (2.4 + i * 1.1) * k
 		local offset = Vector3.new(math.cos(i * 2.1) * 0.9, 0, math.sin(i * 2.1) * 0.9) * k
-		piece(parent, "Pointe", Enum.PartType.Block, Vector3.new(0.9, h, 0.9) * Vector3.new(k, 1, k), color, offset + at + Vector3.new(0, h / 2 - 0.2, 0),
+		local rock = piece(parent, "Pointe", Enum.PartType.Block, Vector3.new(0.9, h, 0.9) * Vector3.new(k, 1, k), color, offset + at + Vector3.new(0, h / 2 - 0.2, 0),
 			CFrame.Angles(0.18 * (i - 1), i * 0.7, 0.15), material)
+		local mesh = Instance.new("SpecialMesh")
+		mesh.MeshType = Enum.MeshType.Sphere
+		mesh.Parent = rock -- ellipsoïde plein : une Part Ball seule impose un diamètre uniforme
 	end
 end
 
@@ -289,9 +297,9 @@ local function props(parent: Instance, base: Instance, id: number)
 	elseif id == 5 then
 		-- Grottes de Lave : mares de lave, pointes de basalte, cristaux de braise
 		for index, p in all do
-			if index % 3 == 1 then pool(parent, p, 4, hex("#C8461E"), hex("#3E3634"), Enum.Material.Neon)
+			if index % 3 == 1 then pool(parent, p, 4, hex("#C8461E"), hex("#3E3634"))
 			elseif index % 3 == 2 then spikes(parent, p, hex("#5A4C48"), nil, 1.3)
-			else spikes(parent, p, hex("#E07028"), Enum.Material.Neon) end
+			else spikes(parent, p, hex("#E07028")) end
 		end
 	elseif id == 6 then
 		-- Bois Ancien : très grands arbres, champignons lumineux
@@ -346,7 +354,7 @@ for _, theme in THEMES do
 			local ramp = theme.Colors[fam]
 			if ramp then d.Color = shade(d.Color, fam, ramp) end
 			if theme.LavaWater and (fam == "Water" or fam == "Foam") then
-				d.Material = Enum.Material.Neon
+				d.Material = Enum.Material.SmoothPlastic
 			end
 		elseif d:IsA("PointLight") then
 			d.Color = theme.Light
@@ -377,7 +385,10 @@ for _, theme in THEMES do
 		spikes(extra, at, if index % 4 == 0 then hex("#E07028") else hex("#5A4C48"), if index % 4 == 0 then Enum.Material.Neon else nil, 1.8)
 	end
 	model.WorldPivot = PIVOT
+	local previous = templates:FindFirstChild(theme.Name)
+	if previous then previous:Destroy() end
 	model.Parent = templates
+	task.wait() -- une zone par lot ; laisser Studio répondre entre les copies
 end
 
 if recording then
