@@ -94,6 +94,47 @@ Usage :
 Rendu commun : `src/client/UI/RarityStyle.lua`. Hors invocation, le cadre des cartes reste
 neutre (`Ink`). Les **monstres n'ont aucune rareté**.
 
+### Rendu des raretés : règles arbitrées (revue du 18 octobre)
+
+Ces règles tranchent entre les PR #61 (couleurs des items), #75 (repère de forme), #62 (grille
+VISUAL_QA) et la maquette figée Invocation V2 (#80). Une PR qui touche à la rareté s'y conforme ;
+en cas de désaccord, on modifie **cette section d'abord**, puis le code. Plan de revue et
+changements demandés à chaque PR : `docs/RARITY_REVIEW.md`.
+
+1. **Une seule palette.** `UITheme.Rarity` et `UITheme.RarityPrism`, sur les paliers de
+   `RarityConfig`, servent aux héros **et** aux items. Pas de seconde palette, pas de nouvelle
+   rareté. Monstres et ressources : **aucune** rareté, aucune couleur de rareté.
+2. **La couleur n'est jamais seule.** Tout affichage d'une rareté porte aussi, sur le même
+   élément ou dans la même vue, son **libellé** (`RarityStyle.name`) ou son **repère de forme**
+   (`RarityStyle.mark` / `RarityStyle.chip`, une fois #75 fusionnée). Une barre ou des points de
+   couleur ne sont admis que si une légende textuelle les suit dans la même vue (ex. barre des
+   rangs de l'invocation x100, suivie des pastilles « Rareté n »).
+3. **Un seul point d'accès.** Les vues lisent la rareté par `RarityStyle` (`color`, `colorAt`,
+   `sequence`, `paint`, `badge`…), jamais `UITheme.Rarity`, `UITheme.RarityPrism` ou
+   `UITheme.RarityMark` directement. Une couleur qui a le même hex qu'une rareté mais **un autre
+   sens** a son propre token dans `UITheme.Colors` (`DropChanceLow`, `Guarantee`).
+4. **La rareté ne prend pas la place d'un état.** Le cadre extérieur d'une carte reste `Ink` ;
+   `Selected` (même or que Légendaire) y est réservé. Le badge du haut d'une carte reste l'état
+   (Nouveau, Équipé…). Pas de couleur de rareté sur une barre de PV, d'énergie ou de progression,
+   un message d'erreur ou un cadre de sélection.
+5. **Invocation V2 fait foi pour ses écrans.** `HeroCard`, `SummonView`, `SummonLayout` et
+   `SummonReveal` suivent la maquette figée (`docs/references/ui/invocation-v2`) : la rareté y est
+   portée par les dix cadres PNG par rang **et** par le libellé en texte. On n'y ajoute pas de
+   badge ni de pastille en plus. Le repère de forme (#75) n'y entre que là où la maquette montre
+   déjà la rareté par une pastille ou une ligne (liste des taux, pastilles du résumé x10/x100),
+   à côté du libellé, sans changer la géométrie.
+6. **Items : la couleur va sur la carte, jamais dans l'icône** (#61). Zone d'illustration teintée
+   de la rareté (`Transparency.RarityTint`) et cerclée (`Stroke.Regular`, prisme pour
+   Transcendant) ; cadre extérieur `Ink` (règle 4). La carte n'affichant pas le libellé, elle
+   porte le repère de forme (règle 2) : `RarityStyle.chip` dans un coin bas de la zone
+   d'illustration. L'icône PNG reste sans couleur de rareté (`docs/ITEMS.md` § 5).
+7. **Contrôle.** Capture réelle, puis la même capture désaturée (ou simulateur de daltonisme) :
+   Épique / Maudit et Calamité / `Error` doivent rester distincts (§ 11, point 8).
+
+État au 18 octobre (`develop`) : règles 1, 3, 4 et 5 appliquées ; règle 2 tenue par les libellés
+(le repère de forme arrive avec #75) ; règle 6 en attente de #61 : d'ici là, les cartes d'item
+gardent le cadre neutre décrit au § 6.
+
 Règle de dosage, reprise de la DA : base **bois/sable** désaturée, accents saturés (or, rouge,
 bleu) **rares** et porteurs de sens.
 
@@ -192,7 +233,8 @@ Pastilles `Medium` : actif `Gold` opaque, inactif `WoodDeep` à `PanelStrong`. T
   (`StoneGrey`, carte à 0,4), `Max` (`Gold`).
 - Slot vide : même cadre, fond `WoodDeep` à `PanelStrong`, sans contenu.
 - **Items 2D** (équipements) : même carte, icône dans la zone d'illustration, cadre neutre (pas de
-  couleur de rareté). Vitrine `Workspace.Bestiaire.Inventaire.Equipement` puis Sacoche : voir
+  couleur de rareté tant que #61 n'est pas fusionnée ; règle cible : § 2, « Rendu des raretés »,
+  règle 6). Vitrine `Workspace.Bestiaire.Inventaire.Equipement` puis Sacoche : voir
   `docs/ITEMS.md`.
 - **Ressources 2D** : même carte, icône dans la zone d'illustration, cadre neutre (aucune rareté).
   Catalogue, vitrine `Workspace.Bestiaire.Inventaire.Ressources` et production des icônes : voir
@@ -294,7 +336,8 @@ Module `UITheme` (structure) :
 UITheme = {
 	Colors = { Ink, InkSoft, TextLight, TextMuted, Cream, Sand, …, Success, Error, Warning,
 		Info, Disabled, Selected, Health, HealthLow, EnemyHealth, Energy, EnergyFull, Progress,
-		BarTrack, CurrencyGold, CurrencyGems, CurrencyTickets },
+		BarTrack, CurrencyGold, CurrencyGems, CurrencyTickets, …, DropChanceLow, Guarantee },
+	Rarity = { Commun, PeuCommun, …, Transcendant }, RarityPrism = { … }, -- lus via RarityStyle
 	Transparency = { Panel = 0.25, PanelStrong = 0.12, HUD = 0.45, Overlay = 0.5,
 		Tooltip = 0.04, Track = 0.35, Shadow = 0.75, Disabled = 0.45, Hover = 0.08 },
 	Typography = { Display (Fredoka One), Body / BodyBold (Builder Sans), Size = {…},
@@ -355,6 +398,9 @@ Moins de fenêtres, plus d'interaction avec le monde : on **prend** un héros et
 5. Un seul bouton principal visible ; zones tactiles ≥ 44 px.
 6. Aucune valeur de style en dur dans le Controller : tout vient de `UITheme`.
 7. Pas d'emoji ni d'icône générique dans une version livrée.
+8. Aucune rareté portée par la couleur seule (§ 2, « Rendu des raretés ») : libellé ou
+   repère de forme à côté ; contrôle en niveaux de gris (capture désaturée ou simulateur de
+   daltonisme) : Épique / Maudit et Calamité / `Error` restent distincts.
 
 ## 12. Implémentation : UIKit (issue #19)
 

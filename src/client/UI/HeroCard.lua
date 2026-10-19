@@ -83,7 +83,7 @@ function HeroCard.new(parent: Instance, hero: any, width: number, options: any?)
 			if i > math.min(4, rank - 2) then break end
 			local sparkle = HeroCard.image(root, "sparkle", UDim2.fromOffset(if i == 1 then 22 else 12, if i == 1 then 22 else 12), UDim2.fromScale(pos.X,pos.Y))
 			sparkle.ZIndex = 5
-			sparkle.ImageColor3 = if rank >= 8 then Theme.Colors.CurrencyGems elseif rank == 7 then Theme.Rarity.Epique else Theme.Colors.GoldLight
+			sparkle.ImageColor3 = if rank >= 8 then Theme.Colors.CurrencyGems elseif rank == 7 then Rarity.color("Maudit") else Theme.Colors.GoldLight
 			table.insert(sparkles, sparkle)
 		end
 	end

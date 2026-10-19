@@ -53,7 +53,7 @@ function Layout.guarantee(parent: Instance, x: number, y: number, small: boolean
 	local w,h = if small then 250 else 240, if small then 42 else 52
 	local f = UIKit.panel(parent,0,UDim.new(0,10),2)
 	f.Position,f.Size = UDim2.fromOffset(x,y),UDim2.fromOffset(w,h)
-	f.BackgroundColor3 = Theme.Rarity.Maudit
+	f.BackgroundColor3 = C.Guarantee
 	local stroke = f:FindFirstChildOfClass("UIStroke")
 	if stroke then stroke.Color = C.GoldLight end
 	Layout.image(f,"seal_garanti",if small then 2 else -12, -4,h+8,h+8)
