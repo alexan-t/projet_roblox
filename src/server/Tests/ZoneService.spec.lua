@@ -169,7 +169,9 @@ return function(createService: any, productionConfig: any, eliteConfig: any, Dif
 		clearNormal(e, p, 5)
 		e.data[p].Progression.EliteFirstClears["1-1"] = true
 		local normal = s:ListStages(p)
-		for _, entry in normal do assert(entry.Mode == "Normal" and entry.Cleared == true) end
+		for _, entry in normal do
+			assert(entry.Mode == "Normal" and entry.Cleared == (entry.Zone == 1))
+		end
 		local elite = s:ListStages(p, "Elite")
 		assert(elite[1].Cleared == true and elite[2].Cleared == false and elite[2].Status == "Unlocked")
 		local fresh = e.player("B")
@@ -273,7 +275,7 @@ return function(createService: any, productionConfig: any, eliteConfig: any, Dif
 		local e = fixture()
 		local s = e.start()
 		local p = e.player("A")
-		for _, case in { { 1, 6 }, { 2, 1 }, { 0, 1 }, { 1, 0 }, { 1.5, 1 }, { "1", 1 } } :: { any } do
+		for _, case in { { 1, 6 }, { 7, 1 }, { 2, 6 }, { 0, 1 }, { 1, 0 }, { 1.5, 1 }, { "1", 1 } } :: { any } do
 			local session, reason = s:StartStage(p, case[1], case[2])
 			assert(session == nil and reason == "stage inconnu", `{case[1]}/{case[2]} -> {reason}`)
 		end
@@ -603,7 +605,9 @@ return function(createService: any, productionConfig: any, eliteConfig: any, Dif
 		local p = e.player("A")
 		local function statuses(): string
 			local out = {}
-			for _, entry in s:ListStages(p) do table.insert(out, entry.Status) end
+			for _, entry in s:ListStages(p) do
+				if entry.Zone == 1 then table.insert(out, entry.Status) end
+			end
 			return table.concat(out, ",")
 		end
 		assert(statuses() == "Unlocked,Locked,Locked,Locked,Locked", statuses())
@@ -622,6 +626,72 @@ return function(createService: any, productionConfig: any, eliteConfig: any, Dif
 		for index, stage in productionConfig.Zones[1].Stages do
 			assert((stage.MiniBoss ~= nil) == (index == 5), `MiniBoss only on 1-5 (1-{index})`)
 		end
+	end)
+
+	test("production Zones 2-6: 5 stages each, boss on X-5, X-1 opened by the previous zone's X-5, no 6-6 / 7-1", function()
+		local e = fixture()
+		local s = e.start()
+		assert(#e.warnings == 0, "valid: " .. table.concat(e.warnings, "; "))
+		assert(#productionConfig.Zones == 6, "6 zones")
+		local p = e.player("A")
+		assert(#s:ListStages(p) == 30, "30 stages")
+		local clears = e.data[p].Progression.FirstClears
+		for zone = 2, 6 do
+			local stages = productionConfig.Zones[zone].Stages
+			assert(#stages == 5, `zone {zone}: 5 stages`)
+			for index, stage in stages do
+				assert((stage.MiniBoss ~= nil) == (index == 5), `MiniBoss only on {zone}-5 ({zone}-{index})`)
+			end
+			local ok, why = s:CanStartStage(p, zone, 1)
+			assert(ok == false and why == "stage verrouillé", `{zone}-1 locked before {zone - 1}-5`)
+			for stage = 1, 5 do clears[`{zone - 1}-{stage}`] = true end
+			assert(s:CanStartStage(p, zone, 1) == true, `{zone}-1 opened by {zone - 1}-5`)
+			assert(s:CanStartStage(p, zone, 2) == false, `{zone}-2 still locked`)
+		end
+		for _, case in { { 6, 6 }, { 7, 1 } } do
+			local ok, why = s:CanStartStage(p, case[1], case[2])
+			assert(ok == false and why == "stage inconnu", `{case[1]}-{case[2]} unknown`)
+		end
+	end)
+
+	test("zone Difficulty: Normal session carries it; Elite multiplies it; Zone 1 Normal has none", function()
+		local stage = { Waves = { { Enemies = { { EnemyId = "Slime", Count = 1 } } } } }
+		local config = { Zones = {
+			{ Stages = { stage } },
+			{ Difficulty = { MaxHealth = 2, AttackDamage = 1.5 }, Stages = { stage } },
+		} }
+		local elite = { Zones = { [2] = { UnlockAfter = "2-1", Stages = { [1] = { MaxHealth = 1.5, AttackDamage = 2 } } } } }
+		local e = fixture(config, elite)
+		local s = e.start()
+		assert(#e.warnings == 0, table.concat(e.warnings, "; "))
+		local p = e.player("A")
+		local first = s:StartStage(p, 1, 1)
+		assert(first and first.Difficulty == nil, "zone 1 Normal: base stats")
+		s:CancelStage(p)
+		e.data[p].Progression.FirstClears["1-1"] = true
+		local normal = s:StartStage(p, 2, 1)
+		assert(normal and normal.Difficulty.MaxHealth == 2 and normal.Difficulty.AttackDamage == 1.5)
+		s:CancelStage(p)
+		e.data[p].Progression.FirstClears["2-1"] = true
+		local hard = s:StartStage(p, 2, 1, "Elite")
+		assert(hard and hard.Difficulty.MaxHealth == 3 and hard.Difficulty.AttackDamage == 3, "zone x Elite")
+		assert(table.isfrozen(hard.Difficulty))
+	end)
+
+	test("zone Difficulty invalid: warning, the zone's stages Unavailable, other zones playable", function()
+		local stage = { Waves = { { Enemies = { { EnemyId = "Slime", Count = 1 } } } } }
+		local e = fixture({ Zones = {
+			{ Stages = { stage } },
+			{ Difficulty = { MaxHealth = -1, Speed = 2 }, Stages = { stage } },
+		} })
+		local s = e.start()
+		assert(#e.warnings >= 2, "warnings logged")
+		local p = e.player("A")
+		e.data[p].Progression.FirstClears["1-1"] = true
+		local list = s:ListStages(p)
+		assert(list[1].Status == "Unlocked" and list[2].Status == "Unavailable")
+		local ok, why = s:CanStartStage(p, 2, 1)
+		assert(ok == false and why == "stage indisponible")
 	end)
 
 	print(`ZoneService: {passed} passed, {failed} failed`)
