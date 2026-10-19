@@ -159,3 +159,44 @@ Contrôle MCP en Edit dans **test 3** : les cinq gabarits de zones 2 à 6 existe
 Aucune modification Studio, nouvelle capture ou nouvelle validation visuelle dans cette
 étape de tests ; les captures et défauts documentés plus haut restent la preuve visuelle.
 Le test Studio à deux clients reste non exécuté. Aucun accès aux images n'a été modifié.
+
+## Reprise — ce qui reste pour passer à PASS
+
+Le code des zones est terminé ; les deux points FIX ne se règlent qu'en Studio et sur le
+compte propriétaire. L'agent de cette étape n'avait ni accès aux réglages des assets, ni
+Studio, ni deux clients. Ces étapes, dans l'ordre, permettent de lever le verdict.
+
+### 1. Images du menu bloquées (propriétaire du jeu)
+
+1. Sur le Creator Hub, ouvrir chacune des images `74149875739571` (quest.png),
+   `99196320622532` (shop.png) et `136778535271316` (bag.png).
+2. Leur donner l'accès à l'expérience **test 3** (placeId `120616399792561`), ou les
+   republier depuis le compte/groupe qui possède l'expérience. Les PNG d'origine sont figés
+   dans `docs/references/ui/invocation-v2/source-manifest.json` : rien à redessiner.
+3. En cas de republication seulement : coller les nouveaux `rbxassetid://` dans
+   `src/shared/Config/MenuIconConfig.lua` (seule source des AssetIds du menu).
+4. Dans test 3, en Edit, exécuter `tools/studio-check-menu-icons.luau` dans la barre de
+   commande : il doit afficher `13/13 lisibles` et renvoyer `0`.
+
+### 2. Test à deux joueurs (manuel)
+
+1. Rojo connecté depuis ce dépôt. Onglet **Test** → *Clients et serveurs* → **2 joueurs** →
+   *Démarrer* : une fenêtre serveur et deux fenêtres clients s'ouvrent.
+2. Dans chaque client, placer une équipe et choisir **une zone différente** (par exemple
+   Zone 2 pour l'un, Zone 6 pour l'autre ; préparer la progression avec `DebugData` comme
+   en solo). Lancer les deux combats à quelques secondes d'écart.
+3. Pendant que les deux combats tournent, dans la fenêtre **serveur**, exécuter
+   `tools/studio-check-two-players.luau` : il doit afficher `Deux joueurs : PASS`.
+4. Vérifier à l'œil dans chaque client : son propre décor, ses héros, ses ennemis, une fin
+   Victory ou Defeat qui ne touche que lui, puis le retour en Placement.
+5. Capturer chaque client pendant le combat dans `automation/screenshots/zones/`
+   (`two-players-client1.jpg`, `two-players-client2.jpg`).
+
+### 3. Nouvelles captures et verdict
+
+1. Refaire en Play les captures `zone2-combat`, `zone6-combat` et `expedition-zone6-final`,
+   menu et récompenses visibles.
+2. Appliquer `docs/VISUAL_QA.md` aux nouvelles captures, puis remplacer dans ce fichier la
+   ligne « Deux joueurs et deux combats simultanés » et le critère « Interface / matériaux
+   des images » par le résultat obtenu. Verdict global **PASS** seulement si les deux passent.
+3. Réinitialiser la caméra de Studio (`docs/MONSTER_PRODUCTION.md` § Outils).

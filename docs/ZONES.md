@@ -269,4 +269,9 @@ connecter le plugin avant Play. Aucun asset de map n'est versionné dans Git et 
 le niveau doit être entier, compris entre 1 et MaxLevel, et le héros doit appartenir au joueur.
 Cette fonction n'existe pas dans une partie publiée et n'ajoute aucune remote client.
 
+Deux contrôles en lecture seule (aucune étape ChangeHistoryService, rien n'est modifié) :
+`tools/studio-check-menu-icons.luau` précharge les images du menu et liste celles qui
+échouent ; `tools/studio-check-two-players.luau`, côté serveur pendant un test à deux
+clients, vérifie plots, décors et combats séparés. Procédure : `docs/ZONES_QA.md` § Reprise.
+
 Validation datée, limites du sandbox et captures : `docs/ZONES_QA.md`.
