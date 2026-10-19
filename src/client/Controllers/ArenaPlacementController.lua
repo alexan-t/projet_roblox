@@ -685,6 +685,7 @@ local function showResult(event: { [string]: any }, silent: boolean)
 			Result = event.Result,
 			FirstClear = event.FirstClear,
 			Rewards = rewards,
+			Loot = if typeof(event.Loot) == "table" then event.Loot else nil, -- butin (#72), à part des monnaies
 			Heroes = if typeof(event.HeroProgression) == "table" then event.HeroProgression else nil, -- XP (#68)
 			Silent = silent, -- l'annonce « VICTOIRE ! » a déjà joué le son
 		}, function()

@@ -1,6 +1,6 @@
 --!strict
--- Hotbar (10 raccourcis, touches 1..9 puis 0) et Sacoche (onglets Héros, Équipement, Ressources ; seuls les
--- héros ont déjà des données côté serveur), côté client. L'ordre de la hotbar vient du serveur et n'est
+-- Hotbar (10 raccourcis, touches 1..9 puis 0) et Sacoche (onglets Héros, Équipement, Ressources ; l'inventaire
+-- vient de Inventory.InventoryStore, lecture seule, #72), côté client. L'ordre de la hotbar vient du serveur et n'est
 -- jamais retrié ici.
 -- Choisir un héros (raccourci, ou Sacoche > Placer) le met « en main » : le joueur le pose ensuite lui-même
 -- sur une case de l'arène (ArenaPlacementController, sa pastille « en main » avec Annuler). Pendant un combat,
@@ -30,9 +30,14 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local HeroConfig = require(ReplicatedStorage.Shared.Config.HeroConfig)
+local InventoryModel = require(ReplicatedStorage.Shared.Sacoche.InventoryModel)
+local ItemConfig = require(ReplicatedStorage.Shared.Config.ItemConfig)
+local ResourceConfig = require(ReplicatedStorage.Shared.Config.ResourceConfig)
 local SacocheModel = require(ReplicatedStorage.Shared.Sacoche.SacocheModel)
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local ArenaStore = require(script.Parent.Parent.Arena.ArenaStore)
+local InventoryStore = require(script.Parent.Parent.Inventory.InventoryStore)
+local RarityStyle = require(script.Parent.Parent.UI.RarityStyle)
 local ScreenState = require(script.Parent.Parent.UI.ScreenState)
 local PlacementState = require(script.Parent.Parent.Arena.PlacementState)
 local UIKit = require(script.Parent.Parent.UI.UIKit)
@@ -81,6 +86,7 @@ local bag = {
 	search = false,
 	picking = false, -- « Ajouter au raccourci » : choisir une case de la hotbar
 	equip = 1, -- héros montré par la poupée d'équipement
+	slot = "all", -- filtre d'emplacement de l'onglet Équipement ("all" ou un SlotType)
 }
 -- « Nouveau » : exemplaires apparus après le premier chargement, pas encore vus.
 local known: { [string]: boolean }? = nil
@@ -99,8 +105,14 @@ local function heldId(): string?
 	return if held then held.instanceId else nil
 end
 
-function HeroBarController.HasNew(): boolean
+-- Héros nouveau (« ! » de l'onglet Héros).
+local function heroesHaveNew(): boolean
 	return next(fresh) ~= nil
+end
+
+-- « ! » du bouton Sac : un héros OU un équipement nouveau pas encore vu.
+function HeroBarController.HasNew(): boolean
+	return heroesHaveNew() or InventoryStore.hasNew()
 end
 
 local render: () -> ()
@@ -397,6 +409,9 @@ local function setBag(open: boolean)
 		SacocheView.Open()
 		GuideTargets.open("Bag")
 	else
+		if bag.tab == "Equipment" then
+			InventoryStore.markSeen() -- l'onglet a été vu : plus rien n'est « Nouveau »
+		end
 		SacocheView.Close()
 		GuideTargets.close("Bag")
 	end
@@ -460,6 +475,35 @@ local function sortedHeroes(): { SacocheModel.Card }
 	return SacocheModel.cards(ArenaStore.heroes :: any, { Infos = HeroConfig.Heroes :: any, Placed = {}, Hotbar = ArenaStore.hotbar })
 end
 
+-- Inventaire (#72) préparé pour la vue : le tri, le filtre et les groupes viennent d'InventoryModel (pur, testé).
+-- Le serveur ne renvoie jamais de rareté : elle est lue dans ItemConfig.
+local function inventoryState(): SacocheView.Inventory
+	local view = InventoryStore.view
+	if not InventoryStore.loaded or not view then
+		return { Loaded = false, Revision = InventoryStore.revision, Cards = {}, Filters = {}, Slot = "all", Groups = {}, Count = 0, Cap = nil, FreshCount = 0 }
+	end
+	local slotOrder = {}
+	for _, slotType in ItemConfig.SlotTypes do
+		table.insert(slotOrder, slotType.Id)
+	end
+	local ctx: InventoryModel.EquipmentContext = {
+		Items = ItemConfig.Items, RankOf = RarityStyle.rank, SlotNames = ItemConfig.SlotTypeNames,
+		Slot = "all", New = InventoryStore.fresh,
+	}
+	local filters = InventoryModel.slotFilters(view.Equipment, ctx, slotOrder)
+	local slot = InventoryModel.activeSlot(filters, bag.slot)
+	ctx.Slot = slot
+	local fresh = 0
+	for _ in InventoryStore.fresh do fresh += 1 end
+	return {
+		Loaded = true, Revision = InventoryStore.revision,
+		Cards = InventoryModel.equipmentCards(view.Equipment, ctx),
+		Filters = filters, Slot = slot,
+		Groups = InventoryModel.resourceGroups(view.Resources, { Resources = ResourceConfig.Resources, Families = ResourceConfig.Families }),
+		Count = view.Count, Cap = view.Cap, FreshCount = fresh,
+	}
+end
+
 local function renderBag()
 	if bag.chosen and not ArenaStore.heroes[bag.chosen] then
 		bag.chosen = nil
@@ -483,7 +527,9 @@ local function renderBag()
 		Filter = bag.filter,
 		Query = bag.query,
 		SearchOpen = bag.search,
-		HasNew = HeroBarController.HasNew(),
+		HasNew = heroesHaveNew(),
+		HasNewEquipment = InventoryStore.hasNew(),
+		Inventory = if bag.tab == "Heroes" then nil else inventoryState(),
 		Total = total,
 		EquipHero = if equipCard and equipHero then { HeroId = equipCard.HeroId, Name = equipCard.Name, Level = equipHero.Level } else nil,
 		Picking = bag.picking,
@@ -539,6 +585,9 @@ local function mountBag()
 			setBag(false)
 		end,
 		OnTab = function(tab: string)
+			if bag.tab == "Equipment" and tab ~= "Equipment" then
+				InventoryStore.markSeen()
+			end
 			bag.tab = tab
 			bag.picking = false
 			ArenaStore.notify()
@@ -557,6 +606,10 @@ local function mountBag()
 		end,
 		OnFilter = function(filter: string)
 			bag.filter = filter
+			ArenaStore.notify()
+		end,
+		OnSlot = function(slot: string)
+			bag.slot = slot
 			ArenaStore.notify()
 		end,
 		OnQuery = function(query: string)
@@ -624,6 +677,17 @@ function HeroBarController:Start()
 		end
 	end)
 	ArenaStore.changed.Event:Connect(render)
+	-- inventaire (#72) : reflet du serveur ; le « ! » du bouton Sac suit les équipements nouveaux
+	local hadNew = HeroBarController.HasNew()
+	InventoryStore.changed.Event:Connect(function()
+		local nowNew = HeroBarController.HasNew()
+		if nowNew ~= hadNew then
+			hadNew = nowNew
+			HeroBarController.newChanged:Fire(nowNew)
+		end
+		render()
+	end)
+	InventoryStore.start()
 	-- un écran modal s'ouvre (Quêtes, Expédition, invocation, récompenses...) : la Sacoche se ferme, jamais
 	-- de fenêtre par-dessus elle
 	ScreenState.changed.Event:Connect(function(current: string?)
