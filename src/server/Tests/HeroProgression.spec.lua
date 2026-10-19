@@ -33,7 +33,19 @@ return function(modules: any)
 		for stage, amount in expected do
 			assert(Rules.stageXP(1, stage, Config) == amount, `1-{stage}`)
 		end
-		assert(Rules.stageXP(1, 6, Config) == 0 and Rules.stageXP(2, 1, Config) == 0)
+		assert(Rules.stageXP(1, 6, Config) == 0 and Rules.stageXP(7, 1, Config) == 0)
+	end)
+
+	test("stage XP zones 2-6: every stage gives XP, more than the same rank in the previous zone", function()
+		for zone = 2, 6 do
+			for stage = 1, 5 do
+				local amount = Rules.stageXP(zone, stage, Config)
+				assert(amount > Rules.stageXP(zone - 1, stage, Config), `{zone}-{stage} > {zone - 1}-{stage}`)
+				if stage > 1 then
+					assert(amount > Rules.stageXP(zone, stage - 1, Config), `{zone}-{stage} > {zone}-{stage - 1}`)
+				end
+			end
+		end
 	end)
 
 	test("#69 Elite XP: 1-1E 60, 1-2E 80, 1-3E 110, 1-4E 150, 1-5E 220; Normal unchanged; distinct per mode", function()

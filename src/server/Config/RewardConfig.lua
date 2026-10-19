@@ -25,6 +25,9 @@ local function replayTickets(mode: string, stage: number): { any }
 	return { { Kind = "SummonTicket", Amount = (TicketEconomy :: any)[mode][stage] } }
 end
 
+-- Replay du premier stage d'une zone 2 à 6 : le même que 1-1 (aucun ticket au rang 1 de TicketEconomy).
+local ENTRY_REPEAT = table.freeze({ table.freeze({ Kind = "Gold", Amount = 20 }) })
+
 local RewardConfig = {
 	TicketEconomy = TicketEconomy,
 	Stages = {
@@ -42,6 +45,33 @@ local RewardConfig = {
 		["1-3"] = { FirstClearReward = NONE, RepeatReward = replayTickets("Normal", 3) },
 		["1-4"] = { FirstClearReward = NONE, RepeatReward = replayTickets("Normal", 4) },
 		["1-5"] = { FirstClearReward = NONE, RepeatReward = replayTickets("Normal", 5) },
+		-- Zones 2 à 6 : mêmes règles que la Zone 1 (First Clear vide PROVISOIRE, il déverrouille le stage
+		-- suivant ; replay : l'or de 1-1 pour X-1, puis les tickets de TicketEconomy selon le rang du stage).
+		["2-1"] = { FirstClearReward = NONE, RepeatReward = ENTRY_REPEAT },
+		["2-2"] = { FirstClearReward = NONE, RepeatReward = replayTickets("Normal", 2) },
+		["2-3"] = { FirstClearReward = NONE, RepeatReward = replayTickets("Normal", 3) },
+		["2-4"] = { FirstClearReward = NONE, RepeatReward = replayTickets("Normal", 4) },
+		["2-5"] = { FirstClearReward = NONE, RepeatReward = replayTickets("Normal", 5) },
+		["3-1"] = { FirstClearReward = NONE, RepeatReward = ENTRY_REPEAT },
+		["3-2"] = { FirstClearReward = NONE, RepeatReward = replayTickets("Normal", 2) },
+		["3-3"] = { FirstClearReward = NONE, RepeatReward = replayTickets("Normal", 3) },
+		["3-4"] = { FirstClearReward = NONE, RepeatReward = replayTickets("Normal", 4) },
+		["3-5"] = { FirstClearReward = NONE, RepeatReward = replayTickets("Normal", 5) },
+		["4-1"] = { FirstClearReward = NONE, RepeatReward = ENTRY_REPEAT },
+		["4-2"] = { FirstClearReward = NONE, RepeatReward = replayTickets("Normal", 2) },
+		["4-3"] = { FirstClearReward = NONE, RepeatReward = replayTickets("Normal", 3) },
+		["4-4"] = { FirstClearReward = NONE, RepeatReward = replayTickets("Normal", 4) },
+		["4-5"] = { FirstClearReward = NONE, RepeatReward = replayTickets("Normal", 5) },
+		["5-1"] = { FirstClearReward = NONE, RepeatReward = ENTRY_REPEAT },
+		["5-2"] = { FirstClearReward = NONE, RepeatReward = replayTickets("Normal", 2) },
+		["5-3"] = { FirstClearReward = NONE, RepeatReward = replayTickets("Normal", 3) },
+		["5-4"] = { FirstClearReward = NONE, RepeatReward = replayTickets("Normal", 4) },
+		["5-5"] = { FirstClearReward = NONE, RepeatReward = replayTickets("Normal", 5) },
+		["6-1"] = { FirstClearReward = NONE, RepeatReward = ENTRY_REPEAT },
+		["6-2"] = { FirstClearReward = NONE, RepeatReward = replayTickets("Normal", 2) },
+		["6-3"] = { FirstClearReward = NONE, RepeatReward = replayTickets("Normal", 3) },
+		["6-4"] = { FirstClearReward = NONE, RepeatReward = replayTickets("Normal", 4) },
+		["6-5"] = { FirstClearReward = NONE, RepeatReward = replayTickets("Normal", 5) },
 	},
 	-- Mode Élite (#69) : même format, clé "<zone>-<stage>" du stage Élite. Le First Clear Élite est
 	-- enregistré dans Progression.EliteFirstClears (il débloque le stage Élite suivant). Listes VIDES,
