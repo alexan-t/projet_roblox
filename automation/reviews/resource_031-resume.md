@@ -1,6 +1,6 @@
 # resource_031 — Galet de Rivière — PASS
 
-Nouvelle série explicitement autorisée par la mission du 18 octobre 2026 ; historique de trois passes conservé dans l'état. Passe 1 : erreur de génération. Passe 2 : modèle corrigé, image `rbxassetid://124890748158418`.
+Nouvelle série explicitement autorisée par la mission du 18 octobre 2026 ; historique de trois passes conservé dans l'état. Passe 1 : erreur de génération. Passe 2 : modèle corrigé, image `rbxassetid://111705179846657`.
 
 Captures réelles : `automation/screenshots/resources/resource_031-resume.jpg`, `card031-resume.jpg`, `minerow-resume.jpg`. Références principales inspectées dans Studio : KingSlime, KingTreant, Treant_Masque et RoiOrc ; comparaison matière pierre avec les voisines 032–034.
 

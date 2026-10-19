@@ -37,5 +37,5 @@
     "method": "Parts, ellipsoïdes (SpecialMesh Sphere), cylindres et coins dans Workspace.AtelierIcones ; archive ServerStorage.Archive_ResourceIcons_Handbuilt_20261019",
     "export": "CaptureService → tools/icon-render.mjs serve → tools/export-resource-icon.mjs build"
   },
-  "icon": "rbxassetid://129020679153861"
+  "icon": "rbxassetid://85393419670325"
 }

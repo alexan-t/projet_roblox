@@ -24,7 +24,7 @@ Preuves :
 | Lecture 32 px sur planche, carte et famille dans Studio | OK : bois, spirale et fente lisibles |
 | Géométrie, détails attachés, un point focal lumineux unique | OK |
 | Aucune rareté, quantité ni texte inventés | OK |
-| Icon Git = Image = AssetId | OK : rbxassetid://102068554185533 |
+| Icon Git = Image = AssetId | OK : rbxassetid://74405538225530 |
 
 Visage, membres, posture et accessoires portés : sans objet. Modèle archivé dans
 `ServerStorage.Archive_ResourceIcons_Handbuilt_20261019`. Nettoyage global et caméra en fin de lot.

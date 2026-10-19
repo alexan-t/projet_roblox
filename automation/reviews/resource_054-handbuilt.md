@@ -22,7 +22,7 @@ Preuves :
 | Lecture 32 px sur planche, carte et famille dans Studio | OK : rouleau beige, torsion et bout pendant lisibles |
 | Géométrie, détails attachés, un point focal lumineux unique | OK |
 | Aucune rareté, quantité ni texte inventés | OK |
-| Icon Git = Image = AssetId | OK : rbxassetid://95173415042102 |
+| Icon Git = Image = AssetId | OK : rbxassetid://111498263999201 |
 
 Visage, membres, posture et accessoires portés : sans objet. Modèle archivé dans
 `ServerStorage.Archive_ResourceIcons_Handbuilt_20261019`. Nettoyage global et caméra en fin de lot.

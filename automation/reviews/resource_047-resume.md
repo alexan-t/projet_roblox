@@ -20,6 +20,6 @@ Preuves :
 | Lecture 32 px sur montage, carte et famille dans Studio | OK |
 | Géométrie, détails attachés, un point focal au plus | OK |
 | Aucune rareté, quantité ni texte inventés | OK |
-| Icon Git = Image = AssetId | OK : rbxassetid://128441665886090 |
+| Icon Git = Image = AssetId | OK : rbxassetid://134647433604547 |
 
 Visage, membres, posture et accessoires portés : sans objet. Nettoyage global et caméra traités en fin de lot.
