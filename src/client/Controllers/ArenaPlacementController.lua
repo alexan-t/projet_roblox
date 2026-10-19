@@ -374,13 +374,20 @@ local function renderEnemies()
 end
 
 -- Fenêtre des stages (E près de la pancarte) : stages réels de StageConfig vus par le serveur
--- (débloqué / verrouillé / terminé), zone du stage choisi. Le serveur revérifie chaque action.
-local function openStageMenu()
+-- (débloqué / verrouillé / terminé), zone du stage choisi, ou `shownZone` (flèches de zone de la fenêtre :
+-- consultation seulement, rien n'est envoyé au serveur avant le choix d'un stage). Le serveur revérifie chaque action.
+local openStageMenu: (shownZone: number?) -> ()
+openStageMenu = function(shownZone: number?)
 	local state = ArenaStore.arena
 	if ArenaStore.inCombat() or state.Available == false then
 		return
 	end
-	local zone = state.Zone or ArenaConfig.Zone
+	local zone = shownZone or state.Zone or ArenaConfig.Zone
+	-- Zones présentes dans les stages du serveur (StageConfig), pour les flèches ‹ › de la fenêtre.
+	local zoneIds: { [number]: boolean } = {}
+	for _, entry in state.Stages or {} do
+		zoneIds[entry.Zone] = true
+	end
 	-- Entrées complètes d'ArenaService (statut, vagues, boss, XP par héros, récompenses, multiplicateurs Élite,
 	-- butin éventuel) : la vue ne fait que les présenter.
 	local function cards(entries: { any }?): { any }
@@ -413,8 +420,9 @@ local function openStageMenu()
 		showToast("Aucun stage disponible")
 		return
 	end
-	-- Nom de la zone : attribut « Nom » du modèle de zone de l'arène (ZoneId), sinon « Zone n ».
-	local title = `Zone {zone}`
+	-- Nom de la zone : attribut « Nom » du modèle de zone de l'arène (ZoneId), sinon ArenaConfig.ZoneNames,
+	-- sinon « Zone n ».
+	local title = if ArenaConfig.ZoneNames[zone] then `Zone {zone} · {ArenaConfig.ZoneNames[zone]}` else `Zone {zone}`
 	local arenaModel = PlotView.arena()
 	local zones = arenaModel and arenaModel:FindFirstChild("Zones")
 	for _, model in if zones then zones:GetChildren() else {} do
@@ -435,12 +443,31 @@ local function openStageMenu()
 		local arena = ArenaStore.arena
 		return z ~= arena.Zone or stage ~= arena.Stage or mode ~= (arena.Mode or "Normal")
 	end
+	-- Zone consultée ≠ zone choisie : pas de stage pré-sélectionné, mode Normal, et l'Élite de CETTE zone est
+	-- ouverte si l'un de ses stages Élite est débloqué (même règle que ZoneService). Une zone sans Élite
+	-- configurée n'a pas d'onglet Élite (EliteStages = nil).
+	local chosenZone = zone == state.Zone
+	local eliteUnlocked = state.EliteUnlocked == true
+	if not chosenZone then
+		eliteUnlocked = false
+		for _, entry in eliteStages do
+			if entry.Status == "Unlocked" then eliteUnlocked = true end
+		end
+	end
+	local function neighbour(step: number): number?
+		return if zoneIds[zone + step] then zone + step else nil
+	end
 	ExpeditionView.Show({ Zone = zone, Title = title, Stages = stages,
-		EliteStages = if #eliteStages > 0 then eliteStages else nil, EliteUnlocked = state.EliteUnlocked == true,
-		Mode = state.Mode, Subtitle = ArenaConfig.ZoneSubtitles[zone] }, {
+		EliteStages = if #eliteStages > 0 then eliteStages else nil, EliteUnlocked = eliteUnlocked,
+		Mode = if chosenZone then state.Mode else "Normal", Subtitle = ArenaConfig.ZoneSubtitles[zone],
+		PreviousZone = neighbour(-1), NextZone = neighbour(1) }, {
 		OnClose = closed,
 		Guide = ArenaStore.guide.expedition,
-		Selected = state.Stage,
+		Selected = if chosenZone then state.Stage else nil,
+		OnZone = function(z: number)
+			closed()
+			openStageMenu(z)
+		end,
 		Team = { Placed = ArenaStore.placedCount(), Max = state.MaxHeroes or ArenaConfig.MaxHeroes, Heroes = heroes },
 		OnSelect = function(z: number, stage: number, mode: string)
 			if differs(z, stage, mode) then
