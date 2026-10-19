@@ -160,6 +160,34 @@ Aucune modification Studio, nouvelle capture ou nouvelle validation visuelle dan
 étape de tests ; les captures et défauts documentés plus haut restent la preuve visuelle.
 Le test Studio à deux clients reste non exécuté. Aucun accès aux images n'a été modifié.
 
+### Tests rejoués au 19/10, après l'ajout des contrôles de reprise
+
+**Tests automatisés : PASS. Verdict global visuel : FIX, inchangé.**
+
+Nouveau test Node `tests/zones-studio-checks.test.mjs` (**6/6**) : il garde
+`tools/studio-check-menu-icons.luau` et `tools/studio-check-two-players.luau` alignés sur
+le code. Il vérifie que les deux scripts restent en lecture seule, que le contrôle des
+images lit bien les 13 AssetIds de `MenuIconConfig`, que les trois images bloquées sont
+toujours celles citées ici, et que le contrôle à deux joueurs lit les mêmes noms et
+attributs que le serveur (`Lobby.Plots`, `OwnerUserId`, `Arene.Zones`, `ZoneId`,
+`DataLoaded`, `CombatId`, `Alive`). Si le code change, ce test casse avant le test manuel.
+
+`node --test --test-isolation=none tests/*.test.mjs` : **20/20**. Les vingt lanceurs
+`tools/test-*.ps1` passent, sans aucun échec : ZoneService **33/33**, CombatEngine
+**36/36**, CombatService **45/45**, ArenaRules **14/14**, ArenaPrep **25/25**,
+PlacementState **14/14**, Expedition **15/15**, RewardService **16/16**, RewardFlow
+**17/17**, CombatPresentation **19/19**, HeroService **47/47**, HeroProgression **13/13**,
+HeroRules **10/10**, Migrations **21/21**, PlotService **37/37**, QuestService **43/43**,
+KingdomService **19/19**, Security **23/23**, Skeleton **13/13**, AnimationSets **14/14**,
+Tutorial **13/13**, Sacoche **9/9**, PlayerStateService **7/7**, QuestLog **7/7**,
+ItemConfig **5/5**, ResourceConfig **5/5**.
+`rojo build` n'a pas été relancé dans cette étape (commande non autorisée dans
+l'environnement de l'agent) ; le dernier build du 19/10 reste PASS et aucun fichier de
+`src/` n'a changé depuis.
+
+Studio n'était pas accessible dans cette étape : les deux scripts de contrôle n'ont pas
+été exécutés. Les trois images restent bloquées et le test à deux clients reste à faire.
+
 ## Reprise — ce qui reste pour passer à PASS
 
 Le code des zones est terminé ; les deux points FIX ne se règlent qu'en Studio et sur le
