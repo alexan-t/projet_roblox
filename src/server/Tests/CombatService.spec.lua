@@ -108,7 +108,8 @@ return function(createService: any, CombatEngine: any, combatConfig: any, _stage
 			env.stages[p] = { Id = env.nextStageId, Zone = 1, Stage = 1, Config = MECHANICS }
 			return p
 		end
-		-- Géométrie de l'arène : 3x3 héros (z 0..18) et 3x3 ennemis (z -21..-30), comme PlotTravail.
+		-- Géométrie de l'arène : 3x3 héros (z 0..18) et 3x3 ennemis (z -21..-30), comme PlotTravail
+		-- avant son agrandissement (docs/PLOTS.md) : les ennemis y sont désormais 20 studs plus loin.
 		function env.context(): any
 			local heroes, enemies = {}, {}
 			for n = 1, 9 do
