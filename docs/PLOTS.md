@@ -68,9 +68,13 @@ Mesures de la sandbox v4 (repère de `FrontEnnemi`, identiques sur les 8 plots) 
 | --- | --- | --- |
 | Sol (`Sol.SoclePierre`) | 122 × 178 studs | 132 × 203 studs |
 | Première rangée de dalles → front ennemi | 23 studs | 43 studs |
-| Écart minimal entre sols voisins | 21,6 studs | 15,0 studs |
+| Écart minimal entre sols voisins | 22,3 studs | 15,8 studs |
 | Pointe extérieure (distance au centre de la place) | 328 studs | 353 studs |
 | Mur invisible `LimiteMap` le plus proche de la pointe | ≈ 41 studs | ≈ 28 studs |
+
+Ces mesures sont recalculées hors Studio par `node tests/plots-agrandissement.test.mjs` : il rejoue la
+géométrie du script sur les 8 plots du snapshot (voisins, murs, forêt, repères immobiles, couloir de
+combat) ; résultats dans `tests/PLOTS_AGRANDISSEMENT_RESULTS.md`. Il ne remplace pas les captures.
 
 Fonctionnement : le sol en « stade » (`BoutArriere`, `Centre`, `BoutAvant` de chaque couche de `Sol`)
 est redimensionné, la pointe côté royaume ne bouge pas. Tout ce qui est côté ennemis recule d'un bloc
