@@ -29,3 +29,11 @@ Règles permanentes pour tous les agents. Le détail est dans `docs/`.
 
 - Code Luau uniquement dans Git (`src/`), synchronisé par Rojo. Jamais de script écrit dans Studio. Branches `feature/*` → PR vers `develop` (voir `README.md`).
 - Modèles et assets : dans Studio, pas dans Git. Toujours placer relativement aux repères existants et enregistrer une étape `ChangeHistoryService` (Ctrl+Z).
+
+## Orchestration des sub-agents
+
+- Le Claude principal est architecte et coordinateur : il lit l'état du dépôt, fixe la portée, délègue, intègre et décide (PR, merge, contrats). Les agents (`.claude/agents/`) exécutent un périmètre précis et rendent un rapport ; ils ne décident ni merge, ni refonte, ni changement de contrat. Spécification : `docs/CLAUDE_AGENTS_ROBLOX.md`.
+- Délégation ciblée, pour économiser les tokens : tâche simple ou localisée → le principal seul ; sinon un spécialiste, au plus deux en parallèle sur des sujets indépendants ; jamais toute l'équipe.
+- Grosse fonctionnalité qui change l'expérience joueur (loot, inventaire, progression, invocation, récompenses, monétisation, onboarding, navigation) → `roblox-product-benchmark` AVANT l'implémentation : comparables sourcés et datés, alerte VERT / JAUNE / ORANGE / ROUGE, sans web = analyse heuristique annoncée. ROUGE = arbitrage avec l'utilisateur, pas un veto. Le principal lui fournit le texte de l'issue (l'agent n'a pas `gh`) ; aucun verdict sans issue, configs, docs et dépendances lus, ni simplification qui touche un contrat existant sans arbitrage.
+- Serveur, remotes ou sauvegardes → ajouter `roblox-data-security` ; fin d'un lot important → `roblox-qa-regression` ; PR à fusionner → `roblox-git-release` (audit), merge exécuté par le principal seulement sur demande.
+- Chaque délégation transmet : objectif, branche, fichiers et contrats concernés, contraintes ; le rapport doit citer les fichiers et les tests réellement exécutés.
