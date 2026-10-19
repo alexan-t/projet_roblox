@@ -534,12 +534,14 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 	end)
 
 	test("#13 RewardConfig: a valid entry for every stage of StageConfig (First Clear = unlock)", function()
-		local stages = configs.StageConfig.Zones[1].Stages
-		assert(#stages == 5)
-		for stage = 1, #stages do
-			local entry = configs.RewardConfig.Stages[`1-{stage}`]
-			assert(entry, `RewardConfig 1-{stage}`)
-			assert(#RewardRules.stageProblems(entry) == 0, `valid 1-{stage}`)
+		assert(#configs.StageConfig.Zones == 6)
+		for zone, config in configs.StageConfig.Zones do
+			assert(#config.Stages == 5)
+			for stage = 1, #config.Stages do
+				local entry = configs.RewardConfig.Stages[`{zone}-{stage}`]
+				assert(entry, `RewardConfig {zone}-{stage}`)
+				assert(#RewardRules.stageProblems(entry) == 0, `valid {zone}-{stage}`)
+			end
 		end
 		local first = configs.RewardConfig.Stages["1-1"]
 		assert(#first.FirstClearReward == 3 and first.RepeatReward[1].Kind == "Gold" and first.RepeatReward[1].Amount == 20, "1-1 contract unchanged")

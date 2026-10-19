@@ -114,3 +114,48 @@ L'attribut de démonstration initial `ApercuUI = Expedition` est restauré.
 Les gabarits et les pancartes restent disponibles pour le prochain Play.
 Branche `acc/mission-f9c766ee` conservée conformément à la consigne de mission, qui interdit
 le changement de branche ; aucun push, aucune fusion, aucune publication.
+
+## Étape 3 — tests, 19 octobre 2026
+
+**Tests automatisés : PASS. Verdict global visuel : FIX, inchangé.**
+
+Couverture complétée dans les specs existantes :
+
+- ZoneService parcourt les trente stages : tous les statuts et indicateurs de First Clear
+  sont vérifiés à chaque étape, ainsi que le lancement, la fin et la délégation des trente
+  victoires aux récompenses. La progression d'un second joueur reste indépendante.
+  Le double de RewardService ne sauvegarde pas : le test applique explicitement les clears.
+  Ce contrôle ne remplace pas deux clients réels dans Studio.
+- RewardFlow valide désormais une entrée de récompenses pour chacun des trente stages des
+  six zones, au lieu des cinq stages de Zone 1 seulement.
+
+Luau CLI officiel téléchargé depuis la dernière release de `luau-lang/luau` dans
+`build/luau-cli` (dossier ignoré), sans installation globale. Les vingt lanceurs
+`tools/test-*.ps1` ont été exécutés avec `-LuauPath build/luau-cli/luau.exe` :
+
+| Lanceurs | Résultat |
+| --- | --- |
+| arena, combat, expedition, heroes, items | PASS |
+| kingdom, migrations, playerstate, plots, presentation | PASS |
+| quests, resources, rewards, sacoche, security | PASS |
+| skeleton, summon, tutorial, ui, zones | PASS |
+
+Résultats ciblés : ZoneService **33/33**, CombatEngine **36/36**, CombatService **45/45**,
+ArenaRules **14/14**, ArenaPrep **25/25**, Expedition **15/15**, RewardService **16/16**,
+RewardFlow **17/17**, CombatPresentation **19/19**, HeroProgression **13/13**.
+Aucun échec. Les lanceurs migrations et summon rejouent des suites de heroes ; leurs
+résultats ne doivent pas être comptés comme des cas indépendants supplémentaires.
+
+`node --test tests/*.test.mjs` : **14/14** contrôles du runner Node passent. Les contrôles
+internes supplémentaires des catalogues signalent aussi Items **19/19**, Resources **13/13**.
+`rojo build -o build/zones-validation.rbxlx` : PASS. `git diff --check` : PASS.
+La sortie détaillée des lanceurs est conservée localement dans
+`build/zone-test-results.json` (non versionnée).
+
+Contrôle MCP en Edit dans **test 3** : les cinq gabarits de zones 2 à 6 existent dans
+`ServerStorage.Assets.ZonesArene`, chacun avec son ZoneId et son FrontEnnemi.
+`ContentProvider:PreloadAsync` retourne toujours **Failure** pour les trois images
+`74149875739571`, `99196320622532`, `136778535271316`.
+Aucune modification Studio, nouvelle capture ou nouvelle validation visuelle dans cette
+étape de tests ; les captures et défauts documentés plus haut restent la preuve visuelle.
+Le test Studio à deux clients reste non exécuté. Aucun accès aux images n'a été modifié.

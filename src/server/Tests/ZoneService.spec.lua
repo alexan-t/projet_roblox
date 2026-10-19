@@ -654,6 +654,33 @@ return function(createService: any, productionConfig: any, eliteConfig: any, Dif
 		end
 	end)
 
+	test("production progression: all 30 stages unlock in order without unlocking another player", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		local other = e.player("B")
+		for index = 1, 30 do
+			local zone = math.floor((index - 1) / 5) + 1
+			local stage = (index - 1) % 5 + 1
+			local list = s:ListStages(p)
+			for i, entry in list do
+				assert(entry.Status == (if i <= index then "Unlocked" else "Locked"), `step {index}, entry {i}`)
+				assert(entry.Cleared == (i < index), `clear flag {index}/{i}`)
+			end
+			local session = s:StartStage(p, zone, stage)
+			assert(session and session.Zone == zone and session.Stage == stage)
+			assert(s:CompleteStage(p, session.Id, true))
+			-- RewardService owns persistence; this fixture only records its calls.
+			local call = e.rewardCalls[#e.rewardCalls]
+			assert(call.player == p and call.zone == zone and call.stage == stage)
+			e.data[p].Progression.FirstClears[`{zone}-{stage}`] = true
+			for i, entry in s:ListStages(other) do
+				assert(entry.Status == (if i == 1 then "Unlocked" else "Locked") and not entry.Cleared, `B isolated at {index}/{i}`)
+			end
+		end
+		assert(#e.rewardCalls == 30 and #e.questEvents == 30)
+	end)
+
 	test("zone Difficulty: Normal session carries it; Elite multiplies it; Zone 1 Normal has none", function()
 		local stage = { Waves = { { Enemies = { { EnemyId = "Slime", Count = 1 } } } } }
 		local config = { Zones = {
