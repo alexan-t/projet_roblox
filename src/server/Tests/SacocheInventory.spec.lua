@@ -334,9 +334,17 @@ return function(Inventory: any, Loot: any, ItemConfig: any, ResourceConfig: any,
 		local half = l.Height * placed.Scale / 2
 		assert(placed.Y - half >= top + R.Margin - 1e-6, "below the currencies")
 		assert(placed.Y + half <= bottom - R.Margin + 1e-6, `above the hotbar: {placed.Y + half} > {bottom - R.Margin}`)
-		-- zone trop étroite (HUD inconnu ou écran minuscule) : tout l'écran, échelle plancher
-		local fallback = Loot.place(v2(844, 390), v2(l.Width, l.Height), R, 200, 210)
-		assert(fallback.Y == 390 / 2 and fallback.Scale >= R.MinScale)
+		assert(placed.Overlap == false and placed.Scale >= R.MinScale)
+		-- zone trop étroite (téléphone 844 x 390 : hotbar fixe de 104 px) : Overlap EXPLICITE, tout l'écran,
+		-- et le contenu entier reste visible (jamais coupé par le bord de l'écran)
+		for _, heroes in { 0, 1, 2, 3, 4 } do
+			local full = layout({ Cards = 3, Heroes = heroes, Band = true, Chips = 5, Caption = true, Note = true })
+			local phone = Loot.place(v2(844, 390), v2(full.Width, full.Height), R, 70, 390 - 104)
+			assert(phone.Overlap == true and phone.Y == 390 / 2, `{heroes} heroes: overlap must be explicit`)
+			assert(full.Height * phone.Scale <= 390 - 2 * R.Margin + 1e-6 and full.Width * phone.Scale <= 844 - 2 * R.Margin + 1e-6,
+				`{heroes} heroes: {full.Width}x{full.Height} at {phone.Scale} leaves the screen`)
+			assert(phone.Scale >= R.FloorScale)
+		end
 		-- sans HUD : identique à fit
 		assert(Loot.place(viewport, v2(l.Width, l.Height), R, 0, viewport.Y).Scale == Loot.fit(viewport, v2(l.Width, l.Height), R))
 	end)
@@ -351,6 +359,8 @@ return function(Inventory: any, Loot: any, ItemConfig: any, ResourceConfig: any,
 		-- les boîtes du butin contiennent le texte grossi au pire (échelle plancher)
 		local worst = Loot.textSize(R.CaptionSize, R.MinScale, R)
 		assert(worst <= R.CaptionHeight and worst <= R.NoteHeight and Loot.textSize(R.ChipAmountSize, R.MinScale, R) <= R.ChipSize.Y)
+		-- sous MinScale (repli Overlap) la compensation s'arrête : les boîtes ne débordent jamais
+		assert(Loot.textSize(R.CaptionSize, R.FloorScale, R) == worst)
 	end)
 
 	test("fit: shrinks on the WIDTH axis on a narrow portrait screen", function()
@@ -360,9 +370,9 @@ return function(Inventory: any, Loot: any, ItemConfig: any, ResourceConfig: any,
 		assert(l.Width * scale <= 600 - 2 * R.Margin + 1e-6, "fits horizontally")
 	end)
 
-	test("fit: never below MinScale nor above the reference/MaxScale", function()
+	test("fit: never below FloorScale (explicit overlap) nor above the reference/MaxScale", function()
 		local l = layout({ Cards = 3, Heroes = 4, Band = true, Chips = 6, Caption = true, Note = true })
-		assert(Loot.fit(v2(300, 200), v2(l.Width, l.Height), R) == R.MinScale)
+		assert(Loot.fit(v2(300, 200), v2(l.Width, l.Height), R) == R.FloorScale, "tiny screen: explicit overlap floor")
 		assert(Loot.fit(v2(7680, 4320), v2(760, 520), R) <= R.MaxScale)
 	end)
 

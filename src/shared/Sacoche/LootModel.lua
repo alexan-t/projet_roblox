@@ -193,22 +193,31 @@ function LootModel.fit(viewport: Vector2, size: Vector2, pack: any): number
 end
 
 -- Échelle et centre vertical (px écran) du contenu dans la zone libre : bas du HUD du haut (top) → haut de
--- la hotbar (bottom), marge de chaque côté. Zone trop étroite (HUD inconnu, écran minuscule) : tout l'écran.
-function LootModel.place(viewport: Vector2, size: Vector2, pack: any, top: number, bottom: number): { Scale: number, Y: number }
+-- la hotbar (bottom), marge de chaque côté.
+-- Zone trop étroite pour le contenu à MinScale (téléphone en paysage, HUD inconnu) : le contenu prend tout
+-- l'écran, Overlap = true (l'écran de fin masque alors EXPLICITEMENT la hotbar, jamais un chevauchement
+-- silencieux), et l'échelle peut descendre jusqu'à FloorScale pour ne jamais sortir de l'écran.
+function LootModel.place(viewport: Vector2, size: Vector2, pack: any, top: number, bottom: number): { Scale: number, Y: number, Overlap: boolean }
 	local zoneTop = math.max(top, 0) + pack.Margin
 	local zoneBottom = math.min(bottom, viewport.Y) - pack.Margin
-	if zoneBottom - zoneTop < size.Y * pack.MinScale then
+	local overlap = zoneBottom - zoneTop < size.Y * pack.MinScale
+	if overlap then
 		zoneTop, zoneBottom = pack.Margin, viewport.Y - pack.Margin
 	end
 	local reference = math.clamp(viewport.Y / pack.ReferenceHeight, pack.MinScale, pack.MaxScale)
 	local byHeight = (zoneBottom - zoneTop) / math.max(size.Y, 1)
 	local byWidth = (viewport.X - 2 * pack.Margin) / math.max(size.X, 1)
-	return { Scale = math.max(math.min(reference, byHeight, byWidth), pack.MinScale), Y = (zoneTop + zoneBottom) / 2 }
+	-- écran trop étroit pour le contenu à MinScale (portrait) : même plancher, pour ne jamais sortir de l'écran
+	local narrow = size.X * pack.MinScale > viewport.X - 2 * pack.Margin
+	local floor = if overlap or narrow then pack.FloorScale else pack.MinScale
+	return { Scale = math.max(math.min(reference, byHeight, byWidth), floor), Y = (zoneTop + zoneBottom) / 2, Overlap = overlap }
 end
 
 -- Taille de texte (px avant échelle) pour qu'un petit texte du butin fasse au moins MinText px réels.
+-- La compensation s'arrête à MinScale (les boîtes du butin sont dimensionnées pour ce pire cas) : sous
+-- MinScale (repli Overlap, téléphone), les textes restent proportionnels et peuvent passer sous MinText.
 function LootModel.textSize(base: number, scale: number, pack: any): number
-	return math.max(base, math.ceil(pack.MinText / math.max(scale, 0.01)))
+	return math.max(base, math.ceil(pack.MinText / math.max(scale, pack.MinScale)))
 end
 
 return LootModel

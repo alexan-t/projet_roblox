@@ -19,7 +19,7 @@
 --      Overflow : message honnête (équipement non ajouté, Sacoche pleine). Aucune ligne si le butin est vide ;
 --   7. bouton principal « Continuer » en dernier.
 -- Mise en page : la hauteur du contenu est CALCULÉE (Shared.Sacoche.LootModel.layout, mesures UITheme.Pack.Reward)
--- et l'échelle tient compte des DEUX axes de l'écran (LootModel.fit).
+-- et l'échelle tient compte des DEUX axes de l'écran (LootModel.place : entre les monnaies et la hotbar, sinon hotbar masquée).
 -- Défaite : titre Error, sans rayons ni étincelles, sans butin.
 -- API : RewardScreenController.Show(data, onContinue?) ; RewardScreenController.Hide().
 --   data = { Result: "Victory" | "Defeat", FirstClear: boolean?,
@@ -609,6 +609,15 @@ function RewardScreenController.Show(data: ScreenData, onContinue: (() -> ())?)
 	veil.Parent = gui
 	tween(veil, Animation.Fade, { BackgroundTransparency = UITheme.Transparency.Overlay })
 
+	local mask = Instance.new("Frame")
+	mask.Name = "MasqueHotbar"
+	mask.BackgroundColor3 = Colors.Ink
+	mask.BackgroundTransparency = PACK.OverlapMask
+	mask.BorderSizePixel = 0
+	mask.Visible = false
+	mask.Active = true -- les raccourcis masqués ne reçoivent pas de clic
+	mask.Parent = gui
+
 	local root = Instance.new("Frame")
 	root.Name = "Contenu"
 	root.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -638,6 +647,10 @@ function RewardScreenController.Show(data: ScreenData, onContinue: (() -> ())?)
 		local placed = LootModel.place(viewport, Vector2.new(layout.Width, layout.Height), PACK, top, bottom)
 		uiScale.Scale = placed.Scale
 		root.Position = UDim2.new(0.5, 0, 0, placed.Y)
+		-- zone trop étroite : le contenu passe sur la hotbar, qui est alors masquée (jamais en silence)
+		mask.Visible = placed.Overlap and bar ~= nil
+		mask.Position = UDim2.fromOffset(0, bottom)
+		mask.Size = UDim2.new(1, 0, 0, math.max(viewport.Y - bottom, 0))
 		for _, entry in smallTexts do
 			entry.Label.TextSize = LootModel.textSize(entry.Base, placed.Scale, PACK)
 		end

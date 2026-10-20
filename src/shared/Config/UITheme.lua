@@ -369,6 +369,9 @@ local Pack = {
 		ButtonGap = 20, BottomPad = 80, MinHeight = 520,
 		-- échelle : contenu tenu entre le bas des monnaies et le haut de la hotbar (Margin de chaque côté)
 		ReferenceHeight = 1080, Margin = 16, MinScale = 0.5, MaxScale = 1.4,
+		-- zone trop étroite (téléphone en paysage) : tout l'écran, échelle jusqu'à FloorScale, hotbar masquée
+		-- par un voile opaque (transparence OverlapMask) au lieu d'être recouverte en silence
+		FloorScale = 0.3, OverlapMask = 0.12,
 		MinText = 14, -- px réels minimum des petits textes du butin, quelle que soit l'échelle (design system § 4)
 	},
 	-- Panneau Quêtes et reveal.
