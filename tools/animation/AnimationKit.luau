@@ -533,6 +533,9 @@ end
 -- Easing d'une clé = façon d'aller vers la clé suivante (In = accélère vers le coup).
 Kit.Attacks = {
 	-- Écuyer : coup d'épée en diagonale, bouclier gardé devant, petit pas en avant.
+	-- weaponRight à l'impact et après : sans lui, la lame finissait à l'horizontale, dans le
+	-- bouclier. Valeurs mesurées sur l'Écuyer : la diagonale finit vers le bas à gauche, devant lui,
+	-- sans qu'aucun point de la lame n'entre dans le bouclier, le buste ou les jambes.
 	Epee = {
 		Length = 0.6, Impact = 0.2,
 		Keys = {
@@ -545,13 +548,15 @@ Kit.Attacks = {
 			} },
 			{ Time = 0.2, Easing = "Out", Poses = {
 				torso = { -14, 30, 0, -0.18 },
-				rightArm = { 25, 0, -30 }, leftArm = { 25, 0, -6 },
+				rightArm = { 25, 0, -30 }, weaponRight = { 0, -20, 30 },
+				leftArm = { 25, 0, -6 },
 				rightLeg = { -6, -30, 0 }, leftLeg = { 30, -30, 0 },
 				head = { 8, -25, 0 },
 			} },
 			{ Time = 0.3, Easing = "InOut", Poses = {
 				torso = { -16, 36, 0, -0.2 },
-				rightArm = { 12, 0, -36 }, leftArm = { 22, 0, -6 },
+				rightArm = { 12, 0, -36 }, weaponRight = { 0, -40, 0 },
+				leftArm = { 22, 0, -6 },
 				rightLeg = { -6, -36, 0 }, leftLeg = { 32, -36, 0 },
 				head = { 9, -30, 0 },
 			} },
@@ -588,25 +593,31 @@ Kit.Attacks = {
 	-- Ultime « Charge du Rempart » (Écuyer) : ramassé derrière le bouclier, épée tirée en arrière,
 	-- puis grand estoc en se fendant. L'onde dorée (UltimateEffectController) part à l'impact :
 	-- garder Impact égal à ANIMATION_IMPACT de ce contrôleur.
+	-- weaponRight : sans lui, le bras levé à 80° pointait la lame vers le haut et la gauche à
+	-- l'impact (pointe à 25 % vers l'avant). Valeurs mesurées sur l'Écuyer : pointe à ~98 % vers
+	-- l'avant à l'armé (hanche) et pendant l'estoc.
 	Rempart = {
 		Length = 0.9, Impact = 0.3,
 		Keys = {
 			{ Time = 0, Easing = "Out", Poses = {} },
 			{ Time = 0.15, Easing = "In", Poses = {
 				torso = { 10, -20, 0, -0.25 },
-				rightArm = { -30, 0, 25 }, leftArm = { 50, 0, -5 },
+				rightArm = { -30, 0, 25 }, weaponRight = { 50, -20, 0 },
+				leftArm = { 50, 0, -5 },
 				rightLeg = { -25, 20, 0 }, leftLeg = { 15, 20, 0 },
 				head = { -5, 15, 0 },
 			} },
 			{ Time = 0.3, Easing = "Out", Poses = {
 				torso = { -18, 25, 0, -0.1 },
-				rightArm = { 80, 0, -10 }, leftArm = { -15, 0, -25 },
+				rightArm = { 80, 0, -10 }, weaponRight = { -30, -60, 10 },
+				leftArm = { -15, 0, -25 },
 				rightLeg = { -10, -25, 0 }, leftLeg = { 38, -25, 0 },
 				head = { 10, -20, 0 },
 			} },
 			{ Time = 0.5, Easing = "InOut", Poses = {
 				torso = { -20, 28, 0, -0.12 },
-				rightArm = { 78, 0, -12 }, leftArm = { -18, 0, -25 },
+				rightArm = { 78, 0, -12 }, weaponRight = { -30, -60, 10 },
+				leftArm = { -18, 0, -25 },
 				rightLeg = { -10, -28, 0 }, leftLeg = { 40, -28, 0 },
 				head = { 11, -22, 0 },
 			} },
