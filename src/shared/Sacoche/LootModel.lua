@@ -9,11 +9,15 @@
 --   chips(resources, slots) -> { Shown, More } : pastilles visibles ; si tout ne tient pas, la dernière place
 --                              est une pastille « +N autres » (N = types de ressources masqués)
 --   moreItemsText(n)        -> « +1 équipement » / « +2 équipements »
---   layout(input, pack)     -> positions (px du design, 1080) et HAUTEUR CALCULÉE du contenu
+--   pack(viewport, reward)  -> mesures de la disposition : Pack.Reward (PC, tablette), surchargé par
+--                              Pack.Reward.Phone sur téléphone (Device = "wide" | "phone")
+--   layout(input, pack)     -> positions (px du design) et HAUTEUR CALCULÉE du contenu ; deux colonnes
+--                              (monnaies + butin | héros + bouton) si pack.TwoColumns (téléphone)
 --   fit(viewport, size, pack) -> échelle sur les DEUX axes (jamais plus grande que la référence 1080)
 -- Les mesures viennent d'UITheme.Pack.Reward (passé en argument : aucune valeur de style ici).
 
 local InventoryModel = require(script.Parent.InventoryModel)
+local SacocheModel = require(script.Parent.SacocheModel)
 
 local LootModel = {}
 
@@ -132,17 +136,27 @@ export type Layout = {
 	Width: number, Height: number, TitleY: number, CardsY: number,
 	LootY: number, LootHeight: number, BandY: number, ChipsY: number, CaptionY: number, NoteY: number,
 	HeroesY: number, HeroesHeight: number, HeroRows: number, HeroPerRow: number, ButtonY: number,
+	-- centres horizontaux (px du design) : une colonne = tous au centre ; téléphone = deux colonnes
+	CardsX: number, LootX: number, HeroesX: number, HeroesWidth: number, ButtonX: number,
 }
 
--- Ordre vertical : titre, cartes de monnaie, butin (objet, pastilles, légende, message), héros, bouton. Sans
--- butin, les positions sont celles de l'écran d'avant (cartes et héros inchangés).
-function LootModel.layout(input: LayoutInput, pack: any): Layout
-	local y = pack.TitleY + pack.BelowTitle
-	local cardsY = y
-	if input.Cards > 0 then
-		y += pack.CardSize.Y + pack.AfterCards
+-- Disposition selon l'écran : téléphone (mêmes seuils que la Sacoche et l'Expédition, SacocheModel.device)
+-- = mesures de base surchargées par pack.Phone ; PC et tablette = mesures de base. Device : "phone" | "wide".
+function LootModel.pack(viewport: Vector2, pack: any): any
+	local layout = table.clone(pack)
+	layout.Phone = nil
+	layout.Device = "wide"
+	if pack.Phone and SacocheModel.device(viewport.X, viewport.Y) == "phone" then
+		for key, value in pack.Phone do
+			layout[key] = value
+		end
+		layout.Device = "phone"
 	end
-	local lootY = y
+	return layout
+end
+
+-- Bloc butin empilé à partir de lootY : objet, pastilles, légende, message. Hauteur 0 sans butin.
+local function lootStack(input: LayoutInput, pack: any, lootY: number): (number, number, number, number, number)
 	local gap = pack.LootGap
 	local bandY, chipsY, captionY, noteY = 0, 0, 0, 0
 	local cursor = 0
@@ -162,27 +176,76 @@ function LootModel.layout(input: LayoutInput, pack: any): Layout
 		noteY = lootY + cursor
 		cursor += pack.NoteHeight + gap
 	end
-	local lootHeight = if cursor > 0 then cursor - gap else 0
+	return if cursor > 0 then cursor - gap else 0, bandY, chipsY, captionY, noteY
+end
+
+-- Héros : une seule ligne (PC, tablette) ou HeroPerRow par ligne (téléphone). Retourne par ligne, lignes, hauteur.
+local function heroGrid(heroes: number, pack: any): (number, number, number)
+	local perRow = if pack.HeroPerRow then math.clamp(heroes, 1, pack.HeroPerRow) else math.max(heroes, 1)
+	local rows = if heroes > 0 then math.ceil(heroes / perRow) else 0
+	local height = if rows > 0 then pack.HeroHeading + rows * pack.HeroChip.Y + (rows - 1) * pack.HeroGap else 0
+	return perRow, rows, height
+end
+
+-- Téléphone (pack.TwoColumns) : titre, puis colonne gauche (monnaies, butin) et colonne droite (héros, puis
+-- « Continuer » aligné sur le bas du contenu). Sans monnaie ni butin, la colonne droite est centrée.
+local function twoColumns(input: LayoutInput, pack: any): Layout
+	local bodyY = pack.TitleY + pack.BelowTitle
+	local y = bodyY
+	local left = 0
+	if input.Cards > 0 then
+		left = pack.CardSize.Y
+		y += pack.CardSize.Y + pack.AfterCards
+	end
+	local lootHeight, bandY, chipsY, captionY, noteY = lootStack(input, pack, y)
+	if lootHeight > 0 then
+		left = y + lootHeight - bodyY
+	end
+	local perRow, rows, heroesHeight = heroGrid(input.Heroes, pack)
+	local button = pack.ButtonSize.Y + pack.ButtonLip
+	local right = heroesHeight + (if rows > 0 then pack.ButtonGap else 0) + button
+	local body = math.max(left, right)
+	local width = pack.Width
+	local leftWidth = pack.ChipRowWidth
+	local rightWidth = width - leftWidth - pack.ColumnGap
+	local rightX = if left == 0 then width / 2 else leftWidth + pack.ColumnGap + rightWidth / 2
+	return {
+		Width = width, Height = math.max(pack.MinHeight, bodyY + body + pack.BottomPad), TitleY = pack.TitleY, CardsY = bodyY,
+		LootY = y, LootHeight = lootHeight, BandY = bandY, ChipsY = chipsY, CaptionY = captionY, NoteY = noteY,
+		HeroesY = bodyY, HeroesHeight = heroesHeight, HeroRows = rows, HeroPerRow = perRow, ButtonY = bodyY + body - button,
+		CardsX = leftWidth / 2, LootX = leftWidth / 2, HeroesX = rightX, HeroesWidth = rightWidth, ButtonX = rightX,
+	}
+end
+
+-- Ordre vertical : titre, cartes de monnaie, butin (objet, pastilles, légende, message), héros, bouton. Sans
+-- butin, les positions sont celles de l'écran d'avant (cartes et héros inchangés).
+function LootModel.layout(input: LayoutInput, pack: any): Layout
+	if pack.TwoColumns then
+		return twoColumns(input, pack)
+	end
+	local y = pack.TitleY + pack.BelowTitle
+	local cardsY = y
+	if input.Cards > 0 then
+		y += pack.CardSize.Y + pack.AfterCards
+	end
+	local lootY = y
+	local lootHeight, bandY, chipsY, captionY, noteY = lootStack(input, pack, lootY)
 	if lootHeight > 0 then
 		y += lootHeight + pack.AfterLoot
 	end
 	-- héros sur une seule ligne, de taille identique : l'écran s'élargit (l'échelle tient compte de la largeur)
-	local perRow = math.max(input.Heroes, 1)
-	local rows = if input.Heroes > 0 then 1 else 0
+	local perRow, rows, heroesHeight = heroGrid(input.Heroes, pack)
 	local heroesWidth = perRow * pack.HeroChip.X + (perRow - 1) * pack.HeroGap
 	local width = math.max(pack.Width, if rows > 0 then heroesWidth + 2 * pack.SideMargin else 0)
 	local heroesY = y
-	local heroesHeight = 0
-	if rows > 0 then
-		heroesHeight = pack.HeroHeading + rows * pack.HeroChip.Y + (rows - 1) * pack.HeroGap
-		y += heroesHeight
-	end
+	y += heroesHeight
 	local buttonY = y + pack.ButtonGap
 	local height = math.max(pack.MinHeight, buttonY + pack.BottomPad)
 	return {
 		Width = width, Height = height, TitleY = pack.TitleY, CardsY = cardsY,
 		LootY = lootY, LootHeight = lootHeight, BandY = bandY, ChipsY = chipsY, CaptionY = captionY, NoteY = noteY,
 		HeroesY = heroesY, HeroesHeight = heroesHeight, HeroRows = rows, HeroPerRow = perRow, ButtonY = buttonY,
+		CardsX = width / 2, LootX = width / 2, HeroesX = width / 2, HeroesWidth = width - 2 * pack.SideMargin, ButtonX = width / 2,
 	}
 end
 
@@ -194,15 +257,19 @@ end
 
 -- Échelle et centre vertical (px écran) du contenu dans la zone libre : bas du HUD du haut (top) → haut de
 -- la hotbar (bottom), marge de chaque côté.
--- Zone trop étroite pour le contenu à MinScale (téléphone en paysage, HUD inconnu) : le contenu prend tout
--- l'écran, Overlap = true (l'écran de fin masque alors EXPLICITEMENT la hotbar, jamais un chevauchement
--- silencieux), et l'échelle peut descendre jusqu'à FloorScale pour ne jamais sortir de l'écran.
+-- Zone trop étroite pour le contenu à MinScale (téléphone en paysage, HUD inconnu) : Overlap = true, le
+-- contenu descend jusqu'au bas de l'écran (l'écran de fin masque alors EXPLICITEMENT la hotbar, jamais un
+-- chevauchement silencieux) en restant sous les monnaies s'il y tient à MinScale, sinon il prend tout
+-- l'écran ; l'échelle peut descendre jusqu'à FloorScale pour ne jamais sortir de l'écran.
 function LootModel.place(viewport: Vector2, size: Vector2, pack: any, top: number, bottom: number): { Scale: number, Y: number, Overlap: boolean }
 	local zoneTop = math.max(top, 0) + pack.Margin
 	local zoneBottom = math.min(bottom, viewport.Y) - pack.Margin
 	local overlap = zoneBottom - zoneTop < size.Y * pack.MinScale
 	if overlap then
-		zoneTop, zoneBottom = pack.Margin, viewport.Y - pack.Margin
+		zoneBottom = viewport.Y - pack.Margin
+		if zoneBottom - zoneTop < size.Y * pack.MinScale then
+			zoneTop = pack.Margin
+		end
 	end
 	local reference = math.clamp(viewport.Y / pack.ReferenceHeight, pack.MinScale, pack.MaxScale)
 	local byHeight = (zoneBottom - zoneTop) / math.max(size.Y, 1)

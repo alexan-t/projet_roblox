@@ -30,8 +30,8 @@ $runnerSource = $shims +
     (Module 'ResourceConfig' 'src/shared/Config/ResourceConfig.lua') +
     (Module 'RarityConfig' 'src/shared/Config/RarityConfig.lua') +
     (Module 'InventoryModel' 'src/shared/Sacoche/InventoryModel.lua') +
-    # Ecran de fin (#72) : LootModel requiert son voisin InventoryModel (script.Parent.InventoryModel) ; substitution locale.
-    "local LootModel = (function()`nlocal script = { Parent = { InventoryModel = InventoryModel } }`nlocal function require(module) return module end`n" +
+    # Ecran de fin (#72) : LootModel requiert ses voisins InventoryModel et SacocheModel (script.Parent.*) ; substitution locale.
+    "local LootModel = (function()`nlocal script = { Parent = { InventoryModel = InventoryModel, SacocheModel = Model } }`nlocal function require(module) return module end`n" +
         (Source 'src/shared/Sacoche/LootModel.lua') + "`nend)()`n" +
     "local runTests = (function()`n" + (Source 'src/server/Tests/Sacoche.spec.lua') + "`nend)()`n" +
     "local runInventoryTests = (function()`n" + (Source 'src/server/Tests/SacocheInventory.spec.lua') + "`nend)()`n" +
