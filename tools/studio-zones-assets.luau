@@ -3,7 +3,7 @@
 -- Assets uniquement, aucun Source de script. Répétable : reconstruit ses propres objets, ne touche à rien d'autre.
 --   1. ReplicatedStorage.Assets.Combat.Ennemi_<EnemyId> : copies de combat statiques des monstres VALIDÉS
 --      (Workspace, docs/ART_DIRECTION.md § 1), pivot tourné de 180° (l'avant du pivot = le visage), CouleurEffet.
---   2. ServerStorage.Assets.ZonesArene.Zone<n>_<Nom> : décor de chaque zone, dérivé du décor de la Zone 1 de
+--   2. ServerStorage.Assets.ZonesArene.Zone<n>_<Nom> : décor de chaque zone (désert, glace, forges, abysses, ciel), dérivé du décor de la Zone 1 de
 --      l'arène de Plot_1 (même plan, mêmes repères SourcesEnnemis / FrontEnnemi), WorldPivot = pivot de l'arène :
 --      ZoneDecor le pose dans l'arène de n'importe quel plot avec PivotTo(arena:GetPivot()).
 -- Une étape ChangeHistoryService (Ctrl+Z).
@@ -29,6 +29,37 @@ local ENEMIES = {
 	{ Id = "TreantArbre", Source = "Treant_Arbre", Color = "#8CDC64" },
 	{ Id = "KingSlime", Source = "KingSlime", Color = "#64B4DC" },
 	{ Id = "KingTreant", Source = "KingTreant", Color = "#8C643C" },
+	-- Zones 2 à 6, version B (faune des fiches automation/briefs) : modèles du Bestiaire (Workspace)
+	{ Id = "VaseDesSables", Source = "VaseDesSables", Color = "#DCB48C" },
+	{ Id = "ChacalParchemin", Source = "ChacalParchemin", Color = "#B4B48C" },
+	{ Id = "ScarabeeForgeSoleil", Source = "ScarabeeForgeSoleil", Color = "#F5C542" },
+	{ Id = "MangeDune", Source = "MangeDune", Color = "#8C643C" },
+	{ Id = "GardienSansVisage", Source = "GardienSansVisage", Color = "#B4B48C" },
+	{ Id = "ColosseEnseveli", Source = "ColosseEnseveli", Color = "#DCB48C" },
+	{ Id = "Givrelot", Source = "Givrelot", Color = "#8CB4DC" },
+	{ Id = "CrocDeGlacier", Source = "CrocDeGlacier", Color = "#64B4DC" },
+	{ Id = "ArmureGelee", Source = "ArmureGelee", Color = "#8CB4DC" },
+	{ Id = "BonhommeRoyal", Source = "BonhommeRoyal", Color = "#DCDCDC" },
+	{ Id = "MammouthCristallin", Source = "MammouthCristallin", Color = "#64B4DC" },
+	{ Id = "RoiSansEte", Source = "RoiSansEte", Color = "#8CB4DC" },
+	{ Id = "ChevalierRivete", Source = "ChevalierRivete", Color = "#8C8C8C" },
+	{ Id = "GolemCloche", Source = "GolemCloche", Color = "#B48C3C" },
+	{ Id = "FourneauAmbulant", Source = "FourneauAmbulant", Color = "#F08C3C" },
+	{ Id = "Martelet", Source = "Martelet", Color = "#8C8C8C" },
+	{ Id = "Chaine", Source = "Chaine", Color = "#646464" },
+	{ Id = "MaitreDesForges", Source = "MaitreDesForges", Color = "#F08C3C" },
+	{ Id = "MeduseCouronnee", Source = "MeduseCouronnee", Color = "#64B4DC" },
+	{ Id = "MureneMiroir", Source = "MureneMiroir", Color = "#648CDC" },
+	{ Id = "CoffreBernard", Source = "CoffreBernard", Color = "#B48C3C" },
+	{ Id = "ChevalierNoye", Source = "ChevalierNoye", Color = "#64B4A0" },
+	{ Id = "CrabeCathedrale", Source = "CrabeCathedrale", Color = "#B4643C" },
+	{ Id = "Leviathan", Source = "Leviathan", Color = "#648CDC" },
+	{ Id = "GargouilleAilee", Source = "GargouilleAilee", Color = "#8C8C8C" },
+	{ Id = "MiniColosseCeleste", Source = "MiniColosseCeleste", Color = "#F5C542" },
+	{ Id = "MoutonNuage", Source = "MoutonNuage", Color = "#DCDCEB" },
+	{ Id = "PoissonDuCiel", Source = "PoissonDuCiel", Color = "#8CB4DC" },
+	{ Id = "BecTonnerre", Source = "BecTonnerre", Color = "#F5C542" },
+	{ Id = "GardienCeleste", Source = "GardienCeleste", Color = "#F5C542" },
 }
 
 local combat = ReplicatedStorage.Assets.Combat
@@ -103,65 +134,81 @@ local function shade(c: Color3, fam: string, ramp: { Color3 }): Color3
 end
 
 -- Thèmes : rampes (sombre, clair) par famille ; familles absentes = inchangées.
+-- Version B (docs/ZONES.md) : désert, glace, forges, abysses, ciel — le biome de la faune des fiches.
 local THEMES = {
 	{
-		Id = 2, Name = "Zone2_MareAuxSlimes", Nom = "La Mare aux Slimes",
+		Id = 2, Name = "Zone2_DesertDesRuines", Nom = "Le Désert des Ruines",
 		Colors = {
-			Leaf = { hex("#4E7A3E"), hex("#7FA85A") }, Water = { hex("#3E8C7E"), hex("#7CC8B4") }, Foam = { hex("#D8F0E4") },
-			Sand = { hex("#8C7452"), hex("#A68C64") }, Flower = { hex("#C8A0DC"), hex("#DCB48C") }, Glow = { hex("#7CF0A0") },
+			Leaf = { hex("#8C7A44"), hex("#B49A5A") }, Water = { hex("#3E8C8C"), hex("#64B4A0") }, Foam = { hex("#E8D2A0") },
+			Sand = { hex("#C8A064"), hex("#E0C080") }, Stone = { hex("#8C6E4E"), hex("#B4946A") }, Ruin = { hex("#D2B48C"), hex("#E6CCA0") },
+			Flower = { hex("#B4643C"), hex("#DC8C3C") }, Wood = { hex("#6E5032"), hex("#8C6A44") }, Glow = { hex("#F5C542") },
 		},
-		Light = hex("#7CF0A0"),
-		Ground = { hex("#5E7A44"), hex("#6E8A4C"), hex("#4E6A3C") },
-		Remove = {},
+		Light = hex("#FFC864"),
+		Ground = { hex("#D2B078"), hex("#C8A46A"), hex("#B8945C") },
+		-- pas de forêt dans le désert : les arbres deviennent des colonnes de grès brisées (Replace)
+		Remove = { SlimeDecor = true, Buisson = true, Fleur = true },
+		Replace = { Arbre = true, Sapin = true },
+		ReplaceWith = "Pillar",
 		TreeScale = 1,
 	},
 	{
-		Id = 3, Name = "Zone3_ForetDesTreants", Nom = "La Forêt des Tréants",
+		Id = 3, Name = "Zone3_TerresGelees", Nom = "Les Terres Gelées",
 		Colors = {
-			Leaf = { hex("#2E6428"), hex("#5A9640") }, Sand = { hex("#7A5A3A"), hex("#8C6A44") }, Flower = { hex("#8CDC64"), hex("#B4E07C") },
-			Water = { hex("#3C86C8"), hex("#6CB4E4") },
+			Leaf = { hex("#9AB4C8"), hex("#D2E2EE") }, Water = { hex("#7CA8D2"), hex("#B4D2EB") }, Foam = { hex("#F0F6FA") },
+			Sand = { hex("#DCE6F0"), hex("#F0F4F8") }, Stone = { hex("#6E7E8C"), hex("#9AAAB8") }, Ruin = { hex("#C8D4DE"), hex("#DCE4EC") },
+			Flower = { hex("#8CB4DC"), hex("#64B4DC") }, Wood = { hex("#5A4A3C"), hex("#7A6650") }, Glow = { hex("#8CE0FF") },
 		},
-		Light = hex("#48E8E8"),
-		Ground = { hex("#3E6E30"), hex("#4A7A36"), hex("#34602A") },
-		Remove = { SlimeDecor = true },
-		TreeScale = 1.45,
+		IceWater = true,
+		Light = hex("#8CE0FF"),
+		Ground = { hex("#E6EEF4"), hex("#DCE6EE"), hex("#CCD8E2") },
+		Remove = { SlimeDecor = true, Fleur = true },
+		TreeScale = 1.2,
 	},
 	{
-		Id = 4, Name = "Zone4_CampDeLaHorde", Nom = "Le Camp de la Horde",
+		Id = 4, Name = "Zone4_Forges", Nom = "Les Forges",
 		Colors = {
-			Leaf = { hex("#64643C"), hex("#A09A50") }, Sand = { hex("#A07850"), hex("#B48A5A") }, Flower = { hex("#B41414"), hex("#8C3C3C") },
-			Water = { hex("#6E5E40"), hex("#9A8A64") }, Foam = { hex("#C8B890") }, Glow = { hex("#E07028") },
-		},
-		Light = hex("#FF8C28"),
-		Ground = { hex("#8A7A4A"), hex("#9C8A58"), hex("#7A6A40") },
-		Remove = { SlimeDecor = true },
-		TreeScale = 1,
-	},
-	{
-		Id = 5, Name = "Zone5_GrottesDeLave", Nom = "Les Grottes de Lave",
-		Colors = {
-			Leaf = { hex("#4A4040"), hex("#665A54") }, Water = { hex("#A8300E"), hex("#E0641E") }, Foam = { hex("#F09A3C") },
-			Sand = { hex("#5E5250"), hex("#746660") }, Stone = { hex("#3E3634"), hex("#6A5E5A") }, Ruin = { hex("#7E7470"), hex("#8E847E") },
-			Flower = { hex("#C8461E"), hex("#E0701E") }, Glow = { hex("#E07028") }, Wood = { hex("#3C2A22"), hex("#5E4232") },
+			Leaf = { hex("#4A4440"), hex("#665E56") }, Water = { hex("#C8461E"), hex("#F08C3C") }, Foam = { hex("#F5C542") },
+			Sand = { hex("#5A5048"), hex("#6E6258") }, Stone = { hex("#3E3A38"), hex("#6A625C") }, Ruin = { hex("#7E766E"), hex("#8E867E") },
+			Flower = { hex("#B4461E"), hex("#E07028") }, Glow = { hex("#F08C3C") }, Wood = { hex("#3C2A22"), hex("#5E4232") },
 		},
 		LavaWater = true,
 		Light = hex("#FF8C28"),
-		Ground = { hex("#4E4442"), hex("#5A4C48"), hex("#443A38") },
-		-- pas de végétation dans les grottes : les arbres deviennent des pointes de basalte (Replace)
+		Ground = { hex("#4E4642"), hex("#5A504A"), hex("#443C38") },
+		-- pas de végétation près des forges : les arbres deviennent des cheminées de fer (Replace)
 		Remove = { SlimeDecor = true, Buisson = true, Fleur = true },
 		Replace = { Arbre = true, Sapin = true },
+		ReplaceWith = "Chimney",
 		TreeScale = 1,
 	},
 	{
-		Id = 6, Name = "Zone6_BoisAncien", Nom = "Le Bois Ancien",
+		Id = 5, Name = "Zone5_Abysses", Nom = "Les Abysses",
 		Colors = {
-			Leaf = { hex("#24482A"), hex("#4A7A3A") }, Sand = { hex("#6A5A3A"), hex("#7C6A46") }, Flower = { hex("#64B4DC"), hex("#8CB4DC") },
-			Water = { hex("#2E6E7A"), hex("#5AA0AE") }, Stone = { hex("#4E5A4A"), hex("#7A8270") }, Ruin = { hex("#8A9078"), hex("#9EA48A") },
+			Leaf = { hex("#1E5A5A"), hex("#3C8C78") }, Water = { hex("#1E3C6E"), hex("#3C6EA0") }, Foam = { hex("#8CB4DC") },
+			Sand = { hex("#8C8064"), hex("#A0947A") }, Stone = { hex("#3C4A5A"), hex("#5E7082") }, Ruin = { hex("#6E8296"), hex("#8296AA") },
+			Flower = { hex("#C8644A"), hex("#E08C64") }, Wood = { hex("#4A3C32"), hex("#5E4E40") }, Glow = { hex("#64DCDC") },
 		},
-		Light = hex("#48E8E8"),
-		Ground = { hex("#2E4E2A"), hex("#3A5E32"), hex("#284426") },
+		Light = hex("#64DCDC"),
+		Ground = { hex("#5A6E7A"), hex("#4E6270"), hex("#465866") },
+		-- fond marin : les arbres deviennent des bouquets de corail (Replace)
+		Remove = { SlimeDecor = true, Fleur = true },
+		Replace = { Arbre = true, Sapin = true },
+		ReplaceWith = "Coral",
+		TreeScale = 1,
+	},
+	{
+		Id = 6, Name = "Zone6_IlesDuCiel", Nom = "Les Îles du Ciel",
+		Colors = {
+			Leaf = { hex("#6EA050"), hex("#94C46E") }, Water = { hex("#8CB4DC"), hex("#B4D2F0") }, Foam = { hex("#F0F6FA") },
+			Sand = { hex("#E6E0D2"), hex("#F4F0E6") }, Stone = { hex("#A0A8B4"), hex("#C8CED8") }, Ruin = { hex("#E0DCD0"), hex("#F0ECE2") },
+			Flower = { hex("#F5C542"), hex("#F5D778") }, Glow = { hex("#F5D778") },
+		},
+		Light = hex("#FFE08C"),
+		Ground = { hex("#A8D48C"), hex("#B8DC9C"), hex("#98C87C") },
+		-- au-dessus des nuages : les sapins deviennent de gros nuages posés (Replace), les arbres ronds restent
 		Remove = { SlimeDecor = true },
-		TreeScale = 1.8,
+		Replace = { Sapin = true },
+		ReplaceWith = "Cloud",
+		TreeScale = 1,
 	},
 }
 
@@ -238,6 +285,57 @@ local function spikes(parent: Instance, at: Vector3, color: Color3, material: En
 	end
 end
 
+-- Colonne de grès brisée (désert) : fût, bague, tronçon tombé à côté.
+local function pillar(parent: Instance, at: Vector3, color: Color3, scale: number?)
+	local k = scale or 1
+	local h = (3.2 + math.abs(at.X + at.Z) % 3) * k
+	piece(parent, "Colonne", Enum.PartType.Cylinder, Vector3.new(h, 1.5 * k, 1.5 * k), color, at + Vector3.new(0, h / 2, 0), FLAT)
+	piece(parent, "Bague", Enum.PartType.Cylinder, Vector3.new(0.4, 1.9 * k, 1.9 * k), color:Lerp(Color3.new(0, 0, 0), 0.12),
+		at + Vector3.new(0, h, 0), FLAT)
+	piece(parent, "Troncon", Enum.PartType.Cylinder, Vector3.new(1.6 * k, 1.4 * k, 1.4 * k), color,
+		at + Vector3.new(1.4 * k, 0.7 * k, 0.8 * k), CFrame.Angles(0, 0.6, 0))
+end
+
+-- Cheminée de forge : fût de fer cerclé, bouche rougeoyante.
+local function chimney(parent: Instance, at: Vector3, iron: Color3, ember: Color3, scale: number?)
+	local k = scale or 1
+	local h = 5 * k
+	piece(parent, "Cheminee", Enum.PartType.Cylinder, Vector3.new(h, 1.6 * k, 1.6 * k), iron, at + Vector3.new(0, h / 2, 0), FLAT)
+	piece(parent, "Cerclage", Enum.PartType.Cylinder, Vector3.new(0.35, 1.9 * k, 1.9 * k), iron:Lerp(Color3.new(0, 0, 0), 0.25),
+		at + Vector3.new(0, h * 0.4, 0), FLAT)
+	piece(parent, "Braise", Enum.PartType.Cylinder, Vector3.new(0.2, 1.2 * k, 1.2 * k), ember, at + Vector3.new(0, h + 0.05, 0), FLAT,
+		Enum.Material.Neon)
+end
+
+-- Bouquet de corail : branches arrondies inclinées.
+local function coral(parent: Instance, at: Vector3, color: Color3, scale: number?)
+	local k = scale or 1
+	for i = 0, 4 do
+		local h = (1.6 + (i % 3) * 0.8) * k
+		local angle = i * 1.25
+		local branch = piece(parent, "Corail", Enum.PartType.Block, Vector3.new(0.6 * k, h, 0.6 * k), color,
+			at + Vector3.new(math.cos(angle) * 0.6 * k, h / 2 - 0.1, math.sin(angle) * 0.6 * k),
+			CFrame.Angles(math.cos(angle) * 0.35, 0, math.sin(angle) * 0.35))
+		local mesh = Instance.new("SpecialMesh")
+		mesh.MeshType = Enum.MeshType.Sphere
+		mesh.Parent = branch
+	end
+end
+
+-- Nuage posé (îles du ciel) : boules aplaties serrées, au ras du sol (rien ne flotte).
+local function cloud(parent: Instance, at: Vector3, color: Color3, scale: number?)
+	local k = scale or 1
+	for i = 0, 3 do
+		local d = (2.6 - (i % 2) * 0.8) * k
+		local puff = piece(parent, "Nuage", Enum.PartType.Ball, Vector3.one * d, color,
+			at + Vector3.new((i - 1.5) * 1.1 * k, d * 0.3, (i % 2) * 0.7 * k))
+		local mesh = Instance.new("SpecialMesh")
+		mesh.MeshType = Enum.MeshType.Sphere
+		mesh.Scale = Vector3.new(1, 0.6, 1)
+		mesh.Parent = puff
+	end
+end
+
 local function cloneProp(parent: Instance, source: Instance?, at: Vector3, scale: number, turn: number)
 	if not source or not source:IsA("Model") then return end
 	local copy = source:Clone()
@@ -271,40 +369,39 @@ local function props(parent: Instance, base: Instance, id: number)
 		for _, p in list do table.insert(all, p) end
 	end
 	if id == 2 then
-		-- Mare aux Slimes : mares, roseaux, champignons
+		-- Désert des Ruines : colonnes brisées, dunes de grès, petites oasis
 		for index, p in all do
-			if index % 3 == 1 then pool(parent, p, 4.5, hex("#4E9C8C"), hex("#7E7064"))
-			elseif index % 3 == 2 then reeds(parent, p, hex("#5E7A3A"), hex("#6C442A"))
-			else mushroom(parent, p, 2.2, hex("#C8A0DC"), hex("#ECE0C8")) end
+			if index % 3 == 1 then pillar(parent, p, hex("#C8A87E"))
+			elseif index % 3 == 2 then spikes(parent, p, hex("#D2B078"), nil, 1.4)
+			else pool(parent, p, 3.5, hex("#3E8C8C"), hex("#B4946A")) end
 		end
 	elseif id == 3 then
-		-- Forêt des Tréants : arbres serrés, champignons à la lisière
+		-- Terres Gelées : sapins enneigés, cristaux de glace, mares gelées
 		for index, p in all do
-			if index % 2 == 1 then cloneProp(parent, tree, p, 1, index) else cloneProp(parent, pine, p, 0.9, index) end
-		end
-		for index, p in SPOTS.Left do
-			mushroom(parent, p + Vector3.new(3, 0, -2.5), 1.4, hex("#B41414"), hex("#ECE0C8"))
+			if index % 3 == 1 then cloneProp(parent, pine, p, 1, index)
+			elseif index % 3 == 2 then spikes(parent, p, hex("#8CE0FF"), Enum.Material.Ice, 1.2)
+			else pool(parent, p, 4, hex("#B4D2EB"), hex("#DCE6F0"), Enum.Material.Ice) end
 		end
 	elseif id == 4 then
-		-- Camp de la Horde : tentes, palissades, tonneaux
-		local tent = camp and camp:FindFirstChild("TenteGobeline")
-		local fence = camp and camp:FindFirstChild("Palissade")
+		-- Forges : cheminées, bassins de métal en fusion, rochers
 		for index, p in all do
-			if index % 3 == 1 then cloneProp(parent, tent, p, 0.8, index * 0.9)
-			elseif index % 3 == 2 then cloneProp(parent, fence, p, 0.8, index * 1.7)
-			else cloneProp(parent, rock, p, 1.2, index) end
+			if index % 3 == 1 then chimney(parent, p, hex("#4A4440"), hex("#F08C3C"))
+			elseif index % 3 == 2 then pool(parent, p, 3.5, hex("#E0641E"), hex("#3E3A38"))
+			else cloneProp(parent, rock, p, 1.1, index) end
 		end
 	elseif id == 5 then
-		-- Grottes de Lave : mares de lave, pointes de basalte, cristaux de braise
+		-- Abysses : coraux, algues, rochers
 		for index, p in all do
-			if index % 3 == 1 then pool(parent, p, 4, hex("#C8461E"), hex("#3E3634"))
-			elseif index % 3 == 2 then spikes(parent, p, hex("#5A4C48"), nil, 1.3)
-			else spikes(parent, p, hex("#E07028")) end
+			if index % 3 == 1 then coral(parent, p, hex("#C8644A"))
+			elseif index % 3 == 2 then reeds(parent, p, hex("#1E5A5A"), hex("#3C8C78"))
+			else cloneProp(parent, rock, p, 1.1, index) end
 		end
 	elseif id == 6 then
-		-- Bois Ancien : très grands arbres, champignons lumineux
+		-- Îles du Ciel : nuages posés, colonnes claires, arbres
 		for index, p in all do
-			if index % 2 == 1 then cloneProp(parent, tree, p, 1.1, index) else mushroom(parent, p, 2.6, hex("#64B4DC"), hex("#DCD2B4"), true) end
+			if index % 3 == 1 then cloud(parent, p, hex("#F0F6FA"), 1.6)
+			elseif index % 3 == 2 then pillar(parent, p, hex("#E0DCD0"), 0.9)
+			else cloneProp(parent, tree, p, 0.9, index) end
 		end
 	end
 end
@@ -355,6 +452,8 @@ for _, theme in THEMES do
 			if ramp then d.Color = shade(d.Color, fam, ramp) end
 			if theme.LavaWater and (fam == "Water" or fam == "Foam") then
 				d.Material = Enum.Material.SmoothPlastic
+			elseif theme.IceWater and fam == "Water" then
+				d.Material = Enum.Material.Ice
 			end
 		elseif d:IsA("PointLight") then
 			d.Color = theme.Light
@@ -382,11 +481,30 @@ for _, theme in THEMES do
 	extra.Name, extra.Parent = "DecorZone", model
 	props(extra, model, theme.Id)
 	for index, at in replaced do
-		spikes(extra, at, if index % 4 == 0 then hex("#E07028") else hex("#5A4C48"), if index % 4 == 0 then Enum.Material.Neon else nil, 1.8)
+		if theme.ReplaceWith == "Pillar" then
+			pillar(extra, at, hex("#C8A87E"), 1.5)
+		elseif theme.ReplaceWith == "Chimney" then
+			chimney(extra, at, hex("#4A4440"), hex("#F08C3C"), 1.4)
+		elseif theme.ReplaceWith == "Cloud" then
+			cloud(extra, at, hex("#F0F6FA"), 2.2)
+		elseif theme.ReplaceWith == "Coral" then
+			coral(extra, at, if index % 2 == 0 then hex("#C8644A") else hex("#E08C64"), 1.8)
+		else
+			spikes(extra, at, if index % 4 == 0 then hex("#E07028") else hex("#5A4C48"), if index % 4 == 0 then Enum.Material.Neon else nil, 1.8)
+		end
 	end
 	model.WorldPivot = PIVOT
-	local previous = templates:FindFirstChild(theme.Name)
-	if previous then previous:Destroy() end
+	for _, previous in templates:GetChildren() do
+		if previous.Name == theme.Name or previous:GetAttribute("ZoneId") == theme.Id then previous:Destroy() end
+	end
+	-- copies d'un ancien décor de cette zone posées dans une arène ou rangées (ServerStorage.ZonesRangees_<plot>)
+	for _, holder in { workspace, ServerStorage } do
+		for _, d in holder:GetDescendants() do
+			if d:IsA("Model") and d:GetAttribute("ZoneId") == theme.Id and not d:IsDescendantOf(templates) then
+				d:Destroy()
+			end
+		end
+	end
 	model.Parent = templates
 	task.wait() -- une zone par lot ; laisser Studio répondre entre les copies
 end

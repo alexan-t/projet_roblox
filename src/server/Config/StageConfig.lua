@@ -16,8 +16,9 @@
 -- (chaque profil de combat ; aucun héros n'est garanti après l'Écuyer). PV ennemis totaux : 280, 340,
 -- 480, 520, 650.
 --
--- Zones 2 à 6 (docs/ZONES.md § Zones 2 à 6) : uniquement des monstres et boss VALIDÉS (docs/ART_DIRECTION.md
--- § 1), aucun inventé. Trois boss validés pour six zones : chacun revient une fois, plus fort.
+-- Zones 2 à 6 (docs/ZONES.md § Zones 2 à 6) : la faune des fiches automation/briefs (désert, glace, forges,
+-- abysses, ciel), cinq monstres par zone et, en X-5, le monstre fort de fin de zone comme boss. Chaque monstre
+-- reprend les stats de l'archétype qu'il remplace (CombatConfig) : mêmes totaux de PV et de dégâts par vague.
 -- Simulations (tests #13) : chaque zone se gagne avec l'équipe et le niveau visés dans docs/ZONES.md, et
 -- son boss résiste à la même équipe au niveau 1. VALEURS ALPHA PROVISOIRES, pas un balancing final.
 
@@ -57,173 +58,173 @@ local StageConfig = {
 				},
 			},
 		},
-		-- Zone 2 — La Mare aux Slimes : slimes des mares, des ronces et des champignons ; boss Slime King.
+		-- Zone 2 — Le Désert des Ruines : Vase des Sables, Chacal Parchemin, Scarabée Forge-Soleil, Mange-Dune, Gardien sans Visage ; boss Colosse Enseveli.
 		[2] = {
 			Difficulty = { MaxHealth = 2.5, AttackDamage = 2.5 },
 			Stages = {
 				[1] = {
 					Waves = {
-						{ Enemies = { { EnemyId = "Slime", Count = 2 }, { EnemyId = "SlimePlante", Count = 2 } } },
+						{ Enemies = { { EnemyId = "VaseDesSables", Count = 1 }, { EnemyId = "ChacalParchemin", Count = 1 }, { EnemyId = "ScarabeeForgeSoleil", Count = 1 }, { EnemyId = "MangeDune", Count = 1 } } },
 					},
 				},
 				[2] = {
 					Waves = {
-						{ Enemies = { { EnemyId = "SlimePlante", Count = 2 }, { EnemyId = "SlimeChampignon", Count = 2 }, { EnemyId = "Slime", Count = 1 } } },
+						{ Enemies = { { EnemyId = "ScarabeeForgeSoleil", Count = 1 }, { EnemyId = "MangeDune", Count = 1 }, { EnemyId = "GardienSansVisage", Count = 2 }, { EnemyId = "VaseDesSables", Count = 1 } } },
 					},
 				},
 				[3] = {
 					Waves = {
-						{ Enemies = { { EnemyId = "Slime", Count = 2 }, { EnemyId = "SlimeChampignon", Count = 2 } } },
-						{ Enemies = { { EnemyId = "SlimePlante", Count = 3 } } },
+						{ Enemies = { { EnemyId = "ChacalParchemin", Count = 1 }, { EnemyId = "VaseDesSables", Count = 1 }, { EnemyId = "GardienSansVisage", Count = 2 } } },
+						{ Enemies = { { EnemyId = "ScarabeeForgeSoleil", Count = 2 }, { EnemyId = "MangeDune", Count = 1 } } },
 					},
 				},
 				[4] = {
 					Waves = {
-						{ Enemies = { { EnemyId = "SlimePlante", Count = 2 }, { EnemyId = "SlimeChampignon", Count = 2 } } },
-						{ Enemies = { { EnemyId = "SlimeChampignon", Count = 2 }, { EnemyId = "Slime", Count = 2 } } },
+						{ Enemies = { { EnemyId = "ScarabeeForgeSoleil", Count = 1 }, { EnemyId = "MangeDune", Count = 1 }, { EnemyId = "GardienSansVisage", Count = 2 } } },
+						{ Enemies = { { EnemyId = "GardienSansVisage", Count = 2 }, { EnemyId = "ChacalParchemin", Count = 1 }, { EnemyId = "VaseDesSables", Count = 1 } } },
 					},
 				},
 				[5] = {
 					Waves = {
-						{ Enemies = { { EnemyId = "Slime", Count = 2 }, { EnemyId = "SlimePlante", Count = 1 } } },
+						{ Enemies = { { EnemyId = "ChacalParchemin", Count = 1 }, { EnemyId = "VaseDesSables", Count = 1 }, { EnemyId = "ScarabeeForgeSoleil", Count = 1 } } },
 					},
-					MiniBoss = { EnemyId = "KingSlime" },
+					MiniBoss = { EnemyId = "ColosseEnseveli" },
 				},
 			},
 		},
-		-- Zone 3 — La Forêt des Tréants : tréants masqués, slimes des ronces et gobelins ; boss King Tréant.
+		-- Zone 3 — Les Terres Gelées : Givrelot, Croc de Glacier, Armure Gelée, Bonhomme Royal, Mammouth Cristallin ; boss Roi sans Été.
 		[3] = {
 			Difficulty = { MaxHealth = 2.5, AttackDamage = 2.5 },
 			Stages = {
 				[1] = {
 					Waves = {
-						{ Enemies = { { EnemyId = "SlimePlante", Count = 2 }, { EnemyId = "Treant", Count = 1 } } },
+						{ Enemies = { { EnemyId = "Givrelot", Count = 1 }, { EnemyId = "CrocDeGlacier", Count = 1 }, { EnemyId = "MammouthCristallin", Count = 1 } } },
 					},
 				},
 				[2] = {
 					Waves = {
-						{ Enemies = { { EnemyId = "SlimePlante", Count = 2 }, { EnemyId = "Gobelin", Count = 2 }, { EnemyId = "Treant", Count = 1 } } },
+						{ Enemies = { { EnemyId = "Givrelot", Count = 1 }, { EnemyId = "CrocDeGlacier", Count = 1 }, { EnemyId = "ArmureGelee", Count = 1 }, { EnemyId = "BonhommeRoyal", Count = 1 }, { EnemyId = "MammouthCristallin", Count = 1 } } },
 					},
 				},
 				[3] = {
 					Waves = {
-						{ Enemies = { { EnemyId = "SlimePlante", Count = 3 }, { EnemyId = "Gobelin", Count = 1 } } },
-						{ Enemies = { { EnemyId = "Treant", Count = 2 } } },
+						{ Enemies = { { EnemyId = "Givrelot", Count = 2 }, { EnemyId = "CrocDeGlacier", Count = 1 }, { EnemyId = "ArmureGelee", Count = 1 } } },
+						{ Enemies = { { EnemyId = "MammouthCristallin", Count = 2 } } },
 					},
 				},
 				[4] = {
 					Waves = {
-						{ Enemies = { { EnemyId = "Gobelin", Count = 2 }, { EnemyId = "Treant", Count = 1 } } },
-						{ Enemies = { { EnemyId = "Treant", Count = 2 }, { EnemyId = "SlimePlante", Count = 1 } } },
+						{ Enemies = { { EnemyId = "BonhommeRoyal", Count = 1 }, { EnemyId = "ArmureGelee", Count = 1 }, { EnemyId = "MammouthCristallin", Count = 1 } } },
+						{ Enemies = { { EnemyId = "MammouthCristallin", Count = 2 }, { EnemyId = "Givrelot", Count = 1 } } },
 					},
 				},
 				[5] = {
 					Waves = {
-						{ Enemies = { { EnemyId = "Treant", Count = 1 }, { EnemyId = "SlimePlante", Count = 2 } } },
+						{ Enemies = { { EnemyId = "MammouthCristallin", Count = 1 }, { EnemyId = "CrocDeGlacier", Count = 1 }, { EnemyId = "Givrelot", Count = 1 } } },
 					},
-					MiniBoss = { EnemyId = "KingTreant" },
+					MiniBoss = { EnemyId = "RoiSansEte" },
 				},
 			},
 		},
-		-- Zone 4 — Le Camp de la Horde : gobelins à lance et à dague ; le Roi Orc revient, plus fort.
+		-- Zone 4 — Les Forges : Chevalier Riveté, Golem Cloche, Fourneau Ambulant, Martelet, Chaîné ; boss Maître des Forges.
 		[4] = {
 			Difficulty = { MaxHealth = 2.5, AttackDamage = 2.2 },
 			Stages = {
 				[1] = {
 					Waves = {
-						{ Enemies = { { EnemyId = "Gobelin", Count = 2 }, { EnemyId = "GobelinDague", Count = 2 } } },
+						{ Enemies = { { EnemyId = "ChevalierRivete", Count = 1 }, { EnemyId = "GolemCloche", Count = 1 }, { EnemyId = "Martelet", Count = 1 }, { EnemyId = "Chaine", Count = 1 } } },
 					},
 				},
 				[2] = {
 					Waves = {
-						{ Enemies = { { EnemyId = "Gobelin", Count = 3 }, { EnemyId = "GobelinDague", Count = 2 } } },
+						{ Enemies = { { EnemyId = "FourneauAmbulant", Count = 1 }, { EnemyId = "ChevalierRivete", Count = 1 }, { EnemyId = "GolemCloche", Count = 1 }, { EnemyId = "Martelet", Count = 1 }, { EnemyId = "Chaine", Count = 1 } } },
 					},
 				},
 				[3] = {
 					Waves = {
-						{ Enemies = { { EnemyId = "Gobelin", Count = 2 }, { EnemyId = "GobelinDague", Count = 2 } } },
-						{ Enemies = { { EnemyId = "GobelinDague", Count = 3 } } },
+						{ Enemies = { { EnemyId = "FourneauAmbulant", Count = 1 }, { EnemyId = "ChevalierRivete", Count = 1 }, { EnemyId = "Martelet", Count = 1 }, { EnemyId = "Chaine", Count = 1 } } },
+						{ Enemies = { { EnemyId = "Martelet", Count = 2 }, { EnemyId = "Chaine", Count = 1 } } },
 					},
 				},
 				[4] = {
 					Waves = {
-						{ Enemies = { { EnemyId = "Gobelin", Count = 3 }, { EnemyId = "GobelinDague", Count = 1 } } },
-						{ Enemies = { { EnemyId = "Gobelin", Count = 2 }, { EnemyId = "GobelinDague", Count = 2 } } },
+						{ Enemies = { { EnemyId = "GolemCloche", Count = 1 }, { EnemyId = "FourneauAmbulant", Count = 1 }, { EnemyId = "ChevalierRivete", Count = 1 }, { EnemyId = "Martelet", Count = 1 } } },
+						{ Enemies = { { EnemyId = "GolemCloche", Count = 1 }, { EnemyId = "FourneauAmbulant", Count = 1 }, { EnemyId = "Chaine", Count = 1 }, { EnemyId = "Martelet", Count = 1 } } },
 					},
 				},
 				[5] = {
 					Waves = {
-						{ Enemies = { { EnemyId = "Gobelin", Count = 2 }, { EnemyId = "GobelinDague", Count = 2 } } },
+						{ Enemies = { { EnemyId = "ChevalierRivete", Count = 1 }, { EnemyId = "GolemCloche", Count = 1 }, { EnemyId = "Chaine", Count = 1 }, { EnemyId = "Martelet", Count = 1 } } },
 					},
-					MiniBoss = { EnemyId = "Boss" },
+					MiniBoss = { EnemyId = "MaitreDesForges" },
 				},
 			},
 		},
-		-- Zone 5 — Les Grottes de Lave : slimes de lave et gobelins à dague ; le Slime King revient, plus fort.
+		-- Zone 5 — Les Abysses : Méduse Couronnée, Murène Miroir, Coffre Bernard, Chevalier Noyé, Crabe Cathédrale ; boss Léviathan.
 		[5] = {
 			Difficulty = { MaxHealth = 3.3, AttackDamage = 2.85 },
 			Stages = {
 				[1] = {
 					Waves = {
-						{ Enemies = { { EnemyId = "SlimeLave", Count = 2 }, { EnemyId = "GobelinDague", Count = 2 } } },
+						{ Enemies = { { EnemyId = "MeduseCouronnee", Count = 1 }, { EnemyId = "MureneMiroir", Count = 1 }, { EnemyId = "ChevalierNoye", Count = 1 }, { EnemyId = "CrabeCathedrale", Count = 1 } } },
 					},
 				},
 				[2] = {
 					Waves = {
-						{ Enemies = { { EnemyId = "SlimeLave", Count = 3 }, { EnemyId = "GobelinDague", Count = 2 } } },
+						{ Enemies = { { EnemyId = "CoffreBernard", Count = 1 }, { EnemyId = "MeduseCouronnee", Count = 1 }, { EnemyId = "MureneMiroir", Count = 1 }, { EnemyId = "ChevalierNoye", Count = 1 }, { EnemyId = "CrabeCathedrale", Count = 1 } } },
 					},
 				},
 				[3] = {
 					Waves = {
-						{ Enemies = { { EnemyId = "SlimeLave", Count = 2 }, { EnemyId = "GobelinDague", Count = 2 } } },
-						{ Enemies = { { EnemyId = "SlimeLave", Count = 3 } } },
+						{ Enemies = { { EnemyId = "CoffreBernard", Count = 1 }, { EnemyId = "MeduseCouronnee", Count = 1 }, { EnemyId = "ChevalierNoye", Count = 1 }, { EnemyId = "CrabeCathedrale", Count = 1 } } },
+						{ Enemies = { { EnemyId = "MureneMiroir", Count = 1 }, { EnemyId = "CoffreBernard", Count = 1 }, { EnemyId = "MeduseCouronnee", Count = 1 } } },
 					},
 				},
 				[4] = {
 					Waves = {
-						{ Enemies = { { EnemyId = "SlimeLave", Count = 3 }, { EnemyId = "GobelinDague", Count = 1 } } },
-						{ Enemies = { { EnemyId = "GobelinDague", Count = 3 }, { EnemyId = "SlimeLave", Count = 1 } } },
+						{ Enemies = { { EnemyId = "MureneMiroir", Count = 1 }, { EnemyId = "CoffreBernard", Count = 1 }, { EnemyId = "MeduseCouronnee", Count = 1 }, { EnemyId = "ChevalierNoye", Count = 1 } } },
+						{ Enemies = { { EnemyId = "CrabeCathedrale", Count = 2 }, { EnemyId = "ChevalierNoye", Count = 1 }, { EnemyId = "MureneMiroir", Count = 1 } } },
 					},
 				},
 				[5] = {
 					Waves = {
-						{ Enemies = { { EnemyId = "SlimeLave", Count = 2 }, { EnemyId = "GobelinDague", Count = 1 } } },
+						{ Enemies = { { EnemyId = "CoffreBernard", Count = 1 }, { EnemyId = "MeduseCouronnee", Count = 1 }, { EnemyId = "CrabeCathedrale", Count = 1 } } },
 					},
-					MiniBoss = { EnemyId = "KingSlime" },
+					MiniBoss = { EnemyId = "Leviathan" },
 				},
 			},
 		},
-		-- Zone 6 — Le Bois Ancien : vieux tréants, tréants masqués et slimes champignons ; le King Tréant revient.
+		-- Zone 6 — Les Îles du Ciel : Gargouille Ailée, Mini Colosse Céleste, Mouton Nuage, Poisson du Ciel, Bec Tonnerre ; boss Gardien Céleste.
 		[6] = {
 			Difficulty = { MaxHealth = 3.1, AttackDamage = 3.1 },
 			Stages = {
 				[1] = {
 					Waves = {
-						{ Enemies = { { EnemyId = "Treant", Count = 1 }, { EnemyId = "SlimeChampignon", Count = 2 } } },
+						{ Enemies = { { EnemyId = "GargouilleAilee", Count = 1 }, { EnemyId = "MoutonNuage", Count = 1 }, { EnemyId = "PoissonDuCiel", Count = 1 } } },
 					},
 				},
 				[2] = {
 					Waves = {
-						{ Enemies = { { EnemyId = "Treant", Count = 2 }, { EnemyId = "SlimeChampignon", Count = 2 } } },
+						{ Enemies = { { EnemyId = "MiniColosseCeleste", Count = 1 }, { EnemyId = "GargouilleAilee", Count = 1 }, { EnemyId = "MoutonNuage", Count = 1 }, { EnemyId = "PoissonDuCiel", Count = 1 } } },
 					},
 				},
 				[3] = {
 					Waves = {
-						{ Enemies = { { EnemyId = "Treant", Count = 1 }, { EnemyId = "SlimeChampignon", Count = 3 } } },
-						{ Enemies = { { EnemyId = "TreantArbre", Count = 1 }, { EnemyId = "Treant", Count = 1 } } },
+						{ Enemies = { { EnemyId = "MiniColosseCeleste", Count = 1 }, { EnemyId = "MoutonNuage", Count = 2 }, { EnemyId = "PoissonDuCiel", Count = 1 } } },
+						{ Enemies = { { EnemyId = "BecTonnerre", Count = 1 }, { EnemyId = "GargouilleAilee", Count = 1 } } },
 					},
 				},
 				[4] = {
 					Waves = {
-						{ Enemies = { { EnemyId = "TreantArbre", Count = 1 }, { EnemyId = "SlimeChampignon", Count = 2 } } },
-						{ Enemies = { { EnemyId = "TreantArbre", Count = 1 }, { EnemyId = "Treant", Count = 2 } } },
+						{ Enemies = { { EnemyId = "BecTonnerre", Count = 1 }, { EnemyId = "MoutonNuage", Count = 1 }, { EnemyId = "PoissonDuCiel", Count = 1 } } },
+						{ Enemies = { { EnemyId = "BecTonnerre", Count = 1 }, { EnemyId = "MiniColosseCeleste", Count = 1 }, { EnemyId = "GargouilleAilee", Count = 1 } } },
 					},
 				},
 				[5] = {
 					Waves = {
-						{ Enemies = { { EnemyId = "TreantArbre", Count = 1 }, { EnemyId = "SlimeChampignon", Count = 2 } } },
+						{ Enemies = { { EnemyId = "BecTonnerre", Count = 1 }, { EnemyId = "MoutonNuage", Count = 1 }, { EnemyId = "PoissonDuCiel", Count = 1 } } },
 					},
-					MiniBoss = { EnemyId = "KingTreant" },
+					MiniBoss = { EnemyId = "GardienCeleste" },
 				},
 			},
 		},

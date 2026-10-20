@@ -202,21 +202,31 @@ vagues physiques, mini-boss) ne pourra être testé qu'avec #8.
 
 Le parcours reste celui de WORLD.md : le joueur choisit une expédition depuis **son arène**,
 le décor change sur place. Les plots de démonstration de `Workspace.PlotsZones` ne sont pas
-les points d'accès au gameplay. Les documents antérieurs ne fixaient pas cinq biomes nommés :
-les déclinaisons ci-dessous réutilisent les monstres **validés** de ART_DIRECTION.md § 1.
-Aucun nouveau monstre, aucune rareté de monstre, aucun nouveau système de butin.
+les points d'accès au gameplay.
 
-| Zone | Ambiance | Ennemis | Boss X-5 | Niveau cible de simulation |
+**Version B (octobre 2026)** : chaque zone a sa propre faune, celle des fiches de production des
+monstres (`automation/briefs`, socles Monstres #23 à #52 du Bestiaire). Cinq monstres communs par zone ;
+en X-5, le **monstre fort de fin de zone** de la fiche sert de boss. Les trois boss validés (Roi Orc,
+Slime King, King Tréant) ne servent plus qu'en Zone 1 (Roi Orc) et restent dans `CombatConfig`.
+Aucune rareté de monstre, aucun nouveau système de butin.
+
+| Zone | Biome | Ennemis (X-1 à X-5) | Boss X-5 | Niveau cible de simulation |
 | --- | --- | --- | --- | --- |
-| 2 · La Mare aux Slimes | Mares, roseaux, champignons | Slime, SlimePlante, SlimeChampignon | KingSlime | 4 |
-| 3 · La Forêt des Tréants | Sous-bois dense, champignons | SlimePlante, Gobelin, Treant | KingTreant | 8 |
-| 4 · Le Camp de la Horde | Tentes, palissades, terre ocre | Gobelin, GobelinDague | Boss (Roi Orc) | 12 |
-| 5 · Les Grottes de Lave | Roche sombre, coulées orange, stalagmites arrondies | SlimeLave, GobelinDague | KingSlime | 16 |
-| 6 · Le Bois Ancien | Grands arbres, mousse, champignons cyan | Treant, TreantArbre, SlimeChampignon | KingTreant | 20 |
+| 2 · Le Désert des Ruines | Dunes, grès, colonnes brisées, oasis | VaseDesSables, ChacalParchemin, ScarabeeForgeSoleil, MangeDune, GardienSansVisage | ColosseEnseveli | 4 |
+| 3 · Les Terres Gelées | Neige, sapins givrés, cristaux et mares de glace | Givrelot, CrocDeGlacier, ArmureGelee, BonhommeRoyal, MammouthCristallin | RoiSansEte | 8 |
+| 4 · Les Forges | Roche noire, cheminées de fer, métal en fusion | ChevalierRivete, GolemCloche, FourneauAmbulant, Martelet, Chaine | MaitreDesForges | 12 |
+| 5 · Les Abysses | Fond marin bleu, coraux, algues, épaves | MeduseCouronnee, MureneMiroir, CoffreBernard, ChevalierNoye, CrabeCathedrale | Leviathan | 16 |
+| 6 · Les Îles du Ciel | Prairie claire, falaises blanches, nuages posés | GargouilleAilee, MiniColosseCeleste, MoutonNuage, PoissonDuCiel, BecTonnerre | GardienCeleste | 20 |
+
+**Équilibrage conservé** : chaque nouveau monstre reprend les stats de l'archétype qu'il remplace
+dans les vagues de la version précédente (ex. `VaseDesSables` = `Slime`, `ColosseEnseveli` = `KingSlime`,
+`MaitreDesForges` = `Boss`). Les vagues gardent les mêmes totaux de PV et de dégâts ; la simulation #13
+(`CombatEngine.spec`) passe sans retouche des niveaux cibles. L'archétype de chaque monstre est noté
+à côté de ses stats dans `CombatConfig` (« comme Slime »…). Valeurs Alpha provisoires, pas un balancing final.
 
 Chaque zone comprend cinq stages. X-1 est débloqué par le First Clear de (X-1)-5 ;
-X-2 à X-5 suivent les First Clears de leur prédécesseur. Les trois boss validés reviennent
-une seconde fois, renforcés par la difficulté de zone. Après une victoire, la sélection peut
+X-2 à X-5 suivent les First Clears de leur prédécesseur. Chaque boss X-5 est le monstre fort
+de la faune de sa zone, renforcé par la difficulté de zone. Après une victoire, la sélection peut
 passer au premier stage de la zone suivante ; après 6-5, elle reste sur 6-5.
 Les flèches du titre d'Expédition permettent de consulter les zones voisines, y compris
 verrouillées. Les onglets Élite ne sont proposés que pour une zone réellement configurée :
@@ -254,7 +264,7 @@ Le serveur et le client lisent les repères du décor courant ; les autres plots
 Dans le sandbox « test 3 », exécuter les outils d'assets en mode Edit via MCP ou la barre de
 commande, **sans créer de Script ou modifier de Source** :
 
-1. `tools/studio-zones-assets.luau` copie les huit monstres validés supplémentaires vers
+1. `tools/studio-zones-assets.luau` copie les monstres de chaque zone (30 pour la version B) vers
    `ReplicatedStorage.Assets.Combat` et construit les cinq décors depuis la Zone 1 de Plot_1.
    Si les modèles de base manquent, il copie Slime_Eau, GobLanceT_A et RoiOrc ; il conserve
    les versions de combat existantes. Les copies supplémentaires sont statiques et utilisent
