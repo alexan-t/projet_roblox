@@ -74,3 +74,28 @@ archivée (`EcuyerDuRempart_ApercuAttente_avant_QA`).
 Les 59 autres héros n'ont ni squelette ni animation : en combat, leur vrai modèle est posé
 statique (voir `HEROES.md`). Leur contrôle « pendant les animations » sera à faire quand ils
 seront articulés (`SKELETON.md`).
+
+## Contre-contrôle
+
+Deux tests gardent les corrections en place :
+
+- `tools/studio-check-heroes.luau` (mode Edit, lecture seule, renvoie le nombre de problèmes) :
+  poses de l'épée et marqueur Impact des cinq séquences de l'Écuyer (jeu, aperçu Attente,
+  `RBX_ANIMSAVES`), prise de l'arme de #01, #25, #47 et #58, cristal en sphère de #25, copies
+  de jeu identiques au Bestiaire (positions par rapport au buste : les pivots diffèrent). Les
+  brouillons #10 et #11 sont signalés « CONNU » sans compter.
+- `tests/heroes-weapons.test.mjs` (`node --test`) : le script Studio attend les mêmes poses
+  qu'AnimationKit, le même impact que `UltimateEffectController`, et reste en lecture seule.
+
+Résultats du 20 octobre 2026 (place test 3) :
+
+| Contrôle | Résultat |
+| --- | --- |
+| Séquences de l'Écuyer : 5 séquences, 26 clés, 5 marqueurs Impact | PASS |
+| Prise : épée 0 stud, bâton #25, quenouille #47, sceptre #58 dans le bras | PASS |
+| Prise : bouclier de l'Écuyer, poing plaqué à la poignée (écart 0,14 stud, toléré 0,2) | PASS, vu en capture de profil |
+| Cristal de #25 en sphère (Bestiaire et copie de jeu) | PASS |
+| 22 copies de jeu identiques au Bestiaire | PASS |
+| Captures de #01 (face, profil), #25 (face), #47 et #58 après corrections | PASS |
+| Script Studio : 0 problème ; brouillons #10 (5/8 pièces sans texture) et #11 (7/8) | CONNU (FIX) |
+| `node --test tests/heroes-weapons.test.mjs` : 7 tests | PASS (7/7) |
