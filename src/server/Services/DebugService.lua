@@ -8,6 +8,7 @@
 --   game.ServerStorage.DebugData:Invoke(player, "SetKingdomState", 2)       -> résultat de KingdomService:Refresh
 --   game.ServerStorage.DebugData:Invoke(player, "AddHero", "tireuse_des_faubourgs") -> identifiant (héros activé de HeroConfig, sinon nil)
 --   game.ServerStorage.DebugData:Invoke(player, "RemoveHero", id)           -> true si retiré (HeroService)
+--   game.ServerStorage.DebugData:Invoke(player, "SetHeroLevel", id, 20)      -> niveau de test (Studio uniquement)
 --   game.ServerStorage.DebugData:Invoke(player, "RefreshKingdom")           -> résultat de KingdomService:Refresh
 --   game.ServerStorage.DebugData:Invoke(player, "GetActiveQuest")           -> QuestService:GetActiveQuest
 --   game.ServerStorage.DebugData:Invoke(player, "QuestEvent", "StageCompleted", { Zone = 1, Stage = 1 })
@@ -29,6 +30,7 @@ local HeroService = require(script.Parent.HeroService)
 local KingdomService = require(script.Parent.KingdomService)
 local QuestService = require(script.Parent.QuestService)
 local ZoneService = require(script.Parent.ZoneService)
+local HeroProgressionConfig = require(script.Parent.Parent.Config.HeroProgressionConfig)
 
 local DebugService = {}
 
@@ -61,6 +63,15 @@ local function handle(player: Player, command: string, ...: any): any
 	elseif command == "RemoveHero" then
 		local id = ...
 		return HeroService:RemoveHero(player, id)
+	elseif command == "SetHeroLevel" then
+		local id, level = ...
+		local hero = if typeof(id) == "string" then data.Heroes[id] else nil
+		if not hero or typeof(level) ~= "number" or level ~= math.floor(level)
+			or level < 1 or level > HeroProgressionConfig.MaxLevel then
+			return "Héros ou niveau invalide"
+		end
+		hero.Level, hero.XP = level, 0
+		return level
 	elseif command == "RefreshKingdom" then
 		return KingdomService:Refresh(player)
 	elseif command == "GetActiveQuest" then

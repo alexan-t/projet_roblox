@@ -2,7 +2,7 @@
 -- Hors du dossier Services : jamais exécuté par le bootstrap.
 -- Teste le vrai CombatEngine (pur) avec la vraie CombatConfig et la vraie StageConfig.
 
-return function(CombatEngine: any, combatConfig: any, stageConfig: any)
+return function(CombatEngine: any, combatConfig: any, stageConfig: any, Difficulty: any)
 	local passed, failed = 0, 0
 	local function test(name: string, run: () -> ())
 		local ok, err = pcall(run)
@@ -573,6 +573,83 @@ return function(CombatEngine: any, combatConfig: any, stageConfig: any)
 			end
 		end
 		assert(stages[5].MiniBoss.EnemyId == "Boss" and combatConfig.Enemies.Boss, "the zone boss has combat stats")
+	end)
+
+	-- Zones 2 à 6 (docs/ZONES.md § Équilibrage) : une équipe de 4 héros au niveau visé de la zone gagne
+	-- chaque stage ; la même équipe au niveau visé de la zone PRÉCÉDENTE perd le boss (la zone demande
+	-- de progresser). Niveaux : stats × (1 + (niveau - 1) × 0,05), comme HeroProgressionRules.
+	local ZONE_LEVEL = { [1] = 1, [2] = 4, [3] = 8, [4] = 12, [5] = 16, [6] = 20 }
+	local TEAMS = {
+		{ "Epeiste", "Paladin", "Archer", "Magicien" },
+		{ "Epeiste", "Barbare", "Tireur", "Archer" },
+		{ "Epeiste", "Magicien", "Tireur", "Paladin" },
+	}
+	local function leveled(profile: string, level: number): any
+		local s = table.clone(combatConfig.Heroes[profile])
+		local factor = 1 + (level - 1) * 0.05
+		s.MaxHealth = math.floor(s.MaxHealth * factor + 0.5)
+		s.AttackDamage = math.floor(s.AttackDamage * factor + 0.5)
+		return s
+	end
+	local function teamOf(profiles: { string }, level: number): { any }
+		local list = {}
+		for index, profile in profiles do
+			local slot = ({ 2, 4, 6, 8 })[index]
+			table.insert(list, { TypeId = profile, Slot = slot, Position = { x = ((slot - 1) % 3) * 10, z = ((slot - 1) // 3) * 9 },
+				Stats = leveled(profile, level) })
+		end
+		return list
+	end
+	local function fight(stage: any, enemies: any, allies: { any }, seed: number): (string?, boolean)
+		local s = CombatEngine.new({
+			Stage = stage, Heroes = combatConfig.Heroes, Enemies = enemies,
+			UltimateRadius = combatConfig.Ultimate.Radius, Allies = allies, EnemyCells = cells(), Random = seeded(seed),
+			TickRate = 20, MaxFrameTime = 0.25,
+		})
+		local boss = false
+		for _ = 1, 20 * 300 do
+			CombatEngine.step(s, 1 / 20)
+			for _, e in CombatEngine.drain(s) do
+				if e.Type == "MiniBossStarted" then boss = true end
+			end
+			if s.result then break end
+		end
+		return s.result, boss
+	end
+
+	test("#13 Zones 2-6 balance (5 seeds, 3 teams of 4): target level wins every stage; previous zone's level mostly loses the boss", function()
+		assert(#stageConfig.Zones == 6, "6 zones")
+		for zone = 2, 6 do
+			local config = stageConfig.Zones[zone]
+			assert(#config.Stages == 5, `Zone {zone} = {zone}-1..{zone}-5`)
+			local enemies = Difficulty.enemies(combatConfig.Enemies, config.Difficulty)
+			for index, stage in config.Stages do
+				assert((stage.MiniBoss ~= nil) == (index == 5), `boss only on {zone}-5 ({zone}-{index})`)
+				for _, wave in stage.Waves do
+					for _, group in wave.Enemies do
+						assert(combatConfig.Enemies[group.EnemyId], `{group.EnemyId} has combat stats`)
+					end
+				end
+			end
+			assert(combatConfig.Enemies[config.Stages[5].MiniBoss.EnemyId], `zone {zone} boss has combat stats`)
+			local losses = 0
+			for _, profiles in TEAMS do
+				for index, stage in config.Stages do
+					for seed = 1, 5 do
+						local result, boss = fight(stage, enemies, teamOf(profiles, ZONE_LEVEL[zone]), seed)
+						assert(result == "Victory", `{zone}-{index} Lv{ZONE_LEVEL[zone]} {table.concat(profiles, "+")}, seed {seed}: {result}`)
+						assert(boss == (index == 5), `{zone}-{index} boss fought: {boss}`)
+					end
+				end
+				for seed = 1, 5 do
+					if fight(config.Stages[5], enemies, teamOf(profiles, ZONE_LEVEL[zone - 1]), seed) ~= "Victory" then
+						losses += 1
+					end
+				end
+			end
+			-- Le niveau de la zone précédente ne suffit pas : le boss gagne plus d'un combat sur deux.
+			assert(losses >= 8, `{zone}-5 must resist Lv{ZONE_LEVEL[zone - 1]} teams ({losses}/15 losses)`)
+		end
 	end)
 
 	print(`CombatEngine: {passed} passed, {failed} failed`)

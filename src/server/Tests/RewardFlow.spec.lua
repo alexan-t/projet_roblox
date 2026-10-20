@@ -601,7 +601,9 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 		local zone = w.services.ZoneService
 		local function statuses(): string
 			local s = {}
-			for _, entry in zone:ListStages(p) do table.insert(s, `{entry.Stage}:{entry.Status}`) end
+			for _, entry in zone:ListStages(p) do
+				if entry.Zone == 1 then table.insert(s, `{entry.Stage}:{entry.Status}`) end
+			end
 			return table.concat(s, " ")
 		end
 		assert(statuses() == "1:Unlocked 2:Locked 3:Locked 4:Locked 5:Locked", statuses())
@@ -625,7 +627,10 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 		for stage = 1, 5 do assert(d.Progression.FirstClears[`1-{stage}`] == true, `FirstClear 1-{stage}`) end
 		assert(d.Currencies.Gold == 100 and d.Currencies.Gems == 10 and d.Currencies.SummonTickets == 1,
 			"only 1-1 gives currencies (1-2..1-5 rewards are empty for now)")
-		assert(#zone:ListStages(p) == 5 and zone:StartStage(p, 1, 6) == nil, "no stage 1-6")
+		assert(zone:StartStage(p, 1, 6) == nil, "no stage 1-6")
+		local after = zone:ListStages(p)
+		assert(after[6].Zone == 2 and after[6].Stage == 1 and after[6].Status == "Unlocked", "1-5 First Clear opens 2-1")
+		assert(after[7].Status == "Locked", "2-2 still locked")
 		-- replays : 1-1 → +20 or, aucun ticket ; 1-5 → pas de second First Clear
 		local r1 = w.fight(p, PAIR, 1)
 		assert(r1[#r1].FirstClear == false and d.Currencies.Gold == 120 and d.Currencies.SummonTickets == 1)
@@ -666,12 +671,14 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 	end)
 
 	test("#13 RewardConfig: a valid entry for every stage of StageConfig (First Clear = unlock)", function()
-		local stages = configs.StageConfig.Zones[1].Stages
-		assert(#stages == 5)
-		for stage = 1, #stages do
-			local entry = configs.RewardConfig.Stages[`1-{stage}`]
-			assert(entry, `RewardConfig 1-{stage}`)
-			assert(#RewardRules.stageProblems(entry) == 0, `valid 1-{stage}`)
+		assert(#configs.StageConfig.Zones == 6)
+		for zone, config in configs.StageConfig.Zones do
+			assert(#config.Stages == 5)
+			for stage = 1, #config.Stages do
+				local entry = configs.RewardConfig.Stages[`{zone}-{stage}`]
+				assert(entry, `RewardConfig {zone}-{stage}`)
+				assert(#RewardRules.stageProblems(entry) == 0, `valid {zone}-{stage}`)
+			end
 		end
 		local first = configs.RewardConfig.Stages["1-1"]
 		assert(#first.FirstClearReward == 3 and first.RepeatReward[1].Kind == "Gold" and first.RepeatReward[1].Amount == 20, "1-1 contract unchanged")

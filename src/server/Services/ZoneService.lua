@@ -32,7 +32,8 @@ export type StageSession = {
 	Stage: number,
 	Status: "Running",
 	Config: any,
-	-- Élite : multiplicateurs des stats ennemies (Difficulty) ; nil en Normal.
+	-- Multiplicateurs des stats ennemies (Difficulty) : ceux de la zone (StageConfig.Zones[zone].Difficulty)
+	-- et, en Élite, ceux du stage Élite, multipliés entre eux ; nil sans aucun (Zone 1 en Normal).
 	Difficulty: any?,
 }
 
@@ -46,6 +47,8 @@ local ZoneService = {}
 local stages: { [number]: { [number]: any } } = {}
 -- Élite : elite[zone] = { unlockAfter = "<zone>-<stage>", stages = { [stage] = multiplicateurs gelés } }.
 local elite: { [number]: { unlockAfter: string, stages: { [number]: any } } } = {}
+-- Difficulté de zone : zoneDifficulty[zone] = multiplicateurs gelés (StageConfig.Zones[zone].Difficulty), ou absent.
+local zoneDifficulty: { [number]: any } = {}
 local sessions: { [Player]: Session } = {}
 local nextSessionId = 0
 
@@ -184,11 +187,23 @@ local function loadConfig(config: any): boolean
 		if typeof(zone) ~= "table" or not isList(zone.Stages) then
 			Log.warn(SCOPE, `Zone {zoneId} : Stages doit être une liste 1..n ; aucun stage lançable`)
 			table.clear(stages)
+			table.clear(zoneDifficulty)
 			return false
 		end
 		stages[zoneId] = {}
+		-- Difficulté de zone (facultative) invalide : avertissement, les stages de CETTE zone sont refusés.
+		local zoneProblems = if zone.Difficulty ~= nil then Difficulty.problems(zone.Difficulty) else {}
+		for _, problem in zoneProblems do
+			Log.warn(SCOPE, `Zone {zoneId} : Difficulty invalide : {problem}`)
+		end
+		if zone.Difficulty ~= nil and #zoneProblems == 0 then
+			zoneDifficulty[zoneId] = table.freeze(table.clone(zone.Difficulty))
+		end
 		for stageId, stage in zone.Stages do
 			local problems = stageProblems(stage)
+			if #zoneProblems > 0 then
+				table.insert(problems, "difficulté de zone invalide")
+			end
 			if #problems > 0 then
 				for _, problem in problems do
 					Log.warn(SCOPE, `Stage {stageKey(zoneId, stageId)} invalide : {problem}`)
@@ -200,6 +215,19 @@ local function loadConfig(config: any): boolean
 		end
 	end
 	return true
+end
+
+-- Multiplicateurs d'une session : zone × stage Élite (stat par stat), nil s'il n'y en a aucun.
+local function sessionDifficulty(zone: number, eliteMultipliers: any?): any?
+	local base = zoneDifficulty[zone]
+	if not base or not eliteMultipliers then
+		return base or eliteMultipliers
+	end
+	local combined = table.clone(base)
+	for key, factor in eliteMultipliers do
+		combined[key] = (combined[key] or 1) * factor
+	end
+	return table.freeze(combined)
 end
 
 -- Stage qui précède (même zone, sinon dernier stage de la zone précédente), ou nil pour le tout premier.
@@ -363,7 +391,7 @@ function ZoneService:StartStage(player: Player, zone: number, stage: number, mod
 	local kind = modeOf(mode) :: Mode
 	nextSessionId += 1
 	local session: Session = { id = nextSessionId, mode = kind, zone = zone, stage = stage, plot = plot, config = stages[zone][stage],
-		difficulty = if kind == "Elite" then elite[zone].stages[stage] else nil }
+		difficulty = sessionDifficulty(zone, if kind == "Elite" then elite[zone].stages[stage] else nil) }
 	sessions[player] = session
 	Log.info(SCOPE, `Stage {stageKey(zone, stage)}{if kind == "Elite" then " Élite" else ""} lancé par {player.Name} (session {session.id})`)
 	return view(session), nil

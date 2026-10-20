@@ -174,8 +174,11 @@ return function(ArenaRules: any, stageConfig: any, arenaConfig: any)
 		assert(z == 1 and s == 1, "next still locked (no First Clear recorded): stay")
 	end)
 
-	test("stage selection uses the real StageConfig: zone 1 has exactly 5 stages", function()
-		assert(#stageConfig.Zones == 1 and #stageConfig.Zones[1].Stages == 5)
+	test("stage selection uses the real StageConfig: 6 zones of exactly 5 stages", function()
+		assert(#stageConfig.Zones == 6)
+		for zone = 1, 6 do
+			assert(#stageConfig.Zones[zone].Stages == 5, `zone {zone}`)
+		end
 	end)
 
 	print(`ArenaRules: {passed} passed, {failed} failed`)

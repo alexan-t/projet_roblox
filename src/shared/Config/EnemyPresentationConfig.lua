@@ -108,6 +108,49 @@ local EnemyPresentationConfig = {
 			-- réaction, chute lourde (0,9 s), poussière, pause, sac, puis effacement lent
 			DeathTiming = table.freeze({ GroundImpact = 1.15, BagDrop = 1.5, FadeStart = 2.9, Complete = 3.4 }),
 		}),
+		-- Zones 2 à 6. Copies de combat statiques (sans squelette, comme Ennemi_Slime) : les slimes gardent le
+		-- profil Slime (teinte de leur élément), les autres chargent d'un bloc (SlimeHeadbutt : élan + éclats de la
+		-- couleur de l'effet) et tombent d'un bloc (HumanoidFall sans animation Mort : le corps bascule).
+		SlimePlante = table.freeze({
+			Family = "Slime", SpawnStyle = "Lake", AttackStyle = "SlimeHeadbutt", DeathStyle = "SlimeBurst", Impact = 0.27,
+			EffectColor = Color3.fromHex("#64B464"), -- vert feuille (ART_DIRECTION § 8)
+			DeathTiming = table.freeze({ BagDrop = 0.45, FadeStart = 0.26, Complete = 0.8 }),
+		}),
+		SlimeChampignon = table.freeze({
+			Family = "Slime", SpawnStyle = "Bush", AttackStyle = "SlimeHeadbutt", DeathStyle = "SlimeBurst", Impact = 0.27,
+			EffectColor = Color3.fromHex("#DCB48C"), -- crème du chapeau
+			DeathTiming = table.freeze({ BagDrop = 0.45, FadeStart = 0.26, Complete = 0.8 }),
+		}),
+		SlimeLave = table.freeze({
+			Family = "Slime", SpawnStyle = "Lake", AttackStyle = "SlimeHeadbutt", DeathStyle = "SlimeBurst", Impact = 0.27,
+			EffectColor = Color3.fromHex("#F08C3C"), -- braise
+			DeathTiming = table.freeze({ BagDrop = 0.45, FadeStart = 0.26, Complete = 0.8 }),
+		}),
+		GobelinDague = table.freeze({
+			Family = "Goblin", SpawnStyle = "Camp", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFall", Impact = 0.3,
+			EffectColor = Color3.fromHex("#8C8C8C"), -- fer de la dague
+			DeathTiming = table.freeze({ GroundImpact = 0.8, BagDrop = 1.0, FadeStart = 2.3, Complete = 2.75 }),
+		}),
+		Treant = table.freeze({
+			Family = "Treant", SpawnStyle = "Bush", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFall", Impact = 0.35,
+			EffectColor = Color3.fromHex("#8C643C"), -- éclats d'écorce
+			DeathTiming = table.freeze({ GroundImpact = 0.8, BagDrop = 1.0, FadeStart = 2.3, Complete = 2.75 }),
+		}),
+		TreantArbre = table.freeze({
+			Family = "Treant", SpawnStyle = "Bush", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFallHeavy", Impact = 0.4,
+			EffectColor = Color3.fromHex("#8CDC64"), -- feuilles
+			DeathTiming = table.freeze({ GroundImpact = 1.15, BagDrop = 1.5, FadeStart = 2.9, Complete = 3.4 }),
+		}),
+		KingSlime = table.freeze({
+			Family = "Slime", SpawnStyle = "CampBoss", AttackStyle = "SlimeHeadbutt", DeathStyle = "SlimeBurst", Impact = 0.3,
+			EffectColor = Color3.fromHex("#64B4DC"), -- gelée bleue
+			DeathTiming = table.freeze({ BagDrop = 0.6, FadeStart = 0.3, Complete = 1.0 }),
+		}),
+		KingTreant = table.freeze({
+			Family = "Treant", SpawnStyle = "CampBoss", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFallHeavy", Impact = 0.45,
+			EffectColor = Color3.fromHex("#8C643C"),
+			DeathTiming = table.freeze({ GroundImpact = 1.15, BagDrop = 1.5, FadeStart = 2.9, Complete = 3.4 }),
+		}),
 	} :: { [string]: Profile }),
 
 	Default = table.freeze({

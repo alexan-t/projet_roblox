@@ -15,7 +15,9 @@
 --   Trois dispositions (UITheme.Pack.Expedition) : PC, tablette (espacements réduits), téléphone (844 x 390,
 --   ses propres tailles, sections compactes).
 -- API : ExpeditionView.Show(data, options) ; ExpeditionView.Hide().
---   data = { Zone, Title?, Subtitle?, Stages = { stage }, EliteStages = { stage }?, EliteUnlocked?, Mode? }
+--   data = { Zone, Title?, Subtitle?, Stages = { stage }, EliteStages = { stage }?, EliteUnlocked?, Mode?,
+--            PreviousZone?, NextZone? } (flèches < > autour du titre, avec options.OnZone(zone) ; pas d'onglet
+--            Élite sans EliteStages)
 --     stage = { Zone, Stage, Status, Cleared, Waves = { { Enemies = { { EnemyId, Count } } } }, Boss?,
 --               HeroXP, FirstClearRewards, RepeatRewards, Multipliers?, PotentialDrops? } (ArenaService)
 --   options = { OnLaunch(zone, stage, mode)?, OnClose?, Selected?, OnSelect(zone, stage, mode)?,
@@ -45,7 +47,8 @@ local INK = UITheme.Stroke.Color
 local ICON = ExpeditionVisualConfig
 
 export type Stage = ExpeditionModel.Stage & { Waves: { any }?, Multipliers: { MaxHealth: number, AttackDamage: number }? }
-export type Data = { Zone: number, Title: string?, Subtitle: string?, Stages: { Stage }, EliteStages: { Stage }?, EliteUnlocked: boolean?, Mode: string? }
+export type Data = { Zone: number, Title: string?, Subtitle: string?, Stages: { Stage }, EliteStages: { Stage }?, EliteUnlocked: boolean?, Mode: string?,
+	PreviousZone: number?, NextZone: number? }
 export type Team = { Placed: number, Max: number, Heroes: { string }? }
 export type Options = {
 	OnLaunch: ((zone: number, stage: number, mode: string) -> ())?,
@@ -55,6 +58,7 @@ export type Options = {
 	Team: Team?,
 	OnPrepare: (() -> ())?,
 	Guide: boolean?,
+	OnZone: ((zone: number) -> ())?,
 }
 
 local ExpeditionView = {}
@@ -407,13 +411,31 @@ function ExpeditionView.Show(data: Data, options: Options?)
 		titleBlock.Parent = head
 		local titleList = column(titleBlock, 2)
 		titleList.VerticalAlignment = Enum.VerticalAlignment.Center
+		local zoneArrows = opts.OnZone ~= nil and (data.PreviousZone ~= nil or data.NextZone ~= nil)
 		local titleRow = Instance.new("Frame")
 		titleRow.BackgroundTransparency = 1
 		titleRow.AutomaticSize = Enum.AutomaticSize.X
-		titleRow.Size = UDim2.fromOffset(0, math.ceil(L.ZoneSize * 1.2))
+		titleRow.Size = UDim2.fromOffset(0, math.max(math.ceil(L.ZoneSize * 1.2), if zoneArrows then UITheme.Spacing.TouchTarget else 0))
 		titleRow.Parent = titleBlock
 		row(titleRow, 10)
 		text(titleRow, data.Title or `Zone {data.Zone}`, L.ZoneSize, if elite then C.GoldLight else C.TextLight).LayoutOrder = 1
+		if zoneArrows then
+			-- flèches de zone : consulter la zone voisine (aucun choix envoyé tant qu'aucun stage n'est choisi)
+			for _, info in { { Zone = data.PreviousZone, Text = "<", Name = "ZonePrecedente", Order = 0 },
+				{ Zone = data.NextZone, Text = ">", Name = "ZoneSuivante", Order = 3 } } do
+				local target = info.Zone
+				local arrow = UIKit.roundButton(titleRow, { Text = info.Text, Name = info.Name, Color = if target then C.Wood else C.Disabled,
+					TextSize = L.ZoneSize, OnClick = function()
+						if target and opts.OnZone then
+							opts.OnZone(target)
+						end
+					end })
+				arrow.LayoutOrder = info.Order
+				if not target then
+					arrow.BackgroundTransparency = 0.45
+				end
+			end
+		end
 		if eliteOpen then
 			local tag = pill(titleRow, "ÉLITE", C.RoyalRed, 14, ICON.Crown, 26)
 			tag.LayoutOrder = 2
@@ -433,7 +455,10 @@ function ExpeditionView.Show(data: Data, options: Options?)
 		tabs.Size = UDim2.fromOffset(0, L.ModeHeight + 8)
 		padding(tabs, 4, 4, 4)
 		row(tabs, 6)
-		for index, info in { { Id = "Normal", Label = "Normal" }, { Id = "Elite", Label = "Élite" } } do
+		-- Zone sans Élite configurée (EliteStages absent) : seul l'onglet Normal.
+		local modeTabs = if data.EliteStages then { { Id = "Normal", Label = "Normal" }, { Id = "Elite", Label = "Élite" } }
+			else { { Id = "Normal", Label = "Normal" } }
+		for index, info in modeTabs do
 			local on = mode == info.Id
 			local isElite = info.Id == "Elite"
 			local tab = Instance.new("TextButton")

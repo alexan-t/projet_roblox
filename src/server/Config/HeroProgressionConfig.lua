@@ -18,13 +18,15 @@ local HeroProgressionConfig = {
 		MaxHealth = 0.05,
 		AttackDamage = 0.05,
 	}),
-	-- XP d'une victoire, par stage, en Mode Normal.
+	-- XP d'une victoire, par stage, en Mode Normal. Zones 2 à 6 : croît avec la zone (niveaux visés,
+	-- docs/ZONES.md § Zones 2 à 6).
 	StageXP = table.freeze({
-		["1-1"] = 25,
-		["1-2"] = 35,
-		["1-3"] = 50,
-		["1-4"] = 70,
-		["1-5"] = 100,
+		["1-1"] = 25, ["1-2"] = 35, ["1-3"] = 50, ["1-4"] = 70, ["1-5"] = 100,
+		["2-1"] = 45, ["2-2"] = 60, ["2-3"] = 80, ["2-4"] = 100, ["2-5"] = 140,
+		["3-1"] = 70, ["3-2"] = 90, ["3-3"] = 115, ["3-4"] = 140, ["3-5"] = 190,
+		["4-1"] = 95, ["4-2"] = 120, ["4-3"] = 150, ["4-4"] = 180, ["4-5"] = 240,
+		["5-1"] = 120, ["5-2"] = 150, ["5-3"] = 185, ["5-4"] = 220, ["5-5"] = 290,
+		["6-1"] = 150, ["6-2"] = 185, ["6-3"] = 225, ["6-4"] = 265, ["6-5"] = 350,
 	}),
 	-- XP d'une victoire en Mode Élite (#69), table distincte : 1-3 Élite ≠ 1-3 Normal.
 	EliteStageXP = table.freeze({
