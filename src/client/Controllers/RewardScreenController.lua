@@ -30,6 +30,7 @@
 --   revient 2 s après « Continuer ») ; trois cas se succèdent : ressources seules, équipement + ressources + XP,
 --   beaucoup de ressources + Sacoche pleine.
 
+local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -44,6 +45,7 @@ local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local InventoryModel = require(ReplicatedStorage.Shared.Sacoche.InventoryModel)
 local LootModel = require(ReplicatedStorage.Shared.Sacoche.LootModel)
 local CurrencyFx = require(script.Parent.Parent.UI.CurrencyFx)
+local GuideTargets = require(script.Parent.Parent.UI.GuideTargets)
 local Icons = require(script.Parent.Parent.UI.Icons)
 local ItemCard = require(script.Parent.Parent.UI.ItemCard)
 local RarityStyle = require(script.Parent.Parent.UI.RarityStyle)
@@ -70,6 +72,13 @@ export type HeroProgress = { InstanceId: string, HeroId: string, XPGranted: numb
 export type ScreenData = { Result: string, FirstClear: boolean?, Rewards: { Reward }?, Silent: boolean?, Heroes: { HeroProgress }?, Loot: any? }
 
 local HERO_CHIP = PACK.HeroChip
+-- Petits textes de l'écran affiché et leur taille de base : grossis à chaque mise à l'échelle pour rester
+-- lisibles (LootModel.textSize, au moins PACK.MinText px réels).
+local smallTexts: { { Label: TextLabel, Base: number } } = {}
+local function small(label: TextLabel, base: number): TextLabel
+	table.insert(smallTexts, { Label = label, Base = base })
+	return label
+end
 local LOOT_CONTEXT: LootModel.Context = {
 	Items = ItemConfig.Items,
 	Resources = ResourceConfig.Resources,
@@ -356,7 +365,7 @@ local function resourceChip(parent: Instance, resource: LootModel.Resource, orde
 		UIKit.text(icon, InventoryModel.initials(resource.Name), Typography.Size.Caption, { Color = Colors.TextLight })
 	end
 	local left = Spacing.XS + 2 + PACK.ChipIcon + Spacing.XS
-	local amount = UIKit.text(chip, `×{resource.AmountText}`, PACK.ChipAmountSize, { Align = Enum.TextXAlignment.Left })
+	local amount = small(UIKit.text(chip, `×{resource.AmountText}`, PACK.ChipAmountSize, { Align = Enum.TextXAlignment.Left }), PACK.ChipAmountSize)
 	amount.Name = "Quantite"
 	amount.Position = UDim2.fromOffset(left, 0)
 	amount.Size = UDim2.new(1, -left - Spacing.XS, 1, 0)
@@ -379,10 +388,16 @@ local function lootBlock(root: Frame, loot: LootModel.Parsed, chips: { Shown: { 
 			Variant = "Band", NameSize = PACK.BandNameSize, LineSize = PACK.BandLineSize, ArtSize = PACK.BandArt,
 			Head = head, Size = UDim2.fromOffset(PACK.BandSize.X, PACK.BandSize.Y),
 		})
+		local texts = band:FindFirstChild("Textes")
+		for _, text in if texts then texts:GetChildren() else {} do
+			if text:IsA("TextLabel") then
+				small(text, text.TextSize) -- mention, nom, ligne : empilés, ils se décalent en grossissant
+			end
+		end
 		band.AnchorPoint = Vector2.new(0.5, 0)
 		band.Position = UDim2.fromOffset(center, layout.BandY)
 		if loot.MoreItems > 0 then
-			local more = UIKit.text(band, LootModel.moreItemsText(loot.MoreItems), PACK.BandMoreSize, { Color = Colors.GoldLight, Align = Enum.TextXAlignment.Right })
+			local more = small(UIKit.text(band, LootModel.moreItemsText(loot.MoreItems), PACK.BandMoreSize, { Color = Colors.GoldLight, Align = Enum.TextXAlignment.Right }), PACK.BandMoreSize)
 			more.Name = "PlusEquipements"
 			more.AnchorPoint = Vector2.new(1, 0.5)
 			more.Position = UDim2.new(1, -Spacing.M, 0.5, 0)
@@ -411,13 +426,13 @@ local function lootBlock(root: Frame, loot: LootModel.Parsed, chips: { Shown: { 
 			local more = UIKit.subPanel(row, UDim2.fromOffset(PACK.ChipSize.X, PACK.ChipSize.Y))
 			more.Name = "PlusRessources"
 			more.LayoutOrder = #chips.Shown + 1
-			UIKit.text(more, LootModel.moreResourcesText(chips.More), PACK.ChipMoreSize, { Color = Colors.TextMuted })
+			small(UIKit.text(more, LootModel.moreResourcesText(chips.More), PACK.ChipMoreSize, { Color = Colors.TextMuted }), PACK.ChipMoreSize)
 			appear(more)
 		end
 	end
 	local gained = best ~= nil or #chips.Shown > 0
 	if gained then
-		local caption = UIKit.text(root, "Ajoutées à ta Sacoche", PACK.CaptionSize, { Color = Colors.TextMuted })
+		local caption = small(UIKit.text(root, "Ajoutées à ta Sacoche", PACK.CaptionSize, { Color = Colors.TextMuted }), PACK.CaptionSize)
 		caption.Name = "Legende"
 		caption.AnchorPoint = Vector2.new(0.5, 0)
 		caption.Position = UDim2.fromOffset(center, layout.CaptionY)
@@ -426,7 +441,7 @@ local function lootBlock(root: Frame, loot: LootModel.Parsed, chips: { Shown: { 
 		step += 1
 	end
 	if loot.Overflow then
-		local note = UIKit.text(root, "Sacoche pleine : certains équipements n'ont pas pu être ajoutés", PACK.NoteSize, { Color = Colors.TextMuted })
+		local note = small(UIKit.text(root, "Sacoche pleine : équipement non ajouté", PACK.NoteSize, { Color = Colors.TextMuted }), PACK.NoteSize)
 		note.Name = "SacochePleine"
 		note.AnchorPoint = Vector2.new(0.5, 0)
 		note.Position = UDim2.fromOffset(center, layout.NoteY)
@@ -604,10 +619,28 @@ function RewardScreenController.Show(data: ScreenData, onContinue: (() -> ())?)
 	local uiScale = Instance.new("UIScale")
 	uiScale.Parent = root
 	local camera = Workspace.CurrentCamera
+	table.clear(smallTexts)
 	local function fit()
-		-- tailles en px pour un écran de 1080 px, réduites si le contenu ne tient pas sur l'un des deux axes
+		-- tailles en px pour un écran de 1080 px, réduites si le contenu ne tient pas sur l'un des deux axes ;
+		-- contenu centré entre le bas des monnaies et le haut de la hotbar (jamais par-dessus)
 		local viewport = if camera then camera.ViewportSize else Vector2.new(1920, 1080)
-		uiScale.Scale = LootModel.fit(viewport, Vector2.new(layout.Width, layout.Height), PACK)
+		-- AbsolutePosition est mesurée sous la barre de Roblox ; cet écran ignore l'inset : on l'ajoute
+		local inset = GuiService:GetGuiInset().Y
+		local top = 0
+		for _, key in { "Gold", "Gems", "SummonTickets" } do
+			local pill = GuideTargets.get(`Currency.{key}`)
+			if pill then
+				top = math.max(top, pill.AbsolutePosition.Y + pill.AbsoluteSize.Y + inset)
+			end
+		end
+		local bar = GuideTargets.get("Hotbar.Bar")
+		local bottom = if bar then bar.AbsolutePosition.Y + inset else viewport.Y
+		local placed = LootModel.place(viewport, Vector2.new(layout.Width, layout.Height), PACK, top, bottom)
+		uiScale.Scale = placed.Scale
+		root.Position = UDim2.new(0.5, 0, 0, placed.Y)
+		for _, entry in smallTexts do
+			entry.Label.TextSize = LootModel.textSize(entry.Base, placed.Scale, PACK)
+		end
 	end
 	fit()
 	if camera then
@@ -683,11 +716,11 @@ function RewardScreenController.Show(data: ScreenData, onContinue: (() -> ())?)
 		section.Name = "Heros"
 		section.AnchorPoint = Vector2.new(0.5, 0)
 		section.Position = UDim2.fromOffset(centerX, heroesY)
-		section.Size = UDim2.fromOffset(PACK.ChipRowWidth, layout.HeroesHeight)
+		section.Size = UDim2.fromOffset(layout.Width - 2 * PACK.SideMargin, layout.HeroesHeight)
 		section.BackgroundTransparency = 1
 		section.Parent = root
-		local heading = UIKit.text(section, "Héros", Typography.Size.Label, { Color = Colors.TextMuted })
-		heading.Size = UDim2.new(1, 0, 0, 24)
+		local heading = small(UIKit.text(section, "Héros", Typography.Size.Label, { Color = Colors.TextMuted }), Typography.Size.Label)
+		heading.Size = UDim2.new(1, 0, 0, PACK.HeroHeading - 4)
 		popIn(heading, heroesStart)
 		local row = Instance.new("Frame")
 		row.BackgroundTransparency = 1
@@ -697,7 +730,7 @@ function RewardScreenController.Show(data: ScreenData, onContinue: (() -> ())?)
 		local rowLayout = Instance.new("UIListLayout")
 		rowLayout.FillDirection = Enum.FillDirection.Horizontal
 		rowLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-		rowLayout.Wraps = true -- plus de deux héros : la ligne passe à la suivante (hauteur déjà calculée)
+		rowLayout.Wraps = false -- une seule ligne : LootModel.layout élargit l'écran pour tous les héros
 		rowLayout.Padding = UDim.new(0, PACK.HeroGap)
 		rowLayout.SortOrder = Enum.SortOrder.LayoutOrder
 		rowLayout.Parent = row
@@ -718,6 +751,7 @@ function RewardScreenController.Show(data: ScreenData, onContinue: (() -> ())?)
 	button.Position = UDim2.fromOffset(centerX, layout.ButtonY) -- sous le dernier bloc affiché (défaite : sous le titre)
 	popIn(button, if #rewards > 0 or #heroes > 0 or lootDuration > 0 then buttonDelay else 0.45, 1.06)
 
+	fit() -- petits textes créés : leur taille suit l'échelle
 	gui.Parent = player:WaitForChild("PlayerGui")
 end
 

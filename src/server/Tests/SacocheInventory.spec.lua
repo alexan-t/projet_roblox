@@ -238,11 +238,11 @@ return function(Inventory: any, Loot: any, ItemConfig: any, ResourceConfig: any,
 			return out
 		end
 		local slots = Loot.chipSlots(R)
-		assert(slots == 6, `{slots} slots`)
-		local fits = Loot.chips(make(6), slots)
-		assert(#fits.Shown == 6 and fits.More == 0)
+		assert(slots == 5, `{slots} slots`)
+		local fits = Loot.chips(make(5), slots)
+		assert(#fits.Shown == 5 and fits.More == 0)
 		local over = Loot.chips(make(8), slots)
-		assert(#over.Shown == 5 and over.More == 3 and #over.Shown + over.More == 8)
+		assert(#over.Shown == 4 and over.More == 4 and #over.Shown + over.More == 8)
 		assert(Loot.moreResourcesText(3) == "+3 autres")
 		local tiny = Loot.chips(make(3), 1)
 		assert(#tiny.Shown == 0 and tiny.More == 3)
@@ -302,12 +302,15 @@ return function(Inventory: any, Loot: any, ItemConfig: any, ResourceConfig: any,
 		end
 	end)
 
-	test("layout: heroes wrap over rows of two (300 px chips in a 740 px row)", function()
+	test("layout: heroes stay on ONE row of identical chips; the screen widens instead of wrapping", function()
 		local one, two, three, four = layout({ Heroes = 1 }), layout({ Heroes = 2 }), layout({ Heroes = 3 }), layout({ Heroes = 4 })
-		assert(one.HeroPerRow == 2 and one.HeroRows == 1 and two.HeroRows == 1 and three.HeroRows == 2 and four.HeroRows == 2)
-		assert(one.HeroesHeight == R.HeroHeading + R.HeroChip.Y)
-		assert(three.HeroesHeight == R.HeroHeading + 2 * R.HeroChip.Y + R.HeroGap)
-		assert(three.ButtonY > two.ButtonY and three.Height > two.Height)
+		for _, l in { one, two, three, four } do
+			assert(l.HeroRows == 1 and l.HeroesHeight == R.HeroHeading + R.HeroChip.Y, `{l.HeroRows} rows`)
+		end
+		assert(one.Width == R.Width and two.Width == R.Width, "two heroes fit the base width")
+		assert(three.Width == 3 * R.HeroChip.X + 2 * R.HeroGap + 2 * R.SideMargin, `{three.Width}`)
+		assert(four.Width == 4 * R.HeroChip.X + 3 * R.HeroGap + 2 * R.SideMargin, `{four.Width}`)
+		assert(four.ButtonY == two.ButtonY and four.Height == two.Height, "no extra row")
 	end)
 
 	test("fit: the reference scale (1080 px) is kept when everything fits, like the previous screen", function()
@@ -317,11 +320,37 @@ return function(Inventory: any, Loot: any, ItemConfig: any, ResourceConfig: any,
 	end)
 
 	test("fit: shrinks on the HEIGHT axis when the content is too tall", function()
-		local tall = layout({ Cards = 3, Heroes = 8, Band = true, Chips = 6, Caption = true, Note = true }) -- 4 rangées de héros
-		local viewport = v2(1920, 1080)
+		local tall = layout({ Cards = 3, Heroes = 2, Band = true, Chips = 5, Caption = true, Note = true })
+		local viewport = v2(1920, 800)
 		local scale = Loot.fit(viewport, v2(tall.Width, tall.Height), R)
 		assert(tall.Height > viewport.Y - 2 * R.Margin and scale < 1 and scale >= R.MinScale, `{tall.Height} / {scale}`)
 		assert(tall.Height * scale <= viewport.Y - 2 * R.Margin + 1e-6, "fits vertically")
+	end)
+
+	test("place: the content stays between the currencies and the hotbar (never over the hotbar)", function()
+		local l = layout({ Cards = 1, Heroes = 3, Band = true, Chips = 5, Caption = true })
+		local viewport, top, bottom = v2(1651, 633), 40, 527 -- viewport Studio de la recette #96
+		local placed = Loot.place(viewport, v2(l.Width, l.Height), R, top, bottom)
+		local half = l.Height * placed.Scale / 2
+		assert(placed.Y - half >= top + R.Margin - 1e-6, "below the currencies")
+		assert(placed.Y + half <= bottom - R.Margin + 1e-6, `above the hotbar: {placed.Y + half} > {bottom - R.Margin}`)
+		-- zone trop étroite (HUD inconnu ou écran minuscule) : tout l'écran, échelle plancher
+		local fallback = Loot.place(v2(844, 390), v2(l.Width, l.Height), R, 200, 210)
+		assert(fallback.Y == 390 / 2 and fallback.Scale >= R.MinScale)
+		-- sans HUD : identique à fit
+		assert(Loot.place(viewport, v2(l.Width, l.Height), R, 0, viewport.Y).Scale == Loot.fit(viewport, v2(l.Width, l.Height), R))
+	end)
+
+	test("textSize: small loot texts never fall below MinText real px, whatever the scale", function()
+		for _, scale in { 0.5, 0.55, 0.586, 0.75, 1, 1.4 } do
+			for _, base in { R.ChipAmountSize, R.ChipMoreSize, R.CaptionSize, R.NoteSize, R.BandMoreSize } do
+				local size = Loot.textSize(base, scale, R)
+				assert(size * scale >= R.MinText - 1e-6 and size >= base, `{base} at {scale}: {size}`)
+			end
+		end
+		-- les boîtes du butin contiennent le texte grossi au pire (échelle plancher)
+		local worst = Loot.textSize(R.CaptionSize, R.MinScale, R)
+		assert(worst <= R.CaptionHeight and worst <= R.NoteHeight and Loot.textSize(R.ChipAmountSize, R.MinScale, R) <= R.ChipSize.Y)
 	end)
 
 	test("fit: shrinks on the WIDTH axis on a narrow portrait screen", function()

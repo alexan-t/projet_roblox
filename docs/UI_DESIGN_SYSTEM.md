@@ -277,21 +277,27 @@ l'utilisateur le 2026-10-19**. Sous les cartes de monnaie, avant la section « H
   meilleur = rang de rareté le plus haut (`RarityStyle.rank`), puis ordre du catalogue. Cadre neutre,
   aucune couleur de rareté (règle 6 en attente de #61 / #75 : le seul point de bascule est
   `ItemCard.rarity`) ;
-- **ressources** : une seule ligne de pastilles compactes (icône + « ×n », 112 × 48, cadre neutre,
+- **ressources** : une seule ligne de pastilles compactes (icône + « ×n », 128 × 48, cadre neutre,
   **aucune rareté**), dans l'ordre du catalogue ; ce qui ne tient pas devient la dernière pastille
   « **+N autres** » (N = types de ressources masqués) ;
 - légende muted « **Ajoutées à ta Sacoche** » sous le tout ; **un seul son** pour toute la ligne ;
-- `Overflow` (Sacoche pleine) : message muted honnête « Sacoche pleine : certains équipements n'ont
-  pas pu être ajoutés » (les ressources et les monnaies restent accordées) ;
+- `Overflow` (Sacoche pleine) : message muted honnête « Sacoche pleine : équipement non ajouté »
+  (les ressources et les monnaies restent accordées) ;
 - aucun butin (défaite, ou rien de gagné) : le bloc n'existe pas, l'écran garde ses positions d'avant.
 
 Données : `CombatEnded.Loot = { Items = { { InstanceId, ItemId } }, Resources = { { ResourceId, Amount } }, Overflow }`,
 lu **à part** de `Rewards` (monnaies) ; nom, rareté, emplacement, famille et icône viennent de
 `ItemConfig` / `ResourceConfig` (le serveur ne renvoie jamais de rareté) ; une entrée inconnue est
 ignorée. **Mise en page à hauteur calculée** : `Shared.Sacoche.LootModel.layout` (mesures
-`UITheme.Pack.Reward`) donne les positions et la hauteur du contenu ; l'échelle (`LootModel.fit`) part de
-la référence 1080 px et se réduit si le contenu ne tient pas sur la hauteur **ou** la largeur de l'écran
-(plancher `MinScale`). Au-delà de deux héros engagés, leur ligne passe à la suivante (hauteur calculée).
+`UITheme.Pack.Reward`) donne les positions et la hauteur du contenu ; l'échelle (`LootModel.place`) part de
+la référence 1080 px et se réduit si le contenu ne tient pas sur la hauteur **ou** la largeur de la **zone
+libre** : entre le bas des monnaies et le haut de la hotbar, comme la Sacoche, jamais par-dessus la hotbar
+(plancher `MinScale` ; zone trop étroite : tout l'écran). Les héros engagés restent sur **une seule ligne**
+de puces identiques : l'écran s'élargit au lieu de passer à la ligne. Les petits textes du butin
+(« ×n », « +N », légende, message, « Héros ») sont grossis selon l'échelle pour faire au moins
+`MinText` = 14 px réels (`LootModel.textSize`), leurs boîtes sont dimensionnées pour le pire cas.
+Recette #96 (2026-10-20) : avant correction, bouton « Continuer » sur la hotbar et textes à 8–10 px réels
+dans le viewport Studio 1651 × 633.
 Tests : `tools/test-sacoche.ps1` (modèles purs), `tests/loot-ui.test.mjs` (règles de rareté, état,
 libellés). Aperçu Studio : `Workspace.ApercuEcranRecompenses = true` fait défiler trois cas
 (ressources seules ; équipement + ressources + XP ; beaucoup de ressources + Sacoche pleine).

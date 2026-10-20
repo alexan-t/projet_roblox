@@ -362,11 +362,14 @@ local Pack = {
 		CardSize = Vector2.new(132, 164), AfterCards = 30,
 		LootGap = 10, AfterLoot = 20,
 		BandSize = Vector2.new(740, 112), BandArt = 92, BandHeadSize = 16, BandNameSize = 24, BandLineSize = 18, BandMoreSize = 18,
-		ChipSize = Vector2.new(112, 48), ChipIcon = 36, ChipGap = 8, ChipRowWidth = 740, ChipAmountSize = 18, ChipMoreSize = 16,
-		CaptionSize = 16, CaptionHeight = 24, NoteSize = 15, NoteHeight = 22,
+		ChipSize = Vector2.new(128, 48), ChipIcon = 36, ChipGap = 8, ChipRowWidth = 740, ChipAmountSize = 18, ChipMoreSize = 16,
+		CaptionSize = 16, CaptionHeight = 32, NoteSize = 15, NoteHeight = 32,
+		-- héros sur UNE ligne (jusqu'à ArenaConfig.MaxHeroes) : l'écran s'élargit au lieu de passer à la ligne
 		HeroChip = Vector2.new(300, 120), HeroHeading = 30, HeroGap = 12,
 		ButtonGap = 20, BottomPad = 80, MinHeight = 520,
+		-- échelle : contenu tenu entre le bas des monnaies et le haut de la hotbar (Margin de chaque côté)
 		ReferenceHeight = 1080, Margin = 16, MinScale = 0.5, MaxScale = 1.4,
+		MinText = 14, -- px réels minimum des petits textes du butin, quelle que soit l'échelle (design system § 4)
 	},
 	-- Panneau Quêtes et reveal.
 	Quest = {

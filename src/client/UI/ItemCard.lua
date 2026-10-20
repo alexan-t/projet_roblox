@@ -149,25 +149,33 @@ local function band(parent: Instance, card: InventoryModel.ItemCard, options: Op
 		levelBadge(art, card.LevelText)
 	end
 	local left = options.ArtSize + 2 * pad + UITheme.Spacing.XS
-	local y = pad
-	if options.Head then
-		local head = UIKit.text(frame, options.Head, UITheme.Typography.Size.Caption + 2, { Color = C.TextMuted, Align = Enum.TextXAlignment.Left })
-		head.Name = "Mention"
-		head.Position = UDim2.fromOffset(left, y)
-		head.Size = UDim2.new(1, -left - pad, 0, 22)
-		y += 24
+	-- colonne de textes empilés et centrés : si l'écran de fin grossit un texte (LootModel.textSize), les
+	-- lignes se décalent au lieu de se chevaucher
+	local texts = Instance.new("Frame")
+	texts.Name = "Textes"
+	texts.BackgroundTransparency = 1
+	texts.Position = UDim2.fromOffset(left, pad)
+	texts.Size = UDim2.new(1, -left - pad - 150, 1, -2 * pad)
+	texts.Parent = frame
+	local stack = Instance.new("UIListLayout")
+	stack.FillDirection = Enum.FillDirection.Vertical
+	stack.VerticalAlignment = Enum.VerticalAlignment.Center
+	stack.SortOrder = Enum.SortOrder.LayoutOrder
+	stack.Parent = texts
+	local function row(text: string, size: number, name: string, order: number, color: Color3?): TextLabel
+		local label = UIKit.text(texts, text, size, { Color = color, Align = Enum.TextXAlignment.Left })
+		label.Name = name
+		label.LayoutOrder = order
+		label.Size = UDim2.fromScale(1, 0)
+		label.AutomaticSize = Enum.AutomaticSize.Y
+		return label
 	end
-	local name = UIKit.text(frame, card.Name, options.NameSize, { Align = Enum.TextXAlignment.Left })
-	name.Name = "Nom"
-	name.Position = UDim2.fromOffset(left, y)
-	name.Size = UDim2.new(1, -left - pad - 150, 0, math.ceil(options.NameSize * 1.25))
-	name.TextTruncate = Enum.TextTruncate.AtEnd
-	y += math.ceil(options.NameSize * 1.25) + 2
+	if options.Head then
+		row(options.Head, UITheme.Typography.Size.Caption + 2, "Mention", 1, C.TextMuted)
+	end
+	row(card.Name, options.NameSize, "Nom", 2).TextTruncate = Enum.TextTruncate.AtEnd
 	-- rareté en texte + emplacement : « Rare · Arme »
-	local line = UIKit.text(frame, `{ItemCard.rarity(card.Rarity)} · {card.SlotName}`, options.LineSize, { Color = C.TextLight, Align = Enum.TextXAlignment.Left })
-	line.Name = "Rarete"
-	line.Position = UDim2.fromOffset(left, y)
-	line.Size = UDim2.new(1, -left - pad - 150, 0, math.ceil(options.LineSize * 1.25))
+	row(`{ItemCard.rarity(card.Rarity)} · {card.SlotName}`, options.LineSize, "Rarete", 3, C.TextLight)
 	return frame
 end
 

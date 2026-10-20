@@ -166,8 +166,11 @@ function LootModel.layout(input: LayoutInput, pack: any): Layout
 	if lootHeight > 0 then
 		y += lootHeight + pack.AfterLoot
 	end
-	local perRow = math.max(math.floor((pack.Width - 2 * pack.SideMargin + pack.HeroGap) / (pack.HeroChip.X + pack.HeroGap)), 1)
-	local rows = if input.Heroes > 0 then math.ceil(input.Heroes / perRow) else 0
+	-- héros sur une seule ligne, de taille identique : l'écran s'élargit (l'échelle tient compte de la largeur)
+	local perRow = math.max(input.Heroes, 1)
+	local rows = if input.Heroes > 0 then 1 else 0
+	local heroesWidth = perRow * pack.HeroChip.X + (perRow - 1) * pack.HeroGap
+	local width = math.max(pack.Width, if rows > 0 then heroesWidth + 2 * pack.SideMargin else 0)
 	local heroesY = y
 	local heroesHeight = 0
 	if rows > 0 then
@@ -177,7 +180,7 @@ function LootModel.layout(input: LayoutInput, pack: any): Layout
 	local buttonY = y + pack.ButtonGap
 	local height = math.max(pack.MinHeight, buttonY + pack.BottomPad)
 	return {
-		Width = pack.Width, Height = height, TitleY = pack.TitleY, CardsY = cardsY,
+		Width = width, Height = height, TitleY = pack.TitleY, CardsY = cardsY,
 		LootY = lootY, LootHeight = lootHeight, BandY = bandY, ChipsY = chipsY, CaptionY = captionY, NoteY = noteY,
 		HeroesY = heroesY, HeroesHeight = heroesHeight, HeroRows = rows, HeroPerRow = perRow, ButtonY = buttonY,
 	}
@@ -186,10 +189,26 @@ end
 -- Échelle : la référence (écran de 1080 px de haut), réduite si le contenu ne tient pas dans la fenêtre sur
 -- l'un OU l'autre axe (marge de chaque côté). Jamais en dessous de MinScale.
 function LootModel.fit(viewport: Vector2, size: Vector2, pack: any): number
+	return LootModel.place(viewport, size, pack, 0, viewport.Y).Scale
+end
+
+-- Échelle et centre vertical (px écran) du contenu dans la zone libre : bas du HUD du haut (top) → haut de
+-- la hotbar (bottom), marge de chaque côté. Zone trop étroite (HUD inconnu, écran minuscule) : tout l'écran.
+function LootModel.place(viewport: Vector2, size: Vector2, pack: any, top: number, bottom: number): { Scale: number, Y: number }
+	local zoneTop = math.max(top, 0) + pack.Margin
+	local zoneBottom = math.min(bottom, viewport.Y) - pack.Margin
+	if zoneBottom - zoneTop < size.Y * pack.MinScale then
+		zoneTop, zoneBottom = pack.Margin, viewport.Y - pack.Margin
+	end
 	local reference = math.clamp(viewport.Y / pack.ReferenceHeight, pack.MinScale, pack.MaxScale)
-	local byHeight = (viewport.Y - 2 * pack.Margin) / math.max(size.Y, 1)
+	local byHeight = (zoneBottom - zoneTop) / math.max(size.Y, 1)
 	local byWidth = (viewport.X - 2 * pack.Margin) / math.max(size.X, 1)
-	return math.max(math.min(reference, byHeight, byWidth), pack.MinScale)
+	return { Scale = math.max(math.min(reference, byHeight, byWidth), pack.MinScale), Y = (zoneTop + zoneBottom) / 2 }
+end
+
+-- Taille de texte (px avant échelle) pour qu'un petit texte du butin fasse au moins MinText px réels.
+function LootModel.textSize(base: number, scale: number, pack: any): number
+	return math.max(base, math.ceil(pack.MinText / math.max(scale, 0.01)))
 end
 
 return LootModel
