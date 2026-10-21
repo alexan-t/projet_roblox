@@ -281,8 +281,6 @@ holder = folder
 local source = workspace.Lobby.Plots.Plot_1
 local templates = ServerStorage.Assets.ZonesArene
 local combat = ReplicatedStorage.Assets.Combat
-local floors = Instance.new("Folder")
-floors.Name, floors.Parent = "SolsBiomes", folder
 
 for _, zone in ZONES do
 	local plot = source:Clone()
@@ -368,21 +366,6 @@ for _, zone in ZONES do
 			BIOME[kind](props, foot, propColor(zone, kind), k)
 		end
 	end
-
-	-- sol de biome ovale autour de l'arène, derrière le portique : le vert du baseplate ne dépasse plus
-	-- derrière l'arène, et l'avant garde l'herbe du Lobby
-	local x0, x1, z0 = math.huge, -math.huge, math.huge
-	for _, d in arena:GetDescendants() do
-		if d:IsA("BasePart") and d.Position.Y < 15 then
-			x0, x1 = math.min(x0, d.Position.X - d.Size.X / 2), math.max(x1, d.Position.X + d.Size.X / 2)
-			z0 = math.min(z0, d.Position.Z - d.Size.Z / 2)
-		end
-	end
-	local depth = (gateZ - z0) + 30
-	local floor = piece(floors, `Sol_Zone{zone.Id}`, Enum.PartType.Block, Vector3.new(math.min(186, (x1 - x0) + 50), 0.1, depth * 1.6),
-		zone.Ground, CFrame.new((x0 + x1) / 2, 0.05, gateZ - depth * 0.8))
-	ellipsoid(floor)
-	floor.CanCollide, floor.CanQuery = true, true
 
 	-- lisière entre l'avant et l'arène, ouverte au portique
 	local ax0, ax1 = math.huge, -math.huge
