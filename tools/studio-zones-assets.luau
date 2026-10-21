@@ -1726,6 +1726,39 @@ BUILD[5] = function(m: Instance)
 
 	-- le boss sort du temple en forme de coquille, au fond (repères SourcesEnnemis déplacés dessus)
 	moveMarkers(m, -53, V(0, 24.5, -55))
+	-- les mares de la Zone 1 (petites pierres, ruisseaux) n'ont pas de sens ici : aux mêmes places (repères
+	-- SautMare des ennemis qui sortent de l'eau), des bassins sacrés de marbre, eau lumineuse et bulles
+	local lake = m:FindFirstChild("Lac")
+	if lake then lake:Destroy() end
+	for k, d in { { -26, 12, 10 }, { -31, -19, 6 }, { -29, -30, 6.8 } } do
+		local at, r = V(d[1], 0, d[2]), d[3]
+		local basin = Instance.new("Model")
+		basin.Name, basin.Parent = "BassinSacre", f
+		piece(basin, "Margelle", Enum.PartType.Cylinder, V(0.9, r + 2.4, r + 2.4), white, at + V(0, 0.45, 0), FLAT)
+		piece(basin, "AnneauOr", Enum.PartType.Cylinder, V(0.95, r + 0.6, r + 0.6), gold, at + V(0, 0.47, 0), FLAT, Enum.Material.Metal)
+		local water = piece(basin, "EauSacree", Enum.PartType.Cylinder, V(1, r, r), glow, at + V(0, 0.5, 0), FLAT, Enum.Material.Neon)
+		water.Transparency = 0.35
+		light(water, glow, r + 6, 0.5)
+		for n = 0, 5 do
+			local a = n * math.pi / 3 + k
+			local rim = at + V(math.cos(a) * (r / 2 + 0.6), 0.9, math.sin(a) * (r / 2 + 0.6))
+			if n % 2 == 0 then
+				ball(basin, "Coquillage", V(1.2, 0.6, 1), hex("#F0D2C0"), rim + V(0, 0.2, 0), rotY(a))
+			else
+				coral(basin, rim, if n % 4 == 1 then coralA else coralC, 0.35)
+			end
+		end
+		for n = 0, 3 do
+			local b = ball(basin, "BulleBassin", V(0.7, 0.7, 0.7), hex("#C8F0FF"), at + V(math.cos(n * 1.6) * r * 0.25, 1, math.sin(n * 1.6) * r * 0.25))
+			tag(b, "BulleMonte", { Hauteur = 6, Periode = 2.4 + n * 0.5 })
+		end
+		if k == 1 then -- fontaine-coquillage au centre du grand bassin
+			column(basin, "PiedFontaine", 2.4, 1.2, white, at + V(0, 0.5, 0))
+			ball(basin, "CoquilleFontaine", V(3.4, 1.4, 3.4), hex("#F4E6DC"), at + V(0, 3.2, 0))
+			local jet = piece(basin, "JetFontaine", Enum.PartType.Cylinder, V(3, 0.5, 0.5), glow, at + V(0, 5.2, 0), FLAT, Enum.Material.Neon)
+			jet.Transparency = 0.4
+		end
+	end
 	-- zone de bataille : rue ancienne de sable du fond, bordée de coraux
 	battleground(f, hex("#B4A584"), hex("#9C8E70"), -43)
 	local streets = group(f, "Rues")
