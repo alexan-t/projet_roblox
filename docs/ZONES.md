@@ -285,8 +285,9 @@ commande, **sans créer de Script ou modifier de Source** :
    les versions de combat existantes. Les copies supplémentaires sont statiques et utilisent
    la mise en scène générique (charge/bascule), pas un nouveau squelette animé.
 2. `tools/studio-zone-stage-signs.luau` installe les pancartes Expédition manquantes et replace les
-   existantes, sur les huit arènes et les vitrines `PlotsZones` : bord droit de la zone de préparation
-   (PointEtendard + (20 ; 18,7)), face avant tournée vers les cases, hors du centre de l'arène.
+   existantes, sur les huit arènes et les vitrines `PlotsZones` : à l'entrée, devant le portique côté droit
+   (PointEtendard + (16,9 ; 50,2), tournée vers l'allée d'arrivée), hors de tout décor de zone. On y choisit
+   le stage, ou une autre zone avec les flèches de la fenêtre, avant d'entrer dans l'arène.
    Les textes et interactions viennent du contrôleur client et de UITheme.
 
 Les outils enregistrent une étape ChangeHistoryService. Relancer Rojo depuis ce checkout et
