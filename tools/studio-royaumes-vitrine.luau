@@ -1,6 +1,6 @@
 --!strict
--- Royaumes miniatures, niveaux 4 à 8 (docs/KINGDOM.md § Vitrine des niveaux). À exécuter dans Studio EDIT
--- (barre de commande ou MCP). Assets uniquement, aucun script. Répétable : reconstruit les niveaux 4 à 8.
+-- Royaumes miniatures, niveaux 4 à 14 (docs/KINGDOM.md § Vitrine des niveaux). À exécuter dans Studio EDIT
+-- (barre de commande ou MCP). Assets uniquement, aucun script. Répétable : reconstruit les niveaux FIRST à LAST.
 -- Chaque niveau part d'une copie du niveau précédent (le niveau 3 validé, modèles importés) posée sur son
 -- socle de Workspace.VitrineRoyaumes, puis le fait grandir : même île, même entrée (portail vers -Z local),
 -- même palette (bois, chaume, pierre, bleu royal et or du royaume, losange emblème).
@@ -9,11 +9,18 @@
 --   6 · Ville fortifiée : enceinte de pierre complète, tours d'angle, tour de guet de pierre.
 --   7 · Château : donjon crénelé à tourelles au fond, remparts plus hauts.
 --   8 · Citadelle royale : donjon couronné d'or, tours plus hautes à flèches d'or, grands étendards.
+--   9 · Cité royale : île élargie, tours latérales, grande salle du palais, piliers royaux à brasero à l'entrée.
+--  10 · Capitale : douves et pont, cathédrale à rosace (à la place de la chapelle, du moulin et de l'atelier).
+--  11 · Royaume radieux : tour des mages à cristal flottant, statue d'or du roi sur la place, lanternes flottantes.
+--  12 · Palais du roi : palais à dôme d'or à la place du donjon, chemin de ronde doré, grand emblème de la porte.
+--  13 · Cité haute : passerelles du palais aux tours du fond, jardins suspendus sur le rempart, fontaine royale.
+--  14 · Empire du roi : chevaliers gardiens géants sur le rempart près de la porte, couronne d'or flottante.
 -- Une étape ChangeHistoryService (Ctrl+Z).
 
 local ChangeHistoryService = game:GetService("ChangeHistoryService")
 
-local recording = ChangeHistoryService:TryBeginRecording("Royaumes niveaux 4 à 8")
+local FIRST, LAST = 4, 14 -- niveaux reconstruits (chacun part du précédent, déjà posé)
+local recording = ChangeHistoryService:TryBeginRecording(`Royaumes niveaux {FIRST} à {LAST}`)
 local vitrine = workspace:WaitForChild("VitrineRoyaumes")
 
 local function hex(h: string): Color3
@@ -304,6 +311,130 @@ local function cloneInto(model: Instance, name: string, from: Instance, at: Vect
 	return copy
 end
 
+-- Anneau de segments (anneaux flottants, couronnes) : n blocs posés sur un cercle horizontal
+local function ring(parent: Instance, name: string, center: Vector3, r: number, n: number, size: Vector3, color: Color3, material: Enum.Material?)
+	for i = 0, n - 1 do
+		local a = i * 2 * math.pi / n
+		block(parent, name, size, color, CFrame.new(center + V(math.cos(a) * r, 0, math.sin(a) * r)) * rotY(-a), material)
+	end
+end
+
+-- Élargit l'île (tapis d'herbe, couche de terre, rochers) dans le plan, sans changer sa hauteur
+local function widenIsland(root: Instance, k: number)
+	local ile = root:FindFirstChild("ile")
+	if not ile then return end
+	for _, d in ile:GetDescendants() do
+		if d:IsA("BasePart") then
+			local l = FRAME:ToObjectSpace(d.CFrame)
+			d.Size = V(d.Size.X * k, d.Size.Y, d.Size.Z * k)
+			d.CFrame = FRAME * (CFrame.new(l.X * k, l.Y, l.Z * k) * l.Rotation)
+		end
+	end
+end
+
+-- Pilier royal : colonne de pierre, bandeau d'or, brasero allumé
+local function royalPillar(parent: Instance, at: Vector3)
+	local m = group(parent, "PilierRoyal")
+	local base = CFrame.new(at)
+	block(m, "SoclePilier", V(1.6, 0.6, 1.6), C.StoneDark, base * CFrame.new(0, 0.3, 0))
+	block(m, "Pilier", V(1.1, 3.6, 1.1), C.Stone, base * CFrame.new(0, 2.4, 0))
+	block(m, "BandeauPilier", V(1.3, 0.3, 1.3), C.Gold, base * CFrame.new(0, 3.6, 0), Enum.Material.Metal)
+	block(m, "Vasque", V(1.6, 0.5, 1.6), C.Gold, base * CFrame.new(0, 4.45, 0), Enum.Material.Metal)
+	local coals = block(m, "Braises", V(1.2, 0.2, 1.2), C.Glow, base * CFrame.new(0, 4.75, 0), Enum.Material.Neon)
+	local fire = Instance.new("Fire")
+	fire.Size, fire.Heat, fire.Color, fire.SecondaryColor = 2, 4, hex("#F08C3C"), hex("#8A2A10")
+	fire.Parent = coals
+end
+
+-- Statue d'or du roi : socle de pierre cerclé d'or, robe, buste, tête couronnée, épée levée
+local function kingStatue(parent: Instance, at: Vector3)
+	local m = group(parent, "StatueDuRoi")
+	local base = CFrame.new(at)
+	block(m, "SocleStatue", V(3, 1, 3), C.Stone, base * CFrame.new(0, 0.5, 0))
+	block(m, "BandeSocle", V(3.2, 0.25, 3.2), C.Gold, base * CFrame.new(0, 1, 0), Enum.Material.Metal)
+	block(m, "Robe", V(1.6, 2.2, 1.1), C.Gold, base * CFrame.new(0, 2.2, 0), Enum.Material.Metal)
+	block(m, "Buste", V(1.3, 1.1, 0.9), C.Gold, base * CFrame.new(0, 3.85, 0), Enum.Material.Metal)
+	local head = block(m, "Tete", V(0.9, 0.9, 0.9), C.Gold, base * CFrame.new(0, 4.85, 0), Enum.Material.Metal)
+	head.Shape = Enum.PartType.Ball
+	for k = 0, 3 do
+		block(m, "Couronne", V(0.25, 0.45, 0.25), C.GoldLight, base * rotY(k * math.pi / 2) * CFrame.new(0.35, 5.4, 0.35), Enum.Material.Metal)
+	end
+	block(m, "Bras", V(0.35, 1.3, 0.35), C.Gold, base * CFrame.new(0.85, 4.3, -0.1) * CFrame.Angles(0, 0, -0.5), Enum.Material.Metal)
+	block(m, "Epee", V(0.18, 2.2, 0.1), C.StoneLight, base * CFrame.new(1.3, 5.6, -0.1), Enum.Material.Metal)
+	block(m, "Garde", V(0.7, 0.15, 0.15), C.GoldLight, base * CFrame.new(1.3, 4.55, -0.1), Enum.Material.Metal)
+	diamond(m, base * CFrame.new(0, 3.85, -0.48), 0.45)
+end
+
+-- Tour des mages : tour de pierre cerclée d'or, sommet ouvert, cristal flottant entouré de deux anneaux d'or
+local function arcaneTower(parent: Instance, at: Vector3)
+	local m = stoneTower(parent, "TourDesMages", at, 3.2, 12, "Creneaux", true)
+	local top = 0.8 + 12
+	local crystal = block(m, "CristalFlottant", V(1.3, 2.6, 1.3), hex("#7FD0FF"), CFrame.new(at + V(0, top + 3.2, 0)) * CFrame.Angles(0, math.pi / 4, 0),
+		Enum.Material.Neon)
+	local mesh = Instance.new("SpecialMesh")
+	mesh.MeshType = Enum.MeshType.Sphere
+	mesh.Parent = crystal
+	local l = Instance.new("PointLight")
+	l.Color, l.Range, l.Brightness = hex("#7FD0FF"), 14, 1
+	l.Parent = crystal
+	ring(m, "AnneauArcane", at + V(0, top + 2.6, 0), 1.8, 10, V(0.25, 0.2, 1.1), C.Gold, Enum.Material.Metal)
+	ring(m, "AnneauArcane", at + V(0, top + 3.9, 0), 1.4, 8, V(0.25, 0.2, 1.1), C.GoldLight, Enum.Material.Metal)
+end
+
+-- Cathédrale : nef de pierre à toit bleu et faîtage d'or, haute tour-clocher à flèche dorée, rosace lumineuse
+local function cathedral(parent: Instance, at: Vector3, w: number, d: number)
+	local m = house(parent, "Cathedrale", at, 0, w, d, 4.6, C.Blue, C.Stone)
+	local base = CFrame.new(at)
+	block(m, "FaitageOr", V(w + 0.6, 0.3, 0.3), C.Gold, base * CFrame.new(0, 0.5 + 4.6 + math.min(w, d) * 0.55, 0), Enum.Material.Metal)
+	local towerAt = (base * CFrame.new(0, 0, -d / 2 - 1.2)).Position
+	stoneTower(m, "Clocher", towerAt, 2.8, 9.5, "Pyramide", true)
+	local rose = block(m, "Rosace", V(1.6, 1.6, 0.15), C.Glow, CFrame.new(towerAt + V(0, 6.2, -1.48)), Enum.Material.Neon)
+	rose.Shape = Enum.PartType.Cylinder
+	rose.CFrame = FRAME * CFrame.new(towerAt + V(0, 6.2, -1.48)) * rotY(math.pi / 2)
+	rose.Size = V(0.15, 1.6, 1.6)
+	diamond(m, CFrame.new(towerAt + V(0, 3.4, -1.48)), 0.8)
+	for _, x in { -1, 1 } do
+		block(m, "Contrefort", V(0.6, 3.6, 0.9), C.StoneDark, base * CFrame.new(x * (w / 2 + 0.3), 2.3, d * 0.15))
+	end
+end
+
+-- Palais du roi : grand corps de pierre à bandeaux d'or, étage, dôme d'or, flèche et étendard, tourelles dorées
+local function palace(parent: Instance, at: Vector3)
+	local m = stoneTower(parent, "Palais", at, 7.2, 9, "Creneaux", true)
+	local base = CFrame.new(at)
+	local top = 0.8 + 9
+	for _, c in { V(-1, 0, -1), V(1, 0, -1), V(-1, 0, 1), V(1, 0, 1) } do
+		local p = c * 3.6
+		local t = group(m, "TourelleDoree")
+		local tb = CFrame.new(at + V(p.X, top - 3, p.Z))
+		block(t, "FutTourelle", V(1.9, 3.6, 1.9), C.Stone, tb * CFrame.new(0, 1.8, 0))
+		block(t, "BandeauTourelle", V(2.2, 0.35, 2.2), C.Gold, tb * CFrame.new(0, 3.6, 0), Enum.Material.Metal)
+		pyramid(t, "ToitDore", tb * CFrame.new(0, 3.75, 0), 2.6, 2.6, C.Gold)
+	end
+	local hall = stoneTower(m, "EtagePalais", at + V(0, top, 0), 4.8, 4.5, "Creneaux", true)
+	hall.Name = "EtagePalais"
+	local dome = block(m, "DomeOr", V(4.6, 4, 4.6), C.Gold, base * CFrame.new(0, top + 0.8 + 4.5 + 1.2, 0), Enum.Material.Metal)
+	local mesh = Instance.new("SpecialMesh")
+	mesh.MeshType = Enum.MeshType.Sphere
+	mesh.Parent = dome
+	block(m, "Fleche", V(0.35, 3.2, 0.35), C.GoldLight, base * CFrame.new(0, top + 0.8 + 4.5 + 4.6, 0), Enum.Material.Metal)
+	banner(m, base * CFrame.new(0, top + 0.8 + 4.5 + 6.2, 0), 2.6, 1.3)
+	block(m, "PortePalais", V(2, 3.2, 0.2), C.WoodMid, base * CFrame.new(0, 2.4, -3.68))
+	block(m, "ArcPalais", V(2.8, 0.6, 0.3), C.Gold, base * CFrame.new(0, 4.2, -3.7), Enum.Material.Metal)
+	block(m, "TenturePalais", V(2.8, 3.4, 0.1), C.Blue, base * CFrame.new(0, 6.6, -3.7))
+	diamond(m, base * CFrame.new(0, 6.6, -3.78), 1.2)
+	local heart = block(m, "CoeurRoyal", V(0.9, 0.9, 0.9), C.Glow, base * CFrame.new(0, top + 0.8 + 2.6, -2.45), Enum.Material.Neon)
+	local l = Instance.new("PointLight")
+	l.Color, l.Range, l.Brightness = C.Glow, 12, 0.9
+	l.Parent = heart
+end
+
+local function destroyNamed(root: Instance, names: { [string]: boolean })
+	for _, d in root:GetChildren() do
+		if names[d.Name] then d:Destroy() end
+	end
+end
+
 ------------------------------------------------------------------ niveaux
 
 local BUILD: { [number]: (root: Instance, from: Instance) -> () } = {}
@@ -395,8 +526,188 @@ end
 
 ------------------------------------------------------------------ construction
 
+-- 9 · Cité royale : île élargie, tours latérales, grande salle du palais, piliers royaux à l'entrée
+BUILD[9] = function(root, from)
+	widenIsland(root, 1.1)
+	for _, x in { -1, 1 } do
+		local at = V(x * MUR_R, 0, 0)
+		clear(root, at, 2.6, { nature = true })
+		stoneTower(root, "TourRempart", at, 3, 7.5, "Pyramide", true)
+	end
+	destroyNamed(root, { MaisonNeuve = true })
+	local hall = house(root, "GrandeSalle", V(4.4, 0, 9.8), 0, 5, 4, 4.2, C.Blue, C.Stone)
+	block(hall, "FaitageOr", V(5.6, 0.3, 0.3), C.Gold, CFrame.new(4.4, 0.5 + 4.2 + 4 * 0.55, 9.8), Enum.Material.Metal)
+	for _, x in { -2.9, 2.9 } do
+		royalPillar(root, V(x, 0, -16.9))
+	end
+end
+
+-- 10 · Capitale : douves et pont devant la porte, cathédrale à rosace
+BUILD[10] = function(root, from)
+	local moat = group(root, "Douves")
+	local gap = math.asin(3.6 / 16.8) -- passage du pont, entre les piliers royaux
+	local steps = 40
+	for i = 0, steps - 1 do
+		local a0 = i * 2 * math.pi / steps
+		local a1 = (i + 1) * 2 * math.pi / steps
+		local mid = (a0 + a1) / 2
+		if math.abs(mid - 1.5 * math.pi) > gap + 0.08 then
+			local pa, pb = V(16.8 * math.cos(a0), 0, 16.8 * math.sin(a0)), V(16.8 * math.cos(a1), 0, 16.8 * math.sin(a1))
+			local d = pb - pa
+			block(moat, "Eau", V(1.5, 0.12, d.Magnitude + 0.3), hex("#5AA8DC"), CFrame.new((pa + pb) / 2 + V(0, 0.08, 0)) * rotY(math.atan2(d.X, d.Z)))
+		end
+	end
+	local bridge = group(root, "Pont")
+	block(bridge, "Tablier", V(3.4, 0.35, 2.6), C.Wood, CFrame.new(0, 0.2, -16.8))
+	for _, x in { -1.6, 1.6 } do
+		block(bridge, "Garde", V(0.2, 0.6, 2.6), C.WoodDark, CFrame.new(x, 0.6, -16.8))
+	end
+	destroyNamed(root, { Chapelle = true, Moulin = true, atelier_bucheron = true })
+	clear(root, V(-7, 0, 3), 3.6, { nature = true })
+	cathedral(root, V(-7, 0, 3.2), 4.4, 5.6)
+end
+
+-- 11 · Royaume radieux : tour des mages, statue d'or du roi sur la place, lanternes flottantes
+BUILD[11] = function(root, from)
+	destroyNamed(root, { TourGuetPierre = true, feu_de_camp = true })
+	arcaneTower(root, V(-5.2, 0, -9.9))
+	kingStatue(root, V(0.2, 0, -2.6))
+	local lanterns = group(root, "LanternesFlottantes")
+	for i = 0, 7 do
+		local a = i * math.pi / 4 + 0.3
+		local lantern = block(lanterns, "Lanterne", V(0.6, 0.8, 0.6), C.Glow, CFrame.new(math.cos(a) * 10, 15 + (i % 3) * 1.4, math.sin(a) * 10),
+			Enum.Material.Neon)
+		if i % 3 == 0 then
+			local l = Instance.new("PointLight")
+			l.Color, l.Range, l.Brightness = C.Glow, 8, 0.6
+			l.Parent = lantern
+		end
+	end
+end
+
+-- 12 · Palais du roi : palais à dôme d'or, chemin de ronde doré, grand emblème sur la porte
+BUILD[12] = function(root, from)
+	destroyNamed(root, { Donjon = true })
+	clear(root, V(-1.6, 0, 8.8), 4.4, { reserves = true })
+	palace(root, V(-1.6, 0, 8.8))
+	local wallFolder = root:FindFirstChild("Rempart")
+	for _, d in (if wallFolder then wallFolder:GetChildren() else {}) do
+		if d:IsA("BasePart") and d.Name == "ChemineRonde" then
+			d.Color, d.Material = C.Gold, Enum.Material.Metal
+		end
+	end
+	local gate = root:FindFirstChild("PorteFortifiee")
+	if gate then
+		block(gate, "Fronton", V(3, 2.8, 0.4), C.Stone, CFrame.new(0, 7.7, -MUR_R - 1))
+		block(gate, "CadreFronton", V(3.3, 0.3, 0.45), C.Gold, CFrame.new(0, 9.15, -MUR_R - 1), Enum.Material.Metal)
+		diamond(gate, CFrame.new(0, 7.7, -MUR_R - 1.25), 1.6)
+	end
+end
+
+-- Passerelle de pierre entre deux points en hauteur : tablier, garde-corps dorés, arc de soutien
+local function skybridge(parent: Instance, a: Vector3, b: Vector3)
+	local m = group(parent, "Passerelle")
+	local d = b - a
+	local len = V(d.X, 0, d.Z).Magnitude
+	local cf = CFrame.new((a + b) / 2) * rotY(math.atan2(d.X, d.Z))
+	block(m, "Tablier", V(1.6, 0.5, len), C.Stone, cf)
+	for _, x in { -0.75, 0.75 } do
+		block(m, "GardeCorps", V(0.15, 0.6, len), C.Gold, cf * CFrame.new(x, 0.55, 0), Enum.Material.Metal)
+	end
+	block(m, "Arc", V(1.2, 0.9, len * 0.7), C.StoneDark, cf * CFrame.new(0, -0.7, 0))
+end
+
+-- Fontaine royale : bassin de pierre cerclé d'or, eau, colonne d'or et gerbe
+local function fountain(parent: Instance, at: Vector3)
+	local m = group(parent, "FontaineRoyale")
+	local base = CFrame.new(at)
+	local FLAT = CFrame.Angles(0, 0, math.pi / 2)
+	local basin = block(m, "Bassin", V(0.8, 3.4, 3.4), C.Stone, base * CFrame.new(0, 0.4, 0) * FLAT)
+	basin.Shape = Enum.PartType.Cylinder
+	local water = block(m, "Eau", V(0.1, 2.8, 2.8), hex("#5AA8DC"), base * CFrame.new(0, 0.82, 0) * FLAT)
+	water.Shape = Enum.PartType.Cylinder
+	ring(m, "Margelle", at + V(0, 0.85, 0), 1.65, 12, V(0.25, 0.15, 0.95), C.Gold, Enum.Material.Metal)
+	block(m, "ColonneFontaine", V(0.5, 1.8, 0.5), C.Gold, base * CFrame.new(0, 1.7, 0), Enum.Material.Metal)
+	local spray = block(m, "Gerbe", V(1.1, 0.9, 1.1), hex("#9FD8FF"), base * CFrame.new(0, 2.8, 0), Enum.Material.Neon)
+	spray.Shape = Enum.PartType.Ball
+	spray.Transparency = 0.25
+end
+
+-- Jardins suspendus : buissons et fleurs posés sur le chemin de ronde de l'arc du fond
+local function hangingGardens(parent: Instance, h: number)
+	local m = group(parent, "JardinsSuspendus")
+	for i = 0, 10 do
+		local t = math.rad(35 + i * 11)
+		local at = V(MUR_R * math.cos(t), h + 0.6, MUR_R * math.sin(t))
+		local bush = block(m, "Buisson", V(1.1, 0.9, 1.1), if i % 2 == 0 then C.Green else hex("#408E4A"), CFrame.new(at))
+		bush.Shape = Enum.PartType.Ball
+		if i % 3 == 1 then
+			local flower = block(m, "Fleur", V(0.35, 0.35, 0.35), if i % 2 == 0 then hex("#EC78A0") else C.Glow, CFrame.new(at + V(0.2, 0.45, 0)))
+			flower.Shape = Enum.PartType.Ball
+		end
+	end
+end
+
+-- Chevalier gardien géant : socle, armure de pierre, cape bleue, bouclier au losange d'or, épée d'or plantée
+local function guardian(parent: Instance, at: Vector3, yaw: number)
+	local m = group(parent, "Gardien")
+	local base = CFrame.new(at) * rotY(yaw)
+	block(m, "SocleGardien", V(2, 0.6, 2), C.StoneDark, base * CFrame.new(0, 0.3, 0))
+	block(m, "Jambes", V(1.3, 1.8, 0.8), C.Stone, base * CFrame.new(0, 1.5, 0))
+	block(m, "Torse", V(1.7, 1.8, 1), C.StoneLight, base * CFrame.new(0, 3.3, 0))
+	block(m, "Cape", V(1.8, 3, 0.2), C.Blue, base * CFrame.new(0, 2.8, 0.6))
+	for _, s in { -1, 1 } do
+		block(m, "Epauliere", V(0.8, 0.5, 1.1), C.Gold, base * CFrame.new(s * 1, 4.1, 0), Enum.Material.Metal)
+	end
+	local head = block(m, "Heaume", V(0.9, 1, 0.9), C.StoneLight, base * CFrame.new(0, 4.75, 0))
+	head.Shape = Enum.PartType.Ball
+	block(m, "Cimier", V(0.2, 0.6, 0.8), C.Gold, base * CFrame.new(0, 5.35, 0), Enum.Material.Metal)
+	block(m, "Bouclier", V(1.2, 1.6, 0.2), C.Blue, base * CFrame.new(-1.05, 3, -0.45))
+	diamond(m, base * CFrame.new(-1.05, 3, -0.57), 0.6)
+	block(m, "Epee", V(0.25, 3, 0.12), C.Gold, base * CFrame.new(0.95, 2.2, -0.5), Enum.Material.Metal)
+	block(m, "GardeEpee", V(0.9, 0.18, 0.18), C.Gold, base * CFrame.new(0.95, 3.75, -0.5), Enum.Material.Metal)
+end
+
+-- 13 · Cité haute : passerelles du palais aux tours du fond, jardins suspendus, fontaine royale
+BUILD[13] = function(root, from)
+	-- sous le bandeau des tours du fond (fût de 7,5) et au-dessus du toit de la grande salle
+	for _, x in { -1, 1 } do
+		local towerAt = V(x * 7.3, 0, 12.6)
+		skybridge(root, V(-1.6 + x * 3.6, 7.4, 9.6), V(towerAt.X - x * 1.5, 7.4, towerAt.Z - 0.6))
+	end
+	hangingGardens(root, 3.2)
+	fountain(root, V(-0.2, 0, -8.6))
+end
+
+-- 14 · Empire du roi : chevaliers gardiens sur le rempart de part et d'autre de la porte, couronne d'or
+-- flottante autour de la flèche du palais
+BUILD[14] = function(root, from)
+	for _, s in { -1, 1 } do
+		local t = 1.5 * math.pi + s * 0.55
+		local at = V(MUR_R * math.cos(t), 3.45, MUR_R * math.sin(t))
+		guardian(root, at, s * 0.55)
+	end
+	local crown = group(root, "CouronneCeleste")
+	local center = V(-1.6, 25.5, 8.8)
+	ring(crown, "Anneau", center, 4.2, 16, V(0.3, 0.5, 1.8), C.Gold, Enum.Material.Metal)
+	for i = 0, 7 do
+		local a = i * math.pi / 4
+		local spike = block(crown, "Fleuron", V(0.4, 1.2, 0.4), C.GoldLight, CFrame.new(center + V(math.cos(a) * 4.2, 0.8, math.sin(a) * 4.2)), Enum.Material.Metal)
+		if i % 2 == 0 then
+			local gem = block(crown, "Joyau", V(0.5, 0.5, 0.5), hex("#7FD0FF"), CFrame.new(center + V(math.cos(a) * 4.2, 1.6, math.sin(a) * 4.2)), Enum.Material.Neon)
+			gem.Shape = Enum.PartType.Ball
+		end
+		spike.Name = "Fleuron"
+	end
+	local glow = block(crown, "Lumiere", V(0.6, 0.6, 0.6), C.Glow, CFrame.new(center), Enum.Material.Neon)
+	glow.Transparency = 1
+	local l = Instance.new("PointLight")
+	l.Color, l.Range, l.Brightness = C.Glow, 16, 1
+	l.Parent = glow
+end
+
 local built = {}
-for n = 4, 8 do
+for n = FIRST, LAST do
 	local socle = vitrine:FindFirstChild(string.format("Socle_%02d", n))
 	local previous = levelModel(n - 1)
 	assert(socle and previous, `socle {n} ou niveau {n - 1} introuvable`)
@@ -411,8 +722,8 @@ for n = 4, 8 do
 	model:PivotTo((socle:FindFirstChild("PointDePose") :: BasePart).CFrame * rel)
 	model.Parent = socle
 	FRAME = model:GetPivot()
-	local root = model:FindFirstChild("royaume_niveau_0" .. (n - 1)) or model
-	root.Name = "royaume_niveau_0" .. n
+	local root = model:FindFirstChild(string.format("royaume_niveau_%02d", n - 1)) or model
+	root.Name = string.format("royaume_niveau_%02d", n)
 	BUILD[n](root, levelModel(3) :: Instance)
 	local count = 0
 	for _, d in model:GetDescendants() do

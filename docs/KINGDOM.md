@@ -104,17 +104,26 @@ emblème) et le fait grandir ; rien n'est réinventé d'un niveau à l'autre.
 | 6 | Ville fortifiée | Enceinte de pierre complète, tours du fond, tour de guet de pierre |
 | 7 | Château | Donjon crénelé à quatre tourelles au fond (à la place de la maison de villageois) |
 | 8 | Citadelle royale | Donjon couronné d'un étage royal et d'un cœur lumineux, tours plus hautes à bandeaux et étendards d'or, porte dorée, grand étendard |
+| 9 | Cité royale | Île élargie, tours latérales dorées, grande salle du palais (à la place de la maison neuve), piliers royaux à brasero devant la porte |
+| 10 | Capitale | Douves et pont devant la porte, cathédrale à rosace et clocher doré (à la place de la chapelle, du moulin et de l'atelier) |
+| 11 | Royaume radieux | Tour des mages à cristal flottant et anneaux d'or (à la place de la tour de guet), statue d'or du roi sur la place (à la place du feu de camp), lanternes flottantes |
+| 12 | Palais du roi | Palais à dôme d'or, étage et tourelles dorées (à la place du donjon), chemin de ronde doré, fronton à grand losange sur la porte |
+| 13 | Cité haute | Passerelles de pierre à garde-corps d'or du palais aux tours du fond, jardins suspendus sur le rempart du fond, fontaine royale sur l'allée |
+| 14 | Empire du roi | Deux chevaliers gardiens géants sur le rempart, de part et d'autre de la porte ; couronne d'or à joyaux flottant autour de la flèche du palais |
 
-Niveaux 4 à 8 : `tools/studio-royaumes-vitrine.luau` (Studio EDIT, répétable, une étape d'annulation),
+Niveaux 4 à 14 : `tools/studio-royaumes-vitrine.luau` (`FIRST`, `LAST` : niveaux reconstruits) (Studio EDIT, répétable, une étape d'annulation),
 construits en pièces Roblox aux couleurs relevées sur les niveaux 1 à 3, à partir d'une copie du niveau
 précédent. Ils ne sont **pas encore** des états de jeu : `RoyaumeEtats` ne contient que les états 1 et 2.
 Pour en faire un état : copier le modèle dans `RoyaumeEtats` avec `VisualState = N`, pivot aligné sur
 `Royaume_Etat1` (voir `Royaume_Etat2`), ses `Emplacements.Heros.Heros_1..6` et son modèle `Fumee`.
 
-Contrôle visuel des niveaux 4 à 8 (captures réelles, `docs/VISUAL_QA.md`) : **PASS** pour chacun
+Contrôle visuel des niveaux 4 à 14 (captures réelles, `docs/VISUAL_QA.md`) : **PASS** pour chacun
 ([4](../automation/screenshots/royaumes/niveau-4.jpg), [5](../automation/screenshots/royaumes/niveau-5.jpg),
 [6](../automation/screenshots/royaumes/niveau-6.jpg), [7](../automation/screenshots/royaumes/niveau-7.jpg),
-[8](../automation/screenshots/royaumes/niveau-8.jpg)). Remarque non bloquante : de face, le donjon du niveau 7
+[8](../automation/screenshots/royaumes/niveau-8.jpg), [9](../automation/screenshots/royaumes/niveau-9.jpg),
+[10 à 12](../automation/screenshots/royaumes/niveaux-10-11-12.jpg), [13](../automation/screenshots/royaumes/niveau-13.jpg),
+[14](../automation/screenshots/royaumes/niveau-14.jpg)). Remarque non bloquante : au niveau 13, les passerelles et
+les jardins suspendus, derrière le palais, se voient peu de face (la fontaine porte la différence). Remarque non bloquante : de face, le donjon du niveau 7
 est en partie caché par les maisons, le niveau 7 se distingue moins du 6 que le 8 du 7.
 
 ## Runtime
