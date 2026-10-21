@@ -251,6 +251,21 @@ local function groundOf(parent: Instance, colors: { Color3 })
 	end
 end
 
+-- Zone de bataille (docs/ZONES.md § Règles de décor) : sol de couleur distincte au centre de l'arène, comme la
+-- clairière de sable de la Zone 1 : large bande de l'entrée à la structure du boss, bouts arrondis, quelques
+-- taches plus sombres. Couvre les cases des héros et FrontEnnemi ; 0,055 stud au-dessus du sol de zone.
+local function battleground(parent: Instance, color: Color3, spot: Color3, back: number?)
+	local top = GROUND_TOP - GROUND_Y + 0.055
+	local zBack = back or -44
+	local len = 30 - zBack
+	piece(parent, "ZoneBataille", Enum.PartType.Block, Vector3.new(44, 0.2, len), color, Vector3.new(0, top - 0.1, (30 + zBack) / 2))
+	piece(parent, "ZoneBatailleAvant", Enum.PartType.Cylinder, Vector3.new(0.2, 44, 44), color, Vector3.new(0, top - 0.1, 30), FLAT)
+	piece(parent, "ZoneBatailleFond", Enum.PartType.Cylinder, Vector3.new(0.2, 40, 40), color, Vector3.new(0, top - 0.1, zBack), FLAT)
+	for _, t in { { -9, 12, 6 }, { 7, 20, 5 }, { -4, -12, 4 }, { 10, -30, 5 }, { -12, -36, 4 }, { 3, 2, 3 } } do
+		piece(parent, "TacheBataille", Enum.PartType.Cylinder, Vector3.new(0.2, t[3], t[3]), spot, Vector3.new(t[1], top - 0.08, t[2]), FLAT)
+	end
+end
+
 -- Accessoires de zone (formes rondes et gonflées, comme le décor de la Zone 1).
 local function mushroom(parent: Instance, at: Vector3, height: number, cap: Color3, stem: Color3, glow: boolean?)
 	piece(parent, "Pied", Enum.PartType.Cylinder, Vector3.new(height, height * 0.32, height * 0.32), stem, at + Vector3.new(0, height / 2, 0), FLAT)
@@ -899,7 +914,7 @@ local function glacialRealm(m: Instance, C: { [string]: Color3 })
 	-- lac gelé (mares de la Zone 1) : grande plaque de glace bordée de neige, pont verglacé sur le ruisseau sud
 	local l = Instance.new("Folder")
 	l.Name, l.Parent = "LacGele", m
-	piece(l, "GlaceLac", Enum.PartType.Cylinder, V(0.15, 15, 15), C.Ice, V(-26, 0, 12), FLAT, Enum.Material.Ice)
+	piece(l, "GlaceLac", Enum.PartType.Cylinder, V(0.15, 15, 15), C.Ice, V(-26, 0.07, 12), FLAT, Enum.Material.Ice)
 	for i = 0, 10 do
 		local a = i * math.pi * 2 / 11
 		ball(l, "BordNeige", V(3, 1.2, 2), if i % 2 == 0 then C.Snow else C.SnowShade, V(-26 + math.cos(a) * 8, 0.2, 12 + math.sin(a) * 8), rotY(-a))
@@ -932,13 +947,8 @@ local function glacialRealm(m: Instance, C: { [string]: Color3 })
 	-- allée : neige tassée (hors cases des héros), cristaux à la place des piliers, lanternes à l'entrée
 	local a = Instance.new("Folder")
 	a.Name, a.Parent = "AlleeGivre", m
-	for _, band in { { -22, 11, 60 }, { 42, 9, 14 } } do
-		-- bande ovale de neige tassée (disque étiré par un SpecialMesh cylindre), hors cases des héros
-		local strip = piece(a, "NeigeTassee", Enum.PartType.Block, V(0.15, band[2], band[3]), C.SnowShade, V(0, 0.02, band[1]), FLAT)
-		local oval = Instance.new("SpecialMesh")
-		oval.MeshType = Enum.MeshType.Cylinder
-		oval.Parent = strip
-	end
+	-- zone de bataille : neige damée bleutée, de l'entrée jusqu'à la grande porte du château
+	battleground(a, C.Battle, C.BattleSpot, -44)
 	for _, x in { -14, 14 } do
 		for _, z in { -10, -24, -38 } do
 			iceCrystal(a, V(x, 0, z), 6, C.Ice, if z == -24 then C.Glow else nil)
@@ -1041,6 +1051,7 @@ BUILD[3] = function(m: Instance)
 		Snow = hex("#F2F7FB"), SnowShade = hex("#D6E3EE"), Rock = hex("#5E7488"), RockLight = hex("#8197AC"),
 		IceDeep = hex("#4F9BD0"), Ice = hex("#8CC8EE"), IceLight = hex("#CDEBFA"), Glow = hex("#6FE3FF"),
 		Roof = hex("#2E4E7E"), Stone = hex("#8A98A6"), Pine = hex("#2E5A44"), Iron = hex("#3E4A5A"), Deep = hex("#1E3C6E"),
+		Battle = hex("#A7C5E0"), BattleSpot = hex("#93B4D4"),
 	})
 end
 

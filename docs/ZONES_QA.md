@@ -347,3 +347,10 @@ Captures : [vue d'ensemble](../automation/screenshots/zones/zone3-gele-v3-overvi
 
 **Verdict visuel : PASS** (KO non bloquant inchangé : calottes un peu plates). **Non testé en Play** : la sortie
 réelle des ennemis par la porte ; à contrôler au prochain combat de la Zone 3.
+
+### Zone 3 — zone de bataille, 22 octobre 2026
+
+Bande de neige damée bleutée `#A7C5E0` (taches `#93B4D4`) au centre de l'arène, de l'entrée à la grande porte,
+sous les cases et le front ennemi (`battleground`) ; la glace du lac passe au-dessus. Première teinte `#C3D6E6`
+trop proche de la neige, foncée après capture. [Capture](../automation/screenshots/zones/zone3-gele-zone-bataille.jpg).
+Règles de décor (structure du boss propre à la zone, zone de bataille) ajoutées à `docs/ZONES.md`.

@@ -277,6 +277,29 @@ Le décor reste visible pendant l'outro. Une relance explicite avant sa fin inst
 le décor du nouveau combat avant sa création. Un décor ou un front absent refuse le lancement.
 Le serveur et le client lisent les repères du décor courant ; les autres plots ne changent pas.
 
+### Règles de décor (obligatoires pour chaque zone)
+
+1. **Structure d'apparition du boss, propre à la zone.** Le petit plateau de la Zone 1 (plateau, rampe,
+   porte et tour derrière le front ennemi) n'est **pas** un élément obligatoire des autres zones : il ne servait
+   qu'à faire apparaître le boss de la Zone 1. Chaque zone doit avoir **sa propre belle structure**, dans son
+   biome, d'où le boss sort : par exemple la grande porte du château prisonnier du glacier en Zone 3. Les
+   repères de `SourcesEnnemis` utilisés par le boss (`Tente` = SortieTente, `HautRampe` = DescenteRampe, avec
+   leurs `Etape1`, `Etape2`…) sont posés sur cette structure, et les repères restants du plateau
+   (`BordPlateau1/2`, `SommetTour`) sont déplacés dessus ou à son pied (`moveMarkers`). Ne pas recopier le plateau.
+2. **Zone de bataille au centre.** Comme la clairière de sable de la Zone 1 (`Sol.Clairiere` : large bande au
+   milieu de l'arène, d'une autre couleur que l'herbe, aux bouts arrondis), chaque zone a au centre un sol
+   **d'une couleur nettement différente** de son sol, là où les unités se battent : de l'entrée jusqu'à la
+   structure du boss, sous les cases des héros et `FrontEnnemi`. Outil : `battleground` (bande de 44 studs,
+   disques avant et fond, quelques taches plus sombres), juste au-dessus du sol de zone et sous les accessoires.
+   Zone 3 : neige damée bleutée `#A7C5E0` sur la neige `#E4EDF5`.
+
+| Zone | Structure du boss | Zone de bataille |
+| --- | --- | --- |
+| 1 | Plateau et tour du camp (d'origine) | Clairière de sable |
+| 2 | Plateau générique (temple sur dais) | **À faire** |
+| 3 | Grande porte du château glaciaire | Neige damée bleutée |
+| 4 à 6 | Plateau générique | **À faire** |
+
 ### Assets Studio
 
 Dans le sandbox « test 3 », exécuter les outils d'assets en mode Edit via MCP ou la barre de
