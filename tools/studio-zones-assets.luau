@@ -1698,7 +1698,7 @@ end
 
 ---------------------------------------------------------------- Zone 5 : la Cité Engloutie
 -- Une cité sous une bulle magique au fond de l'océan : on y marche normalement, et l'océan est visible tout
--- autour, derrière la barrière. Animé par DecorVivantController (tags) ; la protection se fissure au fil des
+-- autour, derrière la barrière, sans jamais sortir de la délimitation du plot. Animé par DecorVivantController (tags) ; la protection se fissure au fil des
 -- stages (attributs StageMin / StageMax) ; au stage 5, salle circulaire du boss et baie vitrée avec l'œil.
 local CS = game:GetService("CollectionService")
 local function tag(instance: Instance, name: string, attributes: { [string]: any }?): Instance
@@ -1739,9 +1739,28 @@ BUILD[5] = function(m: Instance)
 		end
 	end
 
+	-- Tout reste dans la délimitation du plot (bordure : x ±59 sur les flancs, fond arrondi jusqu'à z -78) :
+	-- barrière en U un peu en retrait (rayons 52 × 50), océan dans la bande entre la barrière et la bordure,
+	-- mur d'eau profonde posé sur la bordure (rayons 57 × 55).
+	local function ring(step: number, rx: number, rz: number): { { at: Vector3, yaw: number, side: number } }
+		local list = {}
+		for z = 18, -20, -step do
+			table.insert(list, { at = V(-rx, 0, z), yaw = math.pi / 2, side = -1 })
+			table.insert(list, { at = V(rx, 0, z), yaw = math.pi / 2, side = 1 })
+		end
+		local count = math.floor(math.pi * (rx + rz) / 2 / step)
+		for i = 1, count - 1 do
+			local a = math.pi * i / count
+			local x, z = -rx * math.cos(a), -20 - rz * math.sin(a)
+			table.insert(list, { at = V(x, 0, z), yaw = -a + math.pi / 2, side = 0 })
+		end
+		return list
+	end
+	local BARRIER = ring(7, 52, 50)
+
 	-- barrière magique : grands pans de verre bleuté, liseré lumineux, qui ondulent
 	local barrier = group(f, "Barriere")
-	for i, p in enclosure(7) do
+	for i, p in BARRIER do
 		local pane = piece(barrier, "PanBarriere", Enum.PartType.Block, V(7.4, 32, 0.4), barrierC, p.at + V(0, 16, 0), rotY(p.yaw), Enum.Material.Glass)
 		pane.Transparency = 0.62
 		tag(pane, "VagueBarriere", { Periode = 3.5 + (i % 4) * 0.4 })
@@ -1753,86 +1772,83 @@ BUILD[5] = function(m: Instance)
 		end
 	end
 
-	-- l'océan tout autour, derrière la barrière : fond marin, forêts d'algues, et un mur d'eau profonde au loin
+	-- l'océan derrière la barrière, jusqu'à la bordure : fond marin, algues, mur d'eau profonde éclairci en haut
 	local oceanF = group(f, "Ocean")
-	for i, p in enclosure(10) do
-		local out = (p.at * V(1, 0, 1)).Unit
-		local far = p.at + out * 44
-		piece(oceanF, "EauProfonde", Enum.PartType.Block, V(18, 70, 1), ocean, far + V(0, 35, 0), rotY(p.yaw))
-		-- lumière de la surface, très haut : l'eau s'éclaircit vers le haut
+	for i, p in ring(6, 57, 55) do
+		piece(oceanF, "EauProfonde", Enum.PartType.Block, V(7.4, 70, 0.8), ocean, p.at + V(0, 35, 0), rotY(p.yaw))
 		for k, band in { { 58, hex("#1E4A78"), 0.2 }, { 66, hex("#3C7AB4"), 0.35 } } do
-			local s = piece(oceanF, "LumiereSurface", Enum.PartType.Block, V(18.2, 8, 1.2), band[2], far + V(0, band[1], 0) - out * 0.2 * k, rotY(p.yaw))
+			local s = piece(oceanF, "LumiereSurface", Enum.PartType.Block, V(7.5, 8, 0.9), band[2], p.at + V(0, band[1], 0), rotY(p.yaw))
 			s.Transparency = band[3]
 		end
-		piece(oceanF, "FondMarin", Enum.PartType.Block, V(14, 0.4, 44), oceanFloor, p.at + out * 22 + V(0, 0.1, 0), rotY(p.yaw + math.pi / 2))
-		if i % 2 == 0 then reeds(oceanF, p.at + out * (10 + i % 3 * 6), hex("#1E5A5A"), hex("#3C8C78")) end
 	end
-	-- baleine qui passe lentement au loin
-	local whale = Instance.new("Model")
-	whale.Name, whale.Parent = "Baleine", oceanF
-	ball(whale, "Corps", V(10, 9, 34), hex("#3A5470"), V(0, 30, -112))
-	ball(whale, "Ventre", V(8, 5, 28), hex("#8CA6BC"), V(0, 27.5, -112))
-	piece(whale, "Queue", Enum.PartType.Block, V(14, 0.8, 6), hex("#3A5470"), V(0, 31, -132))
-	for _, s in { -1, 1 } do
-		ball(whale, "Nageoire", V(9, 0.8, 4), hex("#3A5470"), V(s * 7, 27, -106), CFrame.Angles(0, 0, s * 0.4))
+	for i, p in ring(6, 54.5, 52.5) do
+		piece(oceanF, "FondMarin", Enum.PartType.Block, V(7.4, 0.3, 5.5), oceanFloor, p.at + V(0, 0.1, 0), rotY(p.yaw))
+		if i % 2 == 0 then reeds(oceanF, p.at, hex("#1E5A5A"), hex("#3C8C78")) end
 	end
-	whale.WorldPivot = PIVOT * CFrame.new(0, GROUND_Y + 30 - PIVOT.Position.Y, -112) * CFrame.Angles(0, math.pi / 2, 0)
-	tag(whale, "PoissonPasse", { Distance = 150, Periode = 60, Ondulation = 2 })
+	-- dans la bande d'eau : silhouettes fines (on les voit de face à travers la vitre)
+	local shadowC = hex("#0A1A2C")
+	local function swimmer(name: string, at: Vector3, alongZ: boolean, dist: number, period: number, wave: number): Model
+		local mdl = Instance.new("Model")
+		mdl.Name, mdl.Parent = name, oceanF
+		mdl.WorldPivot = PIVOT * CFrame.new(at.X, GROUND_Y + at.Y - PIVOT.Position.Y, at.Z) * (if alongZ then CFrame.Angles(0, math.pi / 2, 0) else CFrame.identity)
+		tag(mdl, "PoissonPasse", { Distance = dist, Periode = period, Ondulation = wave })
+		return mdl
+	end
+	-- baleine le long du flanc est
+	local whale = swimmer("Baleine", V(55, 30, -6), true, 34, 40, 0.6)
+	ball(whale, "Corps", V(3.4, 8, 22), hex("#3A5470"), V(55, 30, -6))
+	ball(whale, "Ventre", V(2.8, 4, 18), hex("#8CA6BC"), V(54.6, 27.5, -6))
+	piece(whale, "Queue", Enum.PartType.Block, V(0.6, 7, 4), hex("#3A5470"), V(55, 31, -18.5))
+	ball(whale, "Nageoire", V(0.6, 3, 6), hex("#3A5470"), V(54.8, 26.5, -2), CFrame.Angles(0.5, 0, 0))
+	-- Léviathan, sombre et lointain, le long du flanc ouest
+	local lev = swimmer("LeviathanLointain", V(-55, 44, -1), true, 16, 50, 2)
+	for n = 0, 5 do -- corps centré sur le pivot : reste sur le flanc droit de la bordure
+		local seg = ball(lev, "Anneau", V(2.4, 7 - n * 0.7, 5), shadowC, V(-55.5, 44 + math.sin(n * 0.8) * 3, -1 + 10 - n * 4))
+		seg.Transparency = 0.3
+	end
 	-- bancs de poissons
-	for k, d in { { -60, 14, -86, 1 }, { 70, 18, -70, -1 }, { -84, 10, -30, 1 }, { 86, 22, -20, -1 } } do
-		local school = Instance.new("Model")
-		school.Name, school.Parent = "BancPoissons", oceanF
+	for k, d in { { -55, 14, -4, true }, { 55, 18, 6, true }, { -9, 16, -73, false }, { 4, 22, -73, false } } do
+		local school = swimmer("BancPoissons", V(d[1], d[2], d[3]), d[4], if d[4] then 30 else 14, 12 + k * 3, 0.5)
 		for n = 0, 7 do
-			local at = V(d[1] + (n % 4) * 1.6, d[2] + (n // 4) * 1.4 + (n % 2) * 0.6, d[3] + (n % 3) * 1.2)
-			ball(school, "Poisson", V(0.7, 0.9, 2), if n % 2 == 0 then hex("#F5C542") else hex("#8CD2E6"), at)
+			local off = if d[4] then V(0, (n // 4) * 1.4 + (n % 2) * 0.6, (n % 4) * 1.6) else V((n % 4) * 1.6, (n // 4) * 1.4 + (n % 2) * 0.6, 0)
+			ball(school, "Poisson", if d[4] then V(0.7, 0.9, 2) else V(2, 0.9, 0.7), if n % 2 == 0 then hex("#F5C542") else hex("#8CD2E6"), V(d[1], d[2], d[3]) + off)
 		end
-		school.WorldPivot = PIVOT * CFrame.new(d[1], GROUND_Y + d[2] - PIVOT.Position.Y, d[3]) * CFrame.Angles(0, d[4] * math.pi / 2, 0)
-		tag(school, "PoissonPasse", { Distance = 50 + k * 6, Periode = 16 + k * 3 })
 	end
-	-- méduses lumineuses
-	for k, d in { { -70, 20, -60 }, { 74, 26, -50 }, { -40, 30, -98 }, { 30, 24, -104 }, { 92, 16, 4 } } do
+	-- méduses lumineuses dans la bande
+	for k, d in { { -55, 22, -18 }, { 55, 26, -30 }, { -30, 30, -70 }, { 32, 24, -70 }, { 55, 16, 12 } } do
 		local jelly = Instance.new("Model")
 		jelly.Name, jelly.Parent = "Meduse", oceanF
-		local bell = ball(jelly, "Ombrelle", V(4, 2.6, 4), hex("#C88CF0"), V(d[1], d[2], d[3]), nil, Enum.Material.Neon)
+		local bell = ball(jelly, "Ombrelle", V(3, 2, 3), hex("#C88CF0"), V(d[1], d[2], d[3]), nil, Enum.Material.Neon)
 		bell.Transparency = 0.25
 		light(bell, hex("#C88CF0"), 10, 0.5)
 		for n = 0, 3 do
 			local a = n * math.pi / 2
-			local fil = piece(jelly, "Filament", Enum.PartType.Block, V(0.2, 4, 0.2), hex("#E6B4FF"), V(d[1] + math.cos(a), d[2] - 3, d[3] + math.sin(a)), nil, Enum.Material.Neon)
+			local fil = piece(jelly, "Filament", Enum.PartType.Block, V(0.2, 3.4, 0.2), hex("#E6B4FF"), V(d[1] + math.cos(a) * 0.8, d[2] - 2.6, d[3] + math.sin(a) * 0.8), nil, Enum.Material.Neon)
 			fil.Transparency = 0.4
 		end
 		jelly.WorldPivot = PIVOT * CFrame.new(d[1], GROUND_Y + d[2] - PIVOT.Position.Y, d[3])
 		tag(jelly, "MeduseFlotte", { Amplitude = 2.5, Periode = 5 + k })
 	end
-	-- silhouettes gigantesques et Léviathan au loin (sombres, à moitié fondues dans l'eau)
-	local shadowC = hex("#0A1A2C")
-	local lev = Instance.new("Model")
-	lev.Name, lev.Parent = "LeviathanLointain", oceanF
-	for n = 0, 9 do
-		local seg = ball(lev, "Anneau", V(9 - n * 0.5, 9 - n * 0.5, 10), shadowC, V(-120 + n * 9, 40 + math.sin(n * 0.7) * 4, -150))
-		seg.Transparency = 0.3
-	end
-	lev.WorldPivot = PIVOT * CFrame.new(-80, GROUND_Y + 40 - PIVOT.Position.Y, -150)
-	tag(lev, "PoissonPasse", { Distance = 120, Periode = 90, Ondulation = 4 })
-	local giant = ball(oceanF, "SilhouetteGeante", V(30, 22, 60), shadowC, V(110, 26, -110), rotY(0.6))
+	-- silhouette gigantesque collée au fond de l'eau, derrière le palais
+	local giant = ball(oceanF, "SilhouetteGeante", V(26, 18, 1.5), shadowC, V(-22, 40, -72.5), CFrame.Angles(0, 0.35, 0.2))
 	giant.Transparency = 0.45
 
 	-- palais de pierre blanche et bleue, grandes fenêtres sur l'océan (stages 1 à 4)
 	local palace = group(f, "Palais", nil, 4)
-	piece(palace, "CorpsPalais", Enum.PartType.Block, V(44, 26, 8), white, V(0, 13, -66))
+	piece(palace, "CorpsPalais", Enum.PartType.Block, V(44, 26, 6), white, V(0, 13, -63))
 	for i = -3, 3 do
 		if math.abs(i) >= 1 then -- le centre est caché par le temple du boss
-			local win = piece(palace, "GrandeFenetre", Enum.PartType.Block, V(3.8, 12, 0.4), barrierC, V(i * 5.8, 14, -61.8), nil, Enum.Material.Glass)
+			local win = piece(palace, "GrandeFenetre", Enum.PartType.Block, V(3.8, 12, 0.4), barrierC, V(i * 5.8, 14, -59.8), nil, Enum.Material.Glass)
 			win.Transparency = 0.35
-			piece(palace, "CadreFenetre", Enum.PartType.Block, V(4.4, 0.6, 0.8), gold, V(i * 5.8, 20.3, -61.8), nil, Enum.Material.Metal)
+			piece(palace, "CadreFenetre", Enum.PartType.Block, V(4.4, 0.6, 0.8), gold, V(i * 5.8, 20.3, -59.8), nil, Enum.Material.Metal)
 		end
-		column(palace, "ColonnePalais", 26, 1.4, white, V(i * 5.8 + 2.9, 0, -61.4))
+		column(palace, "ColonnePalais", 26, 1.4, white, V(i * 5.8 + 2.9, 0, -59.4))
 	end
-	for _, x in { -26, 26 } do
-		column(palace, "TourPalais", 36, 7, stoneBlue, V(x, 0, -64))
-		ball(palace, "DomePalais", V(7.6, 7, 7.6), deepBlue, V(x, 36, -64))
+	for _, x in { -19, 19 } do
+		column(palace, "TourPalais", 36, 7, stoneBlue, V(x, 0, -62))
+		ball(palace, "DomePalais", V(7.6, 7, 7.6), deepBlue, V(x, 36, -62))
 	end
-	ball(palace, "GrandDome", V(22, 14, 8), stoneBlue, V(0, 26, -66))
+	ball(palace, "GrandDome", V(22, 14, 6), stoneBlue, V(0, 26, -63))
 
 	-- statues de créatures marines le long de l'allée
 	for k, d in { { -26, -6 }, { 26, -6 }, { -27, -36 }, { 27, -36 } } do
@@ -1865,14 +1881,14 @@ BUILD[5] = function(m: Instance)
 	end
 
 	-- épave encastrée dans un bâtiment (côté est, au fond)
-	piece(f, "Batiment", Enum.PartType.Block, V(12, 14, 10), white, V(46, 7, -48))
-	piece(f, "ToitBatiment", Enum.PartType.Wedge, V(12, 4, 10), deepBlue, V(46, 16, -48))
-	piece(f, "CoqueEpave", Enum.PartType.Block, V(16, 6, 6), hex("#4A3828"), V(38, 6, -44), CFrame.Angles(0, -0.5, 0.25))
-	piece(f, "ProueEpave", Enum.PartType.Wedge, V(6, 6, 5), hex("#4A3828"), V(31, 5, -40), CFrame.Angles(0, -0.5 - math.pi / 2, 0.25))
-	column(f, "MatEpave", 12, 0.8, hex("#4A3828"), V(40, 8, -45))
+	piece(f, "Batiment", Enum.PartType.Block, V(12, 14, 10), white, V(34, 7, -46))
+	piece(f, "ToitBatiment", Enum.PartType.Wedge, V(12, 4, 10), deepBlue, V(34, 16, -46))
+	piece(f, "CoqueEpave", Enum.PartType.Block, V(16, 6, 6), hex("#4A3828"), V(29, 6, -41), CFrame.Angles(0, -0.5, 0.25))
+	piece(f, "ProueEpave", Enum.PartType.Wedge, V(6, 6, 5), hex("#4A3828"), V(24.5, 5, -37.5), CFrame.Angles(0, -0.5 - math.pi / 2, 0.25))
+	column(f, "MatEpave", 12, 0.8, hex("#4A3828"), V(30, 8, -42))
 
 	-- coquillages géants transformés en maisons
-	for k, d in { { 46, 6 }, { 48, -10 } } do
+	for k, d in { { 42, 6 }, { 42, -12 } } do
 		ball(f, "MaisonCoquille", V(10, 8, 9), if k == 1 then hex("#F0D2C0") else hex("#E6C8D8"), V(d[1], 3, d[2]))
 		for n = -2, 2 do
 			piece(f, "Strie", Enum.PartType.Block, V(0.4, 7, 0.4), hex("#C8A090"), V(d[1] + n * 1.6, 4, d[2] + 4.2), CFrame.Angles(0, 0, n * 0.25))
@@ -1884,7 +1900,7 @@ BUILD[5] = function(m: Instance)
 	end
 
 	-- jardin de coraux dans une bulle magique (ouest, au fond)
-	local gx, gz = -44, -56
+	local gx, gz = -31, -48
 	for n = 0, 6 do
 		local a = n * 0.9
 		local c = Instance.new("Model")
@@ -1912,7 +1928,7 @@ BUILD[5] = function(m: Instance)
 	local crown = ball(f, "PerleTemple", V(3, 3, 3), hex("#F0F6FA"), V(0, 25, -56), nil, Enum.Material.Neon)
 	light(crown, glow, 18, 0.9)
 	-- énormes ancres
-	for _, d in { { 34, 12, 0.3 }, { -48, -10, -0.4 } } do
+	for _, d in { { 34, 12, 0.3 }, { -45, -4, -0.4 } } do
 		local iron = hex("#5A6470")
 		piece(f, "VergeAncre", Enum.PartType.Block, V(1.2, 12, 1.2), iron, V(d[1], 5.4, d[2]), CFrame.Angles(0, 0, d[3]), Enum.Material.Metal)
 		piece(f, "JasAncre", Enum.PartType.Block, V(7, 1, 1), iron, V(d[1] - math.sin(d[3]) * 5, 10.6, d[2]), CFrame.Angles(0, 0, d[3]), Enum.Material.Metal)
@@ -1958,7 +1974,7 @@ BUILD[5] = function(m: Instance)
 		end
 		ball(parent, "Flaque", V(5, 0.2, 4), barrierC, at + V(0, 0.15, 0))
 	end
-	local spots = enclosure(7)
+	local spots = BARRIER
 	local leaks = group(f, "Fuites", 2)
 	for _, k in { 5, 13, 22 } do
 		local p = spots[k]
@@ -1986,7 +2002,7 @@ BUILD[5] = function(m: Instance)
 		end
 	end
 	local flooded = group(f, "Envahi", 5)
-	for _, d in { { 40, -4, 26, 18 }, { -46, -46, 18, 26 } } do
+	for _, d in { { 36, -4, 20, 18 }, { -40, 2, 12, 20 } } do
 		local water = piece(flooded, "EauEnvahie", Enum.PartType.Block, V(d[3], 7, d[4]), barrierC, V(d[1], 3.5, d[2]), nil, Enum.Material.Glass)
 		water.Transparency = 0.55
 		tag(water, "VagueBarriere", { Periode = 3 })
@@ -2006,34 +2022,34 @@ BUILD[5] = function(m: Instance)
 			piece(hall, "ChapiteauSalle", Enum.PartType.Block, V(3.4, 1, 3.4), gold, at + V(0, 26.4, 0), nil, Enum.Material.Metal)
 		end
 	end
-	local bay = piece(hall, "BaieVitree", Enum.PartType.Block, V(46, 30, 0.6), barrierC, V(0, 22, -70.5), nil, Enum.Material.Glass)
+	local bay = piece(hall, "BaieVitree", Enum.PartType.Block, V(40, 30, 0.6), barrierC, V(0, 22, -66), nil, Enum.Material.Glass)
 	bay.Transparency = 0.5
 	tag(bay, "VagueBarriere", { Periode = 6 })
-	for _, x in { -23, -11.5, 0, 11.5, 23 } do
-		piece(hall, "MeneauBaie", Enum.PartType.Block, V(1, 30, 1), white, V(x, 22, -70))
+	for _, x in { -20, -10, 0, 10, 20 } do
+		piece(hall, "MeneauBaie", Enum.PartType.Block, V(1, 30, 1), white, V(x, 22, -65.6))
 	end
-	piece(hall, "LinteauBaie", Enum.PartType.Block, V(48, 2.4, 2), gold, V(0, 38, -70), nil, Enum.Material.Metal)
-	piece(hall, "AppuiBaie", Enum.PartType.Block, V(48, 7, 2.4), white, V(0, 3.5, -70))
+	piece(hall, "LinteauBaie", Enum.PartType.Block, V(42, 2.4, 2), gold, V(0, 38, -65.6), nil, Enum.Material.Metal)
+	piece(hall, "AppuiBaie", Enum.PartType.Block, V(42, 7, 2.4), white, V(0, 3.5, -65.6))
 	-- séquence : silhouette qui passe, revient ; puis l'œil géant se colle contre la vitre
 	local seq = Instance.new("Model")
 	seq.Name, seq.Parent = "SequenceOeil", hall
 	local sil = Instance.new("Model")
 	sil.Name, sil.Parent = "Silhouette", seq
-	for n = 0, 7 do
-		local s = ball(sil, "Corps", V(12 - n, 11 - n, 13), shadowC, V(-n * 11, 30 + math.sin(n) * 2, -100))
+	for n = 0, 4 do -- corps centré sur le pivot : reste dans la bordure du fond en passant
+		local s = ball(sil, "Corps", V(4.6, 9 - n * 1, 1.6), shadowC, V(6.8 - n * 3.4, 30 + math.sin(n) * 1.5, -73.5))
 		s.Transparency = 0.2
 	end
-	sil.WorldPivot = PIVOT * CFrame.new(0, GROUND_Y + 30 - PIVOT.Position.Y, -100)
+	sil.WorldPivot = PIVOT * CFrame.new(0, GROUND_Y + 30 - PIVOT.Position.Y, -73.5)
 	local eye = Instance.new("Model")
 	eye.Name, eye.Parent = "Oeil", seq
-	ball(eye, "Paupiere", V(30, 24, 8), hex("#1E3A3A"), V(0, 26, -76))
-	ball(eye, "Globe", V(22, 16, 4), hex("#E6E0B4"), V(0, 26, -73.6))
-	local iris = ball(eye, "Iris", V(11, 11, 2), hex("#F5C542"), V(0, 26, -72.4), nil, Enum.Material.Neon)
+	ball(eye, "Paupiere", V(30, 24, 5), hex("#1E3A3A"), V(0, 26, -71.5))
+	ball(eye, "Globe", V(22, 16, 3), hex("#E6E0B4"), V(0, 26, -69.6))
+	local iris = ball(eye, "Iris", V(11, 11, 1.6), hex("#F5C542"), V(0, 26, -68.6), nil, Enum.Material.Neon)
 	light(iris, hex("#F5C542"), 30, 1.2)
-	piece(eye, "Pupille", Enum.PartType.Block, V(1.6, 9, 0.6), hex("#0A0A0A"), V(0, 26, -71.4))
-	eye.WorldPivot = PIVOT * CFrame.new(0, GROUND_Y + 26 - PIVOT.Position.Y, -76)
-	seq.WorldPivot = PIVOT * CFrame.new(0, GROUND_Y + 26 - PIVOT.Position.Y, -76)
-	tag(seq, "SequenceOeil", { Periode = 40 })
+	piece(eye, "Pupille", Enum.PartType.Block, V(1.6, 9, 0.6), hex("#0A0A0A"), V(0, 26, -67.8))
+	eye.WorldPivot = PIVOT * CFrame.new(0, GROUND_Y + 26 - PIVOT.Position.Y, -71.5)
+	seq.WorldPivot = PIVOT * CFrame.new(0, GROUND_Y + 26 - PIVOT.Position.Y, -71.5)
+	tag(seq, "SequenceOeil", { Periode = 40, Largeur = 12 })
 end
 
 ---------------------------------------------------------------- Zone 6 : sanctuaire des îles du ciel

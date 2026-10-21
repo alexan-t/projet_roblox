@@ -331,8 +331,9 @@ Décor : `BUILD[5]` de `tools/studio-zones-assets.luau` ; animations : `src/clie
   palais de pierre blanche et bleue aux grandes fenêtres, statues de poisson et de pieuvre, fontaine qui coule vers
   le haut, épave encastrée dans un bâtiment, coquillages-maisons, jardin de coraux sous bulle magique, ancres,
   temple-coquille d'où sort le boss (structure du boss), limite légère de pierre et de corail vers l'avant.
-- **Derrière la barrière** : fond marin, forêts d'algues, mur d'eau profonde éclairci vers la surface, baleine,
-  bancs de poissons, méduses lumineuses, silhouette géante et Léviathan au loin.
+- **Derrière la barrière**, sans sortir de la délimitation du plot (barrière en U de rayons 52 × 50, mur d'eau
+  profonde sur la bordure, 57 × 55) : bande d'eau avec fond marin, algues, baleine, bancs de poissons, méduses
+  lumineuses, silhouette géante et Léviathan (silhouettes fines, sombres), eau éclaircie vers la surface.
 - **Animé** (tags) : `PoissonPasse` (baleine, bancs, Léviathan), `MeduseFlotte`, `CorailOndule`, `BulleMonte`
   (fontaine, eau envahie), `GoutteTombe` (fuites), `VagueBarriere` (barrière, bulle, baie), `SequenceOeil`.
 - **Progression** : `ArenaService` pose sur l'arène `StageDecor` (stage choisi) ; le client n'affiche un groupe que si

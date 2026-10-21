@@ -14,7 +14,7 @@
 --   • "GoutteTombe"   (BasePart) : tombe de Hauteur studs (fuite), puis repart d'en haut. Hauteur (8), Periode (1.2).
 --   • "VagueBarriere" (BasePart) : la transparence ondule autour de sa valeur d'origine (barrière magique). Periode (4).
 --   • "SequenceOeil"  (Model, enfants Silhouette et Oeil) : derrière la baie vitrée du boss, quelque chose passe,
---       revient, puis un œil géant se colle à la vitre, regarde, et repart. Boucle de Periode (40) secondes.
+--       revient, puis un œil géant se colle à la vitre, regarde, et repart. Periode (40 s), Largeur (18 studs).
 -- Aucune logique gameplay ici.
 
 local CollectionService = game:GetService("CollectionService")
@@ -104,36 +104,73 @@ end
 
 ------------------------------------------------------------------ animations
 
+-- Visibilité d'un modèle de la séquence (0 = visible, 1 = caché), sans toucher au masquage par stage.
+local function fade(model: Instance, hidden: number)
+	for _, d in model:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.LocalTransparencyModifier = hidden
+		elseif d:IsA("Light") then
+			d.Enabled = hidden < 0.5
+		end
+	end
+end
+
+-- Masquée par son stage (un ancêtre porte StageMin / StageMax hors du stage de l'arène) ?
+local function stageHidden(instance: Instance): boolean
+	local stage = stageOf(instance)
+	local node: Instance? = instance
+	while node do
+		local min, max = node:GetAttribute("StageMin"), node:GetAttribute("StageMax")
+		if (typeof(min) == "number" and stage < min) or (typeof(max) == "number" and stage > max) then
+			return true
+		end
+		node = node.Parent
+	end
+	return false
+end
+
+-- Tout reste dans la délimitation du plot : la silhouette passe derrière la baie (Largeur, 18 studs de part
+-- et d'autre) en apparaissant et disparaissant en fondu ; l'œil arrive en fondu contre la vitre, regarde, repart.
 local function eyeSequence(entry: Entry, t: number)
 	local model = entry.instance
+	if stageHidden(model) then
+		return
+	end
 	local silhouette = model:FindFirstChild("Silhouette")
 	local eye = model:FindFirstChild("Oeil")
 	local period = num(model, "Periode", 40)
+	local half = num(model, "Largeur", 18)
 	local u = (t + entry.phase) % period
 	local base = entry.base
-	-- Silhouette : passe de gauche à droite (0-7 s), revient plus près (10-17 s), sinon hors champ.
+	-- Silhouette : passe de gauche à droite (0-7 s), revient (10-17 s), cachée sinon.
 	if silhouette and silhouette:IsA("Model") then
-		local x, z = 140, 0
+		local k, back = -1, false
 		if u < 7 then
-			x, z = -70 + 140 * (u / 7), 0
+			k = u / 7
 		elseif u >= 10 and u < 17 then
-			x, z = 70 - 140 * ((u - 10) / 7), 10
+			k, back = (u - 10) / 7, true
 		end
-		-- loin derrière la vitre (24 studs), puis plus près au retour
-		setPivot(silhouette, base * CFrame.new(x, -1 + math.sin(u * 0.6) * 1.5, -24 + z) * CFrame.Angles(0, if u < 8 then 0 else math.pi, 0))
+		if k < 0 then
+			fade(silhouette, 1)
+		else
+			local x = if back then half - 2 * half * k else -half + 2 * half * k
+			fade(silhouette, 1 - math.clamp(math.min(k, 1 - k) * 6, 0, 1))
+			setPivot(silhouette, base * CFrame.new(x, math.sin(u * 0.6) * 1.5, -2) * CFrame.Angles(0, if back then math.pi else 0, 0))
+		end
 	end
-	-- Œil : s'approche (19-21 s), reste collé à la vitre en regardant (21-30 s), repart (30-33 s).
+	-- Œil : apparaît (19-21 s), collé à la vitre en regardant (21-30 s), disparaît (30-33 s).
 	if eye and eye:IsA("Model") then
-		local depth = 60
+		local show = 0
 		if u >= 19 and u < 21 then
-			depth = 60 * (1 - (u - 19) / 2)
+			show = (u - 19) / 2
 		elseif u >= 21 and u < 30 then
-			depth = 0
+			show = 1
 		elseif u >= 30 and u < 33 then
-			depth = 60 * ((u - 30) / 3)
+			show = 1 - (u - 30) / 3
 		end
-		local look = if u >= 21 and u < 30 then math.sin((u - 21) * 0.9) * 0.25 else 0
-		setPivot(eye, base * CFrame.new(0, 0, -depth) * CFrame.Angles(0, look, 0))
+		fade(eye, 1 - show)
+		local look = if show >= 1 then math.sin((u - 21) * 0.9) * 0.25 else 0
+		setPivot(eye, base * CFrame.new(0, 0, -3 * (1 - show)) * CFrame.Angles(0, look, 0))
 	end
 end
 
