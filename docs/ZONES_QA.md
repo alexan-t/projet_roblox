@@ -424,3 +424,12 @@ retirés ; courant de lave depuis chaque cascade (ouest jusque sous le rempart, 
    [courant de près](../automation/screenshots/zones/zone4-lave-courant.jpg).
 
 Caméra de Studio réinitialisée. **Non testé en Play.**
+
+## Zone 4 — haut-fourneau du flanc est, 22 octobre 2026
+
+Demande de l'équipe : une petite structure un peu haute à droite, dans le biome. Haut-fourneau (`blastFurnace`)
+entre les deux postes de forge du flanc est, à la place d'une réserve et d'un faisceau d'orgues.
+
+Vue de combat et vue de près : **PASS** (tour lisible depuis l'arène, environ 30 studs, ne masque pas la porte).
+[Vue de combat](../automation/screenshots/zones/zone4-haut-fourneau-vue.jpg),
+[de près](../automation/screenshots/zones/zone4-haut-fourneau.jpg). Caméra de Studio réinitialisée. **Non testé en Play.**

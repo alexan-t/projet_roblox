@@ -1459,6 +1459,69 @@ local function lavaRiver(f: Instance, points: { Vector3 }, width: number, C: { [
 	end
 end
 
+-- Haut-fourneau (Zone 4, flanc est) : tour de basalte cerclée de fer en trois étages (24 studs) sur socle,
+-- meurtrières rougeoyantes, bannière, trou de coulée tourné vers l'arène qui verse dans une rigole ;
+-- plateforme crénelée, cheminée qui fume et brûle (30 studs) ; potence de chargement et son seau de minerai.
+local function blastFurnace(f: Instance, at: Vector3, C: { [string]: Color3 })
+	local front = V(-1, 0, 0) -- vers l'arène
+	local faceFront = rotY(math.atan2(front.X, front.Z))
+	piece(f, "SocleHautFourneau", Enum.PartType.Block, V(12, 3, 12), C.Basalt, at + V(0, 1.5, 0))
+	piece(f, "CerclageSocle", Enum.PartType.Block, V(12.4, 0.6, 12.4), C.Iron, at + V(0, 2.6, 0), nil, Enum.Material.DiamondPlate)
+	for _, c in { V(-5.2, 0, -5.2), V(5.2, 0, -5.2), V(-5.2, 0, 5.2), V(5.2, 0, 5.2) } do
+		piece(f, "PilierSocle", Enum.PartType.Block, V(2.4, 5, 2.4), C.BasaltLight, at + c + V(0, 2.5, 0))
+	end
+	local y = 3
+	for i, s in { { 9.4, 8 }, { 8.2, 7 }, { 6.8, 6 } } do
+		column(f, "CorpsHautFourneau", s[2], s[1], if i % 2 == 1 then C.Rock else C.RockDark, at + V(0, y, 0))
+		piece(f, "CerclageHautFourneau", Enum.PartType.Cylinder, V(0.9, s[1] + 0.5, s[1] + 0.5), C.Iron, at + V(0, y + s[2] - 0.4, 0), FLAT, Enum.Material.Metal)
+		y += s[2]
+	end
+	-- meurtrières en diagonale (étage du milieu), bannière sur la face avant
+	for k = 0, 3 do
+		local a = math.pi / 4 + k * math.pi / 2
+		local dir = V(math.cos(a), 0, math.sin(a))
+		local slit = piece(f, "MeurtriereFourneau", Enum.PartType.Block, V(1.1, 3.4, 0.3), C.Neon, at + dir * 4.05 + V(0, 14.5, 0),
+			rotY(math.atan2(dir.X, dir.Z)), Enum.Material.Neon)
+		if k == 1 then light(slit, C.Ember, 12, 0.7) end
+	end
+	piece(f, "BanniereFourneau", Enum.PartType.Block, V(3.4, 6.4, 0.25), C.Cloth, at + front * 4.2 + V(0, 14, 0), faceFront)
+	piece(f, "EmblemeFourneau", Enum.PartType.Block, V(1.5, 1.5, 0.2), C.Neon, at + front * 4.35 + V(0, 14.8, 0), faceFront * CFrame.Angles(0, 0, math.pi / 4),
+		Enum.Material.Neon)
+	-- trou de coulée : bouche rougeoyante, bec de fer, filet de métal en fusion, rigole au sol
+	piece(f, "ArcCoulee", Enum.PartType.Block, V(3.6, 3.4, 0.6), C.Dark, at + front * 4.75 + V(0, 4.9, 0), faceFront)
+	local hole = piece(f, "TrouCoulee", Enum.PartType.Block, V(2.6, 2.4, 0.3), C.Neon, at + front * 5.1 + V(0, 4.7, 0), faceFront, Enum.Material.Neon)
+	light(hole, C.Ember, 16, 1.2)
+	piece(f, "BecCoulee", Enum.PartType.Block, V(1.4, 0.5, 2.6), C.Iron, at + front * 6.2 + V(0, 3.7, 0), faceFront * CFrame.Angles(0.25, 0, 0), Enum.Material.Metal)
+	column(f, "FiletCoulee", 3.2, 0.6, C.Neon, at + front * 7.4 + V(0, 0.3, 0), Enum.Material.Neon)
+	piece(f, "RigoleCoulee", Enum.PartType.Block, V(2.4, 0.7, 6), C.Iron, at + front * 8 + V(0, 0.35, 1.4), nil, Enum.Material.DiamondPlate)
+	piece(f, "MetalRigole", Enum.PartType.Block, V(1.6, 0.2, 5.4), C.Neon, at + front * 8 + V(0, 0.75, 1.4), nil, Enum.Material.Neon)
+	-- plateforme crénelée du gueulard, cheminée qui fume et brûle
+	piece(f, "PlateformeGueulard", Enum.PartType.Cylinder, V(0.8, 10.4, 10.4), C.Iron, at + V(0, y + 0.4, 0), FLAT, Enum.Material.DiamondPlate)
+	for k = 0, 7 do
+		local a = k * math.pi / 4
+		local dir = V(math.cos(a), 0, math.sin(a))
+		piece(f, "CreneauGueulard", Enum.PartType.Block, V(1.8, 1.6, 0.8), C.Basalt, at + dir * 4.8 + V(0, y + 1.6, 0), rotY(math.atan2(dir.X, dir.Z)))
+	end
+	local chimneyTop = y + 0.8 + 6
+	column(f, "ChemineeGueulard", 6, 3, C.Basalt, at + V(1, y + 0.8, 1))
+	local mouth = piece(f, "BoucheGueulard", Enum.PartType.Cylinder, V(0.3, 2.4, 2.4), C.Neon, at + V(1, chimneyTop + 0.05, 1), FLAT, Enum.Material.Neon)
+	light(mouth, C.Ember, 20, 1)
+	local smoke = emitter(mouth, "Fumee", "rbxasset://textures/particles/smoke_main.dds", hex("#2E2A28"), 4, 9, 6, 5)
+	smoke.EmissionDirection = Enum.NormalId.Right
+	flame(f, at + V(1, chimneyTop + 0.8, 1), 6, 9, C.Ember)
+	-- potence de chargement vers l'arène, chaîne et seau de minerai
+	local armY = y + 3.2
+	column(f, "MatPotence", 3.6, 0.7, C.Wood, at + front * 3.4 + V(0, y + 0.8, -2.6))
+	piece(f, "BrasPotence", Enum.PartType.Block, V(7.6, 0.7, 0.7), C.Wood, at + front * 6.6 + V(0, armY + 0.6, -2.6))
+	piece(f, "JambePotence", Enum.PartType.Block, V(0.5, 4.2, 0.5), C.Wood, at + front * 5 + V(0, armY - 1, -2.6), CFrame.Angles(0, 0, -0.8))
+	local hookX = at + front * 9.8 + V(0, 0, -2.6)
+	for cy = armY, armY - 7, -1.1 do
+		ball(f, "MaillonPotence", V(0.4, 1, 0.6), C.Dark, hookX + V(0, cy, 0), nil, Enum.Material.Metal)
+	end
+	column(f, "SeauMinerai", 2, 2.6, C.Iron, hookX + V(0, armY - 9.6, 0), Enum.Material.Metal)
+	ball(f, "MineraiSeau", V(2.2, 1, 2.2), hex("#5A3A2A"), hookX + V(0, armY - 7.5, 0))
+end
+
 BUILD[4] = function(m: Instance)
 	-- repères dans l'embrasure : le boss part de l'intérieur de la fournaise, la porte s'ouvre devant lui ;
 	-- saut depuis le dessus du linteau (porte agrandie de 1,35)
@@ -1522,7 +1585,7 @@ BUILD[4] = function(m: Instance)
 		V(-51, 0, 10), V(-60, 0, 12) }, 4.6, C)
 	lavaRiver(f, { V(25, 0, -64.5), V(32, 0, -61), V(40, 0, -63), V(48, 0, -66), V(56, 0, -68) }, 4, C)
 	-- orgues basaltiques adossées au rempart des flancs, blocs de roche épars
-	for _, o in { { -54.5, -26, 8, 15 }, { 54.5, -22, 8, 16 }, { 54.5, 5, 6, 12 }, { -41, -53, 7, 17 } } do
+	for _, o in { { -54.5, -26, 8, 15 }, { 54.5, -22, 8, 16 }, { -41, -53, 7, 17 } } do
 		basaltColumns(f, V(o[1], 0, o[2]), if o[1] > 50 then -math.pi / 2 elseif o[1] < -50 then math.pi / 2 else 0.8, o[3], o[4], C)
 	end
 	for i, b in { { -46, 14 }, { -30, 24 }, { 30, 26 }, { 40, -28 }, { 50, -46 }, { -28, -40 }, { 36, 6 }, { -44, 30 } } do
@@ -1546,7 +1609,8 @@ BUILD[4] = function(m: Instance)
 	weaponRack(f, V(-51, 0, -4), math.pi / 2, C)
 	supplies(f, V(46, 0, 26), -0.4, C)
 	supplies(f, V(-44, 0, 26), 0.5, C)
-	supplies(f, V(50, 0, -2), -math.pi / 2, C)
+	-- petite structure haute du flanc est, entre les deux postes de forge
+	blastFurnace(f, V(48, 0, 1), C)
 	orePile(f, V(44, 0, -42), C)
 	orePile(f, V(-47, 0, -27), C)
 	for _, c in { { 34, 4, 0.4 }, { 30, -30, 2.2 }, { 36, 20, 2.8 } } do

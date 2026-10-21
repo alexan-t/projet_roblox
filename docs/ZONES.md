@@ -351,7 +351,10 @@ qui verse du métal en fusion ; deux cascades de lave. Pas de lac ni de bassins 
 (`lavaRiver` : lit en segments, croûtes sombres, berges de roches, braises) part du pied de chaque cascade, à
 l'ouest le long du flanc jusque sous le rempart, à l'est vers l'angle du fond ; les repères `SautMare` sont posés
 dessus. Roches : orgues basaltiques adossées au rempart (`basaltColumns`, deux rangs, tons chauds, éboulis au
-pied) et roches arrondies (`boulder`, masses gonflées superposées, pas de cubes). Flancs : postes de forge
+pied) et roches arrondies (`boulder`, masses gonflées superposées, pas de cubes). Sur le flanc est, une petite
+structure haute : le **haut-fourneau** (`blastFurnace`, environ 30 studs) : tour de basalte cerclée de fer en trois
+étages, meurtrières, bannière, trou de coulée tourné vers l'arène qui verse dans une rigole, gueulard crénelé,
+cheminée qui fume, potence et seau de minerai. Flancs : postes de forge
 (`forgeStation` : foyer, hotte, enclume, soufflet, baquet), râteliers d'armes, tonneaux et caisses, tas de
 minerai, fissures de lave dans le sol. Les Neon utilisent `#D2501E` (un `#F08C3C` en Neon ressort jaune) ; les feux (`Fire`) sont
 portés par une pièce droite invisible (`flame`), sinon ils partent de côté sur un cylindre couché.
