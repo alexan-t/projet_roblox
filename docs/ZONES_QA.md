@@ -391,3 +391,23 @@ Contrôles successifs :
 
 Porte remise au repos après l'essai, caméra de Studio réinitialisée. **Non testé en Play** : la séquence
 complète pendant un vrai combat contre le Maître des Forges (calage sur la retenue `EntranceHold`, sons).
+
+## Zone 4 — fond haut et arène habitée, 22 octobre 2026
+
+Retour de l'équipe : zone très vide hors de la porte, fond pas assez haut. Ajouts : citadelle-forge de 42 à
+52 studs derrière le rempart, cheminées de 66 à 76 qui fument, engrenage, creuset, cascades de lave ; rempart
+qui monte de 14 à 34 vers le fond ; ateliers des flancs (postes de forge, râteliers, réserves, minerai,
+fissures de lave) ; lave du lac et rigoles passées à l'orange (`#D2501E`). 757 pièces dans le décor.
+
+Contrôles :
+
+1. Avant : **FIX** (murs bas, horizon et plots voisins visibles, sol nu). [Capture](../automation/screenshots/zones/zone4-citadelle-avant.jpg).
+2. Vue de combat après ajout : citadelle et cheminées cachent l'horizon, flancs remplis.
+   [Capture](../automation/screenshots/zones/zone4-citadelle-vue.jpg).
+3. Vue de côté : **FIX** (feux des braseros et cheminées à l'horizontale ; creuset dans le vide) → feux sur une
+   pièce droite, creuset pendu à une poutre ancrée dans la citadelle. [Capture](../automation/screenshots/zones/zone4-citadelle-cote.jpg).
+4. Vue au sol vers la porte : **PASS** (la citadelle domine, la porte reste le centre).
+   [Capture](../automation/screenshots/zones/zone4-citadelle-sol.jpg).
+
+Remarque non bloquante : de face, le creuset se lit encore mal (boule à côté de l'engrenage). Caméra de Studio
+réinitialisée. **Non testé en Play.**

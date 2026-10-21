@@ -167,7 +167,7 @@ local THEMES = {
 	{
 		Id = 4, Name = "Zone4_Forges", Nom = "Les Forges",
 		Colors = {
-			Leaf = { hex("#4A4440"), hex("#665E56") }, Water = { hex("#C8461E"), hex("#F08C3C") }, Foam = { hex("#F5C542") },
+			Leaf = { hex("#4A4440"), hex("#665E56") }, Water = { hex("#A8361A"), hex("#D2501E") }, Foam = { hex("#E0662A") },
 			Sand = { hex("#5A5048"), hex("#6E6258") }, Stone = { hex("#3E3A38"), hex("#6A625C") }, Ruin = { hex("#7E766E"), hex("#8E867E") },
 			Flower = { hex("#B4461E"), hex("#E07028") }, Glow = { hex("#F08C3C") }, Wood = { hex("#3C2A22"), hex("#5E4232") },
 		},
@@ -1216,63 +1216,269 @@ local function furnaceGate(parent: Instance, z: number, iron: Color3, basalt: Co
 	return gate
 end
 
+-- Citadelle-forge du fond (Zone 4) : couronne de hautes tours de basalte derrière le rempart (42 à 52 studs,
+-- elle cache l'horizon et les plots voisins), meurtrières rougeoyantes, créneaux, bannières ; trois hautes
+-- cheminées fumantes, un grand engrenage au-dessus de la porte, un creuset qui verse du métal en fusion.
+-- Feu (Fire) posé sur une petite pièce invisible et droite : sur un cylindre couché (FLAT), il partirait de côté.
+local function flame(parent: Instance, at: Vector3, size: number, heat: number, color: Color3)
+	local carrier = piece(parent, "PorteFeu", Enum.PartType.Block, V(1, 1, 1), color, at)
+	carrier.Transparency = 1
+	local fire = Instance.new("Fire")
+	fire.Size, fire.Heat, fire.Color, fire.SecondaryColor = size, heat, color, hex("#8A2A10")
+	fire.Parent = carrier
+end
+
+local function forgeCitadel(f: Instance, C: { [string]: Color3 })
+	local count = 11
+	for i = 0, count - 1 do
+		local a = 0.32 + (math.pi - 0.64) * i / (count - 1)
+		local at = V(-66 * math.cos(a), 0, -20 - 63 * math.sin(a))
+		local rot = rotY(-a + math.pi / 2)
+		local inward = (V(0, 0, -20) - at).Unit
+		local center = math.abs(at.X) < 16
+		local h = if center then 52 else 42 + (i * 7 % 3) * 4
+		piece(f, "TourCitadelle", Enum.PartType.Block, V(13, h, 9), if i % 2 == 0 then C.Basalt else C.BasaltLight, at + V(0, h / 2, 0), rot)
+		for _, y in { h * 0.35, h * 0.7 } do
+			piece(f, "CerclageCitadelle", Enum.PartType.Block, V(13.4, 1, 9.4), C.Iron, at + V(0, y, 0), rot, Enum.Material.DiamondPlate)
+		end
+		for k = -1, 1 do
+			piece(f, "Creneau", Enum.PartType.Block, V(2.8, 3, 9.2), C.Basalt, at + rot:VectorToWorldSpace(V(k * 4.6, 0, 0)) + V(0, h + 1.5, 0), rot)
+		end
+		-- meurtrières rougeoyantes sur la face tournée vers l'arène
+		for _, y in { h * 0.5, h * 0.82 } do
+			for _, k in { -3, 3 } do
+				local slit = piece(f, "Meurtriere", Enum.PartType.Block, V(1.3, 4.4, 0.3), C.Neon, at + inward * 4.6 + rot:VectorToWorldSpace(V(k, 0, 0)) + V(0, y, 0), rot,
+					Enum.Material.Neon)
+				if k > 0 and i % 2 == 0 and y > h * 0.6 then light(slit, C.Ember, 14, 0.8) end
+			end
+		end
+		-- bannières de forge (tissu sombre, losange de braise)
+		if i % 3 == 1 then
+			local cloth = at + inward * 4.7 + V(0, h - 9, 0)
+			piece(f, "Banniere", Enum.PartType.Block, V(5, 13, 0.3), C.Cloth, cloth, rot)
+			piece(f, "BarreBanniere", Enum.PartType.Block, V(6.4, 0.5, 0.5), C.Iron, cloth + V(0, 6.7, 0) + inward * 0.2, rot, Enum.Material.Metal)
+			piece(f, "EmblemeBanniere", Enum.PartType.Block, V(2.2, 2.2, 0.2), C.Neon, cloth + inward * 0.2 + V(0, 1.5, 0), rot * CFrame.Angles(0, 0, math.pi / 4),
+				Enum.Material.Neon)
+		end
+	end
+	-- trois hautes cheminées fumantes derrière la citadelle
+	for _, s in { { -38, -79, 66, 8 }, { 38, -79, 66, 8 }, { 0, -90, 76, 10 } } do
+		local at = V(s[1], 0, s[2])
+		column(f, "HauteCheminee", s[3], s[4], C.Basalt, at)
+		for y = 12, s[3] - 6, 14 do
+			piece(f, "CerclageCheminee", Enum.PartType.Cylinder, V(1.2, s[4] + 0.8, s[4] + 0.8), C.Iron, at + V(0, y, 0), FLAT, Enum.Material.Metal)
+		end
+		local top = piece(f, "BoucheCheminee", Enum.PartType.Cylinder, V(0.4, s[4] - 1.4, s[4] - 1.4), C.Neon, at + V(0, s[3] + 0.1, 0), FLAT, Enum.Material.Neon)
+		light(top, C.Ember, 30, 1.2)
+		local smoke = emitter(top, "Fumee", "rbxasset://textures/particles/smoke_main.dds", hex("#2E2A28"), 5, 16, 7, 7)
+		smoke.SpreadAngle = Vector2.new(12, 12)
+		smoke.EmissionDirection = Enum.NormalId.Right -- cylindre couché (FLAT) : sa face Right regarde le ciel
+		flame(f, at + V(0, s[3] + 1, 0), 12, 14, C.Ember)
+	end
+	-- grand engrenage au-dessus de la porte, et un plus petit engrené
+	for _, g in { { 0, 41, -77, 18, 12 }, { 13.5, 51.5, -76.6, 10, 8 } } do
+		local at, r = V(g[1], g[2], g[3]), g[4] / 2
+		piece(f, "Engrenage", Enum.PartType.Cylinder, V(2, g[4], g[4]), C.Iron, at, rotY(math.pi / 2), Enum.Material.Metal)
+		for t = 0, g[5] - 1 do
+			local ang = t * 2 * math.pi / g[5]
+			piece(f, "Dent", Enum.PartType.Block, V(2.2, 2.4, 2), C.Iron, at + V(math.cos(ang) * (r + 0.9), math.sin(ang) * (r + 0.9), 0),
+				CFrame.Angles(0, 0, ang + math.pi / 2), Enum.Material.Metal)
+		end
+		for t = 0, 1 do
+			piece(f, "Rayon", Enum.PartType.Block, V(g[4] - 2, 1.4, 2.3), C.BasaltLight, at, CFrame.Angles(0, 0, t * math.pi / 2), Enum.Material.Metal)
+		end
+		local hub = piece(f, "Moyeu", Enum.PartType.Cylinder, V(2.6, r * 0.6, r * 0.6), C.Neon, at, rotY(math.pi / 2), Enum.Material.Neon)
+		light(hub, C.Ember, 16, 0.8)
+	end
+	-- creuset suspendu à une poutre ancrée dans la citadelle, qui verse du métal en fusion dans un moule
+	local pot = V(17, 33, -66)
+	piece(f, "PoutreCreuset", Enum.PartType.Block, V(1.8, 1.8, 13), C.Iron, V(pot.X, 41.6, -71.5), nil, Enum.Material.DiamondPlate)
+	ball(f, "Creuset", V(7, 6, 7), C.Iron, pot, CFrame.Angles(0, 0, 0.55), Enum.Material.Metal)
+	piece(f, "MetalCreuset", Enum.PartType.Cylinder, V(0.3, 5, 5), C.Neon, pot + V(-1.2, 2.2, 0), CFrame.Angles(0, 0, math.pi / 2 + 0.55), Enum.Material.Neon)
+	for _, k in { -2.4, 2.4 } do
+		for y = pot.Y + 3, 40.8, 1.6 do
+			ball(f, "MaillonCreuset", V(0.5, 1.3, 0.8), C.Dark, V(pot.X + k, y, pot.Z), nil, Enum.Material.Metal)
+		end
+	end
+	local stream = column(f, "Coulee", pot.Y - 3, 1.3, C.Neon, V(13.4, 3, -66), Enum.Material.Neon)
+	light(stream, C.Ember, 18, 1)
+	piece(f, "Moule", Enum.PartType.Block, V(5, 1, 4), C.Iron, V(13.4, 3.5, -66), nil, Enum.Material.DiamondPlate)
+	piece(f, "MetalMoule", Enum.PartType.Block, V(4, 0.2, 3), C.Neon, V(13.4, 4.05, -66), nil, Enum.Material.Neon)
+end
+
+-- Poste de forge : foyer de basalte et ses braises (feu), hotte, enclume, soufflet, baquet de trempe.
+local function forgeStation(f: Instance, at: Vector3, yaw: number, C: { [string]: Color3 })
+	local r = rotY(yaw)
+	local function p(v: Vector3): Vector3
+		return at + r:VectorToWorldSpace(v)
+	end
+	piece(f, "Foyer", Enum.PartType.Block, V(5, 3, 4), C.Basalt, p(V(0, 1.5, 0)), r)
+	local coals = piece(f, "BraisesFoyer", Enum.PartType.Block, V(4, 0.4, 3), C.Neon, p(V(0, 3.1, 0)), r, Enum.Material.Neon)
+	light(coals, C.Ember, 12, 1)
+	local fire = Instance.new("Fire")
+	fire.Size, fire.Heat, fire.Color, fire.SecondaryColor = 4, 6, C.Ember, hex("#8A2A10")
+	fire.Parent = coals
+	piece(f, "HotteFoyer", Enum.PartType.Block, V(5.4, 1.6, 4.4), C.BasaltLight, p(V(0, 7.2, -0.3)), r)
+	column(f, "TuyauHotte", 6, 1.4, C.Iron, p(V(0, 8, -0.6)), Enum.Material.Metal)
+	for _, x in { -2.3, 2.3 } do
+		piece(f, "PiedHotte", Enum.PartType.Block, V(0.6, 3.6, 0.6), C.Iron, p(V(x, 4.9, -1.8)), r, Enum.Material.Metal)
+	end
+	piece(f, "SocleEnclume", Enum.PartType.Block, V(2, 2, 2), C.Basalt, p(V(4.6, 1, 1.4)), r)
+	piece(f, "Enclume", Enum.PartType.Block, V(3.6, 1.2, 1.6), C.Iron, p(V(4.6, 2.6, 1.4)), r, Enum.Material.DiamondPlate)
+	piece(f, "Bigorne", Enum.PartType.Wedge, V(1.6, 1, 1.6), C.Iron, p(V(7, 2.6, 1.4)), r * rotY(-math.pi / 2), Enum.Material.DiamondPlate)
+	ball(f, "Soufflet", V(2.6, 1.4, 3.6), C.Leather, p(V(-3.8, 1.2, 0.4)), r)
+	piece(f, "BecSoufflet", Enum.PartType.Cylinder, V(1.6, 0.5, 0.5), C.Iron, p(V(-2.4, 1.5, 0.2)), r, Enum.Material.Metal)
+	column(f, "Baquet", 1.8, 2.8, C.Wood, p(V(-1.4, 0, 3.4)))
+	piece(f, "EauBaquet", Enum.PartType.Cylinder, V(0.2, 2.3, 2.3), hex("#3E5A6E"), p(V(-1.4, 1.8, 3.4)), FLAT)
+	piece(f, "Pince", Enum.PartType.Block, V(0.3, 3, 0.3), C.Iron, p(V(-1, 2.6, 3.6)), r * CFrame.Angles(0.3, 0, 0.2), Enum.Material.Metal)
+end
+
+-- Râtelier d'armes forgées (épées et haches), adossé au rempart.
+local function weaponRack(f: Instance, at: Vector3, yaw: number, C: { [string]: Color3 })
+	local r = rotY(yaw)
+	local function p(v: Vector3): Vector3
+		return at + r:VectorToWorldSpace(v)
+	end
+	for _, x in { -3.4, 3.4 } do
+		piece(f, "MontantRatelier", Enum.PartType.Block, V(0.6, 5, 0.6), C.Wood, p(V(x, 2.5, 0)), r)
+	end
+	piece(f, "BarreRatelier", Enum.PartType.Block, V(7.6, 0.5, 0.6), C.Wood, p(V(0, 4.6, 0)), r)
+	piece(f, "BasRatelier", Enum.PartType.Block, V(7.6, 0.5, 1.4), C.Wood, p(V(0, 0.5, 0.4)), r)
+	for k = -2, 2 do
+		local x = k * 1.3
+		if k % 2 == 0 then
+			piece(f, "Lame", Enum.PartType.Block, V(0.5, 4, 0.15), C.Steel, p(V(x, 3, 0.5)), r * CFrame.Angles(-0.12, 0, 0), Enum.Material.Metal)
+			piece(f, "Garde", Enum.PartType.Block, V(1.4, 0.25, 0.3), C.Gold, p(V(x, 5.1, 0.25)), r * CFrame.Angles(-0.12, 0, 0), Enum.Material.Metal)
+		else
+			piece(f, "Manche", Enum.PartType.Block, V(0.3, 4.6, 0.3), C.Wood, p(V(x, 2.8, 0.5)), r * CFrame.Angles(-0.12, 0, 0))
+			piece(f, "Hache", Enum.PartType.Block, V(0.2, 1.4, 1.2), C.Steel, p(V(x, 4.6, 0.9)), r * CFrame.Angles(-0.12, 0, 0), Enum.Material.Metal)
+		end
+	end
+end
+
+-- Tonneaux et caisses de minerai empilés.
+local function supplies(f: Instance, at: Vector3, yaw: number, C: { [string]: Color3 })
+	local r = rotY(yaw)
+	for _, o in { V(0, 0, 0), V(2.6, 0, 0.4), V(1.3, 2.4, 0.2) } do
+		column(f, "Tonneau", 2.4, 2.2, C.Wood, at + r:VectorToWorldSpace(o))
+		piece(f, "CerclageTonneau", Enum.PartType.Cylinder, V(0.3, 2.4, 2.4), C.Iron, at + r:VectorToWorldSpace(o + V(0, 1.6, 0)), FLAT, Enum.Material.Metal)
+	end
+	for i, o in { V(-3.4, 1.1, 0.6), V(-3.2, 3.3, 0.4), V(-5.6, 1.1, -0.6) } do
+		piece(f, "Caisse", Enum.PartType.Block, V(2.2, 2.2, 2.2), C.WoodLight, at + r:VectorToWorldSpace(o), r * rotY(i * 0.3))
+	end
+	ball(f, "MineraiCaisse", V(1.8, 0.8, 1.8), hex("#5A3A2A"), at + r:VectorToWorldSpace(V(-3.2, 4.6, 0.4)))
+end
+
+-- Tas de minerai brut où luisent des éclats de braise.
+local function orePile(f: Instance, at: Vector3, C: { [string]: Color3 })
+	ball(f, "TasMinerai", V(7, 3, 6), hex("#4A3428"), at + V(0, 0.6, 0))
+	ball(f, "TasMinerai", V(4, 2.4, 4), hex("#5A3A2A"), at + V(2, 1.6, 1))
+	for i, o in { V(-1.5, 2, 0.8), V(1.2, 2.8, -0.6), V(2.6, 2.6, 1.8), V(-0.4, 1.6, -2) } do
+		local shard = piece(f, "Eclat", Enum.PartType.Block, V(0.6, 1.4, 0.6), C.Neon, at + o, CFrame.Angles(0.4 * i, i, 0.3), Enum.Material.Neon)
+		if i == 1 then light(shard, C.Ember, 8, 0.6) end
+	end
+end
+
+-- Fissure de lave dans le sol : segments lumineux en zigzag, juste au-dessus du sol de zone.
+local function lavaCrack(f: Instance, at: Vector3, yaw: number, C: { [string]: Color3 })
+	local pos, dir = at, yaw
+	for i = 1, 5 do
+		local len = 3 + (i % 2) * 1.6
+		local step = rotY(dir):VectorToWorldSpace(V(0, 0, len))
+		local crack = piece(f, "FissureLave", Enum.PartType.Block, V(0.5, 0.12, len + 0.4), C.Neon, pos + step / 2 + V(0, GROUND_TOP - GROUND_Y + 0.07, 0), rotY(dir),
+			Enum.Material.Neon)
+		if i == 3 then light(crack, C.Ember, 8, 0.4) end
+		pos += step
+		dir += if i % 2 == 0 then 0.7 else -0.7
+	end
+end
+
 BUILD[4] = function(m: Instance)
 	-- repères dans l'embrasure : le boss part de l'intérieur de la fournaise, la porte s'ouvre devant lui ;
 	-- saut depuis le dessus du linteau (porte agrandie de 1,35)
 	moveMarkers(m, -55.5, V(0, 23.6, -54))
 	local basalt, basaltLight, iron, ember, dark = hex("#3A3432"), hex("#5A524C"), hex("#6E6E72"), hex("#F08C3C"), hex("#1C1614")
+	-- Neon : teinte plus sombre que la lumière (le Neon s'éclaircit au rendu ; #F08C3C ressortait jaune)
+	local C = {
+		Basalt = basalt, BasaltLight = basaltLight, Iron = iron, Ember = ember, Dark = dark, Neon = hex("#D2501E"),
+		Cloth = hex("#6A1E16"), Leather = hex("#6E4A32"), Wood = hex("#5E4232"), WoodLight = hex("#7A5A3E"), Steel = hex("#A8ACB4"), Gold = hex("#D2A04A"),
+	}
 	local f = Instance.new("Folder")
 	f.Name, f.Parent = "Forges", m
-	-- murs de basalte cerclés de fer, rivets, cheminées
+	-- rempart de basalte cerclé de fer, de plus en plus haut vers le fond (14 à l'entrée, 34 au fond) ;
+	-- contreforts à brasero sur les flancs
 	for i, p in enclosure(8) do
-		local h = if p.back then 18 else 12 + (i % 2) * 2
+		local t = math.clamp((18 - p.at.Z) / 92, 0, 1)
+		local h = 14 + t * 20 + (i % 2) * 2
 		local rot = rotY(p.yaw)
 		piece(f, "MurBasalte", Enum.PartType.Block, V(8.4, h, 3.6), if i % 2 == 0 then basalt else basaltLight, p.at + V(0, h / 2, 0), rot)
 		for _, y in { h * 0.3, h * 0.75 } do
 			piece(f, "Cerclage", Enum.PartType.Block, V(8.6, 0.7, 3.9), iron, p.at + V(0, y, 0), rot, Enum.Material.DiamondPlate)
 		end
-		if i % 4 == 0 then
-			chimney(f, p.at + V(0, h, 0), basalt, ember, 1.2)
+		if i % 3 == 0 then
+			local foot = p.at + ((V(0, 0, -20) - p.at) * V(1, 0, 1)).Unit * 2.6
+			piece(f, "Contrefort", Enum.PartType.Block, V(3.4, h + 3, 3), basaltLight, foot + V(0, (h + 3) / 2, 0), rot)
+			piece(f, "Brasero", Enum.PartType.Cylinder, V(1.4, 3.4, 3.4), iron, foot + V(0, h + 3.7, 0), FLAT, Enum.Material.Metal)
+			local coals = piece(f, "BraisesBrasero", Enum.PartType.Cylinder, V(0.3, 2.8, 2.8), C.Neon, foot + V(0, h + 4.45, 0), FLAT, Enum.Material.Neon)
+			light(coals, ember, 16, 1)
+			flame(f, foot + V(0, h + 5, 0), 5, 8, ember)
 		end
 	end
+	forgeCitadel(f, C)
 	-- grand fourneau au fond : dôme, deux cheminées ; la Porte-Fournaise est encastrée devant
 	ball(f, "Fourneau", V(26, 20, 18), basaltLight, V(0, 6, -66))
 	piece(f, "Socle", Enum.PartType.Block, V(28, 3, 16), basalt, V(0, 1.5, -64))
 	furnaceGate(f, -54, iron, basalt, ember, dark)
 	for _, side in { -1, 1 } do
 		column(f, "GrandeCheminee", 26, 4, basalt, V(side * 9, 0, -70))
-		local b = piece(f, "BraiseCheminee", Enum.PartType.Cylinder, V(0.3, 3, 3), ember, V(side * 9, 26.2, -70), FLAT, Enum.Material.Neon)
+		local b = piece(f, "BraiseCheminee", Enum.PartType.Cylinder, V(0.3, 3, 3), C.Neon, V(side * 9, 26.2, -70), FLAT, Enum.Material.Neon)
 		light(b, ember, 10, 0.8)
+		-- cascades de lave sur le rempart du fond, et leur bassin
+		local h = 14 + math.clamp((18 + 68.3) / 92, 0, 1) * 20
+		local fall = piece(f, "CascadeLave", Enum.PartType.Block, V(5, h, 0.6), C.Neon, V(side * 25.4, h / 2, -66.2), rotY(-side * 0.464), Enum.Material.Neon)
+		light(fall, ember, 22, 1.2)
+		piece(f, "BassinLave", Enum.PartType.Cylinder, V(0.3, 9, 9), C.Neon, V(side * 24.6, 0.12, -63.4), FLAT, Enum.Material.Neon)
+		for k = 0, 6 do
+			local a = k * math.pi * 2 / 7
+			ball(f, "BordBassin", V(3, 1.2, 2), basalt, V(side * 24.6 + math.cos(a) * 4.8, 0.3, -63.4 + math.sin(a) * 4.8), rotY(-a))
+		end
 	end
 	-- rigoles de métal en fusion vers l'allée
 	for _, x in { -11, 11 } do
-		local g = piece(f, "Rigole", Enum.PartType.Block, V(1.6, 0.25, 42), ember, V(x, 0.15, -36), nil, Enum.Material.Neon)
+		local g = piece(f, "Rigole", Enum.PartType.Block, V(1.6, 0.25, 42), C.Neon, V(x, 0.15, -36), nil, Enum.Material.Neon)
 		light(g, ember, 8, 0.4)
 		for _, side in { -1, 1 } do
 			piece(f, "BordRigole", Enum.PartType.Block, V(0.6, 0.6, 42), iron, V(x + side * 1.1, 0.3, -36), nil, Enum.Material.DiamondPlate)
 		end
 	end
-	-- enclumes, lingots, chaînes
-	for _, d in { { -22, -8 }, { 40, -10 }, { 44, 10 }, { -42, -52 } } do
-		piece(f, "SocleEnclume", Enum.PartType.Block, V(2, 2, 2), basalt, V(d[1], 1, d[2]))
-		piece(f, "Enclume", Enum.PartType.Block, V(3.6, 1.2, 1.6), iron, V(d[1], 2.6, d[2]), nil, Enum.Material.DiamondPlate)
-		piece(f, "Bigorne", Enum.PartType.Wedge, V(1.6, 1, 1.6), iron, V(d[1] + 2.4, 2.6, d[2]), rotY(-math.pi / 2), Enum.Material.DiamondPlate)
-		for k = 0, 2 do
-			piece(f, "Lingot", Enum.PartType.Block, V(1.4, 0.6, 0.7), hex("#D2A04A"), V(d[1] - 2.6, 0.3 + k * 0.6, d[2] + 1.6), rotY(k * 0.3), Enum.Material.Metal)
-		end
+	-- ateliers des flancs (hors de la zone de bataille et du lac à l'ouest) : postes de forge, râteliers,
+	-- réserves, minerai, fissures de lave
+	forgeStation(f, V(44, 0, -14), -math.pi / 2, C)
+	forgeStation(f, V(46, 0, 12), -math.pi / 2 - 0.3, C)
+	forgeStation(f, V(-46, 0, -2), math.pi / 2, C)
+	weaponRack(f, V(51, 0, -32), -math.pi / 2 - 0.35, C)
+	weaponRack(f, V(-49, 0, -40), math.pi / 2 + 0.45, C)
+	weaponRack(f, V(-52, 0, 14), math.pi / 2, C)
+	supplies(f, V(46, 0, 26), -0.4, C)
+	supplies(f, V(-44, 0, 26), 0.5, C)
+	supplies(f, V(50, 0, -2), -math.pi / 2, C)
+	orePile(f, V(44, 0, -42), C)
+	orePile(f, V(-40, 0, -52), C)
+	for _, c in { { 34, 4, 0.4 }, { 30, -30, 2.2 }, { -42, -24, 1.1 }, { -40, 18, -0.6 }, { 36, 20, 2.8 } } do
+		lavaCrack(f, V(c[1], 0, c[2]), c[3], C)
 	end
 	-- coin de l'ancien plateau : enclume géante, tas de charbon fumant, lingots
 	piece(f, "SocleGrandeEnclume", Enum.PartType.Block, V(5, 3, 4), basalt, V(26, 1.5, -44))
 	ball(f, "GrandeEnclume", V(9, 2.6, 3.6), iron, V(26, 4.2, -44), nil, Enum.Material.DiamondPlate)
 	ball(f, "Marteau", V(1, 5, 1), hex("#5A4232"), V(29, 6.4, -43), CFrame.Angles(0, 0, 0.9))
 	ball(f, "TeteMarteau", V(2.6, 1.6, 1.6), iron, V(31, 7.6, -43), nil, Enum.Material.DiamondPlate)
-	ball(f, "TasCharbon", V(10, 4, 8), hex("#2A2422"), V(38, 0.6, -50))
-	for i, e in { { 36, 2.4, -49 }, { 40, 2.8, -51 }, { 38, 3.4, -50 } } do
-		local braise = ball(f, "Braise", V(1.2, 0.8, 1.2), ember, V(e[1], e[2], e[3]), rotY(i), Enum.Material.Neon)
+	ball(f, "TasCharbon", V(10, 4, 8), hex("#2A2422"), V(38, 0.6, -52))
+	for i, e in { { 36, 2.4, -51 }, { 40, 2.8, -53 }, { 38, 3.4, -52 } } do
+		local braise = ball(f, "Braise", V(1.2, 0.8, 1.2), C.Neon, V(e[1], e[2], e[3]), rotY(i), Enum.Material.Neon)
 		if i == 2 then light(braise, ember, 10, 0.6) end
 	end
 	for k = 0, 4 do
-		piece(f, "Lingot", Enum.PartType.Block, V(1.8, 0.7, 0.9), hex("#D2A04A"), V(34 + (k % 2) * 1.2, 0.35 + math.floor(k / 2) * 0.7, -38), rotY(k * 0.25),
+		piece(f, "Lingot", Enum.PartType.Block, V(1.8, 0.7, 0.9), C.Gold, V(34 + (k % 2) * 1.2, 0.35 + math.floor(k / 2) * 0.7, -38), rotY(k * 0.25),
 			Enum.Material.Metal)
 	end
 	battleground(f, hex("#8A7462"), hex("#6E5A4C"), -42)

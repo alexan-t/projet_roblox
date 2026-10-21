@@ -301,6 +301,10 @@ Le serveur et le client lisent les repères du décor courant ; les autres plots
    structure du boss, sous les cases des héros et `FrontEnnemi`. Outil : `battleground` (bande de 44 studs,
    disques avant et fond, quelques taches plus sombres), juste au-dessus du sol de zone et sous les accessoires.
    Zone 3 : neige damée bleutée `#A7C5E0` sur la neige `#E4EDF5`.
+3. **Un fond haut et impressionnant, une arène habitée.** Derrière la structure du boss, le décor doit monter
+   assez haut pour cacher l'horizon et les plots voisins depuis la caméra de combat (Zone 4 : citadelle de
+   42 à 52 studs, cheminées de 66 à 76), et le rempart monter vers le fond. Les flancs, hors zone de bataille,
+   sont remplis d'éléments du biome (ateliers, réserves, lumières) : pas de grands sols nus.
 
 | Zone | Structure du boss | Zone de bataille |
 | --- | --- | --- |
@@ -339,6 +343,14 @@ basalte, linteau, couronne et sceau forgé, deux battants cerclés de fer avec s
 refroidi au repos, orange braise une fois allumés), intérieur rougeoyant, tuyaux avec vapeur continue et
 vannes, deux chaînes à contrepoids, deux marteaux mécaniques sur enclumes. Construite à l'échelle du boss
 (8,5 studs de haut), puis agrandie de 1,35 autour du pied de la porte.
+
+**Zone 4 — fond et flancs** (règle 3) : rempart de basalte de 14 studs à l'entrée à 34 au fond, contreforts à
+braseros ; derrière, la citadelle-forge (`forgeCitadel`) : onze tours de 42 à 52 studs, meurtrières rougeoyantes,
+créneaux, bannières, trois hautes cheminées fumantes, grand engrenage au-dessus de la porte, creuset suspendu
+qui verse du métal en fusion ; deux cascades de lave et leurs bassins. Flancs : postes de forge (`forgeStation` :
+foyer, hotte, enclume, soufflet, baquet), râteliers d'armes, tonneaux et caisses, tas de minerai, fissures de
+lave dans le sol. Les Neon utilisent `#D2501E` (un `#F08C3C` en Neon ressort jaune) ; les feux (`Fire`) sont
+portés par une pièce droite invisible (`flame`), sinon ils partent de côté sur un cylindre couché.
 Variante possible plus tard : le boss assemblé sur place, pièce par pièce, devant la fournaise.
 
 ### Assets Studio
