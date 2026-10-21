@@ -110,20 +110,28 @@ emblème) et le fait grandir ; rien n'est réinventé d'un niveau à l'autre.
 | 12 | Palais du roi | Palais à dôme d'or, étage et tourelles dorées (à la place du donjon), chemin de ronde doré, fronton à grand losange sur la porte |
 | 13 | Cité haute | Passerelles de pierre à garde-corps d'or du palais aux tours du fond, jardins suspendus sur le rempart du fond, fontaine royale sur l'allée |
 | 14 | Empire du roi | Deux chevaliers gardiens géants sur le rempart, de part et d'autre de la porte ; couronne d'or à joyaux flottant autour de la flèche du palais |
+| 15 | Royaume des cascades | L'île ne peut plus s'élargir (socle de 38) : le royaume grandit vers le haut. Cascades qui débordent du rempart dans les douves, longues tentures bleues sur le rempart avant, arche fleurie à l'entrée de la place |
+| 16 | Îles célestes | Trois îlots flottants à tours dorées, enchaînés d'or aux tours du royaume et au palais |
+| 17 | Royaume des arcanes | Cœur de cristal géant à anneaux d'or au-dessus de la couronne, faisceaux de lumière vers les îlots et la tour des mages, cercle de runes lumineuses sur la place |
+| 18 | Âge d'or | Arc de triomphe de pierre et d'or sur le pont (à la place des piliers royaux), statue d'or du roi au sommet, tours du rempart coiffées d'or |
+| 19 | Royaume ailé | Immenses ailes d'or déployées derrière le palais, auréole lumineuse |
+| 20 | Royaume légendaire | Citadelle céleste (sanctuaire, tourelles, dôme d'or) sur une roche flottante au-dessus du royaume, reliée par une colonne de lumière, étoiles |
 
-Niveaux 4 à 14 : `tools/studio-royaumes-vitrine.luau` (`FIRST`, `LAST` : niveaux reconstruits) (Studio EDIT, répétable, une étape d'annulation),
+Niveaux 4 à 20 : `tools/studio-royaumes-vitrine.luau` (`FIRST`, `LAST` : niveaux reconstruits) (Studio EDIT, répétable, une étape d'annulation),
 construits en pièces Roblox aux couleurs relevées sur les niveaux 1 à 3, à partir d'une copie du niveau
 précédent. Ils ne sont **pas encore** des états de jeu : `RoyaumeEtats` ne contient que les états 1 et 2.
 Pour en faire un état : copier le modèle dans `RoyaumeEtats` avec `VisualState = N`, pivot aligné sur
 `Royaume_Etat1` (voir `Royaume_Etat2`), ses `Emplacements.Heros.Heros_1..6` et son modèle `Fumee`.
 
-Contrôle visuel des niveaux 4 à 14 (captures réelles, `docs/VISUAL_QA.md`) : **PASS** pour chacun
+Contrôle visuel des niveaux 4 à 20 (captures réelles, `docs/VISUAL_QA.md`) : **PASS** pour chacun
 ([4](../automation/screenshots/royaumes/niveau-4.jpg), [5](../automation/screenshots/royaumes/niveau-5.jpg),
 [6](../automation/screenshots/royaumes/niveau-6.jpg), [7](../automation/screenshots/royaumes/niveau-7.jpg),
 [8](../automation/screenshots/royaumes/niveau-8.jpg), [9](../automation/screenshots/royaumes/niveau-9.jpg),
 [10 à 12](../automation/screenshots/royaumes/niveaux-10-11-12.jpg), [13](../automation/screenshots/royaumes/niveau-13.jpg),
-[14](../automation/screenshots/royaumes/niveau-14.jpg)). Remarque non bloquante : au niveau 13, les passerelles et
-les jardins suspendus, derrière le palais, se voient peu de face (la fontaine porte la différence). Remarque non bloquante : de face, le donjon du niveau 7
+[14](../automation/screenshots/royaumes/niveau-14.jpg), [15](../automation/screenshots/royaumes/niveau-15.jpg),
+[16 et 17](../automation/screenshots/royaumes/niveaux-16-17.jpg), [18 et 19](../automation/screenshots/royaumes/niveaux-18-19.jpg),
+[20](../automation/screenshots/royaumes/niveau-20.jpg)). Remarque non bloquante : au niveau 13, les passerelles et
+les jardins suspendus, derrière le palais, se voient peu de face (la fontaine porte la différence). Remarque non bloquante : au niveau 18, l'arc de triomphe masque une partie de la porte fortifiée de face. Remarque non bloquante : de face, le donjon du niveau 7
 est en partie caché par les maisons, le niveau 7 se distingue moins du 6 que le 8 du 7.
 
 ## Runtime

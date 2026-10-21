@@ -1,5 +1,5 @@
 --!strict
--- Royaumes miniatures, niveaux 4 à 14 (docs/KINGDOM.md § Vitrine des niveaux). À exécuter dans Studio EDIT
+-- Royaumes miniatures, niveaux 4 à 20 (docs/KINGDOM.md § Vitrine des niveaux). À exécuter dans Studio EDIT
 -- (barre de commande ou MCP). Assets uniquement, aucun script. Répétable : reconstruit les niveaux FIRST à LAST.
 -- Chaque niveau part d'une copie du niveau précédent (le niveau 3 validé, modèles importés) posée sur son
 -- socle de Workspace.VitrineRoyaumes, puis le fait grandir : même île, même entrée (portail vers -Z local),
@@ -15,11 +15,17 @@
 --  12 · Palais du roi : palais à dôme d'or à la place du donjon, chemin de ronde doré, grand emblème de la porte.
 --  13 · Cité haute : passerelles du palais aux tours du fond, jardins suspendus sur le rempart, fontaine royale.
 --  14 · Empire du roi : chevaliers gardiens géants sur le rempart près de la porte, couronne d'or flottante.
+--  15 · Royaume des cascades : cascades du rempart dans les douves, tentures sur le rempart, arche fleurie.
+--  16 · Îles célestes : trois îlots flottants à tours dorées enchaînés au royaume.
+--  17 · Arcanes : cœur de cristal géant au-dessus de la couronne, faisceaux, cercle de runes sur la place.
+--  18 · Âge d'or : arc de triomphe d'or sur le pont (statue du roi au sommet), tours coiffées d'or.
+--  19 · Royaume ailé : immenses ailes d'or derrière le palais, auréole.
+--  20 · Royaume légendaire : citadelle céleste au-dessus du royaume, colonne de lumière, étoiles.
 -- Une étape ChangeHistoryService (Ctrl+Z).
 
 local ChangeHistoryService = game:GetService("ChangeHistoryService")
 
-local FIRST, LAST = 4, 14 -- niveaux reconstruits (chacun part du précédent, déjà posé)
+local FIRST, LAST = 15, 20 -- niveaux reconstruits (chacun part du précédent, déjà posé)
 local recording = ChangeHistoryService:TryBeginRecording(`Royaumes niveaux {FIRST} à {LAST}`)
 local vitrine = workspace:WaitForChild("VitrineRoyaumes")
 
@@ -704,6 +710,220 @@ BUILD[14] = function(root, from)
 	local l = Instance.new("PointLight")
 	l.Color, l.Range, l.Brightness = C.Glow, 16, 1
 	l.Parent = glow
+end
+
+------------------------------------------------------------------ niveaux 15 à 20 : l'île ne peut plus s'élargir
+-- (socle de 38, île de 35) : le royaume grandit vers le haut et s'enrichit, toujours dans la même palette.
+
+local WATER = hex("#5AA8DC")
+
+-- Cascade : l'eau des jardins du rempart déborde par-dessus le chemin de ronde et tombe dans les douves
+local function waterfall(parent: Instance, angle: number, width: number)
+	local m = group(parent, "Cascade")
+	local out = V(math.cos(angle), 0, math.sin(angle))
+	local yaw = math.atan2(out.X, out.Z)
+	local frame = CFrame.new(out * (MUR_R + 1.15) + V(0, 1.75, 0)) * rotY(yaw) -- Z local : vers l'extérieur
+	block(m, "Deversoir", V(width + 0.5, 0.35, 1.2), C.StoneLight, CFrame.new(out * (MUR_R + 0.4) + V(0, 3.45, 0)) * rotY(yaw))
+	local sheet = block(m, "Chute", V(width, 3.6, 0.3), WATER, frame * CFrame.Angles(0.28, 0, 0), Enum.Material.Glass)
+	sheet.Transparency = 0.12
+	for k = -1, 1 do
+		local streak = block(m, "Filet", V(0.18, 3.4, 0.08), hex("#C8ECFF"), frame * CFrame.Angles(0.28, 0, 0) * CFrame.new(k * width * 0.3, 0, 0.18), Enum.Material.Neon)
+		streak.Transparency = 0.3
+	end
+	for k = -2, 2 do
+		local foam = block(m, "Ecume", V(1.1, 0.6, 1.1), hex("#E6F6FF"), CFrame.new(out * 16.6 + V(0, 0.25, 0)) * rotY(yaw) * CFrame.new(k * width * 0.22, 0, 0))
+		foam.Shape = Enum.PartType.Ball
+	end
+end
+
+-- Bannière tombante sur la face extérieure du rempart : longue tenture bleue, bordure et losange d'or
+local function wallBanner(parent: Instance, angle: number, h: number)
+	local m = group(parent, "TentureRempart")
+	local out = V(math.cos(angle), 0, math.sin(angle))
+	local cf = CFrame.new(out * (MUR_R + 0.68) + V(0, h - 1.6, 0)) * rotY(math.atan2(out.X, out.Z))
+	block(m, "Tenture", V(1.4, 3, 0.1), C.Blue, cf)
+	block(m, "Bordure", V(1.5, 0.2, 0.12), C.Gold, cf * CFrame.new(0, 1.45, 0), Enum.Material.Metal)
+	part(m, "Pointe", "WedgePart", V(1.4, 0.7, 0.1), C.Blue, cf * CFrame.new(0, -1.85, 0) * CFrame.Angles(math.pi, 0, 0))
+	diamond(m, cf * CFrame.new(0, 0.3, 0.08), 0.6)
+end
+
+-- Arche fleurie sur l'allée : deux poteaux, arc de verdure, fleurs
+local function flowerArch(parent: Instance, z: number)
+	local m = group(parent, "ArcheFleurie")
+	for _, x in { -1.9, 1.9 } do
+		block(m, "Poteau", V(0.3, 3.2, 0.3), C.WoodDark, CFrame.new(x, 1.6, z))
+	end
+	for i = 0, 6 do
+		local a = math.pi * i / 6
+		local leaf = block(m, "Verdure", V(0.9, 0.9, 0.9), if i % 2 == 0 then C.Green else hex("#408E4A"), CFrame.new(-1.9 * math.cos(a), 3.2 + 1.3 * math.sin(a), z))
+		leaf.Shape = Enum.PartType.Ball
+		if i % 2 == 1 then
+			local f = block(m, "Fleur", V(0.4, 0.4, 0.4), if i == 3 then C.Glow else hex("#EC78A0"), CFrame.new(-1.9 * math.cos(a), 3.2 + 1.3 * math.sin(a), z - 0.45))
+			f.Shape = Enum.PartType.Ball
+		end
+	end
+end
+
+-- Îlot flottant : roche en cône renversé, herbe, petite tour à toit bleu, chaîne d'or vers le royaume
+local function floatingIslet(parent: Instance, at: Vector3, r: number, anchor: Vector3)
+	local m = group(parent, "IlotFlottant")
+	local grass = block(m, "HerbeIlot", V(0.5, r * 2, r * 2), C.Green, CFrame.new(at) * CFrame.Angles(0, 0, math.pi / 2))
+	grass.Shape = Enum.PartType.Cylinder
+	for k = 0, 3 do
+		local rock = block(m, "Roche", V(r * (1.8 - k * 0.4), 1.3, r * (1.8 - k * 0.4)), if k % 2 == 0 then C.Stone else C.StoneDark,
+			CFrame.new(at - V(0, 0.9 + k * 1.1, 0)) * rotY(k * 0.5))
+		local mesh = Instance.new("SpecialMesh")
+		mesh.MeshType = Enum.MeshType.Sphere
+		mesh.Parent = rock
+	end
+	stoneTower(m, "TourIlot", at + V(0, 0.25, 0), r * 0.7, r * 1.4, "Pyramide", true)
+	local d = anchor - at
+	local steps = math.floor(d.Magnitude / 0.8)
+	for i = 1, steps - 1 do
+		local p = at + d * (i / steps) - V(0, math.sin(math.pi * i / steps) * 1.2, 0)
+		block(m, "Maillon", if i % 2 == 0 then V(0.18, 0.5, 0.35) else V(0.35, 0.5, 0.18), C.Gold, CFrame.lookAt(p, p + d), Enum.Material.Metal)
+	end
+end
+
+-- Faisceau de lumière (colonne lumineuse) d'un point à un autre
+local function beam(parent: Instance, a: Vector3, b: Vector3, w: number, color: Color3)
+	local d = b - a
+	local p = block(parent, "Faisceau", V(w, w, d.Magnitude), color, CFrame.lookAt((a + b) / 2, b), Enum.Material.Neon)
+	p.Transparency = 0.45
+	return p
+end
+
+-- 15 · Royaume des cascades : l'eau des jardins déborde du rempart en cascades dans les douves, tentures,
+-- arche fleurie à l'entrée de la place
+BUILD[15] = function(root, from)
+	local falls = group(root, "Cascades")
+	for _, a in { 1.5 * math.pi - 0.75, 1.5 * math.pi + 0.75, 0.52, math.pi - 0.52 } do -- entre les tours du rempart
+		waterfall(falls, a, 2.6)
+	end
+	local banners = group(root, "Tentures")
+	for _, a in { 1.5 * math.pi - 0.42, 1.5 * math.pi + 0.42, 1.5 * math.pi - 1.05, 1.5 * math.pi + 1.05 } do
+		wallBanner(banners, a, 3.2)
+	end
+	flowerArch(root, -11.4)
+end
+
+-- 16 · Royaume des îles célestes : trois îlots flottants à tours dorées, enchaînés aux tours du royaume
+BUILD[16] = function(root, from)
+	local islets = group(root, "IlesCelestes")
+	floatingIslet(islets, V(-13, 15, 2), 2.6, V(-MUR_R, 9, 0))
+	floatingIslet(islets, V(13, 17, 3), 2.6, V(MUR_R, 9, 0))
+	floatingIslet(islets, V(0, 19, 17), 3, V(-1.6, 15.5, 12.4))
+end
+
+-- 17 · Royaume des arcanes : cœur de cristal géant au-dessus de la couronne, faisceaux vers les îlots et
+-- la tour des mages, cercle de runes lumineuses sur la place
+BUILD[17] = function(root, from)
+	local arcane = group(root, "Arcanes")
+	local heartAt = V(-1.6, 31, 8.8)
+	local heart = block(arcane, "CoeurDeCristal", V(2.6, 4.6, 2.6), hex("#7FD0FF"), CFrame.new(heartAt) * rotY(math.pi / 4), Enum.Material.Neon)
+	local mesh = Instance.new("SpecialMesh")
+	mesh.MeshType = Enum.MeshType.Sphere
+	mesh.Parent = heart
+	local l = Instance.new("PointLight")
+	l.Color, l.Range, l.Brightness = hex("#7FD0FF"), 22, 1.2
+	l.Parent = heart
+	for k, r in { 2.4, 3.2 } do
+		ring(arcane, "AnneauCristal", heartAt + V(0, (k - 1.5) * 1.6, 0), r, 12, V(0.25, 0.2, 1.3), if k == 1 then C.Gold else C.GoldLight, Enum.Material.Metal)
+	end
+	for _, p in { V(-13, 18, 2), V(13, 20, 3), V(0, 23, 17), V(-5.2, 16, -9.9) } do
+		beam(arcane, heartAt, p, 0.3, hex("#9FE0FF"))
+	end
+	for i = 0, 11 do
+		local a = i * math.pi / 6
+		local rune = block(arcane, "Rune", V(0.7, 0.08, 0.7), hex("#7FD0FF"), CFrame.new(0.2 + math.cos(a) * 3.4, 0.06, -2.6 + math.sin(a) * 3.4) * rotY(a + math.pi / 4),
+			Enum.Material.Neon)
+		rune.Transparency = 0.2
+	end
+end
+
+-- 18 · Âge d'or : arc de triomphe d'or sur le pont (à la place des piliers royaux), tours du rempart coiffées d'or
+BUILD[18] = function(root, from)
+	destroyNamed(root, { PilierRoyal = true })
+	local arch = group(root, "ArcDeTriomphe")
+	local z = -16.9
+	for _, x in { -3.4, 3.4 } do
+		block(arch, "PileArc", V(2, 7, 2.2), C.Stone, CFrame.new(x, 3.5, z))
+		block(arch, "BandeauPile", V(2.2, 0.35, 2.4), C.Gold, CFrame.new(x, 6.9, z), Enum.Material.Metal)
+		block(arch, "Colonne", V(0.5, 6, 0.5), C.Gold, CFrame.new(x + (if x < 0 then 1.05 else -1.05), 3.3, z - 1.2), Enum.Material.Metal)
+	end
+	block(arch, "Attique", V(9, 2.4, 2.4), C.Stone, CFrame.new(0, 8.3, z))
+	block(arch, "FriseArc", V(9.2, 0.35, 2.6), C.Gold, CFrame.new(0, 9.6, z), Enum.Material.Metal)
+	block(arch, "TentureArc", V(3, 1.8, 0.1), C.Blue, CFrame.new(0, 8.3, z - 1.25))
+	diamond(arch, CFrame.new(0, 8.3, z - 1.32), 1)
+	kingStatue(arch, V(0, 9.8, z))
+	for _, d in root:GetChildren() do
+		if d.Name == "TourRempart" then
+			for _, p in d:GetDescendants() do
+				if p:IsA("BasePart") and p.Name == "ToitTour" then p.Color, p.Material = C.Gold, Enum.Material.Metal end
+			end
+		end
+	end
+end
+
+-- 19 · Royaume ailé : immenses ailes d'or déployées derrière le palais, auréole dorée
+BUILD[19] = function(root, from)
+	local wings = group(root, "AilesRoyales")
+	local center = V(-1.6, 17, 13.2)
+	for _, s in { -1, 1 } do
+		for k = 0, 8 do -- os de l'aile : arc qui part du palais et s'élève vers l'extérieur
+			local x = 2 + k * 1.5
+			local y = k * 1.35 - k * k * 0.07
+			block(wings, "ArcAile", V(1.7, 0.6, 0.5), C.Gold, CFrame.new(center + V(s * x, y, 0)) * CFrame.Angles(0, 0, s * (0.75 - k * 0.09)), Enum.Material.Metal)
+			-- plumes pendantes sous l'arc, plus longues au milieu de l'aile
+			local len = 3 + math.sin(math.pi * (k + 1) / 10) * 5
+			block(wings, "Plume", V(1.25, len, 0.3), if k % 2 == 0 then C.Gold else C.GoldLight,
+				CFrame.new(center + V(s * x, y, 0.1)) * CFrame.Angles(0, 0, s * (0.25 + k * 0.05)) * CFrame.new(0, -len / 2, 0), Enum.Material.Metal)
+		end
+		for k = 0, 3 do -- petites plumes de couverture au-dessus de l'arc
+			block(wings, "PlumeCourte", V(0.9, 2.2, 0.25), C.GoldLight,
+				CFrame.new(center + V(s * (3 + k * 2.4), 1.6 + k * 1.8 - k * k * 0.12, -0.2)) * CFrame.Angles(0, 0, -s * 0.5), Enum.Material.Metal)
+		end
+	end
+	local halo = center + V(0, 12, 0.6) -- auréole verticale, face à l'entrée
+	for i = 0, 17 do
+		local a = i * math.pi * 2 / 18
+		block(wings, "Aureole", V(1.4, 0.6, 0.3), C.Glow, CFrame.new(halo + V(math.cos(a) * 4, math.sin(a) * 4, 0)) * CFrame.Angles(0, 0, a + math.pi / 2), Enum.Material.Neon)
+	end
+end
+
+-- 20 · Royaume légendaire : citadelle céleste flottant au-dessus du royaume, reliée par une colonne de lumière
+BUILD[20] = function(root, from)
+	local sky = group(root, "CitadelleCeleste")
+	local at = V(-1.6, 40, 8.8)
+	for k = 0, 4 do -- roche flottante en cône renversé
+		local rock = block(sky, "RocheCeleste", V(9 - k * 1.7, 1.6, 9 - k * 1.7), if k % 2 == 0 then C.Stone else C.StoneDark,
+			CFrame.new(at - V(0, 0.8 + k * 1.4, 0)) * rotY(k * 0.4))
+		local mesh = Instance.new("SpecialMesh")
+		mesh.MeshType = Enum.MeshType.Sphere
+		mesh.Parent = rock
+	end
+	local grass = block(sky, "HerbeCeleste", V(0.5, 9, 9), C.Green, CFrame.new(at) * CFrame.Angles(0, 0, math.pi / 2))
+	grass.Shape = Enum.PartType.Cylinder
+	stoneTower(sky, "SanctuaireCeleste", at + V(0, 0.25, 0), 3.6, 4, "Creneaux", true)
+	for _, c in { V(-1, 0, -1), V(1, 0, -1), V(-1, 0, 1), V(1, 0, 1) } do
+		stoneTower(sky, "TourelleCeleste", at + c * 3 + V(0, 0.25, 0), 1.4, 3.4, "Pyramide", true)
+	end
+	local dome = block(sky, "DomeCeleste", V(3.4, 3, 3.4), C.Gold, CFrame.new(at + V(0, 6.4, 0)), Enum.Material.Metal)
+	local mesh = Instance.new("SpecialMesh")
+	mesh.MeshType = Enum.MeshType.Sphere
+	mesh.Parent = dome
+	banner(sky, CFrame.new(at + V(0, 7.8, 0)), 3, 1.2)
+	local column = beam(sky, V(-1.6, 27, 8.8), at - V(0, 7, 0), 1.6, C.Glow)
+	column.Transparency = 0.55
+	local l = Instance.new("PointLight")
+	l.Color, l.Range, l.Brightness = C.Glow, 20, 1
+	l.Parent = column
+	for i = 0, 9 do -- étoiles autour de la citadelle
+		local a = i * math.pi / 5
+		local star = block(sky, "Etoile", V(0.5, 0.5, 0.5), C.GoldLight, CFrame.new(at + V(math.cos(a) * 7, 2 + (i % 3) * 1.5, math.sin(a) * 7)) * CFrame.Angles(0.6, a, 0.6),
+			Enum.Material.Neon)
+		star.Name = "Etoile"
+	end
 end
 
 local built = {}
