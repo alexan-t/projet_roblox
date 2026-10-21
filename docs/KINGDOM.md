@@ -85,6 +85,38 @@ royaume de l'état 1 à l'état 2. Les anciens
 profils (6 classes temporaires `Archer`… `Tireur`, sans modèle ici) sont migrés en DataVersion 2.
 `CombatConfig` garde ces classes comme **profils de combat** temporaires, pas comme HeroId.
 
+## Vitrine des niveaux (Test 3)
+
+`Workspace.VitrineRoyaumes` montre un royaume par niveau, sur 20 socles (`Socle_01` à `Socle_20`,
+attribut `Niveau`, plaque « Niveau N », `PointDePose` = repère du royaume). Chaque modèle
+`Royaume_NiveauN` (attribut `Niveau = N`) est posé sur le `PointDePose` de son socle, comme le royaume
+sur `EmplacementCentral` dans un plot. **Règle de progression** : un niveau reprend le niveau précédent
+(même île, même entrée vers -Z local, même palette : bois, chaume, pierre, bleu royal et or, losange
+emblème) et le fait grandir ; rien n'est réinventé d'un niveau à l'autre.
+
+| Niveau | Royaume | Nouveautés |
+| --- | --- | --- |
+| 1 | Campement | Maison du chef, tente, puits, feu de camp, champ, palissade partielle, portail (modèles importés) |
+| 2 | Hameau | Palissade fermée, maison de villageois, atelier de bûcheron, meules de foin |
+| 3 | Village | Tour de guet, étal de marché, palissade complète |
+| 4 | Village fortifié | Deux tours de guet à l'entrée, moulin, maison neuve sur le terrain à bâtir |
+| 5 | Bourg | Rempart de pierre à l'avant, porte fortifiée à herse, tours d'angle, chapelle (à la place de la tente), second étal |
+| 6 | Ville fortifiée | Enceinte de pierre complète, tours du fond, tour de guet de pierre |
+| 7 | Château | Donjon crénelé à quatre tourelles au fond (à la place de la maison de villageois) |
+| 8 | Citadelle royale | Donjon couronné d'un étage royal et d'un cœur lumineux, tours plus hautes à bandeaux et étendards d'or, porte dorée, grand étendard |
+
+Niveaux 4 à 8 : `tools/studio-royaumes-vitrine.luau` (Studio EDIT, répétable, une étape d'annulation),
+construits en pièces Roblox aux couleurs relevées sur les niveaux 1 à 3, à partir d'une copie du niveau
+précédent. Ils ne sont **pas encore** des états de jeu : `RoyaumeEtats` ne contient que les états 1 et 2.
+Pour en faire un état : copier le modèle dans `RoyaumeEtats` avec `VisualState = N`, pivot aligné sur
+`Royaume_Etat1` (voir `Royaume_Etat2`), ses `Emplacements.Heros.Heros_1..6` et son modèle `Fumee`.
+
+Contrôle visuel des niveaux 4 à 8 (captures réelles, `docs/VISUAL_QA.md`) : **PASS** pour chacun
+([4](../automation/screenshots/royaumes/niveau-4.jpg), [5](../automation/screenshots/royaumes/niveau-5.jpg),
+[6](../automation/screenshots/royaumes/niveau-6.jpg), [7](../automation/screenshots/royaumes/niveau-7.jpg),
+[8](../automation/screenshots/royaumes/niveau-8.jpg)). Remarque non bloquante : de face, le donjon du niveau 7
+est en partie caché par les maisons, le niveau 7 se distingue moins du 6 que le 8 du 7.
+
 ## Runtime
 
 ```text
