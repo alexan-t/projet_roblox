@@ -444,3 +444,26 @@ Vue depuis le royaume et vue depuis l'arène : **PASS** (séparation lisible, ar
 aligné sur le portique). [Depuis le royaume](../automation/screenshots/zones/zone4-limite-royaume.jpg),
 [depuis l'arène](../automation/screenshots/zones/zone4-limite-arene.jpg). Caméra de Studio réinitialisée.
 **Non testé en Play.**
+
+## Zone 6 — Sanctuaire du Ciel, 22 octobre 2026
+
+Brief de l'équipe : structure du boss céleste (plateforme circulaire, colonnes blanches, statues ailées, pierres
+flottantes, lumière, escalier suspendu, cristaux) et entrée du boss invoqué par le sanctuaire. Décor refait selon
+les quatre règles (structure du boss, zone de bataille, fond haut et arène habitée, limite avant).
+
+1. Avant : **FIX** (zone très vide et basse, petit dôme, horizon visible).
+   [Capture](../automation/screenshots/zones/zone6-sanctuaire-avant.jpg).
+2. Premier essai : **FIX** (sanctuaire noyé dans la mer de nuages, blanc sur blanc).
+   [Capture](../automation/screenshots/zones/zone6-sanctuaire-noye.jpg) → nuages dégagés derrière le sanctuaire,
+   couronne du fond bleutée, rapprochée (elle se perdait dans la brume) puis étirée en hauteur ; sanctuaire agrandi,
+   halo d'or derrière le grand cristal.
+3. Vue au sol vers le sanctuaire : **PASS**. [Capture](../automation/screenshots/zones/zone6-sanctuaire-sol.jpg).
+4. Invocation jouée dans Studio (code de `BossGate`, Edit) : cristaux et cercle allumés, colonne de lumière,
+   anneaux : **PASS** (anneaux discrets). [Capture](../automation/screenshots/zones/zone6-sanctuaire-invocation.jpg).
+   Sanctuaire remis au repos (colonne invisible, anneaux pâles) après l'essai.
+5. Vue de combat : **PASS** (sanctuaire au centre, fond qui cache l'horizon, flancs remplis).
+   [Capture](../automation/screenshots/zones/zone6-sanctuaire-vue.jpg).
+6. Limite depuis le royaume : **PASS**. [Capture](../automation/screenshots/zones/zone6-limite-royaume.jpg).
+
+Caméra de Studio réinitialisée. **Non testé en Play** : l'invocation pendant un vrai combat contre le Gardien
+Céleste (descente de l'escalier, calage sur `EntranceHold`).

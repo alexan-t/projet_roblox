@@ -99,9 +99,9 @@ local CombatConfig = {
 			FourneauAmbulant = 1.8, Martelet = 1.8, Chaine = 1.8, MaitreDesForges = 4.4, MeduseCouronnee = 1.4,
 			MureneMiroir = 1.4, CoffreBernard = 1.4, ChevalierNoye = 1.8, CrabeCathedrale = 1.8, Leviathan = 2.6,
 			GargouilleAilee = 2.0, MiniColosseCeleste = 2.0, MoutonNuage = 1.4, PoissonDuCiel = 1.4, BecTonnerre = 2.2,
-			GardienCeleste = 2.6,
+			GardienCeleste = 4.4,
 		}),
-		-- MaitreDesForges : la Porte-Fournaise s'ouvre avant qu'il en sorte (EnemyPresentationConfig.Gate).
+		-- MaitreDesForges, GardienCeleste : la structure du boss s'anime avant qu'il en sorte (EnemyPresentationConfig.Gate).
 		DefaultEntrance = 1.6,
 		-- Fin de combat : les modèles restent ce temps (outro du client : morts, sac, « VICTOIRE ! »),
 		-- puis la préparation est reconstruite. Rien ne disparaît d'un coup.

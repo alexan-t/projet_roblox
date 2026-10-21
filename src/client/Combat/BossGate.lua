@@ -7,10 +7,15 @@
 --   2. les chaînes se tendent (tremblement, puis les contrepoids remontent) ;
 --   3. les battants s'ouvrent lentement vers l'arène, fumée et braises jaillissent de la fournaise ;
 -- le boss sort ensuite de l'embrasure (EnemyPresentationController, entrée Walk) ; la porte se referme après.
+-- Zone 6 (Sanctuaire du Ciel) : les cristaux s'allument, les anneaux tournent et montent, la colonne de lumière
+-- apparaît, le vent se lève, une ombre passe sur l'arène ; le boss naît dans la colonne et descend l'escalier.
 -- Purement visuel et local à ce client (CFrame, couleurs, émetteurs de pièces ancrées du décor) : aucune règle.
 -- Structure attendue (toutes les parties sont facultatives) :
 --   Battants/<Model> (pivot : pièce Charniere, attribut Sens = ±1), Chaines/<Model> (Poulie en haut),
---   Marteaux/<Model> (Axe = pivot, Bras = partie mobile), Effets/Foyer (ParticleEmitter Fumee et Braises).
+--   Marteaux/<Model> (Axe = pivot, Bras = partie mobile), Effets/Foyer (ParticleEmitter Fumee et Braises),
+--   Anneaux/<Model> (attributs Tours, Monte ; pivot = centre), Effets/Ombre (attribut Course, axe X local),
+--   émetteurs à attribut Rafale (nombre de particules à l'ouverture). Une Lueur à attribut Apparition prend
+--   cette transparence une fois allumée (0 sinon) : la colonne de lumière, invisible au repos.
 
 local RunService = game:GetService("RunService")
 
@@ -24,11 +29,21 @@ local HAMMER_STRIKE = 0.78 -- rad : bras levé → tête sur l'enclume
 local LIGHT_BOOST = 3 -- facteur de luminosité des lumières des lueurs une fois allumées
 
 type Saved = { part: BasePart, cframe: CFrame }
-type Glow = { part: BasePart, color: Color3, lit: Color3, transparency: number, lights: { { light: PointLight, brightness: number } } }
+type Glow = {
+	part: BasePart,
+	color: Color3,
+	lit: Color3,
+	transparency: number,
+	target: number,
+	lights: { { light: PointLight, brightness: number } },
+}
 type Rig = {
 	leaves: { { hinge: CFrame, sign: number, parts: { Saved } } },
 	chains: { { top: number, parts: { Saved } } },
 	hammers: { { axis: CFrame, parts: { Saved } } },
+	rings: { { pivot: Vector3, turns: number, rise: number, parts: { Saved } } },
+	shadows: { { part: BasePart, cframe: CFrame, course: number } },
+	bursts: { { emitter: ParticleEmitter, count: number } },
 	glows: { Glow },
 	smoke: ParticleEmitter?,
 	sparks: ParticleEmitter?,
@@ -78,7 +93,17 @@ local function rigOf(gate: Model): Rig
 	if rig then
 		return rig
 	end
-	local new: Rig = { leaves = {}, chains = {}, hammers = {}, glows = {}, center = gate:GetPivot().Position, token = 0 }
+	local new: Rig = {
+		leaves = {},
+		chains = {},
+		hammers = {},
+		rings = {},
+		shadows = {},
+		bursts = {},
+		glows = {},
+		center = gate:GetPivot().Position,
+		token = 0,
+	}
 	for _, leaf in children(gate, "Battants") do
 		local hinge = leaf:FindFirstChild("Charniere")
 		if hinge and hinge:IsA("BasePart") then
@@ -98,14 +123,31 @@ local function rigOf(gate: Model): Rig
 			table.insert(new.hammers, { axis = axis.CFrame, parts = saved(arm) })
 		end
 	end
+	for _, ring in children(gate, "Anneaux") do
+		local turns, rise = ring:GetAttribute("Tours"), ring:GetAttribute("Monte")
+		table.insert(new.rings, {
+			pivot = if ring:IsA("Model") then ring:GetPivot().Position else new.center,
+			turns = if typeof(turns) == "number" then turns else 1,
+			rise = if typeof(rise) == "number" then rise else 0,
+			parts = saved(ring),
+		})
+	end
 	for _, d in gate:GetDescendants() do
+		if d:IsA("BasePart") and d.Name == "Ombre" then
+			local course = d:GetAttribute("Course")
+			table.insert(new.shadows, { part = d, cframe = d.CFrame, course = if typeof(course) == "number" then course else 0 })
+		elseif d:IsA("ParticleEmitter") and typeof(d:GetAttribute("Rafale")) == "number" then
+			table.insert(new.bursts, { emitter = d, count = d:GetAttribute("Rafale") :: number })
+		end
 		if d:IsA("BasePart") and d:GetAttribute("Lueur") == true then
 			local lit = d:GetAttribute("LueurAllumee")
+			local appear = d:GetAttribute("Apparition")
 			local glow: Glow = {
 				part = d,
 				color = d.Color,
 				lit = if typeof(lit) == "Color3" then lit else d.Color,
 				transparency = d.Transparency,
+				target = if typeof(appear) == "number" then appear else 0,
 				lights = {},
 			}
 			for _, l in d:GetChildren() do
@@ -160,10 +202,29 @@ end
 local function setGlow(rig: Rig, a: number)
 	for _, g in rig.glows do
 		g.part.Color = g.color:Lerp(g.lit, a)
-		g.part.Transparency = g.transparency * (1 - a)
+		g.part.Transparency = g.transparency + (g.target - g.transparency) * a
 		for _, l in g.lights do
 			l.light.Brightness = l.brightness * (1 + (LIGHT_BOOST - 1) * a)
 		end
+	end
+end
+
+-- anneaux : tournent autour de l'axe vertical de leur centre et montent
+local function setRings(rig: Rig, a: number)
+	for _, ring in rig.rings do
+		local turn = CFrame.new(ring.pivot) * CFrame.Angles(0, ring.turns * 2 * math.pi * a, 0) * CFrame.new(-ring.pivot)
+			+ Vector3.new(0, ring.rise * a, 0)
+		for _, s in ring.parts do
+			s.part.CFrame = turn * s.cframe
+		end
+	end
+end
+
+-- ombre qui passe sur l'arène : traverse le long de son axe X, apparaît puis s'efface (alpha 0 et 1 : invisible)
+local function setShadows(rig: Rig, a: number)
+	for _, sh in rig.shadows do
+		sh.part.CFrame = sh.cframe + sh.cframe.RightVector * sh.course * a
+		sh.part.Transparency = 1 - 0.55 * math.sin(math.pi * a)
 	end
 end
 
@@ -198,11 +259,17 @@ function BossGate.open(gate: Model, duration: number, alive: () -> boolean)
 	end, live)
 	emit(rig.sparks, 25)
 	AudioController.Play("Impact", { Position = rig.center, Pitch = 0.8, Volume = 0.7 })
-	-- 2 et 3. les chaînes se tendent, les battants s'ouvrent lentement, fumée et braises
+	-- 2 et 3. les chaînes se tendent, les battants s'ouvrent lentement, fumée et braises ;
+	-- anneaux, ombre et rafales de vent pour un sanctuaire
 	emit(rig.smoke, 30)
+	for _, b in rig.bursts do
+		b.emitter:Emit(b.count)
+	end
 	run(duration * 0.7, function(a)
 		local e = smooth(a)
 		setLeaves(rig, e)
+		setRings(rig, e)
+		setShadows(rig, a)
 		setChains(rig, CHAIN_LIFT * e, 0.06 * (1 - a))
 		setHammers(rig, 1 - smooth(math.min(a * 2, 1)))
 		if a > 0.4 and a < 0.45 then
@@ -222,6 +289,7 @@ function BossGate.close(gate: Model, duration: number)
 		run(duration, function(a)
 			local e = 1 - smooth(a)
 			setLeaves(rig, e)
+			setRings(rig, e)
 			setChains(rig, CHAIN_LIFT * e, 0)
 			setGlow(rig, e)
 		end, function(): boolean
@@ -235,6 +303,8 @@ function BossGate.reset(gate: Model)
 	local rig = rigOf(gate)
 	rig.token += 1
 	setLeaves(rig, 0)
+	setRings(rig, 0)
+	setShadows(rig, 0)
 	setChains(rig, 0, 0)
 	setHammers(rig, 0)
 	setGlow(rig, 0)

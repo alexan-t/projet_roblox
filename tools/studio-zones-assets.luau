@@ -2219,73 +2219,390 @@ BUILD[5] = function(m: Instance)
 	tag(seq, "SequenceOeil", { Periode = 40, Largeur = 12 })
 end
 
+-- Cumulus : grande masse de nuage gonflée (base bleutée, sommets blancs), haute d'environ 1,45 × s.
+-- Allongé le long de `yaw` (la tangente du rempart).
+-- `far` : nuages du fond, bleutés (contraste avec le marbre et l'or du sanctuaire) et étirés en hauteur pour
+-- cacher l'horizon depuis la caméra de combat sans avancer sur le sanctuaire.
+local function cumulus(f: Instance, at: Vector3, s: number, yaw: number, C: { [string]: Color3 }, far: boolean?)
+	local r = rotY(yaw)
+	local light, shade = if far then C.CloudFar else C.Cloud, if far then C.CloudFarShade else C.CloudShade
+	local k = V(1, if far then 1.4 else 1, 1)
+	ball(f, "Cumulus", V(1.7, 0.6, 1.2) * s * k, shade, at + V(0, 0.25 * s, 0) * k, r)
+	ball(f, "Cumulus", V(1, 0.85, 0.9) * s * k, light, at + r:VectorToWorldSpace(V(-0.45, 0.6, 0) * s) * k, r)
+	ball(f, "Cumulus", V(1.1, 1, 1) * s * k, light, at + r:VectorToWorldSpace(V(0.35, 0.75, 0.05) * s) * k, r)
+	ball(f, "Cumulus", V(0.7, 0.6, 0.7) * s * k, light, at + r:VectorToWorldSpace(V(0.05, 1.15, -0.05) * s) * k, r)
+end
+
+-- Cristal lévitant : éclat lumineux allongé et son petit frère, sans socle (rien ne le porte).
+local function skyCrystal(parent: Instance, at: Vector3, h: number, C: { [string]: Color3 }, yaw: number?): BasePart
+	local r = rotY(yaw or 0) * CFrame.Angles(0.12, 0, 0.1)
+	local main = ball(parent, "Cristal", V(h * 0.34, h, h * 0.34), C.Crystal, at, r, Enum.Material.Neon)
+	main.Transparency = 0.1
+	ball(parent, "EclatCristal", V(h * 0.16, h * 0.45, h * 0.16), C.Crystal, at + r:VectorToWorldSpace(V(h * 0.28, -h * 0.2, 0)), r * CFrame.Angles(0, 0, -0.35),
+		Enum.Material.Neon)
+	return main
+end
+
+-- Statue ailée de marbre : socle cerclé d'or, robe, buste, tête, ailes de trois plumes d'or qui s'ouvrent.
+local function wingedStatue(f: Instance, at: Vector3, yaw: number, k: number, C: { [string]: Color3 })
+	local r = rotY(yaw)
+	local function p(v: Vector3): Vector3
+		return at + r:VectorToWorldSpace(v * k)
+	end
+	piece(f, "SocleStatue", Enum.PartType.Block, V(3, 2.2, 3) * k, C.MarbleShade, p(V(0, 1.1, 0)), r)
+	piece(f, "BandeSocle", Enum.PartType.Block, V(3.2, 0.3, 3.2) * k, C.Gold, p(V(0, 2.1, 0)), r, Enum.Material.Metal)
+	ball(f, "Robe", V(2, 3.6, 1.6) * k, C.Marble, p(V(0, 3.9, 0)), r)
+	ball(f, "Buste", V(1.5, 1.6, 1.1) * k, C.Marble, p(V(0, 5.9, 0)), r)
+	ball(f, "Tete", V(1, 1.1, 1) * k, C.Marble, p(V(0, 7.2, 0.05)), r)
+	ball(f, "Aureole", V(1.6, 0.2, 1.6) * k, C.Gold, p(V(0, 7.9, -0.2)), r * CFrame.Angles(-0.4, 0, 0), Enum.Material.Metal)
+	for _, s in { -1, 1 } do
+		for i = 0, 2 do
+			ball(f, "Plume", V(0.5, 3.4 - i * 0.6, 1.3) * k, if i == 0 then C.Gold else C.Marble, p(V(s * (1 + i * 0.6), 6.2 + i * 0.5, -0.5)),
+				r * CFrame.Angles(0, 0, s * (0.35 + i * 0.3)), if i == 0 then Enum.Material.Metal else nil)
+		end
+	end
+end
+
+-- Île flottante : dessus de marbre cerclé d'or, dessous de roche en pointe ; couronnée d'un petit temple, d'un
+-- cristal ou d'un arbre doré. `at` : centre du dessus.
+local function floatingIsland(f: Instance, at: Vector3, r: number, crown: string, C: { [string]: Color3 })
+	piece(f, "DessusIle", Enum.PartType.Cylinder, V(0.8, 2 * r, 2 * r), C.Marble, at, FLAT)
+	piece(f, "BordIle", Enum.PartType.Cylinder, V(0.5, 2 * r + 0.5, 2 * r + 0.5), C.Gold, at - V(0, 0.5, 0), FLAT, Enum.Material.Metal)
+	ball(f, "RocheIle", V(2 * r * 0.95, r * 0.9, 2 * r * 0.95), C.Rock, at - V(0, r * 0.4, 0))
+	ball(f, "RocheIle", V(r * 1.2, r * 1.1, r * 1.2), C.RockDark, at - V(0, r * 0.95, 0), rotY(r))
+	ball(f, "PointeIle", V(r * 0.5, r * 0.9, r * 0.5), C.RockDark, at - V(0, r * 1.5, 0), CFrame.Angles(0.1, 0, 0.12))
+	if crown == "Temple" then
+		for q = 0, 3 do
+			local a = q * math.pi / 2 + math.pi / 4
+			column(f, "ColonneIle", r * 1.1, r * 0.16, C.Marble, at + V(math.cos(a) * r * 0.5, 0.4, math.sin(a) * r * 0.5))
+		end
+		ball(f, "DomeIle", V(r * 1.3, r * 0.7, r * 1.3), C.Gold, at + V(0, r * 1.5 + 0.4, 0), nil, Enum.Material.Metal)
+	elseif crown == "Cristal" then
+		local c = skyCrystal(f, at + V(0, r * 0.9 + 1, 0), r * 1.3, C, r)
+		light(c, C.CrystalLight, 16, 0.8)
+	else
+		column(f, "TroncIle", r * 0.8, r * 0.18, C.Wood, at + V(0, 0.4, 0))
+		ball(f, "FeuillageIle", V(r * 1.3, r * 1, r * 1.3), C.Leaf, at + V(0, r * 1.3, 0))
+		ball(f, "FeuillageIle", V(r * 0.8, r * 0.7, r * 0.8), C.LeafLight, at + V(r * 0.35, r * 1.65, 0.2))
+	end
+end
+
+-- Pierre flottante : bloc de roche arrondi et sa dalle de marbre.
+local function floatingStone(f: Instance, at: Vector3, s: number, k: number, C: { [string]: Color3 })
+	local r = rotY(k * 1.3) * CFrame.Angles(0.15 * (k % 3 - 1), 0, 0.12)
+	ball(f, "PierreFlottante", V(2.4, 1.8, 2) * s, C.Rock, at, r)
+	piece(f, "DallePierre", Enum.PartType.Block, V(1.8, 0.35, 1.5) * s, C.Marble, at + V(0, 0.85 * s, 0), r)
+end
+
+-- Ruisseau de lumière céleste : lit lumineux en segments, écume blanche, berges de nuages et de pierres.
+local function skyStream(f: Instance, points: { Vector3 }, width: number, C: { [string]: Color3 })
+	local y = GROUND_TOP - GROUND_Y + 0.12
+	for i = 1, #points - 1 do
+		local a, b = points[i], points[i + 1]
+		local d = b - a
+		local len = d.Magnitude
+		local r = rotY(math.atan2(d.X, d.Z))
+		local bed = piece(f, "RuisseauCeleste", Enum.PartType.Block, V(width, 0.25, len + 0.6), C.Stream, (a + b) / 2 + V(0, y, 0), r, Enum.Material.Neon)
+		if i % 2 == 1 then
+			light(bed, C.CrystalLight, 14, 0.6)
+			local sparks = emitter(bed, "Scintillement", "rbxasset://textures/particles/sparkles_main.dds", hex("#E8FAFF"), 2, 0.4, 2, 1.6)
+			sparks.LightEmission = 1
+		end
+		if i > 1 then
+			piece(f, "CoudeRuisseau", Enum.PartType.Cylinder, V(0.25, width, width), C.Stream, a + V(0, y, 0), FLAT, Enum.Material.Neon)
+		end
+		for k = 1, math.floor(len / 5) do
+			local t = (k - 0.5) / math.floor(len / 5)
+			ball(f, "Ecume", V(1.4, 0.25, 0.9), C.Cloud, a:Lerp(b, t) + r:VectorToWorldSpace(V(((k + i) % 3 - 1) * width * 0.25, y + 0.14, 0)), r * rotY(k))
+		end
+		local steps = math.max(1, math.floor(len / 4))
+		for k = 0, steps - 1 do
+			local t = (k + 0.5) / steps
+			for _, side in { -1, 1 } do
+				local at = a:Lerp(b, t) + r:VectorToWorldSpace(V(side * (width / 2 + 1), 0, 0))
+				if (k + i + side) % 2 == 0 then
+					cloud(f, at, C.Cloud, 0.8)
+				else
+					ball(f, "PierreBerge", V(2, 1.2, 1.6) * (0.7 + (k % 3) * 0.15), C.MarbleShade, at + V(0, 0.3, 0), rotY(k + i))
+				end
+			end
+		end
+	end
+end
+
+-- Colonnade en ruine : colonnes blanches à chapiteau d'or, certaines brisées, un linteau sur les deux premières.
+local function colonnade(f: Instance, from: Vector3, to: Vector3, count: number, h: number, C: { [string]: Color3 })
+	for i = 0, count - 1 do
+		local at = from:Lerp(to, i / (count - 1))
+		local broken = i % 3 == 2
+		local hi = if broken then h * 0.45 else h
+		column(f, "ColonneRuine", hi, 1.8, C.Marble, at)
+		piece(f, "BaseColonne", Enum.PartType.Block, V(2.4, 0.8, 2.4), C.MarbleShade, at + V(0, 0.4, 0))
+		if broken then
+			piece(f, "TronconRuine", Enum.PartType.Cylinder, V(3.4, 1.8, 1.8), C.Marble, at + V(1.6, 0.9, 1), rotY(0.7))
+		else
+			piece(f, "Chapiteau", Enum.PartType.Block, V(2.6, 0.7, 2.6), C.Gold, at + V(0, hi + 0.35, 0), nil, Enum.Material.Metal)
+		end
+	end
+	local a, b = from, from:Lerp(to, 1 / (count - 1))
+	local d = b - a
+	piece(f, "LinteauRuine", Enum.PartType.Block, V(2.2, 1.2, d.Magnitude + 2.6), C.MarbleShade, (a + b) / 2 + V(0, h + 1.3, 0), rotY(math.atan2(d.X, d.Z)))
+end
+
+-- Sanctuaire du Ciel (structure du boss, docs/ZONES.md § Porte du boss) : plateforme circulaire flottante au fond,
+-- colonnade blanche ouverte vers l'arène, statues ailées, escalier suspendu, cristaux lévitants, grand cristal
+-- au-dessus. Modèle « PorteBoss » (Style Sanctuaire), animé par Combat/BossGate à l'entrée du boss : les cristaux
+-- et le cercle du sol s'allument (Lueur), les anneaux tournent et montent (Anneaux), la colonne de lumière
+-- apparaît (Apparition), le vent se lève (émetteurs à Rafale), une ombre passe sur l'arène (Effets/Ombre).
+local function skySanctuary(parent: Instance, center: Vector3, C: { [string]: Color3 })
+	local gate = Instance.new("Model")
+	gate.Name, gate.Parent = "PorteBoss", parent
+	gate:SetAttribute("Style", "Sanctuaire")
+	local function glow(p: BasePart, lit: Color3, appear: number?): BasePart
+		p:SetAttribute("Lueur", true)
+		p:SetAttribute("LueurAllumee", lit)
+		if appear then p:SetAttribute("Apparition", appear) end
+		return p
+	end
+	local top = center.Y
+	local R = 17
+	-- plateforme : dessus de marbre, cercle d'or, cercle de runes ; dessous de roche flottante
+	piece(gate, "Plateforme", Enum.PartType.Cylinder, V(1.6, 2 * R, 2 * R), C.Marble, center - V(0, 0.8, 0), FLAT)
+	piece(gate, "CerclePlateforme", Enum.PartType.Cylinder, V(0.8, 2 * R + 0.8, 2 * R + 0.8), C.Gold, center - V(0, 1.3, 0), FLAT, Enum.Material.Metal)
+	glow(piece(gate, "CercleRunes", Enum.PartType.Cylinder, V(0.1, 22, 22), C.CrystalDim, center + V(0, 0.03, 0), FLAT, Enum.Material.Neon), C.CrystalLit)
+	piece(gate, "CentrePlateforme", Enum.PartType.Cylinder, V(0.12, 20.6, 20.6), C.MarbleShade, center + V(0, 0.06, 0), FLAT)
+	ball(gate, "RochePlateforme", V(2 * R * 0.95, 7, 2 * R * 0.95), C.Rock, center - V(0, 3.4, 0))
+	ball(gate, "RochePlateforme", V(R * 1.2, 5, R * 1.2), C.RockDark, center - V(0, 5.4, 0), rotY(0.6))
+	ball(gate, "PointePlateforme", V(6, 5, 6), C.RockDark, center - V(0, top - 4.3, 0), CFrame.Angles(0.08, 0, 0.1))
+	-- colonnade ouverte vers l'arène (+z), chapiteaux d'or, entablement en arc
+	local cols = {}
+	for q = 0, 9 do
+		local a = q * math.pi / 5
+		if math.sin(a) < 0.9 then
+			local at = center + V(math.cos(a) * 14.5, 0, math.sin(a) * 14.5)
+			column(gate, "ColonneSanctuaire", 20, 2.4, C.Marble, at)
+			piece(gate, "BaseSanctuaire", Enum.PartType.Block, V(3.2, 0.9, 3.2), C.MarbleShade, at + V(0, 0.45, 0))
+			piece(gate, "ChapiteauSanctuaire", Enum.PartType.Block, V(3.4, 0.9, 3.4), C.Gold, at + V(0, 20.45, 0), nil, Enum.Material.Metal)
+			table.insert(cols, { at = at, a = a })
+		end
+	end
+	for q = 1, #cols do
+		local a, b = cols[q], cols[q % #cols + 1]
+		if math.abs(b.a - a.a) < 0.7 or math.abs(b.a - a.a) > 5.6 then
+			local d = b.at - a.at
+			local mid = (a.at + b.at) / 2
+			piece(gate, "Entablement", Enum.PartType.Block, V(2.2, 1.6, d.Magnitude + 2.4), C.MarbleShade, mid + V(0, 21.7, 0), rotY(math.atan2(d.X, d.Z)))
+			piece(gate, "FriseOr", Enum.PartType.Block, V(2.3, 0.35, d.Magnitude + 2.4), C.Gold, mid + V(0, 22.65, 0), rotY(math.atan2(d.X, d.Z)), Enum.Material.Metal)
+		end
+	end
+	-- statues ailées qui gardent l'escalier
+	for _, s in { -1, 1 } do
+		wingedStatue(gate, center + V(s * 8.5, 0, R - 3.5), 0, 1.25, C)
+	end
+	-- escalier suspendu : marches de marbre séparées, nez d'or, jusqu'au sol de l'arène
+	for i = 1, 14 do
+		local at = center + V(0, -i * (top / 14.5), R + i * 1.15)
+		piece(gate, "Marche", Enum.PartType.Block, V(8, 0.5, 1.05), C.Marble, at - V(0, 0.25, 0))
+		piece(gate, "NezMarche", Enum.PartType.Block, V(8.1, 0.2, 0.2), C.Gold, at + V(0, -0.1, 0.5), nil, Enum.Material.Metal)
+	end
+	-- grand cristal au-dessus du sanctuaire, petits cristaux en couronne ; colonne de lumière (invisible au repos)
+	local crystals = Instance.new("Folder")
+	crystals.Name, crystals.Parent = "Cristaux", gate
+	local big = skyCrystal(crystals, center + V(0, 29, 0), 10, C)
+	light(big, C.CrystalLight, 30, 1)
+	for q = 0, 5 do
+		local a = q * math.pi / 3
+		local c = skyCrystal(crystals, center + V(math.cos(a) * 21, 7 + (q % 3) * 4, math.sin(a) * 21), 4.5 + (q % 2), C, a)
+		if q % 2 == 0 then light(c, C.CrystalLight, 12, 0.6) end
+	end
+	for _, d in crystals:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.Color = C.CrystalDim
+			glow(d, C.CrystalLit)
+		end
+	end
+	for q = 0, 17 do
+		local a = q * math.pi * 2 / 18
+		local seg = piece(gate, "Halo", Enum.PartType.Block, V(2.9, 0.5, 0.4), C.GlowGold, center + V(math.cos(a) * 8.5, 29 + math.sin(a) * 8.5, -2),
+			CFrame.Angles(0, 0, a + math.pi / 2), Enum.Material.Neon)
+		glow(seg, C.GlowLit)
+	end
+	local beam = column(gate, "ColonneLumiere", 27, 5.5, C.CrystalLit, center + V(0, 0.1, 0), Enum.Material.Neon)
+	beam.Transparency = 1
+	glow(beam, C.CrystalLit, 0.4)
+	-- anneaux d'invocation autour de la colonne : pâles au repos, ils s'allument, tournent et montent
+	local rings = Instance.new("Folder")
+	rings.Name, rings.Parent = "Anneaux", gate
+	for _, spec in { { 7, 3.5, 1.5 }, { 5.8, 9, -1 }, { 4.4, 14.5, 2 } } do
+		local ring = Instance.new("Model")
+		ring.Name, ring.Parent = "Anneau", rings
+		ring:SetAttribute("Tours", spec[3])
+		ring:SetAttribute("Monte", 1.5)
+		for s = 0, 13 do
+			local a = s * math.pi * 2 / 14
+			local seg = piece(ring, "SegmentAnneau", Enum.PartType.Block, V(0.35, 0.6, spec[1] * 0.47), C.CrystalDim,
+				center + V(math.cos(a) * spec[1], spec[2], math.sin(a) * spec[1]), rotY(-a), Enum.Material.Neon)
+			seg.Transparency = 0.75
+			glow(seg, C.CrystalLit)
+		end
+		local world = PIVOT:PointToWorldSpace(Vector3.new(center.X, 0, center.Z))
+		ring.WorldPivot = CFrame.new(world.X, GROUND_Y + center.Y + spec[2], world.Z) * PIVOT.Rotation
+	end
+	-- effets : vent et étincelles en rafale, ombre qui passe sur l'arène
+	local effects = Instance.new("Folder")
+	effects.Name, effects.Parent = "Effets", gate
+	local hearth = piece(effects, "Foyer", Enum.PartType.Block, V(10, 1, 10), C.Cloud, center + V(0, 1, 0))
+	hearth.Transparency = 1
+	local wind = emitter(hearth, "Vent", "rbxasset://textures/particles/smoke_main.dds", hex("#F4F8FF"), 0, 6, 16, 1.4)
+	wind.SpreadAngle = Vector2.new(80, 20)
+	wind:SetAttribute("Rafale", 40)
+	local sparks = emitter(hearth, "Etincelles", "rbxasset://textures/particles/sparkles_main.dds", C.CrystalLit, 0, 0.6, 10, 1.6)
+	sparks.LightEmission = 1
+	sparks:SetAttribute("Rafale", 35)
+	local shadow = ball(effects, "Ombre", V(22, 0.1, 14), hex("#3C4A64"), V(-45, GROUND_TOP - GROUND_Y + 0.3, -20))
+	shadow.Transparency = 1
+	shadow:SetAttribute("Course", 90) -- traverse l'arène d'ouest en est (axe X local)
+	return gate
+end
+
+-- Limite légère avec l'avant du plot (règle 4) : balustrade basse de marbre, poteaux d'or à orbe, nuages ;
+-- passage central gardé par deux statues ailées, en face du portique. Sans collision.
+local function skyBoundary(f: Instance, z: number, C: { [string]: Color3 })
+	local function zAt(x: number): number
+		return z - (math.abs(x) / 50) ^ 2 * 5
+	end
+	for _, side in { -1, 1 } do
+		local posts = {}
+		for x = 11, 50, 6.5 do
+			table.insert(posts, V(side * x, 0, zAt(x)))
+		end
+		for i = 1, #posts - 1 do
+			local a, b = posts[i], posts[i + 1]
+			local d = b - a
+			local r = rotY(math.atan2(d.X, d.Z))
+			local mid = (a + b) / 2
+			piece(f, "SocleBalustrade", Enum.PartType.Block, V(1.4, 0.5, d.Magnitude), C.MarbleShade, mid + V(0, 0.25, 0), r)
+			piece(f, "MainCourante", Enum.PartType.Block, V(1.2, 0.4, d.Magnitude), C.Marble, mid + V(0, 2.2, 0), r)
+			for k = 1, 5 do
+				local at = a:Lerp(b, k / 6)
+				ball(f, "Balustre", V(0.6, 1.7, 0.6), C.Marble, at + V(0, 1.2, 0))
+			end
+			if i % 2 == 0 then cloud(f, mid + r:VectorToWorldSpace(V(0, 0, 0)) + V(0, 0, -1.8), C.Cloud, 1) end
+		end
+		for i, p in posts do
+			if i == 1 then
+				wingedStatue(f, p, 0, 0.9, C)
+			else
+				column(f, "PoteauOr", 3.2, 0.7, C.Gold, p, Enum.Material.Metal)
+				local orb = ball(f, "OrbePoteau", V(1, 1, 1), C.GlowGold, p + V(0, 3.6, 0), nil, Enum.Material.Neon)
+				if i % 3 == 1 then light(orb, C.GlowGold, 10, 0.6) end
+			end
+		end
+	end
+end
+
 ---------------------------------------------------------------- Zone 6 : sanctuaire des îles du ciel
 BUILD[6] = function(m: Instance)
-	moveMarkers(m, -51, V(0, 21, -58))
-	local marble, marbleDark, gold, cloudC, sky = hex("#F4F0E6"), hex("#DCD6C8"), hex("#F5C542"), hex("#FFFFFF"), hex("#8CB4DC")
+	local C = {
+		Marble = hex("#F4F0E6"), MarbleShade = hex("#DCD6C8"), Gold = hex("#F5C542"), Cloud = hex("#FFFFFF"), CloudShade = hex("#DCE6F2"),
+		CloudFar = hex("#DDE6F4"), CloudFarShade = hex("#AFC2E2"), GlowLit = hex("#FFF4C8"), Sky = hex("#8CB4DC"), Rock = hex("#A49CB0"), RockDark = hex("#857D94"), Crystal = hex("#7FB8E6"), CrystalDim = hex("#6E9CC8"),
+		CrystalLit = hex("#D8F4FF"), CrystalLight = hex("#9FD8FF"), GlowGold = hex("#FFE08C"), Stream = hex("#7CC4F0"),
+		Wood = hex("#B49A6A"), Leaf = hex("#F2E2A8"), LeafLight = hex("#FFF2C8"),
+	}
+	-- repères : le boss naît dans la colonne de lumière, au centre du sanctuaire, puis descend l'escalier suspendu
+	local center = V(0, 11, -66)
+	local sources = m:FindFirstChild("SourcesEnnemis")
+	local function put(name: string, pos: Vector3, steps: { Vector3 })
+		local marker = sources and sources:FindFirstChild(name)
+		if not marker or not marker:IsA("BasePart") then return end
+		local function at(part: BasePart, v: Vector3)
+			local world = PIVOT:PointToWorldSpace(Vector3.new(v.X, 0, v.Z))
+			part.CFrame = CFrame.new(world.X, GROUND_Y + v.Y, world.Z) * PIVOT.Rotation
+		end
+		at(marker, pos)
+		for i, step in steps do
+			local child = marker:FindFirstChild(`Etape{i}`)
+			if not child then
+				local model = marker:FindFirstChild("Etape1")
+				if model and model:IsA("BasePart") then
+					child = model:Clone()
+					child.Name = `Etape{i}`
+					child.Parent = marker
+				end
+			end
+			if child and child:IsA("BasePart") then at(child, step) end
+		end
+	end
+	local stairTop, stairFoot = V(0, 11, -50.5), V(0, 0, -33.5)
+	put("HautRampe", center, { stairTop, stairFoot })
+	put("Tente", center + V(0, 0, 4), { stairTop, stairFoot })
+	put("BordPlateau1", V(-6, 11, -52), {})
+	put("BordPlateau2", V(6, 11, -52), {})
+	put("SommetTour", center + V(0, 23.5, 0), {})
+	-- plus de lac : un ruisseau de lumière céleste le remplace, ses repères de saut (SautMare) passent dessus
+	local lake = m:FindFirstChild("Lac")
+	if lake then lake:Destroy() end
+	for name, pos in { MareFond = V(-36, 0, -44), MareMilieu = V(-35, 0, -16), MareGrande = V(-41, 0, 2) } do
+		put(name, pos, {})
+	end
 	local f = Instance.new("Folder")
 	f.Name, f.Parent = "Sanctuaire", m
-	-- banc de nuages et arches de marbre à liseré d'or
+	-- mer de nuages autour de l'arène, de plus en plus haute vers le fond ; cumulus géants et îles derrière
 	for i, p in enclosure(8) do
-		cloud(f, p.at + V(0, 1, 0), cloudC, 2.4)
-		if i % 3 == 0 then
-			local h = if p.back then 16 else 11
-			local right = CFrame.Angles(0, p.yaw, 0).RightVector
-			for _, s in { -1, 1 } do
-				column(f, "ColonneMarbre", h, 1.8, marble, p.at + right * s * 3)
-			end
-			piece(f, "ArcheMarbre", Enum.PartType.Block, V(8.4, 1.4, 2), marbleDark, p.at + V(0, h + 0.7, 0), rotY(p.yaw))
-			piece(f, "LisereOr", Enum.PartType.Block, V(8.6, 0.3, 2.2), gold, p.at + V(0, h + 1.55, 0), rotY(p.yaw), Enum.Material.Metal)
+		-- le fond derrière le sanctuaire reste dégagé (il se découpe sur la couronne bleutée)
+		if math.abs(p.at.X) > 34 or p.at.Z > -50 then
+			local t = math.clamp((18 - p.at.Z) / 92, 0, 1)
+			cumulus(f, p.at + V(0, -1, 0), 8 + t * 12 + (i % 3) * 1.5, p.yaw, C)
 		end
 	end
-	-- sanctuaire rond au fond : colonnade, dôme d'or, orbe
-	for k = 0, 7 do
-		local a = k * math.pi / 4
-		column(f, "ColonneSanctuaire", 14, 1.6, marble, V(math.cos(a) * 8, 2, -64 + math.sin(a) * 6))
+	for i = 0, 8 do
+		local a = 0.3 + (math.pi - 0.6) * i / 8
+		cumulus(f, V(-76 * math.cos(a), -2, -22 - 74 * math.sin(a)), 24 + (i * 5 % 3) * 4, -a + math.pi / 2, C, true)
 	end
-	piece(f, "SocleSanctuaire", Enum.PartType.Cylinder, V(2, 20, 20), marbleDark, V(0, 1, -64), FLAT)
-	ball(f, "Dome", V(19, 9, 15), gold, V(0, 16.5, -64), nil, Enum.Material.Metal)
-	local orb = ball(f, "Orbe", V(3.6, 3.6, 3.6), hex("#FFE08C"), V(0, 22.5, -64), nil, Enum.Material.Neon)
-	light(orb, hex("#FFE08C"), 24, 1.2)
-	-- statues ailées de part et d'autre de l'allée
+	floatingIsland(f, V(-40, 27, -76), 6, "Temple", C)
+	floatingIsland(f, V(42, 31, -74), 5.5, "Cristal", C)
+	floatingIsland(f, V(-18, 46, -80), 5, "Arbre", C)
+	floatingIsland(f, V(24, 50, -82), 4.5, "Temple", C)
+	-- le Sanctuaire du Ciel (structure du boss)
+	skySanctuary(f, center, C)
+	for k, s in { { -24, 7, -60 }, { 22, 12, -58 }, { -20, 18, -74 }, { 25, 22, -76 }, { -30, 13, -50 }, { 30, 8, -66 }, { -10, 30, -80 }, { 12, 27, -84 } } do
+		floatingStone(f, V(s[1], s[2], s[3]), 1 + (k % 3) * 0.4, k, C)
+	end
+	-- ruisseau de lumière : d'une cascade tombée de l'île du temple, le long du flanc ouest, jusque sous la mer de nuages
+	local fall = piece(f, "CascadeCeleste", Enum.PartType.Block, V(3.6, 26, 0.5), C.Stream, V(-40, 13, -69.5), nil, Enum.Material.Neon)
+	fall.Transparency = 0.15
+	light(fall, C.CrystalLight, 16, 0.8)
+	skyStream(f, { V(-40, 0, -68), V(-36, 0, -56), V(-36, 0, -44), V(-38, 0, -30), V(-35, 0, -16), V(-38, 0, -2), V(-44, 0, 6),
+		V(-51, 0, 10), V(-60, 0, 12) }, 4.2, C)
+	-- flancs : colonnades en ruine, îles basses, statues ailées le long de l'allée, cloche et lanternes d'or
+	colonnade(f, V(44, 0, -34), V(44, 0, 8), 6, 11, C)
+	colonnade(f, V(-46, 0, -40), V(-46, 0, -20), 3, 10, C)
+	floatingIsland(f, V(46, 16, 24), 4.5, "Arbre", C)
+	floatingIsland(f, V(-48, 15, -6), 4, "Cristal", C)
 	for _, x in { -15, 15 } do
-		for _, z in { -14, -40 } do
-			column(f, "Piedestal", 3, 3, marbleDark, V(x, 0, z))
-			ball(f, "Statue", V(2, 4, 1.6), marble, V(x, 5, z))
-			for _, s in { -1, 1 } do
-				ball(f, "Aile", V(0.5, 3.4, 2.6), gold, V(x + s * 1.3, 5.6, z), CFrame.Angles(0, 0, s * 0.5), Enum.Material.Metal)
-			end
+		for _, z in { -14, -36 } do
+			wingedStatue(f, V(x, 0, z), if x < 0 then math.pi / 2 else -math.pi / 2, 0.85, C)
 		end
 	end
-	-- îlots de nuages posés et bannières côté est
-	for _, d in { { 42, -8 }, { 46, 10 }, { 38, -62 }, { -44, -54 } } do
-		cloud(f, V(d[1], 0, d[2]), cloudC, 1.8)
-		column(f, "MatBanniere", 9, 0.4, gold, V(d[1] + 2, 0, d[2]), Enum.Material.Metal)
-		piece(f, "Banniere", Enum.PartType.Block, V(0.15, 4, 2.4), sky, V(d[1] + 2, 6.4, d[2] + 1.3))
-	end
-	-- plus de plateau : le boss sort du portail doré du sanctuaire (rideau de lumière bleu ciel)
-	bossGate(f, -53, 8, 12, { Dark = hex("#5E8CC0"), Post = marble, Lintel = gold, LintelMaterial = Enum.Material.Metal, Glow = hex("#FFE08C") })
-	local veil = piece(f, "VoileLumiere", Enum.PartType.Block, V(7, 10, 0.3), hex("#BFE0FF"), V(0, 5, -53.2), nil, Enum.Material.Neon)
-	veil.Transparency = 0.55
+	cloud(f, V(30, 0, -44), C.Cloud, 2.6)
 	for _, side in { -1, 1 } do
-		cloud(f, V(side * 7, 0, -51.5), cloudC, 1.3)
+		column(f, "PortiqueCloche", 9, 0.8, C.Marble, V(30 + side * 3, 0, -46))
 	end
-	-- coin de l'ancien plateau : îlot de nuages, cloche dorée sur son portique, lanternes d'or
-	cloud(f, V(26, 0, -44), cloudC, 2.6)
-	for _, side in { -1, 1 } do
-		column(f, "PortiqueCloche", 9, 0.8, marble, V(26 + side * 3, 0, -46))
+	piece(f, "TraverseCloche", Enum.PartType.Block, V(7.4, 0.8, 0.9), C.Gold, V(30, 9.2, -46), nil, Enum.Material.Metal)
+	ball(f, "Cloche", V(3.4, 4, 3.4), C.Gold, V(30, 7, -46), nil, Enum.Material.Metal)
+	for _, at in { V(36, 0, -20), V(36, 0, 14), V(-44, 0, 22), V(40, 0, 30) } do
+		column(f, "MatLanterne", 6, 0.4, C.Gold, at, Enum.Material.Metal)
+		local orb = ball(f, "LanterneOr", V(1.4, 1.4, 1.4), C.GlowGold, at + V(0, 6.6, 0), nil, Enum.Material.Neon)
+		light(orb, C.GlowGold, 10, 0.6)
 	end
-	piece(f, "TraverseCloche", Enum.PartType.Block, V(7.4, 0.8, 0.9), gold, V(26, 9.2, -46), nil, Enum.Material.Metal)
-	ball(f, "Cloche", V(3.4, 4, 3.4), gold, V(26, 7, -46), nil, Enum.Material.Metal)
-	for _, at in { V(16, 0, -50), V(34, 0, -36) } do
-		column(f, "MatLanterne", 6, 0.4, gold, at, Enum.Material.Metal)
-		local orb = ball(f, "LanterneOr", V(1.4, 1.4, 1.4), hex("#FFE08C"), at + V(0, 6.6, 0), nil, Enum.Material.Neon)
-		light(orb, hex("#FFE08C"), 9, 0.6)
+	for k, c in { { 40, -6 }, { 30, 24 }, { -30, 26 }, { 52, -46 } } do
+		cloud(f, V(c[1], 0, c[2]), C.Cloud, 1.6 + (k % 2) * 0.6)
 	end
-	battleground(f, hex("#BFD6EE"), hex("#A9C6E6"), -41)
+	battleground(f, hex("#BFD6EE"), hex("#A9C6E6"), -36)
 	for _, at in { V(21, 0, -24), V(-19, 0, -24), V(-23, 0, 3) } do
-		cloud(f, at + V(0, 0, -2.4), cloudC, 1.4)
+		cloud(f, at + V(0, 0, -2.4), C.Cloud, 1.4)
 	end
+	skyBoundary(f, 47, C)
 end
 
 for _, theme in THEMES do

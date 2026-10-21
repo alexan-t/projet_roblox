@@ -316,7 +316,7 @@ Le serveur et le client lisent les repères du décor courant ; les autres plots
 | 3 | Grande porte du château glaciaire | Neige damée bleutée `#A7C5E0` |
 | 4 | **Porte-Fournaise** : immense porte de métal encastrée dans la grande forge, qui s'ouvre (voir § Porte du boss) | Dalles chaudes `#8A7462` |
 | 5 | Temple-coquille de la Cité Engloutie, porte couverte de coraux (§ Cité Engloutie) | Sable du fond `#B4A584` |
-| 6 | Portail doré à voile de lumière, devant le sanctuaire | Ciel pâle `#BFD6EE` |
+| 6 | **Sanctuaire du Ciel** : plateforme céleste flottante, invocation du boss (voir § Porte du boss) | Ciel pâle `#BFD6EE` |
 
 Outils : `bossGate` (porte générique : fond sombre arrondi, montants, linteau, seuil lumineux) et
 `moveMarkers(m, porte, sommet)` (repères sur la porte et le sommet du saut du boss) ; l'ancien coin du plateau
@@ -385,6 +385,24 @@ encadré de deux piliers à brasero et bannière, en face du portique. Flancs : 
 minerai, fissures de lave dans le sol. Les Neon utilisent `#D2501E` (un `#F08C3C` en Neon ressort jaune) ; les feux (`Fire`) sont
 portés par une pièce droite invisible (`flame`), sinon ils partent de côté sur un cylindre couché.
 Variante possible plus tard : le boss assemblé sur place, pièce par pièce, devant la fournaise.
+
+**Zone 6 — Sanctuaire du Ciel** (`skySanctuary`, Style `Sanctuaire`) : plateforme circulaire de marbre cerclée
+d'or, flottante sur un dessous de roche en pointe ; colonnade blanche ouverte vers l'arène (chapiteaux et frise
+d'or), deux statues ailées, escalier suspendu de marches séparées jusqu'au sol ; grand cristal lévitant dans un
+halo d'or et six cristaux en couronne ; cercle de runes au sol. **Invocation du boss** (variante forte, même
+module `BossGate`, durée `GardienCeleste` = 4,4 s) : les cristaux, le cercle et le halo s'allument (`Lueur`),
+trois anneaux de lumière tournent et montent (`Anneaux`, attributs `Tours`, `Monte`), la colonne de lumière
+apparaît (`Apparition` 0,4), le vent et des étincelles jaillissent (émetteurs à `Rafale`), une ombre traverse
+l'arène (`Effets/Ombre`, `Course`). Le boss naît dans la colonne, au centre de la plateforme (`HautRampe`),
+puis descend l'escalier (`Etape1` en haut, `Etape2` au pied).
+
+**Zone 6 — fond, flancs, limite** : mer de nuages (`cumulus`) qui monte vers le fond, dégagée derrière le
+sanctuaire ; derrière, une couronne de nuages bleutés étirés en hauteur (contraste avec le marbre, cache
+l'horizon) ; quatre îles flottantes (temple, cristal, arbre doré) et des pierres flottantes. Plus de lac : un
+ruisseau de lumière céleste (`skyStream`) tombe en cascade d'une île et longe le flanc ouest ; les repères
+`SautMare` (Mouton Nuage) sont posés dessus. Flancs : colonnades en ruine, îles basses, statues ailées le long de
+l'allée, cloche et lanternes d'or. Limite avant (`skyBoundary`) : balustrade de marbre, poteaux d'or à orbe,
+nuages, passage gardé par deux statues ailées.
 
 ### Assets Studio
 
