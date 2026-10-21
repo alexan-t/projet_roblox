@@ -247,7 +247,12 @@ Captures (Edit, gabarit posé dans l'arène de Plot_1 puis Zone 1 restaurée) :
 [tête](../automation/screenshots/zones/zone2-sables-tete.jpg),
 [avant-poste](../automation/screenshots/zones/zone2-sables-avant-poste.jpg),
 [fond](../automation/screenshots/zones/zone2-sables-fond.jpg),
-[oasis](../automation/screenshots/zones/zone2-sables-oasis.jpg).
+[oasis](../automation/screenshots/zones/zone2-sables-oasis.jpg),
+[vitrine `PlotsZones.Plot_Zone2`](../automation/screenshots/zones/zone2-sables-vitrine.jpg).
+
+Le décor est posé à son emplacement prévu, la vitrine `Workspace.PlotsZones.Plot_Zone2` (panneau renommé),
+et non dans les arènes du hub. L'outil d'assets supprimait la copie de la vitrine en reconstruisant une
+zone : il l'y remplace désormais par le nouveau décor.
 
 | Critère | Grille | Observation |
 | --- | --- | --- |

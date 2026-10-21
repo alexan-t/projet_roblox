@@ -961,14 +961,26 @@ for _, theme in THEMES do
 	for _, previous in templates:GetChildren() do
 		if previous.Name == theme.Name or previous:GetAttribute("ZoneId") == theme.Id then previous:Destroy() end
 	end
-	-- copies d'un ancien décor de cette zone posées dans une arène ou rangées (ServerStorage.ZonesRangees_<plot>)
+	-- copies d'un ancien décor de cette zone posées dans une arène ou rangées (ServerStorage.ZonesRangees_<plot>) :
+	-- retirées, sauf dans la vitrine de la zone (Workspace.PlotsZones, emplacement prévu) où le nouveau décor les remplace
+	local showcase = workspace:FindFirstChild("PlotsZones")
+	local showcaseArenas: { Model } = {}
 	for _, holder in { workspace, ServerStorage } do
 		for _, d in holder:GetDescendants() do
 			if d:IsA("Model") and d:GetAttribute("ZoneId") == theme.Id and d.Parent and d.Parent.Name == "Zones"
 				or d:IsA("Model") and d:GetAttribute("ZoneId") == theme.Id and d.Parent and d.Parent.Name:match("^ZonesRangees_") then
+				local holderArena = d.Parent.Parent
+				if showcase and d:IsDescendantOf(showcase) and holderArena and holderArena:IsA("Model") then
+					table.insert(showcaseArenas, holderArena)
+				end
 				d:Destroy()
 			end
 		end
+	end
+	for _, showcaseArena in showcaseArenas do
+		local copy = model:Clone()
+		copy:PivotTo(showcaseArena:GetPivot())
+		copy.Parent = showcaseArena:FindFirstChild("Zones")
 	end
 	model.Parent = templates
 	task.wait() -- une zone par lot ; laisser Studio répondre entre les copies
