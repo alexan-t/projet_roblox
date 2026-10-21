@@ -1,8 +1,8 @@
 --!strict
 -- Catalogue des ressources 2D (voir docs/RESOURCES.md). Partagé : l'onglet Ressources de la
 -- Sacoche, l'écran de récompenses et la vitrine Studio en lisent le nom, la famille et l'icône.
--- Aucun système de ressources en jeu pour l'instant (pas de stockage dans PlayerData, pas
--- d'obtention, pas de recette).
+-- Possession et butin (#72) : PlayerData.Inventory.Resources (piles par ResourceId) et LootConfig référencent
+-- ces identifiants sans les modifier ; aucune recette ni utilité en jeu (pas de crafting, pas de Forge).
 --
 -- Source : automation/catalogues/resources.json (une tâche par ressource, avec l'idée de l'icône).
 -- Identifiants par famille, en paliers contigus de 10. Les ressources n'ont **aucune rareté** :

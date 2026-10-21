@@ -185,8 +185,9 @@ end
 -- Fin de combat, dans cet ordre et une seule fois :
 --   moteur : Victory / Defeat → verrouillage de la session → ZoneService:CompleteStage
 --   (QuestService, puis RewardService à la victoire) → XP des participants (victoire acceptée par
---   ZoneService seulement) → CombatEnded final au client, avec FirstClear, Rewards et HeroProgression
---   réellement attribués et déjà sauvegardés → callbacks (ArenaService).
+--   ZoneService seulement) → CombatEnded final au client, avec FirstClear, Rewards, Loot (#72 ; victoire
+--   seulement, absent sinon) et HeroProgression réellement attribués et déjà sauvegardés → callbacks
+--   (ArenaService).
 local function finalize(session: Session)
 	local result = session.state.result
 	if not result or sessions[session.player] ~= session then
@@ -213,6 +214,8 @@ local function finalize(session: Session)
 		Result = result,
 		FirstClear = if victory and reward then reward.FirstClear else false,
 		Rewards = if victory and reward then reward.Rewards else {},
+		-- Butin (#72) : champ séparé des monnaies, présent seulement pour une victoire dont le loot a été attribué.
+		Loot = if victory and reward then reward.Loot else nil,
 		HeroProgression = progression,
 	} })
 	for _, callback in endedCallbacks do

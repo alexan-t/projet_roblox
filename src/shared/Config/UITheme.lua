@@ -321,6 +321,11 @@ local Pack = {
 			DollWidth = 360, SlotSize = 84, DollMid = 120, HeroRow = 130, DollGap = 14,
 			EmptyIcon = 96, EmptyTitle = 22,
 			PickBottom = 118, PickSize = 20,
+			-- Équipement / Ressources (#72) : filtres >= 44 px, cartes d'item, tuiles de ressource compactes.
+			FilterHeight = 44, CountWidth = 84,
+			ItemCols = 3, ItemCellH = 176, ItemArt = 84, ItemNameSize = 16, ItemLineSize = 14, ItemGap = 12,
+			ResCols = 2, ResTileH = 52, ResIcon = 40, ResNameSize = 14, ResAmountSize = 18, ResGap = 10,
+			ResHeaderSize = 16, ResHintSize = 15, ResHintHeight = 24,
 		},
 		Tablet = {
 			Window = Vector2.new(970, 610), HeroCols = 4, DetailWidth = 320, DollWidth = 340, TabWidth = 210,
@@ -336,6 +341,10 @@ local Pack = {
 			DollWidth = 250, SlotSize = 44, DollMid = 64, HeroRow = 58, DollGap = 8,
 			EmptyIcon = 64, EmptyTitle = 18,
 			PickBottom = 76, PickSize = 17,
+			FilterHeight = 44, CountWidth = 70,
+			ItemCols = 3, ItemCellH = 132, ItemArt = 52, ItemNameSize = 14, ItemLineSize = 14, ItemGap = 8,
+			ResCols = 2, ResTileH = 48, ResIcon = 36, ResNameSize = 14, ResAmountSize = 16, ResGap = 8,
+			ResHeaderSize = 15, ResHintSize = 14, ResHintHeight = 20,
 		},
 		Margin = 16, -- px : marge minimale autour de la fenêtre centrée (écran, HUD, hotbar)
 		MinScale = 0.5,
@@ -344,6 +353,26 @@ local Pack = {
 		Lift = 6, -- px : la carte choisie se soulève
 		Breathe = 1.8, -- s : respiration de « Placer »
 		SlotPulse = 1.4, -- s : pulsation des raccourcis pendant le choix d'une case
+	},
+	-- Écran de fin de combat (RewardScreenController, Shared.Sacoche.LootModel) : mesures du design, en px pour
+	-- un écran de 1080 px de haut ; la hauteur du contenu est CALCULÉE (LootModel.layout), l'échelle tient
+	-- compte des deux axes (LootModel.fit).
+	Reward = {
+		Width = 760, SideMargin = 10, TitleY = 90, BelowTitle = 95,
+		CardSize = Vector2.new(132, 164), AfterCards = 30,
+		LootGap = 10, AfterLoot = 20,
+		BandSize = Vector2.new(740, 112), BandArt = 92, BandHeadSize = 16, BandNameSize = 24, BandLineSize = 18, BandMoreSize = 18,
+		ChipSize = Vector2.new(128, 48), ChipIcon = 36, ChipGap = 8, ChipRowWidth = 740, ChipAmountSize = 18, ChipMoreSize = 16,
+		CaptionSize = 16, CaptionHeight = 32, NoteSize = 15, NoteHeight = 32,
+		-- héros sur UNE ligne (jusqu'à ArenaConfig.MaxHeroes) : l'écran s'élargit au lieu de passer à la ligne
+		HeroChip = Vector2.new(300, 120), HeroHeading = 30, HeroGap = 12,
+		ButtonGap = 20, BottomPad = 80, MinHeight = 520,
+		-- échelle : contenu tenu entre le bas des monnaies et le haut de la hotbar (Margin de chaque côté)
+		ReferenceHeight = 1080, Margin = 16, MinScale = 0.5, MaxScale = 1.4,
+		-- zone trop étroite (téléphone en paysage) : tout l'écran, échelle jusqu'à FloorScale, hotbar masquée
+		-- par un voile opaque (transparence OverlapMask) au lieu d'être recouverte en silence
+		FloorScale = 0.3, OverlapMask = 0.12,
+		MinText = 14, -- px réels minimum des petits textes du butin, quelle que soit l'échelle (design system § 4)
 	},
 	-- Panneau Quêtes et reveal.
 	Quest = {
@@ -398,6 +427,7 @@ local UITheme = {
 		Quest = table.freeze(Pack.Quest),
 		Expedition = table.freeze(Pack.Expedition),
 		Sacoche = table.freeze(Pack.Sacoche),
+		Reward = table.freeze(Pack.Reward),
 	}),
 	Stroke = table.freeze(Stroke),
 	Spacing = table.freeze(Spacing),

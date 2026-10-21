@@ -10,7 +10,7 @@
 --   pointe) ; Élite verrouillée : voile et « Termine le Stage 1-5 pour débloquer l'Élite » (progression
 --   Normal réelle) ; détail : ennemis par vague (vrais modèles en ViewportFrame, ×n), boss (Roi Orc),
 --   récompenses (« Première victoire » une fois, « Ensuite / À chaque victoire » avec l'XP par héros),
---   butin possible (masqué / « Butin à venir » sans table réelle) ; pied : équipe X/4 (portraits des héros
+--   butin possible (« Pas de butin pour l'instant » si le serveur n'en liste aucun) ; pied : équipe X/4 (portraits des héros
 --   posés), « Préparer l'équipe » (mis en avant sans héros), « Lancer » (sous-texte : stage ou raison).
 --   Trois dispositions (UITheme.Pack.Expedition) : PC, tablette (espacements réduits), téléphone (844 x 390,
 --   ses propres tailles, sections compactes).
@@ -966,18 +966,11 @@ function ExpeditionView.Show(data: Data, options: Options?)
 					UIKit.text(chance, ExpeditionModel.chance(drop.Chance), L.DropSize)
 				end
 			else
-				-- pas encore de table de loot (#72) : aucun pourcentage inventé
-				local soon = UIKit.text(cols[3], "Butin à venir", L.DropSize, { Color = C.TextMuted, Stroke = false })
-				soon.LayoutOrder = 2
-				soon.TextXAlignment = Enum.TextXAlignment.Left
-				soon.Size = UDim2.new(1, 0, 0, L.DropSize + 6)
-				if wide then
-					local sub = UIKit.text(cols[3], "Équipements et ressources : bientôt", 14, { Color = C.TextMuted, Stroke = false })
-					sub.LayoutOrder = 3
-					sub.TextXAlignment = Enum.TextXAlignment.Left
-					sub.TextWrapped = true
-					sub.Size = UDim2.new(1, 0, 0, 36)
-				end
+				-- aucun butin listé pour ce stage (le serveur n'en annonce pas) : aucun pourcentage inventé
+				local none = UIKit.text(cols[3], "Pas de butin pour l'instant", L.DropSize, { Color = C.TextMuted, Stroke = false })
+				none.LayoutOrder = 2
+				none.TextXAlignment = Enum.TextXAlignment.Left
+				none.Size = UDim2.new(1, 0, 0, L.DropSize + 6)
 			end
 		end
 

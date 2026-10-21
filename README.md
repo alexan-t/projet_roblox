@@ -163,6 +163,10 @@ Clear et ajoute les récompenses de `src/server/Config/RewardConfig.lua` (premie
 +1 ticket d'invocation ; valeurs Alpha provisoires). Le tout est sauvegardé avant l'écran de fin,
 sans action « réclamer ». Voir [la config, le flux et les garanties](docs/REWARDS.md).
 
+Depuis #72, la même victoire tire aussi un butin serveur (ressources et éventuel équipement des catalogues existants
+`ItemConfig` / `ResourceConfig`), rangé dans `PlayerData.Inventory` et lisible en lecture seule (`GetInventory`). Valeurs
+**ALPHA 0.0.2 PROVISOIRE** (`src/server/Config/LootConfig.lua`) ; voir [le loot, ses choix provisoires et la simulation](docs/REWARDS.md#loot-72-v1-serveur).
+
 ## Héros et invocation (HeroService)
 
 Le premier héros est obtenu pendant l'invocation tutorielle (`Remotes.RequestStarterSummon`, gratuite,

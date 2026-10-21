@@ -10,9 +10,9 @@ une icône.
 | --- | --- |
 | Catalogue défini (100 items, `ItemConfig`) | **OUI** |
 | Icônes 2D livrées (AssetId publié, vitrine remplie) | **OUI : 100 / 100** : 58 du partenaire (PR #74, `item_035` à `item_044`, `item_053` à `item_100`) et 42 produites ici (`item_001` à `item_034`, `item_045` à `item_052`, PNG dans `assets/icons/items/`) |
-| Stockage dans `PlayerData` | **NON** |
-| Obtention (récompenses, butin) | **NON** |
-| Équipement des héros, statistiques | **NON** |
+| Stockage dans `PlayerData` | **OUI (#72, V1 serveur)** : `PlayerData.Inventory.Equipment`, une entrée par exemplaire (`{ ItemId, UpgradeLevel = 0 }`, clé = `ItemInstanceId` « I_T… ») |
+| Obtention (récompenses, butin) | **OUI (#72, V1 serveur)** : loot de victoire de la Zone 1, `LootConfig` (valeurs **ALPHA 0.0.2 PROVISOIRE**) ; voir `docs/REWARDS.md` § Loot |
+| Équipement des héros, statistiques, Forge | **NON** (#73) : aucun bouton Équiper, `UpgradeLevel` sans effet |
 
 Catalogue défini ≠ asset 2D livré ≠ système de jeu implémenté.
 
@@ -37,12 +37,21 @@ Catalogue défini ≠ asset 2D livré ≠ système de jeu implémenté.
   § 2). Sans Luau ni Studio : `node tests/items-vitrine.test.mjs` compare aussi `ItemConfig` au
   tableau du § 2 et, comme **contrôle historique**, à la vitrine du snapshot
   `studio/sandbox/partner_sandbox_v4.rbxl` (il ne prouve pas l'état de la DEV actuelle).
-- **Aucun système d'items en jeu** pour l'instant : `PlayerData` ne stocke que les monnaies,
-  les héros, l'équipe, le royaume, les quêtes et les réglages
-  (`src/shared/Types/PlayerDataTypes.lua`). Les statistiques, le stockage et l'obtention des
-  items restent à définir côté gameplay.
-- La **Sacoche** du joueur (`HeroBarController`, PR #44) prévoit déjà les onglets
-  **Équipement** et **Ressources**, encore vides (« Bientôt disponible »).
+- **Possession et loot (#72, V1 serveur)** : les catalogues existent déjà (100 items, 7 emplacements, 10 raretés) et
+  **ne sont pas réinventés** : le gameplay n'ajoute, ne renomme et ne réordonne aucun `ItemId`, rareté ni emplacement ; il les
+  **référence**. Un équipement possédé est une **instance** (`ItemInstanceId` unique généré par le serveur, patron `HeroService.newId`,
+  préfixe `I_T`) qui pointe vers un `ItemId` du catalogue : plusieurs exemplaires d'un même `ItemId` sont autorisés et ne sont **jamais
+  fusionnés**. `UpgradeLevel = 0` est stocké dès V1 sans aucun effet ; pas d'affixe, pas d'item hors catalogue. Règles pures :
+  `src/server/Inventory/InventoryRules.lua` ; vue en lecture seule : `GetInventory` / `InventoryChanged` (`InventoryService`, aucun
+  remote d'écriture). Un exemplaire ne s'équipera que sur un seul héros (#73). Tirage : rareté d'abord, puis item uniforme parmi les items
+  de cette rareté ; Zone 1 Normal ⊂ Commun / Peu commun / Rare, Élite ⊂ Rare / Épique / Légendaire, jamais au-dessus de Légendaire.
+- **Choix PROVISOIRES et points ouverts** (ALPHA 0.0.2, à arbitrer après simulation, voir `docs/REWARDS.md` § Loot) : plafond de
+  **500 instances** (au-delà, l'équipement n'est pas créé et `Overflow = true`) ; équipement garanti du premier clear de 1-5 Normal ;
+  pas de poids par `ItemId` ; `ItemPool` (équipement aléatoire non listé dans « Butin possible »). **Constat sur le catalogue** : le
+  pool Normal de la Zone 1 ne contient aucun `gloves` et un seul `armor` / `boots`, et le pool Élite un seul `gloves` / `boots` ; un 7/7
+  emplacements est donc impossible en Normal et très lent en Élite, quelles que soient les chances (`tools/simulate-loot.ps1` le signale).
+- La **Sacoche** du joueur (`HeroBarController`, PR #44) prévoit les onglets **Équipement** et **Ressources** ; leur affichage est
+  fourni côté client (#72, UI) à partir de `GetInventory`.
 - Les règles visuelles viennent du design system UI : cartes et slots (§ 6), icônes (§ 7).
 
 ## 2. Répartition du catalogue

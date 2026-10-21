@@ -3,7 +3,7 @@
 -- Teste les vraies migrations v1 -> v2 (classes de combat temporaires -> HeroId réels) et v2 -> v3
 -- (onboarding : les anciens profils ne refont pas l'invocation tutorielle).
 
-return function(Migrations: any, HeroRules: any, hotbarSize: number)
+return function(Migrations: any, HeroRules: any, hotbarSize: number, reconcile: any, defaultData: any)
 	local passed, failed = 0, 0
 	local function test(name: string, run: () -> ())
 		local ok, err = pcall(run)
@@ -290,6 +290,80 @@ return function(Migrations: any, HeroRules: any, hotbarSize: number)
 		local snapshot = dump(d)
 		assert(Migrations.run(d) == "Ok" and d.DataVersion == 4 and dump(d) == snapshot)
 		assert(d.Progression.EliteFirstClears == nil, "never filled by a migration: no Elite clear given back")
+	end)
+
+	-- #72 : Inventory est une clé fixe du template. Contrat avec le VRAI Reconcile de ProfileStore et le VRAI
+	-- DefaultPlayerData (voir tools/test-heroes.ps1) : aucune migration, DataVersion reste 4, rien n'est perdu.
+	local function deepCopy(value: any): any
+		if typeof(value) ~= "table" then return value end
+		local out = {}
+		for k, v in value do out[k] = deepCopy(v) end
+		return out
+	end
+	local function v4WithoutInventory(): any
+		local d = deepCopy(defaultData)
+		d.Inventory = nil
+		d.Currencies = { Gold = 321, Gems = 12, SummonTickets = 4 }
+		d.Progression.CurrentZone = 1
+		d.Progression.HighestStage = 3
+		d.Progression.FirstClears = { ["1-1"] = true, ["1-2"] = true, ["1-3"] = true }
+		d.Progression.EliteFirstClears = { ["1-1"] = true }
+		d.Heroes = { H_a = { HeroId = "ecuyer_du_rempart", Level = 5, XP = 17 }, H_b = { HeroId = "tireuse_des_faubourgs", Level = 2, XP = 3 } }
+		d.Team = { "H_a", "H_b" }
+		d.Hotbar = { "H_a", "", "H_b", "", "", "", "", "", "", "" }
+		d.Summons = { Total = 9 }
+		d.Kingdom = { Level = 3, VisualState = 2 }
+		d.Quests = { SummonStarter = { Progress = 1, Claimed = true }, DefendDomain = { Progress = 1, Claimed = false } }
+		d.Settings = { CombatSpeed = 2 }
+		d.Tutorial = { Seen = { GuideStage = true } }
+		return d
+	end
+	local function without(d: any, key: string): string
+		local copy = deepCopy(d)
+		copy[key] = nil
+		return dump(copy)
+	end
+
+	test("#72 v4 profile without Inventory: no migration, Reconcile adds the two empty fixed tables, nothing lost", function()
+		assert(Migrations.CURRENT_VERSION == 4, "DataVersion unchanged")
+		assert(defaultData.DataVersion == 4 and typeof(defaultData.Inventory) == "table", "template carries Inventory")
+		local d = v4WithoutInventory()
+		local before = without(d, "Inventory")
+		assert(Migrations.run(d) == "Ok" and d.DataVersion == 4 and d.Inventory == nil, "a migration never invents an inventory")
+		reconcile(d, defaultData)
+		assert(typeof(d.Inventory) == "table" and next(d.Inventory.Equipment) == nil and next(d.Inventory.Resources) == nil)
+		local keys = {}
+		for k in d.Inventory do table.insert(keys, k) end
+		table.sort(keys)
+		assert(table.concat(keys, ",") == "Equipment,Resources", "fixed keys only")
+		assert(without(d, "Inventory") == before, "Heroes, XP, Hotbar, Team, FirstClears, EliteFirstClears, currencies, quests, kingdom, settings, tutorial untouched")
+		assert(d.DataVersion == 4)
+		d.Inventory.Resources.resource_011 = 5
+		assert(next(defaultData.Inventory.Resources) == nil, "Reconcile deep-copies the template: the default is never shared")
+	end)
+
+	test("#72 Reconcile is idempotent and keeps an existing inventory (equipment, stacks, unknown future keys)", function()
+		local d = v4WithoutInventory()
+		d.Inventory = {
+			Equipment = { I_T0000000001_a = { ItemId = "item_015", UpgradeLevel = 0 }, I_T0000000002_b = { ItemId = "item_015", UpgradeLevel = 2 } },
+			Resources = { resource_011 = 12, resource_030 = 1 },
+			Future = { Flag = true },
+		}
+		local before = dump(d)
+		reconcile(d, defaultData)
+		reconcile(d, defaultData)
+		assert(dump(d) == before, "nothing added, nothing removed, unknown keys tolerated")
+		local partial = v4WithoutInventory()
+		partial.Inventory = { Equipment = { I_x = { ItemId = "item_001", UpgradeLevel = 0 } } }
+		reconcile(partial, defaultData)
+		assert(typeof(partial.Inventory.Resources) == "table" and partial.Inventory.Equipment.I_x.ItemId == "item_001", "missing half filled, existing half kept")
+		assert(Migrations.run(partial) == "Ok" and partial.Inventory.Equipment.I_x ~= nil, "a later migration run keeps it too")
+	end)
+
+	test("#72 new profile: the template itself is a complete v4 profile with an empty Inventory", function()
+		local fresh = deepCopy(defaultData)
+		assert(Migrations.run(fresh) == "Ok" and fresh.DataVersion == 4)
+		assert(next(fresh.Inventory.Equipment) == nil and next(fresh.Inventory.Resources) == nil)
 	end)
 
 	test("missing Heroes / Hotbar / Team tables do not crash", function()

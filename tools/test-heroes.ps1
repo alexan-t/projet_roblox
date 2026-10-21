@@ -11,6 +11,13 @@ function Module([string]$path) { "(function()`n$(Source $path)`nend)()" }
 # 2. Migrations v1 -> v2 (pur).
 # 3. HeroService réel (starter, invocation, HeroObtained, modèles client) avec les vraies configs,
 #    HeroRules et SummonRules, et des doubles de DataService, PlotService, KingdomService et des API moteur.
+# 4. Contrat Reconcile (#72) : le VRAI ReconcileTable de ProfileStore (extrait du fichier vendor, pas recopié)
+#    et le VRAI DefaultPlayerData, pour prouver qu'un profil v4 sans clé neuve reçoit le modèle sans perte.
+$vendor = Source 'src/server/Vendor/ProfileStore.luau'
+$reconcileMatch = [regex]::Match($vendor, '(?s)local function DeepCopyTable.*?(?=local function RegisterError)')
+if (-not $reconcileMatch.Success -or $reconcileMatch.Value -notmatch 'local function ReconcileTable') { throw 'ReconcileTable introuvable dans ProfileStore.luau' }
+$reconcileSource = "(function()`n$($reconcileMatch.Value)`nreturn ReconcileTable`nend)()"
+$defaultData = "(function(script, require, game)`n$(Source 'src/server/Data/DefaultPlayerData.lua')`nend)({ Parent = { Migrations = modules.Migrations } }, function(m) return m end, { GetService = function() return { Shared = { Types = { PlayerDataTypes = {} } } } end })"
 $runner = "local HeroRules = $(Module 'src/server/Heroes/HeroRules.lua')`n" +
 	"local SummonRules = (function(script, require)`n$(Source 'src/server/Heroes/SummonRules.lua')`nend)({ Parent = { HeroRules = HeroRules } }, function(m) return m end)`n" +
 	"local modules = {`n" +
@@ -24,11 +31,13 @@ $runner = "local HeroRules = $(Module 'src/server/Heroes/HeroRules.lua')`n" +
 	"    HeroProgressionConfig = $(Module 'src/server/Config/HeroProgressionConfig.lua'),`n" +
 	"    HeroProgressionRules = $(Module 'src/server/Heroes/HeroProgressionRules.lua'),`n" +
 	"}`n" +
+	"local reconcile = $reconcileSource`n" +
+	"local defaultData = $defaultData`n" +
 	"local function createService(env)`n    local game, script, require, Instance, Random, Vector3, task = env.game, env.script, env.require, env.Instance, env.Random, env.Vector3, env.task`n$(Source 'src/server/Services/HeroService.lua')`nend`n" +
 	"local suite = '$Suite'`n" +
 	"local results = {}`n" +
 	"if suite == 'all' or suite == 'rules' then table.insert(results, { pcall($(Module 'src/server/Tests/HeroRules.spec.lua'), HeroRules, modules.HeroConfig, modules.CombatConfig) }) end`n" +
-	"if suite == 'all' or suite == 'migrations' then table.insert(results, { pcall($(Module 'src/server/Tests/Migrations.spec.lua'), modules.Migrations, HeroRules, modules.HeroConfig.HotbarSize) }) end`n" +
+	"if suite == 'all' or suite == 'migrations' then table.insert(results, { pcall($(Module 'src/server/Tests/Migrations.spec.lua'), modules.Migrations, HeroRules, modules.HeroConfig.HotbarSize, reconcile, defaultData) }) end`n" +
 	"if suite == 'all' or suite == 'summon' then table.insert(results, { pcall($(Module 'src/server/Tests/HeroService.spec.lua'), createService, modules) }) end`n" +
 	"if suite == 'all' or suite == 'progression' then table.insert(results, { pcall($(Module 'src/server/Tests/HeroProgression.spec.lua'), modules) }) end`n" +
 	"for _, r in results do if not r[1] then error(r[2]) end end`n"

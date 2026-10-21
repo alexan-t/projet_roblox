@@ -163,10 +163,10 @@ Le jeu passe par l'arène (#11) : la pancarte du stage envoie `ArenaAction("Sele
 | `HeroXP` | `HeroProgressionConfig`, XP **par héros posé** |
 | `FirstClearRewards`, `RepeatRewards` | `RewardConfig` (vide = rien affiché) |
 | `Multipliers = { MaxHealth, AttackDamage }` | `EliteConfig` (Élite seulement) |
-| `PotentialDrops?` | table de butin réelle (#72) : `{ Kind = "Resource" \| "Item", Id, Chance 0..1, Min?, Max? }` |
+| `PotentialDrops?` | `LootConfig` via `LootRules.preview` (#72) : `{ Kind = "Resource" \| "Item", Id, Chance 0..1, Min?, Max? }` ; ressources avec leurs chances réelles, items précis configurés (aucun aujourd'hui) |
 
 - **Construction** : `Server.Arena.StagePreview.build`, un module pur qui copie les configs (testé).
-- **Butin** : sans table de butin réelle, `PotentialDrops` vaut `nil` et la fenêtre affiche « Butin à venir ». Aucun pourcentage n'est inventé.
+- **Butin (#72)** : `ArenaService` construit `PotentialDrops` depuis `LootConfig` (`LootRules.preview`, valeurs **ALPHA 0.0.2 PROVISOIRE**). Il liste les ressources avec leurs chances réelles. Le contrat `Drop` n'est pas étendu (pas de `Kind` ItemPool) : l'équipement aléatoire n'est donc **pas** listé ligne par ligne, seuls d'éventuels items précis configurés (`Items`, aucun aujourd'hui) le seraient. Sans table pour le stage, ou si `LootConfig` est invalide (aucun loot n'est alors accordé), `PotentialDrops` vaut `nil` et la fenêtre affiche « Pas de butin pour l'instant ». Aucun pourcentage n'est inventé.
 - **Élite verrouillée** : le message de déblocage utilise la vraie progression Normal (`X/5 stages terminés`).
 
 ## Contrats
@@ -180,8 +180,9 @@ Le jeu passe par l'arène (#11) : la pancarte du stage envoie `ArenaAction("Sele
 - **RewardService (#9)** : à la victoire, juste après QuestService, ZoneService appelle
   `RewardService:HandleStageCompleted(player, zone, stage, session.Id)`. L'id de session sert
   d'identité de completion. RewardService gère le First Clear (`FirstClears["<zone>-<stage>"] = true`,
-  ce qui déverrouille le stage suivant), les récompenses de replay et le ticket initial.
-  `CompleteStage` renvoie `(true, { FirstClear, Rewards })` à CombatService, qui l'envoie au client.
+  ce qui déverrouille le stage suivant), les récompenses de replay, le ticket initial et, depuis #72,
+  le loot (même section synchrone, voir `docs/REWARDS.md` § Loot).
+  `CompleteStage` renvoie `(true, { FirstClear, Rewards, Loot? })` à CombatService, qui l'envoie au client.
   ZoneService n'écrit lui-même **aucune** récompense, devise ni ticket. Voir `docs/REWARDS.md`.
 
 ## Validation
