@@ -1998,6 +1998,53 @@ BUILD[5] = function(m: Instance)
 		piece(f, "BrasAncre", Enum.PartType.Block, V(8, 1.2, 1.2), iron, V(d[1], 0.8, d[2]), CFrame.Angles(0, 0, d[3] * 0.3), Enum.Material.Metal)
 	end
 
+	-- jardins de récif à l'entrée de l'arène, de part et d'autre de la zone de bataille (taches de sol vides)
+	for _, side in { -1, 1 } do
+		local cx, cz = side * 36, 28
+		local garden = Instance.new("Model")
+		garden.Name, garden.Parent = "JardinRecif", f
+		-- tapis de sable clair et rochers moussus
+		ball(garden, "SableRecif", V(24, 0.3, 18), hex("#C8BC9C"), V(cx, 0.1, cz))
+		for n, r in { { -7, -4, 3.4 }, { 6, 5, 2.6 }, { 8, -5, 2 }, { -9, 5, 2.2 } } do
+			ball(garden, "RocherRecif", V(r[3] * 1.4, r[3], r[3] * 1.2), stoneBlue, V(cx + side * r[1], r[3] * 0.35, cz + r[2]), rotY(n))
+			ball(garden, "Mousse", V(r[3] * 1.2, 0.4, r[3]), hex("#3C8C78"), V(cx + side * r[1], r[3] * 0.85, cz + r[2]))
+		end
+		-- bouquets de coraux qui ondulent (grands au fond, petits devant)
+		for n, d in { { -3, -6, 1.5 }, { 3, -3, 1.2 }, { -5, 2, 1 }, { 1, 6, 0.8 }, { 9, 0, 1.1 }, { -10, -1, 0.9 } } do
+			local c = Instance.new("Model")
+			c.Name, c.Parent = "CorailJardin", garden
+			local at = V(cx + side * d[1], 0, cz + d[2])
+			coral(c, at, ({ coralA, coralB, coralC })[n % 3 + 1], d[3])
+			c.WorldPivot = PIVOT * CFrame.new(at.X, GROUND_Y - PIVOT.Position.Y, at.Z)
+			tag(c, "CorailOndule", { Amplitude = 6, Periode = 3 + n * 0.4 })
+		end
+		-- bénitier géant entrouvert et sa perle lumineuse
+		local clamAt = V(cx - side * 2, 0, cz + 1)
+		ball(garden, "ValveBas", V(5.4, 1.8, 4.4), hex("#B4A0C8"), clamAt + V(0, 0.6, 0))
+		ball(garden, "ValveHaut", V(5.4, 1.5, 4.4), hex("#C8B4DC"), clamAt + V(0, 2.2, -1.2), CFrame.Angles(0.55, 0, 0))
+		local pearl = ball(garden, "PerleBenitier", V(1.6, 1.6, 1.6), hex("#F0F6FA"), clamAt + V(0, 1.6, 0.2), nil, Enum.Material.Neon)
+		light(pearl, glow, 10, 0.6)
+		-- anémones lumineuses et étoiles de mer
+		for n, d in { { 5, 2 }, { -6, 6 }, { 10, -4 } } do
+			local a = ball(garden, "Anemone", V(1.8, 1, 1.8), if n == 2 then hex("#F08CC8") else glow, V(cx + side * d[1], 0.4, cz + d[2]), nil, Enum.Material.Neon)
+			light(a, glow, 6, 0.3)
+		end
+		for n, d in { { 2, 7 }, { -8, 3 }, { 7, 7 } } do
+			for k = 0, 4 do
+				local a = k * math.pi * 2 / 5 + n
+				piece(garden, "BrasEtoile", Enum.PartType.Block, V(0.5, 0.25, 1.4), hex("#F0A07C"),
+					V(cx + side * d[1] + math.cos(a) * 0.6, 0.15, cz + d[2] + math.sin(a) * 0.6), rotY(-a + math.pi / 2))
+			end
+		end
+		-- algues et amphore renversée
+		for n = 0, 2 do reeds(garden, V(cx + side * (11 - n * 2), 0, cz - 6 + n * 3), hex("#1E5A5A"), hex("#3C8C78")) end
+		ball(garden, "Amphore", V(1.8, 2.6, 1.8), hex("#C87A50"), V(cx + side * 4, 0.9, cz - 7), CFrame.Angles(0, 0, side * 1.2))
+		ball(garden, "ColAmphore", V(0.9, 1, 0.9), hex("#A8603C"), V(cx + side * 5.6, 1.2, cz - 7), CFrame.Angles(0, 0, side * 1.2))
+		for k = 0, 3 do
+			local b = ball(garden, "BulleJardin", V(0.6, 0.6, 0.6), hex("#C8F0FF"), clamAt + V(0, 1.6 + k * 0.3, 0.2))
+			tag(b, "BulleMonte", { Hauteur = 9, Periode = 3 + k * 0.6 })
+		end
+	end
 	-- limite légère avec l'avant du plot : muret de pierre blanche et coraux, passage en face du portique
 	for _, side in { -1, 1 } do
 		for x = 12, 50, 6 do
