@@ -204,11 +204,15 @@ Le parcours reste celui de WORLD.md : le joueur choisit une expédition depuis *
 le décor change sur place. Les plots de démonstration de `Workspace.PlotsZones` ne sont pas
 les points d'accès au gameplay.
 
-**Vitrine visitable (sandbox « test 3 »)** : `Workspace.PlotsZones.Plot_Zone2` à `Plot_Zone6`, cinq
-copies du plot alignées au sud du Lobby (z ≈ −360, x = 120 à 880), entrée tournée vers le Lobby. Chaque
-arène porte le décor de sa zone et ses six monstres exposés (`MonstresDeLaZone`). On y va à pied par le
-passage ouvert dans le mur sud du Lobby (x ≈ 331, `PlotsZones.CheminZones` ; murs et arbres retirés rangés
-dans `ServerStorage.Archive_PassageZones`). Aucun script, aucun combat : ce sont des lieux à visiter.
+**Vitrine visitable (sandbox « test 3 »)** : `tools/studio-zones-vitrine.luau` (après
+`studio-zones-assets.luau`) reconstruit `Workspace.PlotsZones.Plot_Zone2` à `Plot_Zone6` : cinq copies du plot
+alignées au sud du Lobby (z ≈ −360, x = 120 à 880), entrée tournée vers le Lobby. Tout le terrain prend le
+biome de sa zone (arène, pelouse, royaume, bordure ; arbres remplacés par colonnes, cheminées, coraux ou nuages ;
+sol de biome sous le terrain, `PlotsZones.SolsBiomes`). Une limite du biome (`LimiteArene` : muret de grès,
+blocs de glace, grille de fer et braseros, récif, banc de nuages) sépare l'avant (royaume, portail) de l'arène,
+ouverte au portique. Chaque arène expose ses six monstres (`MonstresDeLaZone`). On y va à pied par le passage
+du mur sud du Lobby (x ≈ 331, `PlotsZones.CheminZones` ; murs et arbres retirés rangés dans
+`ServerStorage.Archive_PassageZones`). Aucun script, aucun combat : ce sont des lieux à visiter.
 
 **Version B (octobre 2026)** : chaque zone a sa propre faune, celle des fiches de production des
 monstres (`automation/briefs`, socles Monstres #23 à #52 du Bestiaire). Cinq monstres communs par zone ;

@@ -198,12 +198,12 @@ local THEMES = {
 	{
 		Id = 6, Name = "Zone6_IlesDuCiel", Nom = "Les Îles du Ciel",
 		Colors = {
-			Leaf = { hex("#6EA050"), hex("#94C46E") }, Water = { hex("#8CB4DC"), hex("#B4D2F0") }, Foam = { hex("#F0F6FA") },
+			Leaf = { hex("#E0D4B4"), hex("#F2ECDA") }, Water = { hex("#8CB4DC"), hex("#B4D2F0") }, Foam = { hex("#F0F6FA") },
 			Sand = { hex("#E6E0D2"), hex("#F4F0E6") }, Stone = { hex("#A0A8B4"), hex("#C8CED8") }, Ruin = { hex("#E0DCD0"), hex("#F0ECE2") },
 			Flower = { hex("#F5C542"), hex("#F5D778") }, Glow = { hex("#F5D778") },
 		},
 		Light = hex("#FFE08C"),
-		Ground = { hex("#A8D48C"), hex("#B8DC9C"), hex("#98C87C") },
+		Ground = { hex("#F2ECDA"), hex("#E8DEC4"), hex("#F8F4E8") }, -- nuages dorés au soleil (≠ glace bleutée de la zone 3)
 		-- au-dessus des nuages : les sapins deviennent de gros nuages posés (Replace), les arbres ronds restent
 		Remove = { SlimeDecor = true },
 		Replace = { Sapin = true },
