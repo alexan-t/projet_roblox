@@ -302,3 +302,31 @@ Captures : [vue d'ensemble](../automation/screenshots/zones/zone3-gele-overview.
 | Blocs de glace | KO non bloquant | Blocs cubiques (demandés par les recos), seule forme anguleuse du décor |
 
 **Verdict : PASS** (1 KO non bloquant). Non testé : combat en Play dans ce décor (repères inchangés).
+
+### Zone 3 — refonte visuelle, 22 octobre 2026
+
+Retour de l'équipe : « pas très beau ». Défauts relevés sur les captures : tout de la même valeur (blanc
+et bleu pâle), formes en boîtes (remparts crénelés, damier, piliers, blocs cubiques), glacier en bulle et toits
+empilés, accessoires éparpillés sans composition. Le camp de la Zone 1 n'est plus conservé.
+
+Refonte (`glacialRealm`) : rempart en couronne de rochers sombres coiffés de neige (tailles et décalages
+variés, blocs au pied, cristaux), château à toits en flèche pris dans des dalles de glace inclinées hérissées de
+cristaux, falaises en roche sombre, lac gelé bordé de neige et pont verglacé, bosquet de sapins enneigés autour
+d'un grand cristal lumineux (à la place du fort), allée en neige tassée, cristaux à la place des piliers, pied
+de la tour des sorties en rochers enneigés. Barricades, damier et blocs cubiques retirés. Repères inchangés.
+
+Captures : [vue d'ensemble](../automation/screenshots/zones/zone3-gele-v2-overview.jpg),
+[château](../automation/screenshots/zones/zone3-gele-v2-chateau.jpg),
+[vue de combat](../automation/screenshots/zones/zone3-gele-v2-combat.jpg),
+[bosquet](../automation/screenshots/zones/zone3-gele-v2-bosquet.jpg).
+
+| Critère | Grille | Observation |
+| --- | --- | --- |
+| Brief | OK | Signature lisible depuis l'entrée et depuis la zone de combat |
+| Zone / palette | OK | Roche bleu sombre, neige, glace du profond au clair, toits bleu roi, lueurs cyan limitées |
+| Lisibilité de l'arène | OK | Cases, allée et front ennemi dégagés |
+| Volumes | OK | Plus aucune boîte hors ossature des sorties (plateau, porte) |
+| Géométrie / clipping visible | OK | Glacier hors du plateau des sorties ; rien ne flotte |
+| Calottes de neige | KO non bloquant | Calottes du rempart encore un peu plates en vue rasante |
+
+**Verdict : PASS** (1 KO non bloquant). Non testé : combat en Play dans ce décor.
