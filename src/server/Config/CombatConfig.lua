@@ -96,11 +96,12 @@ local CombatConfig = {
 			VaseDesSables = 1.4, ChacalParchemin = 1.4, ScarabeeForgeSoleil = 1.4, MangeDune = 1.4,
 			GardienSansVisage = 1.4, ColosseEnseveli = 2.6, Givrelot = 1.4, CrocDeGlacier = 1.4, ArmureGelee = 1.8,
 			BonhommeRoyal = 1.8, MammouthCristallin = 2.0, RoiSansEte = 2.6, ChevalierRivete = 1.8, GolemCloche = 1.8,
-			FourneauAmbulant = 1.8, Martelet = 1.8, Chaine = 1.8, MaitreDesForges = 2.6, MeduseCouronnee = 1.4,
+			FourneauAmbulant = 1.8, Martelet = 1.8, Chaine = 1.8, MaitreDesForges = 4.4, MeduseCouronnee = 1.4,
 			MureneMiroir = 1.4, CoffreBernard = 1.4, ChevalierNoye = 1.8, CrabeCathedrale = 1.8, Leviathan = 2.6,
 			GargouilleAilee = 2.0, MiniColosseCeleste = 2.0, MoutonNuage = 1.4, PoissonDuCiel = 1.4, BecTonnerre = 2.2,
 			GardienCeleste = 2.6,
 		}),
+		-- MaitreDesForges : la Porte-Fournaise s'ouvre avant qu'il en sorte (EnemyPresentationConfig.Gate).
 		DefaultEntrance = 1.6,
 		-- Fin de combat : les modèles restent ce temps (outro du client : morts, sac, « VICTOIRE ! »),
 		-- puis la préparation est reconstruite. Rien ne disparaît d'un coup.

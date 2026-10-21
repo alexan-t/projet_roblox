@@ -279,6 +279,15 @@ Le serveur et le client lisent les repères du décor courant ; les autres plots
 
 ### Règles de décor (obligatoires pour chaque zone)
 
+**Structure type**, du point de vue de la caméra du joueur, à garder pour toutes les zones :
+
+| Plan | Contenu |
+| --- | --- |
+| Bas | Zone des héros (cases `CaseHeros`) |
+| Milieu | Voie de combat (zone de bataille, règle 2) |
+| Haut | Zone ennemie (`FrontEnnemi`) |
+| Tout en haut, au fond | Structure du boss (règle 1) : porte, temple, forge, trône, faille, autel ou plateforme |
+
 1. **Structure d'apparition du boss, propre à la zone.** Le petit plateau de la Zone 1 (plateau, rampe,
    porte et tour derrière le front ennemi) n'est **pas** un élément obligatoire des autres zones : il ne servait
    qu'à faire apparaître le boss de la Zone 1. Chaque zone doit avoir **sa propre belle structure**, dans son
@@ -298,13 +307,39 @@ Le serveur et le client lisent les repères du décor courant ; les autres plots
 | 1 | Plateau et tour du camp (d'origine) | Clairière de sable |
 | 2 | Plateau générique (temple sur dais) | **À faire** |
 | 3 | Grande porte du château glaciaire | Neige damée bleutée `#A7C5E0` |
-| 4 | Gueule rougeoyante de la grande forge, au pied du fourneau | Dalles chaudes `#8A7462` |
+| 4 | **Porte-Fournaise** : immense porte de métal encastrée dans la grande forge, qui s'ouvre (voir § Porte du boss) | Dalles chaudes `#8A7462` |
 | 5 | Porte du temple englouti couverte de coraux, devant l'épave | Sable du fond `#B4A584` |
 | 6 | Portail doré à voile de lumière, devant le sanctuaire | Ciel pâle `#BFD6EE` |
 
 Outils : `bossGate` (porte générique : fond sombre arrondi, montants, linteau, seuil lumineux) et
 `moveMarkers(m, porte, sommet)` (repères sur la porte et le sommet du saut du boss) ; l'ancien coin du plateau
 reçoit des accessoires du biome (enclume géante et charbon, bénitier géant, cloche dorée).
+
+### Porte du boss (structure animée)
+
+Une structure de boss peut s'animer à l'entrée du boss : le décor contient alors un modèle **`PorteBoss`**, que
+le client (`src/client/Combat/BossGate.lua`) anime localement juste avant l'entrée d'un ennemi au style
+`Heavy` (`CampBoss`), puis referme après son arrivée. Purement visuel, aucune règle.
+
+| Partie de `PorteBoss` | Rôle à l'entrée du boss |
+| --- | --- |
+| Pièces à attribut `Lueur` (et `LueurAllumee`, Color3) | La forge s'allume : couleur allumée, lumières plus fortes |
+| `Marteaux/<Model>` : `Axe` (pivot) et `Bras` (partie mobile) | Les marteaux mécaniques frappent leur enclume |
+| `Chaines/<Model>` : `Poulie` en haut | Les chaînes se tendent, les contrepoids remontent |
+| `Battants/<Model>` : `Charniere` (pivot), attribut `Sens` (±1) | Les battants s'ouvrent lentement vers l'arène |
+| `Effets/Foyer` : émetteurs `Fumee` et `Braises` | Fumée et braises jaillissent de la fournaise |
+
+Les repères du boss (`HautRampe`, `Tente`) sont posés **dans l'embrasure, derrière les battants** : le boss
+apparaît porte ouverte et sort de la structure. Durées : `EnemyPresentationConfig.Gate` (ouverture prise sur le
+budget d'entrée du boss) ; le budget du boss est allongé en conséquence dans `CombatConfig.Presentation.Entrance`
+(`MaitreDesForges` = 4,4 s).
+
+**Zone 4 — Porte-Fournaise** (`furnaceGate` dans l'outil d'assets) : arche de métal riveté sur socles de
+basalte, linteau, couronne et sceau forgé, deux battants cerclés de fer avec symboles en losange (métal
+refroidi au repos, orange braise une fois allumés), intérieur rougeoyant, tuyaux avec vapeur continue et
+vannes, deux chaînes à contrepoids, deux marteaux mécaniques sur enclumes. Construite à l'échelle du boss
+(8,5 studs de haut), puis agrandie de 1,35 autour du pied de la porte.
+Variante possible plus tard : le boss assemblé sur place, pièce par pièce, devant la fournaise.
 
 ### Assets Studio
 

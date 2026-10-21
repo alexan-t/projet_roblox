@@ -369,3 +369,25 @@ Plateau générique retiré ; repères de sortie déplacés sur la nouvelle port
 **Verdict visuel : PASS** pour les deux règles (porte lisible depuis l'entrée, zone de bataille nettement
 distincte du sol). Remarque non bloquante : la Zone 6 reste assez vide hors de l'allée. **Non testé en Play** :
 sortie réelle des ennemis par les nouvelles portes.
+
+## Zone 4 — Porte-Fournaise, 22 octobre 2026
+
+La gueule de forge générique (`bossGate`) est remplacée par la **Porte-Fournaise** (`furnaceGate`, modèle
+`PorteBoss`) : arche de métal, battants, tuyaux et vapeur, chaînes, marteaux mécaniques, symboles forgés.
+Repères du boss dans l'embrasure, derrière les battants ; tas de charbon déplacé pour laisser la place aux marteaux.
+
+Contrôles successifs :
+
+1. Porte fermée : **FIX** (symboles en flèche, lisibles comme une interface, et rouge vif au repos) →
+   losanges forgés, rouge sombre au repos.
+2. Ouverture jouée dans Studio (code de `BossGate`, Edit) : battants vers l'arène, chaînes, lueurs →
+   **FIX** (allumé jaune pâle) → orange braise.
+3. Porte ouverte avec le Maître des Forges dans l'embrasure : **PASS** (le boss tient dans l'ouverture,
+   encadré par la lueur). [Capture](../automation/screenshots/zones/zone4-fournaise-ouverte.jpg),
+   [battants](../automation/screenshots/zones/zone4-fournaise-battants.jpg).
+4. Vue d'ensemble depuis l'entrée : **FIX** (porte trop modeste pour une « immense arche ») → agrandie de 1,35 →
+   **PASS** : héros en bas, voie de combat, ennemis, porte au fond.
+   [Capture](../automation/screenshots/zones/zone4-fournaise-vue.jpg).
+
+Porte remise au repos après l'essai, caméra de Studio réinitialisée. **Non testé en Play** : la séquence
+complète pendant un vrai combat contre le Maître des Forges (calage sur la retenue `EntranceHold`, sons).

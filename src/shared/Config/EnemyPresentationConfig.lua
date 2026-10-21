@@ -73,6 +73,10 @@ local EnemyPresentationConfig = {
 		Glow = Color3.fromHex("#F5CB5C"), -- lueur du sac (GoldLight)
 	}),
 
+	-- Porte du boss (décor de zone « PorteBoss », client Combat/BossGate) : ouverture avant l'entrée d'un style
+	-- Heavy, prise sur le budget d'entrée (au plus Share du budget, au plus Open s), fermeture après l'arrivée.
+	Gate = table.freeze({ Open = 1.6, Share = 0.4, Close = 1.4 }),
+
 	SpawnStyles = table.freeze({
 		Lake = table.freeze({ Modes = table.freeze({ "SautMare" }), Kind = "Lake" }),
 		Camp = table.freeze({ Modes = table.freeze({ "SortieTente", "DescenteRampe", "SautPlateau" }), Kind = "Walk" }),
