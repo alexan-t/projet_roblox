@@ -204,6 +204,12 @@ Le parcours reste celui de WORLD.md : le joueur choisit une expédition depuis *
 le décor change sur place. Les plots de démonstration de `Workspace.PlotsZones` ne sont pas
 les points d'accès au gameplay.
 
+**Vitrine visitable (sandbox « test 3 »)** : `Workspace.PlotsZones.Plot_Zone2` à `Plot_Zone6`, cinq
+copies du plot alignées au sud du Lobby (z ≈ −360, x = 120 à 880), entrée tournée vers le Lobby. Chaque
+arène porte le décor de sa zone et ses six monstres exposés (`MonstresDeLaZone`). On y va à pied par le
+passage ouvert dans le mur sud du Lobby (x ≈ 331, `PlotsZones.CheminZones` ; murs et arbres retirés rangés
+dans `ServerStorage.Archive_PassageZones`). Aucun script, aucun combat : ce sont des lieux à visiter.
+
 **Version B (octobre 2026)** : chaque zone a sa propre faune, celle des fiches de production des
 monstres (`automation/briefs`, socles Monstres #23 à #52 du Bestiaire). Cinq monstres communs par zone ;
 en X-5, le **monstre fort de fin de zone** de la fiche sert de boss. Les trois boss validés (Roi Orc,
