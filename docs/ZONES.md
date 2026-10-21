@@ -347,9 +347,13 @@ vannes, deux chaînes à contrepoids, deux marteaux mécaniques sur enclumes. Co
 **Zone 4 — fond et flancs** (règle 3) : rempart de basalte de 14 studs à l'entrée à 34 au fond, contreforts à
 braseros ; derrière, la citadelle-forge (`forgeCitadel`) : onze tours de 42 à 52 studs, meurtrières rougeoyantes,
 créneaux, bannières, trois hautes cheminées fumantes, grand engrenage au-dessus de la porte, creuset suspendu
-qui verse du métal en fusion ; deux cascades de lave et leurs bassins. Flancs : postes de forge (`forgeStation` :
-foyer, hotte, enclume, soufflet, baquet), râteliers d'armes, tonneaux et caisses, tas de minerai, fissures de
-lave dans le sol. Les Neon utilisent `#D2501E` (un `#F08C3C` en Neon ressort jaune) ; les feux (`Fire`) sont
+qui verse du métal en fusion ; deux cascades de lave. Pas de lac ni de bassins ronds : un **courant de lave**
+(`lavaRiver` : lit en segments, croûtes sombres, berges de roches, braises) part du pied de chaque cascade, à
+l'ouest le long du flanc jusque sous le rempart, à l'est vers l'angle du fond ; les repères `SautMare` sont posés
+dessus. Roches : orgues basaltiques adossées au rempart (`basaltColumns`, deux rangs, tons chauds, éboulis au
+pied) et roches arrondies (`boulder`, masses gonflées superposées, pas de cubes). Flancs : postes de forge
+(`forgeStation` : foyer, hotte, enclume, soufflet, baquet), râteliers d'armes, tonneaux et caisses, tas de
+minerai, fissures de lave dans le sol. Les Neon utilisent `#D2501E` (un `#F08C3C` en Neon ressort jaune) ; les feux (`Fire`) sont
 portés par une pièce droite invisible (`flame`), sinon ils partent de côté sur un cylindre couché.
 Variante possible plus tard : le boss assemblé sur place, pièce par pièce, devant la fournaise.
 

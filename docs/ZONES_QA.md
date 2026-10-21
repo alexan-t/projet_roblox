@@ -411,3 +411,16 @@ Contrôles :
 
 Remarque non bloquante : de face, le creuset se lit encore mal (boule à côté de l'engrenage). Caméra de Studio
 réinitialisée. **Non testé en Play.**
+
+## Zone 4 — courant de lave et roches, 22 octobre 2026
+
+Retour de l'équipe : décorations des côtés sans allure, cercles de lave inutiles. Lac de la Zone 1 et bassins
+retirés ; courant de lave depuis chaque cascade (ouest jusque sous le rempart, est vers l'angle du fond), repères
+`SautMare` déplacés dessus (aucun ennemi de la Zone 4 ne les utilise). Orgues basaltiques et roches.
+
+1. Premier essai : **FIX** (orgues noires et régulières, lues comme des tonneaux, posées au bout des murs ;
+   roches en cubes noirs) → orgues sur deux rangs aux tons chauds, adossées aux murs ; roches en masses arrondies.
+2. Vue de combat : **PASS**. [Capture](../automation/screenshots/zones/zone4-lave-vue.jpg),
+   [courant de près](../automation/screenshots/zones/zone4-lave-courant.jpg).
+
+Caméra de Studio réinitialisée. **Non testé en Play.**

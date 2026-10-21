@@ -1393,14 +1393,92 @@ local function lavaCrack(f: Instance, at: Vector3, yaw: number, C: { [string]: C
 	end
 end
 
+-- Orgues basaltiques : faisceau de colonnes serrées sur deux rangs, plus hautes au centre, tons de basalte
+-- chauds variés, sur un pied d'éboulis. Le long de la tangente `yaw` (adossé au rempart).
+local function basaltColumns(f: Instance, at: Vector3, yaw: number, count: number, hmax: number, C: { [string]: Color3 })
+	local r = rotY(yaw)
+	local tones = { C.Rock, C.RockDark, C.RockLight }
+	for i = 0, count - 1 do
+		local u = (i - (count - 1) / 2) * 2.1
+		local row = i % 2
+		local profile = 1 - math.abs(u) / (count * 1.25)
+		local h = hmax * (0.35 + 0.65 * profile) * (0.8 + ((i * 7) % 5) * 0.06) * (if row == 1 then 0.8 else 1)
+		local d = 2.3 + ((i * 5) % 3) * 0.35
+		local foot = at + r:VectorToWorldSpace(V(u, 0, row * 1.9 - 0.6))
+		column(f, "OrgueBasalte", h, d, tones[(i * 2) % 3 + 1], foot)
+		piece(f, "DessusOrgue", Enum.PartType.Cylinder, V(0.3, d + 0.1, d + 0.1), tones[(i * 2 + 2) % 3 + 1], foot + V(0, h + 0.1, 0),
+			FLAT * CFrame.Angles(((i % 3) - 1) * 0.12, 0, 0))
+	end
+	for k = -1, 1 do
+		ball(f, "EboulisOrgue", V(4.4, 1.8, 3.4), C.RockDark, at + r:VectorToWorldSpace(V(k * count * 0.8, 0.4, 2.6)), r * rotY(k))
+	end
+end
+
+-- Roche : masses arrondies superposées et inclinées (formes gonflées de la DA), tons de basalte chauds,
+-- une arête plus claire au sommet.
+local function boulder(f: Instance, at: Vector3, size: number, k: number, C: { [string]: Color3 })
+	local r = rotY(k * 1.7)
+	ball(f, "Roche", V(3.4, 2.2, 2.8) * size, if k % 2 == 0 then C.Rock else C.RockDark, at + V(0, 0.7 * size, 0), r * CFrame.Angles(0.12, 0, 0.18))
+	ball(f, "Roche", V(2.2, 1.7, 2) * size, C.RockDark, at + r:VectorToWorldSpace(V(1.5, 0.5, 0.7) * size), r * CFrame.Angles(-0.2, 0.6, 0.3))
+	ball(f, "Roche", V(1.8, 1.1, 1.5) * size, C.RockLight, at + r:VectorToWorldSpace(V(-0.4, 1.55, -0.2) * size), r * CFrame.Angles(0.25, 0.3, -0.2))
+end
+
+-- Courant de lave : lit lumineux en segments (joints arrondis aux coudes), croûtes sombres qui flottent,
+-- berges de blocs de basalte, braises qui montent. `points` : du haut (sous une cascade) vers l'aval.
+local function lavaRiver(f: Instance, points: { Vector3 }, width: number, C: { [string]: Color3 })
+	local y = GROUND_TOP - GROUND_Y + 0.12
+	for i = 1, #points - 1 do
+		local a, b = points[i], points[i + 1]
+		local d = b - a
+		local len = d.Magnitude
+		local yaw = math.atan2(d.X, d.Z)
+		local r = rotY(yaw)
+		local bed = piece(f, "CoulantLave", Enum.PartType.Block, V(width, 0.25, len + 0.6), C.Neon, (a + b) / 2 + V(0, y, 0), r, Enum.Material.Neon)
+		if i % 2 == 1 then
+			light(bed, C.Ember, 18, 0.9)
+			local sparks = emitter(bed, "Braises", "rbxasset://textures/particles/sparkles_main.dds", hex("#FF8C2A"), 2, 0.5, 4, 1.6)
+			sparks.LightEmission = 1
+		end
+		if i > 1 then
+			piece(f, "CoudeLave", Enum.PartType.Cylinder, V(0.25, width, width), C.Neon, a + V(0, y, 0), FLAT, Enum.Material.Neon)
+		end
+		-- croûtes sombres sur la lave
+		for k = 1, math.floor(len / 5) do
+			local t = (k - 0.5) / math.floor(len / 5)
+			ball(f, "CrouteLave", V(1.6, 0.25, 1.1), C.Crust, a:Lerp(b, t) + r:VectorToWorldSpace(V(((k + i) % 3 - 1) * width * 0.25, y + 0.14, 0)), r * rotY(k))
+		end
+		-- berges : blocs de basalte des deux côtés
+		local steps = math.max(1, math.floor(len / 3.6))
+		for k = 0, steps - 1 do
+			local t = (k + 0.5) / steps
+			for _, side in { -1, 1 } do
+				local at = a:Lerp(b, t) + r:VectorToWorldSpace(V(side * (width / 2 + 0.9), 0, 0))
+				boulder(f, at, 0.55 + ((k + i + side) % 3) * 0.15, (k * 3 + i) % 5, C)
+			end
+		end
+	end
+end
+
 BUILD[4] = function(m: Instance)
 	-- repères dans l'embrasure : le boss part de l'intérieur de la fournaise, la porte s'ouvre devant lui ;
 	-- saut depuis le dessus du linteau (porte agrandie de 1,35)
 	moveMarkers(m, -55.5, V(0, 23.6, -54))
+	-- plus de lac (cercles de lave de la Zone 1) : un courant de lave le remplace ; ses repères de saut
+	-- (SautMare) passent sur le courant
+	local lake = m:FindFirstChild("Lac")
+	if lake then lake:Destroy() end
+	local sources = m:FindFirstChild("SourcesEnnemis")
+	for name, pos in { MareFond = V(-36, 0, -44), MareMilieu = V(-35, 0, -16), MareGrande = V(-41, 0, 2) } do
+		local marker = sources and sources:FindFirstChild(name)
+		if marker and marker:IsA("BasePart") then
+			local world = PIVOT:PointToWorldSpace(Vector3.new(pos.X, 0, pos.Z))
+			marker.CFrame = CFrame.new(world.X, GROUND_Y, world.Z) * PIVOT.Rotation
+		end
+	end
 	local basalt, basaltLight, iron, ember, dark = hex("#3A3432"), hex("#5A524C"), hex("#6E6E72"), hex("#F08C3C"), hex("#1C1614")
 	-- Neon : teinte plus sombre que la lumière (le Neon s'éclaircit au rendu ; #F08C3C ressortait jaune)
 	local C = {
-		Basalt = basalt, BasaltLight = basaltLight, Iron = iron, Ember = ember, Dark = dark, Neon = hex("#D2501E"),
+		Basalt = basalt, BasaltLight = basaltLight, BasaltDark = hex("#2C2826"), Rock = hex("#5A4E48"), RockDark = hex("#453C38"), RockLight = hex("#76685E"), Crust = hex("#4A2418"), Iron = iron, Ember = ember, Dark = dark, Neon = hex("#D2501E"),
 		Cloth = hex("#6A1E16"), Leather = hex("#6E4A32"), Wood = hex("#5E4232"), WoodLight = hex("#7A5A3E"), Steel = hex("#A8ACB4"), Gold = hex("#D2A04A"),
 	}
 	local f = Instance.new("Folder")
@@ -1437,11 +1515,18 @@ BUILD[4] = function(m: Instance)
 		local h = 14 + math.clamp((18 + 68.3) / 92, 0, 1) * 20
 		local fall = piece(f, "CascadeLave", Enum.PartType.Block, V(5, h, 0.6), C.Neon, V(side * 25.4, h / 2, -66.2), rotY(-side * 0.464), Enum.Material.Neon)
 		light(fall, ember, 22, 1.2)
-		piece(f, "BassinLave", Enum.PartType.Cylinder, V(0.3, 9, 9), C.Neon, V(side * 24.6, 0.12, -63.4), FLAT, Enum.Material.Neon)
-		for k = 0, 6 do
-			local a = k * math.pi * 2 / 7
-			ball(f, "BordBassin", V(3, 1.2, 2), basalt, V(side * 24.6 + math.cos(a) * 4.8, 0.3, -63.4 + math.sin(a) * 4.8), rotY(-a))
-		end
+	end
+	-- courants de lave : à l'ouest, de la cascade le long du flanc jusque sous le rempart ; à l'est, court,
+	-- de la cascade vers l'angle du rempart
+	lavaRiver(f, { V(-25, 0, -64.5), V(-31, 0, -56), V(-36, 0, -44), V(-38, 0, -30), V(-35, 0, -16), V(-38, 0, -2), V(-44, 0, 6),
+		V(-51, 0, 10), V(-60, 0, 12) }, 4.6, C)
+	lavaRiver(f, { V(25, 0, -64.5), V(32, 0, -61), V(40, 0, -63), V(48, 0, -66), V(56, 0, -68) }, 4, C)
+	-- orgues basaltiques adossées au rempart des flancs, blocs de roche épars
+	for _, o in { { -54.5, -26, 8, 15 }, { 54.5, -22, 8, 16 }, { 54.5, 5, 6, 12 }, { -41, -53, 7, 17 } } do
+		basaltColumns(f, V(o[1], 0, o[2]), if o[1] > 50 then -math.pi / 2 elseif o[1] < -50 then math.pi / 2 else 0.8, o[3], o[4], C)
+	end
+	for i, b in { { -46, 14 }, { -30, 24 }, { 30, 26 }, { 40, -28 }, { 50, -46 }, { -28, -40 }, { 36, 6 }, { -44, 30 } } do
+		boulder(f, V(b[1], 0, b[2]), 1.2 + (i % 3) * 0.35, i, C)
 	end
 	-- rigoles de métal en fusion vers l'allée
 	for _, x in { -11, 11 } do
@@ -1455,16 +1540,16 @@ BUILD[4] = function(m: Instance)
 	-- réserves, minerai, fissures de lave
 	forgeStation(f, V(44, 0, -14), -math.pi / 2, C)
 	forgeStation(f, V(46, 0, 12), -math.pi / 2 - 0.3, C)
-	forgeStation(f, V(-46, 0, -2), math.pi / 2, C)
+	forgeStation(f, V(-48, 0, -16), math.pi / 2, C)
 	weaponRack(f, V(51, 0, -32), -math.pi / 2 - 0.35, C)
 	weaponRack(f, V(-49, 0, -40), math.pi / 2 + 0.45, C)
-	weaponRack(f, V(-52, 0, 14), math.pi / 2, C)
+	weaponRack(f, V(-51, 0, -4), math.pi / 2, C)
 	supplies(f, V(46, 0, 26), -0.4, C)
 	supplies(f, V(-44, 0, 26), 0.5, C)
 	supplies(f, V(50, 0, -2), -math.pi / 2, C)
 	orePile(f, V(44, 0, -42), C)
-	orePile(f, V(-40, 0, -52), C)
-	for _, c in { { 34, 4, 0.4 }, { 30, -30, 2.2 }, { -42, -24, 1.1 }, { -40, 18, -0.6 }, { 36, 20, 2.8 } } do
+	orePile(f, V(-47, 0, -27), C)
+	for _, c in { { 34, 4, 0.4 }, { 30, -30, 2.2 }, { 36, 20, 2.8 } } do
 		lavaCrack(f, V(c[1], 0, c[2]), c[3], C)
 	end
 	-- coin de l'ancien plateau : enclume géante, tas de charbon fumant, lingots
