@@ -21,7 +21,7 @@ end
 -- Mêmes rampes que tools/studio-zones-assets.luau (familles de teintes de la Zone 1 → biome).
 local ZONES = {
 	{
-		Id = 2, Nom = "Le Désert des Ruines", X = 120,
+		Id = 2, Nom = "Le Royaume des Sables", X = 120,
 		Monsters = { "VaseDesSables", "ChacalParchemin", "ScarabeeForgeSoleil", "MangeDune", "GardienSansVisage" }, Boss = "ColosseEnseveli",
 		Colors = {
 			Leaf = { hex("#8C7A44"), hex("#B49A5A") }, Water = { hex("#3E8C8C"), hex("#64B4A0") }, Foam = { hex("#E8D2A0") },

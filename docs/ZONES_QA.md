@@ -228,3 +228,35 @@ Studio, ni deux clients. Ces étapes, dans l'ordre, permettent de lever le verdi
    ligne « Deux joueurs et deux combats simultanés » et le critère « Interface / matériaux
    des images » par le résultat obtenu. Verdict global **PASS** seulement si les deux passent.
 3. Réinitialiser la caméra de Studio (`docs/MONSTER_PRODUCTION.md` § Outils).
+
+## Zone 2 — Royaume des Sables, 21 octobre 2026
+
+Décor du Désert des Ruines complété d'après les recos de l'équipe et renommé **Le Royaume des Sables**
+(`ArenaConfig.ZoneNames[2]`, outils, doc). Gabarit reconstruit dans « test 3 » par
+`tools/studio-zones-assets.luau` (Zone 2 seule), une étape ChangeHistoryService par passe.
+
+Ajouts par rapport à la Zone 1 : crêtes de grès le long du rempart (falaises vertes), bassin d'oasis
+bordé de pierres sous la grande mare, palmiers, roseaux et canal ancien à demi ensablé (rivière),
+avant-poste du désert avec palissades de bois sec, auvent déchiré, drapeaux et amphores (camp gobelin),
+ossements, amphores et petits tas de sable dispersés. Signature : **tête de statue colossale** (22 studs,
+némès rayé d'or) qui sort du sable côté est, tournée vers l'entrée. Repères `SourcesEnnemis`, portique
+et cases des héros inchangés ; allée et cases dégagées.
+
+Captures (Edit, gabarit posé dans l'arène de Plot_1 puis Zone 1 restaurée) :
+[vue d'ensemble](../automation/screenshots/zones/zone2-sables-overview.jpg),
+[tête](../automation/screenshots/zones/zone2-sables-tete.jpg),
+[avant-poste](../automation/screenshots/zones/zone2-sables-avant-poste.jpg),
+[fond](../automation/screenshots/zones/zone2-sables-fond.jpg),
+[oasis](../automation/screenshots/zones/zone2-sables-oasis.jpg).
+
+| Critère | Grille | Observation |
+| --- | --- | --- |
+| Brief | OK | Tous les éléments des recos présents, signature lisible depuis l'entrée |
+| Zone / palette | OK | Sable, grès ocre, accents or et toile rouge ; eau turquoise de l'oasis |
+| Lisibilité de l'arène | OK | Cases, allée et front ennemi dégagés |
+| Volumes | OK | Formes arrondies ; crêtes refaites trois fois (piles puis jarres refusées) |
+| Géométrie / clipping visible | OK | Rien ne flotte, accessoires hors cases |
+| Présence de la signature | OK | La tête domine le flanc est (rempart 9 à 15 studs) |
+| Falaises | KO non bloquant | Crêtes rocheuses basses (9 à 15 studs), pas de vraies falaises hautes |
+
+**Verdict : PASS** (1 KO non bloquant). Non testé : combat en Play dans ce décor (repères inchangés).

@@ -44,7 +44,7 @@ local CombatConfig = {
 		KingTreant = table.freeze({ MaxHealth = 600, AttackDamage = 20, AttackInterval = 1.7, AttackRange = 8, MoveSpeed = 4 }),
 		-- Zones 2 à 6, version B (faune des fiches automation/briefs, docs/ZONES.md) : chaque monstre reprend
 		-- les stats de l'archétype qu'il remplace dans les vagues, l'équilibrage simulé (#13) ne change pas.
-		-- Zone 2 — Le Désert des Ruines
+		-- Zone 2 — Le Royaume des Sables
 		VaseDesSables = table.freeze({ MaxHealth = 60, AttackDamage = 6, AttackInterval = 1.2, AttackRange = 4, MoveSpeed = 6 }), -- comme Slime
 		ChacalParchemin = table.freeze({ MaxHealth = 60, AttackDamage = 6, AttackInterval = 1.2, AttackRange = 4, MoveSpeed = 6 }), -- comme Slime
 		ScarabeeForgeSoleil = table.freeze({ MaxHealth = 70, AttackDamage = 6, AttackInterval = 1.2, AttackRange = 4, MoveSpeed = 6 }), -- comme SlimePlante

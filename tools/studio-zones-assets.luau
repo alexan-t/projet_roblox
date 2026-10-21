@@ -137,7 +137,7 @@ end
 -- Version B (docs/ZONES.md) : désert, glace, forges, abysses, ciel — le biome de la faune des fiches.
 local THEMES = {
 	{
-		Id = 2, Name = "Zone2_DesertDesRuines", Nom = "Le Désert des Ruines",
+		Id = 2, Name = "Zone2_RoyaumeDesSables", Nom = "Le Royaume des Sables",
 		Colors = {
 			Leaf = { hex("#8C7A44"), hex("#B49A5A") }, Water = { hex("#3E8C8C"), hex("#64B4A0") }, Foam = { hex("#E8D2A0") },
 			Sand = { hex("#C8A064"), hex("#E0C080") }, Stone = { hex("#8C6E4E"), hex("#B4946A") }, Ruin = { hex("#D2B48C"), hex("#E6CCA0") },
@@ -422,6 +422,220 @@ local function frame(parent: Instance, kit: Kit, towerTop: (Instance, Vector3) -
 	towerTop(parent, V(30.4, 13.5, -49))
 end
 
+---------------------------------------------------------------- Zone 2 : le Royaume des Sables
+-- Ce qui remplace la Zone 1 : falaises de grès (falaises vertes), canal ancien et oasis (rivière),
+-- avant-poste du désert (camp gobelin). Signature : une énorme tête de statue qui sort du sable.
+
+local function palm(parent: Instance, at: Vector3, h: number, lean: number, trunk: Color3, leaf: Color3)
+	-- tronc en tronçons décalés (courbe), bagues sombres, couronne de 7 palmes tombantes
+	local top = at
+	for i = 0, 4 do
+		local seg = at + V(lean * (i / 4) ^ 2 * h * 0.25, i * h / 5, 0)
+		ball(parent, "Tronc", V(1.3 - i * 0.12, h / 5 + 0.6, 1.3 - i * 0.12), if i % 2 == 0 then trunk else trunk:Lerp(Color3.new(0, 0, 0), 0.15),
+			seg + V(0, h / 10, 0))
+		top = seg + V(0, h / 5, 0)
+	end
+	for i = 0, 6 do
+		local a = i * math.pi * 2 / 7
+		local dir = V(math.cos(a), 0, math.sin(a))
+		ball(parent, "Palme", V(1.4, 0.35, 5.2), if i % 2 == 0 then leaf else leaf:Lerp(Color3.new(1, 1, 0.6), 0.15),
+			top + dir * 2.2 + V(0, -0.5, 0), CFrame.Angles(0, -a + math.pi / 2, 0) * CFrame.Angles(0.45, 0, 0))
+	end
+	for i = 0, 2 do
+		ball(parent, "Datte", V(0.6, 0.6, 0.6), hex("#8C4E28"), top + V(math.cos(i * 2.1) * 0.5, -0.4, math.sin(i * 2.1) * 0.5))
+	end
+end
+
+local function amphora(parent: Instance, at: Vector3, k: number, color: Color3, tipped: boolean?)
+	local body = if tipped then CFrame.Angles(0, at.X, 0) * CFrame.Angles(math.pi / 2.2, 0, 0) else CFrame.identity
+	local lift = if tipped then 0.8 * k else 1 * k
+	ball(parent, "Amphore", V(1.6, 2, 1.6) * k, color, at + V(0, lift, 0), body)
+	local up = body.UpVector
+	piece(parent, "Col", Enum.PartType.Cylinder, V(0.9, 0.7, 0.7) * k, color, at + V(0, lift, 0) + up * 1.3 * k, body * FLAT)
+	piece(parent, "Levre", Enum.PartType.Cylinder, V(0.25, 1, 1) * k, color:Lerp(Color3.new(0, 0, 0), 0.2), at + V(0, lift, 0) + up * 1.75 * k,
+		body * FLAT)
+	piece(parent, "Bande", Enum.PartType.Cylinder, V(0.2, 1.62, 1.62) * k, hex("#3A2A1E"), at + V(0, lift, 0) + up * 0.3 * k, body * FLAT)
+end
+
+local function amphorae(parent: Instance, at: Vector3, color: Color3)
+	amphora(parent, at, 1, color)
+	amphora(parent, at + V(1.7, 0, 0.6), 0.75, color:Lerp(Color3.new(1, 1, 1), 0.1))
+	amphora(parent, at + V(0.4, 0, 2), 0.85, color, true)
+end
+
+local function flag(parent: Instance, at: Vector3, h: number, wood: Color3, cloth: Color3, trim: Color3)
+	column(parent, "Mat", h, 0.45, wood, at)
+	ball(parent, "Pommeau", V(0.8, 0.8, 0.8), trim, at + V(0, h + 0.2, 0))
+	piece(parent, "Vergue", Enum.PartType.Cylinder, V(3.4, 0.3, 0.3), wood, at + V(1.6, h - 0.4, 0))
+	piece(parent, "Drapeau", Enum.PartType.Block, V(3.2, 2.4, 0.15), cloth, at + V(1.7, h - 1.8, 0))
+	piece(parent, "Galon", Enum.PartType.Block, V(3.2, 0.35, 0.18), trim, at + V(1.7, h - 0.8, 0))
+	-- bas déchiré : trois lambeaux de longueurs inégales
+	for i, len in { 1.4, 0.6, 1.1 } do
+		piece(parent, "Lambeau", Enum.PartType.Block, V(0.9, len, 0.15), cloth, at + V(0.6 + (i - 1) * 1.1, h - 3 - len / 2, 0),
+			CFrame.Angles(0, 0, (i - 2) * 0.12))
+	end
+end
+
+local function palisade(parent: Instance, from: Vector3, to: Vector3, wood: Color3)
+	local dir = to - from
+	local n = math.floor(dir.Magnitude / 1.1)
+	local yaw = math.atan2(-dir.Z, dir.X)
+	for i = 0, n do
+		local at = from + dir * (i / n)
+		local h = 3.4 + (i * 7 % 5) * 0.35
+		local stake = column(parent, "Pieu", h, 0.9, if i % 2 == 0 then wood else wood:Lerp(Color3.new(1, 1, 1), 0.12), at)
+		stake.CFrame *= CFrame.Angles((i % 3 - 1) * 0.05, 0, 0)
+		ball(parent, "TetePieu", V(0.9, 0.9, 0.9), wood, at + V(0, h, 0))
+	end
+	for _, y in { 1.2, 2.6 } do
+		piece(parent, "Liure", Enum.PartType.Block, V(dir.Magnitude + 0.6, 0.35, 0.3), wood:Lerp(Color3.new(0, 0, 0), 0.3),
+			(from + to) / 2 + V(0, y, 0) + rotY(yaw):VectorToWorldSpace(V(0, 0, 0.55)), rotY(yaw))
+	end
+end
+
+local function bones(parent: Instance, at: Vector3, yaw: number, bone: Color3, dark: Color3)
+	local r = rotY(yaw)
+	local function p(x: number, y: number, z: number): Vector3
+		return at + r:VectorToWorldSpace(V(x, y, z))
+	end
+	ball(parent, "Colonne", V(0.7, 0.7, 6), bone, p(0, 0.3, 0), r)
+	for i = 0, 4 do
+		for _, side in { -1, 1 } do
+			ball(parent, "Cote", V(0.45, 2.6 - math.abs(i - 2) * 0.35, 0.5), bone, p(side * 1, 1, -2 + i * 1),
+				r * CFrame.Angles(0, 0, side * -0.55))
+		end
+	end
+	ball(parent, "Crane", V(1.8, 1.4, 2.2), bone, p(0, 0.6, 4))
+	for _, side in { -1, 1 } do
+		ball(parent, "Orbite", V(0.5, 0.45, 0.3), dark, p(side * 0.45, 0.8, 5.05))
+		ball(parent, "Corne", V(0.4, 0.4, 1.8), bone, p(side * 1, 1, 3.6), r * CFrame.Angles(-0.5, side * 0.6, 0))
+	end
+end
+
+local function cliff(parent: Instance, at: Vector3, yaw: number, len: number, h: number, bands: { Color3 })
+	-- crête de grès le long du rempart : masses très chevauchées de hauteurs inégales, une strate claire
+	-- continue à mi-hauteur et une table rocheuse continue au sommet, éboulis au pied côté arène
+	local r = rotY(yaw)
+	local n = math.max(2, math.floor(len / 6))
+	for i = 0, n - 1 do
+		local u = (i / (n - 1) - 0.5) * len * 0.8
+		local hi = h * (0.8 + ((i * 5) % 4) * 0.08)
+		local base = at + r:VectorToWorldSpace(V(u, 0, ((i % 2) - 0.5) * 1.4))
+		ball(parent, "Roche", V(len / n * 2.4, hi * 1.3, 9 + (i % 3)), if i % 2 == 0 then bands[1] else bands[3], base + V(0, hi * 0.33, 0),
+			r * CFrame.Angles(0, ((i % 3) - 1) * 0.12, ((i % 3) - 1) * 0.06))
+		if i % 2 == 0 then
+			ball(parent, "Eboulis", V(3.4, 2, 2.8), bands[3], base + r:VectorToWorldSpace(V(1.2, 0.4, 6)), r * rotY(i))
+		end
+	end
+	ball(parent, "Strate", V(len * 0.9, 1.8, 10.8), bands[2], at + V(0, h * 0.45, 0), r)
+	ball(parent, "Table", V(len * 0.6, 2.4, 7), bands[2], at + V(0, h * 0.82, 0), r)
+end
+
+local function desertRealm(m: Instance, sand: Color3, stone: Color3, pale: Color3, gold: Color3, dark: Color3)
+	local terracotta, wood, cloth, bone = hex("#B4643C"), hex("#9C8058"), hex("#A8452E"), hex("#E8DCC0")
+	local bands = { hex("#B98A62"), hex("#D4AA80"), hex("#A87652") }
+
+	-- signature : une énorme tête de statue qui sort du sable, côté est, tournée vers l'entrée
+	local t = Instance.new("Folder")
+	t.Name, t.Parent = "TeteColossale", m
+	local H = V(42, 0, -10)
+	-- némès (coiffe rayée) derrière le visage ; le visage regarde l'entrée (+z)
+	ball(t, "Coiffe", V(26, 20, 18), stone, H + V(0, 10, -3))
+	ball(t, "Visage", V(18, 22, 16), pale, H + V(0, 6, 0))
+	for _, side in { -1, 1 } do
+		piece(t, "Pan", Enum.PartType.Block, V(3.4, 14, 5), stone, H + V(side * 10.5, 6, 1))
+		for y = 0, 4 do
+			piece(t, "Rayure", Enum.PartType.Block, V(3.55, 0.7, 5.15), gold, H + V(side * 10.5, 0.6 + y * 2.6, 1))
+		end
+		piece(t, "Arcade", Enum.PartType.Block, V(4.6, 0.9, 1.6), pale:Lerp(Color3.new(0, 0, 0), 0.1), H + V(side * 3.6, 12.8, 5.8),
+			CFrame.Angles(-0.25, 0, side * -0.12))
+		ball(t, "Oeil", V(3.8, 1.5, 1.2), dark, H + V(side * 3.6, 11, 6.6))
+		ball(t, "Levre", V(5, 1.2, 1.4), pale:Lerp(Color3.new(0, 0, 0), 0.08), H + V(0, 5.6 - (side + 1) * 0.55, 7.6))
+	end
+	ball(t, "Bandeau", V(22.6, 1.6, 15.8), gold, H + V(0, 15.2, -3)) -- anneau doré qui épouse la coiffe
+	piece(t, "Uraeus", Enum.PartType.Wedge, V(1.6, 2.8, 1.8), gold, H + V(0, 17, 5.4), rotY(math.pi))
+	piece(t, "Nez", Enum.PartType.Wedge, V(2.8, 4.4, 2.4), pale, H + V(0, 8.6, 8.4), rotY(math.pi))
+	piece(t, "Fissure", Enum.PartType.Block, V(0.4, 7, 0.5), dark, H + V(-6, 9, 5.6), CFrame.Angles(0, 0.6, -0.35))
+	for i, at in { V(-14, 1.2, 10), V(-17, 0.8, 6) } do
+		piece(t, "MorceauTombe", Enum.PartType.Block, V(3.6, 3.6, 3.2) / i ^ 0.4, stone:Lerp(Color3.new(0, 0, 0), 0.08), H + at,
+			CFrame.Angles(0.3 * i, 0.6 * i, 0.2))
+	end
+	ball(t, "Ensablement", V(34, 7, 26), sand, H + V(0, 0, 1))
+	ball(t, "Ensablement", V(14, 6, 10), sand, H + V(-12, 0, 9), rotY(0.4))
+	ball(t, "Ensablement", V(12, 5, 9), sand, H + V(12, 0, 7), rotY(-0.3))
+
+	local c = Instance.new("Folder")
+	c.Name, c.Parent = "FalaisesGres", m
+	cliff(c, V(49, 0, -41), 1.94, 28, 15, bands)
+	cliff(c, V(-47, 0, -41), 1.08, 26, 14, bands)
+	cliff(c, V(-51, 0, -10), math.pi / 2, 12, 9, bands)
+
+	-- oasis latérale autour des mares (lac de la Zone 1) et canal ancien, lit asséché vers la pyramide
+	local o = Instance.new("Folder")
+	o.Name, o.Parent = "Oasis", m
+	local palmTrunk, palmLeaf = hex("#8C6A44"), hex("#6E9A3C")
+	palm(o, V(-38, 0, 16), 9, 1, palmTrunk, palmLeaf)
+	palm(o, V(-36, 0, 8), 7, -1, palmTrunk, palmLeaf)
+	palm(o, V(-38, 0, -24), 8.5, 1, palmTrunk, palmLeaf)
+	palm(o, V(-22, 0, -34), 7.5, -1, palmTrunk, palmLeaf)
+	palm(o, V(-18, 0, 20), 6.5, 1, palmTrunk, palmLeaf)
+	for _, at in { V(-22, 0, 6), V(-34, 0, -15), V(-25, 0, -26) } do
+		reeds(o, at, hex("#7A8A44"), hex("#8C5A30"))
+	end
+	-- bassin de l'oasis sous la grande mare du lac (repère MareGrande inchangé), bordé de pierres rondes
+	piece(o, "EauOasis", Enum.PartType.Cylinder, V(0.15, 15, 15), hex("#4E9E96"), V(-26, 0, 12), FLAT)
+	for i = 0, 10 do
+		local a = i * math.pi * 2 / 11
+		ball(o, "PierreOasis", V(2.2, 1, 1.6), if i % 2 == 0 then stone else hex("#B4946A"), V(-26 + math.cos(a) * 7.9, 0.2, 12 + math.sin(a) * 7.9),
+			rotY(-a))
+	end
+	-- canal : bordures de grès de part et d'autre du lit, puis lit asséché à demi rempli de sable
+	for i = 0, 5 do
+		local z = -34 - i * 3
+		for _, side in { -1, 1 } do
+			piece(o, "BordCanal", Enum.PartType.Block, V(1.2, 0.9, 2.8), if i % 2 == 0 then stone else bands[2], V(-29 + side * 2.2, 0.45, z),
+				rotY((i % 2) * 0.05))
+		end
+		piece(o, "LitSec", Enum.PartType.Block, V(3.2, 0.12, 3), hex("#A88A5C"), V(-29, 0.08, z))
+		if i % 2 == 1 then ball(o, "SableCanal", V(2.8, 0.9, 2.2), sand, V(-29 + (i % 3 - 1) * 0.5, 0.15, z)) end
+	end
+	amphorae(o, V(-40, 0, -2), terracotta)
+
+	-- avant-poste du désert (à la place du camp gobelin), côté est de l'entrée
+	local a = Instance.new("Folder")
+	a.Name, a.Parent = "AvantPoste", m
+	palisade(a, V(24, 0, 36), V(44, 0, 38), wood)
+	palisade(a, V(46, 0, 34), V(48, 0, 16), wood)
+	-- auvent de toile tendu sur quatre poteaux, bord déchiré
+	for _, p in { V(30, 0, 22), V(38, 0, 22), V(30, 0, 30), V(38, 0, 30) } do
+		column(a, "Poteau", 5, 0.6, wood, p)
+	end
+	piece(a, "Auvent", Enum.PartType.Block, V(9.6, 0.25, 9.6), cloth, V(34, 5.1, 26), CFrame.Angles(0.12, 0, 0))
+	piece(a, "BandeAuvent", Enum.PartType.Block, V(9.6, 0.3, 1.2), gold, V(34, 5.05, 26.6), CFrame.Angles(0.12, 0, 0))
+	for i = 0, 4 do
+		piece(a, "Frange", Enum.PartType.Block, V(1.6, 0.6 + (i % 3) * 0.4, 0.15), cloth, V(30.4 + i * 1.9, 4.2 - (i % 3) * 0.2, 30.8))
+	end
+	ball(a, "Coussin", V(2.4, 0.8, 1.6), hex("#8C3A24"), V(33, 0.4, 25))
+	amphorae(a, V(41, 0, 26), terracotta)
+	amphorae(a, V(26, 0, 18), terracotta:Lerp(pale, 0.2))
+	flag(a, V(24, 0, 34), 8, wood, cloth, gold)
+	flag(a, V(46, 0, 18), 7, wood, cloth, gold)
+	bones(a, V(42, 0, 10), 0.6, bone, dark)
+
+	-- ossements, drapeaux et amphores dispersés, petits tas de sable
+	local d = Instance.new("Folder")
+	d.Name, d.Parent = "Vestiges", m
+	bones(d, V(-44, 0, 30), -0.4, bone, dark)
+	flag(d, V(-16, 0, -46), 9, wood, cloth, gold)
+	flag(d, V(52, 0, -2), 6.5, wood, cloth, gold)
+	amphorae(d, V(-15, 0, -40), terracotta)
+	amphorae(d, V(15, 0, -58), terracotta:Lerp(pale, 0.2))
+	for _, s in { { 18, 42, 4 }, { -20, 42, 3.5 }, { -46, 22, 3 }, { 30, 46, 3 }, { -14, -52, 4 }, { 20, -60, 3.5 }, { 16, 2, 2.6 } } do
+		ball(d, "PetitTas", V(s[3], s[3] * 0.32, s[3] * 0.8), if #d:GetChildren() % 2 == 0 then sand else sand:Lerp(Color3.new(1, 1, 1), 0.08),
+			V(s[1], 0.1, s[2]), rotY(s[1]))
+	end
+end
+
 local BUILD = {}
 
 ---------------------------------------------------------------- Zone 2 : temple ensablé du désert
@@ -452,14 +666,8 @@ BUILD[2] = function(m: Instance)
 			piece(f, "Pointe", Enum.PartType.Wedge, V(1.8, 1.6, 1.8), gold, V(x, 9.8, z))
 		end
 	end
-	-- tête de statue à demi ensevelie, côté est
-	ball(f, "TeteStatue", V(9, 8, 8), light2, V(44, 2.5, -10))
-	piece(f, "Coiffe", Enum.PartType.Block, V(10, 3, 7), stone, V(44, 7, -10))
-	for _, side in { -1, 1 } do
-		piece(f, "Oeil", Enum.PartType.Block, V(1.6, 0.8, 0.5), dark, V(44 + side * 2, 3.6, -6.1))
-	end
-	-- dunes
-	for _, d in { { 36, -30, 14 }, { 46, 8, 12 }, { -46, -50, 16 }, { 40, -62, 14 } } do
+	-- dunes (la tête de statue, les falaises et l'avant-poste occupent les anciens emplacements)
+	for _, d in { { 36, -30, 14 }, { 40, -62, 14 }, { -50, 40, 12 } } do
 		ball(f, "Dune", V(d[3], 3, d[3] * 0.7), sand, V(d[1], 0.4, d[2]), rotY(d[1]))
 	end
 	-- ossature des sorties : temple sur dais, porte du temple, obélisque-vigie
@@ -472,6 +680,7 @@ BUILD[2] = function(m: Instance)
 		piece(f, "BlocBrise", Enum.PartType.Block, V(4.6, 3.4, 3.2), stone, at + V(-1.5, 1.7, -2.6), rotY(0.4))
 		ball(f, "TasSable", V(6, 1.6, 4), sand, at + V(1.6, 0.2, -2.2))
 	end
+	desertRealm(m, sand, stone, light2, gold, dark)
 end
 
 ---------------------------------------------------------------- Zone 3 : donjon de glace

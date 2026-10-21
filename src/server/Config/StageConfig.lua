@@ -58,7 +58,7 @@ local StageConfig = {
 				},
 			},
 		},
-		-- Zone 2 — Le Désert des Ruines : Vase des Sables, Chacal Parchemin, Scarabée Forge-Soleil, Mange-Dune, Gardien sans Visage ; boss Colosse Enseveli.
+		-- Zone 2 — Le Royaume des Sables : Vase des Sables, Chacal Parchemin, Scarabée Forge-Soleil, Mange-Dune, Gardien sans Visage ; boss Colosse Enseveli.
 		[2] = {
 			Difficulty = { MaxHealth = 2.5, AttackDamage = 2.5 },
 			Stages = {

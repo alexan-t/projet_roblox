@@ -78,7 +78,7 @@ local ArenaConfig = {
 	-- présent garde la priorité (attribut Nom du modèle de zone).
 	ZoneNames = table.freeze({
 		[1] = "La Plaine du Royaume",
-		[2] = "Le Désert des Ruines",
+		[2] = "Le Royaume des Sables",
 		[3] = "Les Terres Gelées",
 		[4] = "Les Forges",
 		[5] = "Les Abysses",
