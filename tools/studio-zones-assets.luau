@@ -1730,33 +1730,50 @@ BUILD[5] = function(m: Instance)
 	-- SautMare des ennemis qui sortent de l'eau), des bassins sacrés de marbre, eau lumineuse et bulles
 	local lake = m:FindFirstChild("Lac")
 	if lake then lake:Destroy() end
-	for k, d in { { -26, 12, 10 }, { -31, -19, 6 }, { -29, -30, 6.8 } } do
+	local markers = m:FindFirstChild("SourcesEnnemis")
+	for k, d in { { -34, 12, 15, "MareGrande" }, { -38, -14, 11, "MareMilieu" }, { -36, -36, 11, "MareFond" } } do
 		local at, r = V(d[1], 0, d[2]), d[3]
 		local basin = Instance.new("Model")
 		basin.Name, basin.Parent = "BassinSacre", f
-		piece(basin, "Margelle", Enum.PartType.Cylinder, V(0.9, r + 2.4, r + 2.4), white, at + V(0, 0.45, 0), FLAT)
-		piece(basin, "AnneauOr", Enum.PartType.Cylinder, V(0.95, r + 0.6, r + 0.6), gold, at + V(0, 0.47, 0), FLAT, Enum.Material.Metal)
-		local water = piece(basin, "EauSacree", Enum.PartType.Cylinder, V(1, r, r), glow, at + V(0, 0.5, 0), FLAT, Enum.Material.Neon)
-		water.Transparency = 0.35
-		light(water, glow, r + 6, 0.5)
+		-- socle en deux gradins arrondis, margelle épaisse en boudin, eau lumineuse bombée
+		piece(basin, "Gradin", Enum.PartType.Cylinder, V(0.8, r + 5, r + 5), stoneBlue, at + V(0, 0.4, 0), FLAT)
+		piece(basin, "Socle", Enum.PartType.Cylinder, V(1.6, r + 3, r + 3), white, at + V(0, 1.1, 0), FLAT)
+		for n = 0, 23 do
+			local a = n * math.pi / 12
+			ball(basin, "Margelle", V(2.4, 1.8, 2.4), if n % 2 == 0 then white else hex("#D8E4EC"),
+				at + V(math.cos(a) * (r / 2 + 0.9), 2.2, math.sin(a) * (r / 2 + 0.9)))
+		end
+		for n = 0, 11 do -- liseré d'or sur la margelle (un disque plein couvrirait l'eau)
+			local a = n * math.pi / 6 + 0.26
+			ball(basin, "PerleOr", V(0.7, 0.7, 0.7), gold, at + V(math.cos(a) * (r / 2 + 0.9), 3.15, math.sin(a) * (r / 2 + 0.9)), nil, Enum.Material.Metal)
+		end
+		local water = ball(basin, "EauSacree", V(r + 0.6, 2.4, r + 0.6), glow, at + V(0, 2.3, 0), nil, Enum.Material.Neon)
+		water.Transparency = 0.15
+		light(water, glow, r + 8, 0.6)
 		for n = 0, 5 do
 			local a = n * math.pi / 3 + k
-			local rim = at + V(math.cos(a) * (r / 2 + 0.6), 0.9, math.sin(a) * (r / 2 + 0.6))
+			local rim = at + V(math.cos(a) * (r / 2 + 0.9), 3.1, math.sin(a) * (r / 2 + 0.9))
 			if n % 2 == 0 then
-				ball(basin, "Coquillage", V(1.2, 0.6, 1), hex("#F0D2C0"), rim + V(0, 0.2, 0), rotY(a))
+				ball(basin, "Coquillage", V(1.6, 0.8, 1.3), hex("#F0D2C0"), rim + V(0, 0.2, 0), rotY(a))
 			else
-				coral(basin, rim, if n % 4 == 1 then coralA else coralC, 0.35)
+				coral(basin, rim, if n % 4 == 1 then coralA else coralC, 0.5)
 			end
 		end
-		for n = 0, 3 do
-			local b = ball(basin, "BulleBassin", V(0.7, 0.7, 0.7), hex("#C8F0FF"), at + V(math.cos(n * 1.6) * r * 0.25, 1, math.sin(n * 1.6) * r * 0.25))
-			tag(b, "BulleMonte", { Hauteur = 6, Periode = 2.4 + n * 0.5 })
+		for n = 0, 4 do
+			local b = ball(basin, "BulleBassin", V(0.8, 0.8, 0.8), hex("#C8F0FF"), at + V(math.cos(n * 1.6) * r * 0.25, 3, math.sin(n * 1.6) * r * 0.25))
+			tag(b, "BulleMonte", { Hauteur = 8, Periode = 2.4 + n * 0.5 })
 		end
 		if k == 1 then -- fontaine-coquillage au centre du grand bassin
-			column(basin, "PiedFontaine", 2.4, 1.2, white, at + V(0, 0.5, 0))
-			ball(basin, "CoquilleFontaine", V(3.4, 1.4, 3.4), hex("#F4E6DC"), at + V(0, 3.2, 0))
-			local jet = piece(basin, "JetFontaine", Enum.PartType.Cylinder, V(3, 0.5, 0.5), glow, at + V(0, 5.2, 0), FLAT, Enum.Material.Neon)
+			column(basin, "PiedFontaine", 4, 1.6, white, at + V(0, 2.4, 0))
+			ball(basin, "CoquilleFontaine", V(5, 2, 5), hex("#F4E6DC"), at + V(0, 6.6, 0))
+			local jet = piece(basin, "JetFontaine", Enum.PartType.Cylinder, V(4, 0.7, 0.7), glow, at + V(0, 9.4, 0), FLAT, Enum.Material.Neon)
 			jet.Transparency = 0.4
+		end
+		-- le repère de sortie (SautMare) suit le bassin : l'ennemi jaillit de l'eau sacrée
+		local marker = markers and markers:FindFirstChild(d[4])
+		if marker and marker:IsA("BasePart") then
+			local world = PIVOT:PointToWorldSpace(Vector3.new(at.X, 0, at.Z))
+			marker.CFrame = CFrame.new(world.X, GROUND_Y + 2.4, world.Z) * PIVOT.Rotation
 		end
 	end
 	-- zone de bataille : rue ancienne de sable du fond, bordée de coraux
@@ -1913,12 +1930,25 @@ BUILD[5] = function(m: Instance)
 		tag(b, "BulleMonte", { Hauteur = 15, Periode = 2.6 + n * 0.3 })
 	end
 
-	-- épave encastrée dans un bâtiment (côté est, au fond)
-	piece(f, "Batiment", Enum.PartType.Block, V(12, 14, 10), white, V(34, 7, -46))
-	piece(f, "ToitBatiment", Enum.PartType.Wedge, V(12, 4, 10), deepBlue, V(34, 16, -46))
-	piece(f, "CoqueEpave", Enum.PartType.Block, V(16, 6, 6), hex("#4A3828"), V(29, 6, -41), CFrame.Angles(0, -0.5, 0.25))
-	piece(f, "ProueEpave", Enum.PartType.Wedge, V(6, 6, 5), hex("#4A3828"), V(24.5, 5, -37.5), CFrame.Angles(0, -0.5 - math.pi / 2, 0.25))
-	column(f, "MatEpave", 12, 0.8, hex("#4A3828"), V(30, 8, -42))
+	-- épave encastrée dans une tour ronde du palais (côté est, au fond) : coque arrondie qui a percé la tour
+	local wood, woodDark = hex("#6E4E34"), hex("#4A3426")
+	column(f, "TourEpave", 16, 10, white, V(38, 0, -44))
+	ball(f, "DomeTourEpave", V(11, 8, 11), deepBlue, V(38, 16, -44))
+	piece(f, "CeintureTour", Enum.PartType.Cylinder, V(0.8, 10.6, 10.6), gold, V(38, 11, -44), FLAT, Enum.Material.Metal)
+	ball(f, "BrecheTour", V(6, 6, 3), hex("#14283C"), V(34, 6, -40.6), rotY(-0.7))
+	ball(f, "CoqueEpave", V(8, 7.5, 22), wood, V(28, 4, -35), rotY(-0.75) * CFrame.Angles(0.18, 0, 0.3))
+	ball(f, "PontEpave", V(6.8, 1.6, 19), woodDark, V(28.4, 7.4, -35.4), rotY(-0.75) * CFrame.Angles(0.18, 0, 0.3))
+	for k = -1, 1 do
+		ball(f, "Bordage", V(8.3, 0.6, 20.5), hex("#8A6A48"), V(28 + k * 0.1, 3 + k * 1.8, -35), rotY(-0.75) * CFrame.Angles(0.18, 0, 0.3))
+	end
+	piece(f, "MatEpave", Enum.PartType.Cylinder, V(15, 1.2, 1.2), woodDark, V(25.5, 12, -32.5), rotY(-0.75) * CFrame.Angles(0, 0, math.pi / 2 - 0.45))
+	piece(f, "VergueEpave", Enum.PartType.Cylinder, V(8, 0.7, 0.7), woodDark, V(23.6, 16.8, -31), rotY(-0.75 + math.pi / 2) * CFrame.Angles(0, 0, 0.2))
+	local sail = piece(f, "VoileDechiree", Enum.PartType.Block, V(0.15, 5.6, 6), hex("#E6DCC8"), V(24.2, 14, -31.8), rotY(-0.75) * CFrame.Angles(0, 0, -0.3))
+	sail.Transparency = 0.15
+	for n = 0, 2 do
+		ball(f, "Algue", V(0.6, 2.6, 0.6), hex("#2E7A64"), V(27 + n * 1.6, 4.6, -38 + n), CFrame.Angles(0.2, 0, 0.3))
+		coral(f, V(31 - n * 2.2, 2.4 + n * 0.6, -33 + n * 1.4), if n % 2 == 0 then coralA else coralC, 0.45)
+	end
 
 	-- coquillages géants transformés en maisons
 	for k, d in { { 42, 6 }, { 42, -12 } } do
@@ -2035,12 +2065,20 @@ BUILD[5] = function(m: Instance)
 		end
 	end
 	local flooded = group(f, "Envahi", 5)
-	for _, d in { { 36, -4, 20, 18 }, { -40, 2, 12, 20 } } do
-		local water = piece(flooded, "EauEnvahie", Enum.PartType.Block, V(d[3], 7, d[4]), barrierC, V(d[1], 3.5, d[2]), nil, Enum.Material.Glass)
-		water.Transparency = 0.55
+	for _, d in { { 38, 2, 24, 30 }, { -34, 12, 28, 28 } } do -- l'est inondé, le grand bassin qui déborde
+		-- nappe d'eau arrondie (dôme aplati) avec un bourrelet d'écume et une vague plus haute au centre
+		local water = ball(flooded, "EauEnvahie", V(d[3], 8, d[4]), barrierC, V(d[1], 0.6, d[2]), nil, Enum.Material.Glass)
+		water.Transparency = 0.5
 		tag(water, "VagueBarriere", { Periode = 3 })
-		for n = 0, 5 do
-			local b = ball(flooded, "BulleEnvahie", V(0.8, 0.8, 0.8), hex("#C8F0FF"), V(d[1] + (n - 2.5) * 3, 0.6, d[2] + (n % 2) * 4 - 2))
+		local crest = ball(flooded, "VagueEnvahie", V(d[3] * 0.55, 6, d[4] * 0.45), hex("#8CDCF0"), V(d[1], 1.6, d[2]), nil, Enum.Material.Glass)
+		crest.Transparency = 0.45
+		tag(crest, "VagueBarriere", { Periode = 2.2 })
+		for n = 0, 9 do
+			local a = n * math.pi / 5
+			ball(flooded, "Ecume", V(3.4, 1.2, 3.4), hex("#E6FAFF"), V(d[1] + math.cos(a) * d[3] * 0.46, 0.5, d[2] + math.sin(a) * d[4] * 0.46))
+		end
+		for n = 0, 7 do
+			local b = ball(flooded, "BulleEnvahie", V(0.9, 0.9, 0.9), hex("#C8F0FF"), V(d[1] + math.cos(n) * d[3] * 0.25, 1, d[2] + math.sin(n) * d[4] * 0.25))
 			tag(b, "BulleMonte", { Hauteur = 7, Periode = 3 + n * 0.4 })
 		end
 	end
