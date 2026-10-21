@@ -335,8 +335,9 @@ return function(Inventory: any, Loot: any, ItemConfig: any, ResourceConfig: any,
 		assert(placed.Y - half >= top + R.Margin - 1e-6, "below the currencies")
 		assert(placed.Y + half <= bottom - R.Margin + 1e-6, `above the hotbar: {placed.Y + half} > {bottom - R.Margin}`)
 		assert(placed.Overlap == false and placed.Scale >= R.MinScale)
-		-- zone trop étroite (téléphone 844 x 390 : hotbar fixe de 104 px) : Overlap EXPLICITE, tout l'écran,
-		-- et le contenu entier reste visible (jamais coupé par le bord de l'écran)
+		-- disposition PC forcée sur une zone trop étroite (844 x 390, hotbar fixe de 104 px) : Overlap EXPLICITE,
+		-- tout l'écran, et le contenu entier reste visible (jamais coupé par le bord de l'écran). En jeu, le
+		-- téléphone a sa propre disposition (tests « phone » ci-dessous).
 		for _, heroes in { 0, 1, 2, 3, 4 } do
 			local full = layout({ Cards = 3, Heroes = heroes, Band = true, Chips = 5, Caption = true, Note = true })
 			local phone = Loot.place(v2(844, 390), v2(full.Width, full.Height), R, 70, 390 - 104)
@@ -386,9 +387,108 @@ return function(Inventory: any, Loot: any, ItemConfig: any, ResourceConfig: any,
 					`{name} {size.X}x{size.Y} scale {scale} does not fit`)
 			end
 		end
-		-- téléphone en paysage : l'échelle plancher s'applique (recette Studio obligatoire, risque connu)
-		local phone = Loot.fit(v2(844, 390), v2(typical.Width, typical.Height), R)
-		print(`INFO 844x390 typical loot screen: scale {phone}, {math.floor(typical.Height * phone)} px of {390 - 2 * R.Margin} px`)
+	end)
+
+	------------------------------------------------------------------ disposition téléphone (844 x 390)
+
+	local P = Loot.pack(v2(844, 390), R)
+	local PHONE_TOP, PHONE_BAR = 70, 390 - 104 -- bas des monnaies (inset compris), haut de la hotbar fixe
+	local function phoneLayout(extra: any?): any
+		local input = { Cards = 0, Heroes = 0, Band = false, Chips = 0, Caption = false, Note = false }
+		for k, v in extra or {} do input[k] = v end
+		return Loot.layout(input, P)
+	end
+	-- tous les textes de la disposition téléphone (px du design) : compensés par textSize à l'affichage
+	local PHONE_TEXTS = { "CardNameSize", "CardAmountSize", "BandHeadSize", "BandNameSize", "BandLineSize", "BandMoreSize",
+		"ChipAmountSize", "ChipMoreSize", "CaptionSize", "NoteSize", "HeroNameSize", "HeroLevelSize" }
+
+	test("pack: phone overrides only on a phone-sized screen (same thresholds as Sacoche / Expedition)", function()
+		assert(P.Device == "phone" and P.TwoColumns == true and P.Phone == nil, "844x390 is a phone")
+		for _, size in { v2(932, 430), v2(667, 375), v2(740, 360) } do
+			assert(Loot.pack(size, R).Device == "phone", `{size.X}x{size.Y}`)
+		end
+		for _, size in { v2(1920, 1080), v2(1651, 633), v2(1366, 768), v2(1180, 820), v2(1024, 768) } do
+			local wide = Loot.pack(size, R)
+			assert(wide.Device == "wide" and wide.Phone == nil, `{size.X}x{size.Y}`)
+			for key, value in R do
+				assert(key == "Phone" or wide[key] == value, `{size.X}x{size.Y}: {key} differs from Pack.Reward`)
+			end
+		end
+		-- PC / tablette : mêmes positions qu'avant (une colonne, tout centré)
+		local wideLayout = Loot.layout({ Cards = 3, Heroes = 4, Band = true, Chips = 6, Caption = true, Note = true }, Loot.pack(v2(1920, 1080), R))
+		assert(wideLayout.CardsX == wideLayout.Width / 2 and wideLayout.HeroesX == wideLayout.Width / 2 and wideLayout.ButtonX == wideLayout.Width / 2)
+		assert(wideLayout.HeroRows == 1 and wideLayout.HeroesWidth == wideLayout.Width - 2 * R.SideMargin)
+	end)
+
+	test("phone: 0 to 4 heroes with the full loot fit 844x390 at scale 1, below the currencies, hotbar masked", function()
+		for _, heroes in { 0, 1, 2, 3, 4 } do
+			for _, extra in { { Cards = 3, Heroes = heroes, Band = true, Chips = 6, Caption = true, Note = true },
+				{ Cards = 1, Heroes = heroes, Chips = 2, Caption = true }, { Heroes = heroes } } do
+				local l = phoneLayout(extra)
+				local placed = Loot.place(v2(844, 390), v2(l.Width, l.Height), P, PHONE_TOP, PHONE_BAR)
+				local half = l.Height * placed.Scale / 2
+				-- contenu court (héros seuls) : il tient entre les monnaies et la hotbar, sans la masquer, au-dessus
+				-- de MinScale ; sinon hotbar masquée et échelle 1 (px réels du design)
+				assert(placed.Scale >= P.MinScale and (placed.Overlap == false or placed.Scale == 1), `{heroes} heroes: scale {placed.Scale}`)
+				assert(extra.Band ~= true or placed.Scale == 1, `{heroes} heroes, full loot: scale {placed.Scale}`)
+				assert(placed.Y - half >= PHONE_TOP + P.Margin - 1e-6, `{heroes} heroes: covers the currencies`)
+				assert(placed.Y + half <= 390 - P.Margin + 1e-6 and l.Width <= 844 - 2 * P.Margin, `{heroes} heroes: leaves the screen`)
+				-- la zone libre (~200 px) ne suffit pas : hotbar masquée explicitement, jamais recouverte en silence
+				assert(placed.Overlap == (placed.Y + half > PHONE_BAR - P.Margin), `{heroes} heroes: silent overlap`)
+				for _, key in PHONE_TEXTS do
+					assert(Loot.textSize(P[key], placed.Scale, P) * placed.Scale >= 14 - 1e-6, `{key} below 14 real px`)
+				end
+			end
+		end
+		-- barre Roblox plus haute (inset 36 px) : tient toujours sous les monnaies
+		local full = phoneLayout({ Cards = 3, Heroes = 4, Band = true, Chips = 6, Caption = true, Note = true })
+		local tall = Loot.place(v2(844, 390), v2(full.Width, full.Height), P, PHONE_TOP + 18, PHONE_BAR)
+		assert(tall.Y - full.Height * tall.Scale / 2 >= PHONE_TOP + 18 + P.Margin - 1e-6 and tall.Scale >= P.MinScale, `inset: {tall.Scale}`)
+		print(`INFO 844x390 phone layout: {full.Width}x{full.Height} px at scale {tall.Scale}, {390 - PHONE_TOP - 2 * P.Margin} px available below the currencies`)
+	end)
+
+	test("phone: two columns that never overlap (currencies + loot | heroes + Continue)", function()
+		for _, heroes in { 1, 2, 3, 4 } do
+			local l = phoneLayout({ Cards = 3, Heroes = heroes, Band = true, Chips = 6, Caption = true, Note = true })
+			local leftEdge = l.LootX + P.ChipRowWidth / 2
+			local rightEdge = l.HeroesX - l.HeroesWidth / 2
+			assert(l.CardsX == l.LootX and leftEdge + P.ColumnGap <= rightEdge + 1e-6 and l.HeroesX + l.HeroesWidth / 2 <= l.Width + 1e-6, "columns")
+			assert(3 * P.CardSize.X + 2 * P.CardGap <= P.ChipRowWidth and P.BandSize.X <= P.ChipRowWidth, "left column content too wide")
+			assert(l.HeroPerRow * P.HeroChip.X + (l.HeroPerRow - 1) * P.HeroGap <= l.HeroesWidth, "hero row too wide")
+			assert(l.HeroRows == math.ceil(heroes / P.HeroPerRow) and l.HeroPerRow <= P.HeroPerRow, `{heroes} heroes: {l.HeroRows} rows`)
+			-- colonne gauche : cartes, objet, pastilles, légende, message empilés sans chevauchement
+			assert(l.CardsY + P.CardSize.Y <= l.BandY and l.BandY + P.BandSize.Y <= l.ChipsY and l.ChipsY + P.ChipSize.Y <= l.CaptionY
+				and l.CaptionY + P.CaptionHeight <= l.NoteY and l.NoteY + P.NoteHeight <= l.Height + 1e-6, "left column")
+			-- colonne droite : héros puis « Continuer » aligné sur le bas du contenu
+			assert(l.HeroesY + l.HeroesHeight + P.ButtonGap <= l.ButtonY + 1e-6, "button over the heroes")
+			assert(l.ButtonY + P.ButtonSize.Y + P.ButtonLip == l.Height - P.BottomPad and l.ButtonX == l.HeroesX, "button")
+			-- titre au-dessus des colonnes (badge « Nouveau » d'une carte compris)
+			assert(l.TitleY + P.TitleBox.Y / 2 <= l.CardsY + P.BadgeLift - P.NewBadge.Y + 1e-6, "title row")
+		end
+		assert(Loot.chipSlots(P) == 5, `phone chips per row: {Loot.chipSlots(P)}`)
+		-- sans monnaie ni butin (défaite, héros seuls) : la colonne droite est centrée
+		local defeat, heroesOnly = phoneLayout({}), phoneLayout({ Heroes = 2 })
+		assert(defeat.ButtonX == defeat.Width / 2 and defeat.ButtonY == defeat.TitleY + P.BelowTitle, "defeat")
+		assert(heroesOnly.HeroesX == heroesOnly.Width / 2, "heroes only")
+		-- « Première victoire » à droite du titre, dans l'écran
+		assert(P.FirstClearOffset.Y == 0 and P.Width / 2 + P.FirstClearOffset.X + P.FirstClearSize.X / 2 <= P.Width, "first clear badge")
+	end)
+
+	test("phone: other landscape phones fit, texts >= 14 real px; boxes hold the enlarged texts", function()
+		local full = phoneLayout({ Cards = 3, Heroes = 4, Band = true, Chips = 6, Caption = true, Note = true })
+		for _, size in { v2(844, 390), v2(932, 430), v2(740, 360), v2(667, 375), v2(800, 360) } do
+			local placed = Loot.place(size, v2(full.Width, full.Height), P, PHONE_TOP, size.Y - 104)
+			assert(full.Height * placed.Scale <= size.Y - 2 * P.Margin + 1e-6 and full.Width * placed.Scale <= size.X - 2 * P.Margin + 1e-6,
+				`{size.X}x{size.Y}: does not fit at {placed.Scale}`)
+			for _, key in PHONE_TEXTS do
+				assert(Loot.textSize(P[key], placed.Scale, P) * placed.Scale >= 14 - 1e-6, `{size.X}x{size.Y}: {key} below 14 real px at {placed.Scale}`)
+			end
+		end
+		local worst = Loot.textSize(14, P.MinScale, P)
+		assert(worst <= P.CaptionHeight and worst <= P.NoteHeight, "caption / note box")
+		assert(Loot.textSize(P.HeroLevelSize, P.MinScale, P) <= (P.HeroChip.Y - 2 * 4 - P.HeroBar) / 2, "hero chip line")
+		assert(Loot.textSize(P.CardAmountSize, P.MinScale, P) <= P.CardSize.Y / 2 - 4, "currency card line")
+		assert(P.ButtonSize.Y >= 44 and P.ChipSize.Y >= 44, "touch target / chip >= 44")
 	end)
 
 	------------------------------------------------------------------ tailles minimales (design system)

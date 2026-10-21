@@ -356,16 +356,22 @@ local Pack = {
 	},
 	-- Écran de fin de combat (RewardScreenController, Shared.Sacoche.LootModel) : mesures du design, en px pour
 	-- un écran de 1080 px de haut ; la hauteur du contenu est CALCULÉE (LootModel.layout), l'échelle tient
-	-- compte des deux axes (LootModel.fit).
+	-- compte des deux axes (LootModel.fit). PC et tablette : une colonne (mesures ci-dessous). Téléphone
+	-- (hauteur < 520, comme la Sacoche et l'Expédition) : surcharges Phone, deux colonnes (LootModel.pack).
 	Reward = {
 		Width = 760, SideMargin = 10, TitleY = 90, BelowTitle = 95,
-		CardSize = Vector2.new(132, 164), AfterCards = 30,
+		TitleSize = Typography.Size.Hero, TitleBox = Vector2.new(560, 80),
+		RayLength = 230, Sparks = Vector2.new(230, 150), -- étincelles : ±X autour du titre, Y de 20 à Sparks.Y
+		FirstClearSize = Vector2.new(170, 30), FirstClearOffset = Vector2.new(0, 58), -- depuis le centre du titre
+		NewBadge = Vector2.new(84, 24),
+		CardSize = Vector2.new(132, 164), CardGap = Spacing.XL, CardsPad = 10, AfterCards = 30,
 		LootGap = 10, AfterLoot = 20,
 		BandSize = Vector2.new(740, 112), BandArt = 92, BandHeadSize = 16, BandNameSize = 24, BandLineSize = 18, BandMoreSize = 18,
 		ChipSize = Vector2.new(128, 48), ChipIcon = 36, ChipGap = 8, ChipRowWidth = 740, ChipAmountSize = 18, ChipMoreSize = 16,
 		CaptionSize = 16, CaptionHeight = 32, NoteSize = 15, NoteHeight = 32,
 		-- héros sur UNE ligne (jusqu'à ArenaConfig.MaxHeroes) : l'écran s'élargit au lieu de passer à la ligne
 		HeroChip = Vector2.new(300, 120), HeroHeading = 30, HeroGap = 12,
+		ButtonSize = Vector2.new(220, 56), ButtonLip = Shadow.ButtonLip, ButtonTextSize = Typography.Size.Button,
 		ButtonGap = 20, BottomPad = 80, MinHeight = 520,
 		-- échelle : contenu tenu entre le bas des monnaies et le haut de la hotbar (Margin de chaque côté)
 		ReferenceHeight = 1080, Margin = 16, MinScale = 0.5, MaxScale = 1.4,
@@ -373,6 +379,29 @@ local Pack = {
 		-- par un voile opaque (transparence OverlapMask) au lieu d'être recouverte en silence
 		FloorScale = 0.3, OverlapMask = 0.12,
 		MinText = 14, -- px réels minimum des petits textes du butin, quelle que soit l'échelle (design system § 4)
+		-- Téléphone en paysage (écran de référence 844 x 390, px réels à l'échelle 1). Deux colonnes : à gauche
+		-- les monnaies (cartes horizontales compactes) puis le butin ; à droite les héros (deux par ligne) puis
+		-- « Continuer », aligné sur le bas du contenu. La zone entre les monnaies et la hotbar (~200 px) ne
+		-- suffit pas : la hotbar est masquée par le voile (Overlap explicite), les monnaies restent visibles.
+		-- Aucun texte sous 14 px réels jusqu'à MinScale (textes compensés par LootModel.textSize).
+		Phone = {
+			Width = 828, TwoColumns = true, ColumnGap = 16, SideMargin = 0,
+			TitleY = 22, BelowTitle = 36, TitleSize = 34, TitleBox = Vector2.new(320, 44),
+			RayLength = 100, Sparks = Vector2.new(240, 40),
+			FirstClearSize = Vector2.new(150, 24), FirstClearOffset = Vector2.new(180, 0),
+			NewBadge = Vector2.new(72, 20), BadgeLift = 6, -- badges posés au-dessus du coin droit (bas du badge à 6 px sous le bord)
+			CardSize = Vector2.new(136, 48), CardGap = 8, CardsPad = 0, AfterCards = 8, Compact = true,
+			CardNameSize = 14, CardAmountSize = 18,
+			LootGap = 6, AfterLoot = 0,
+			BandSize = Vector2.new(440, 68), BandArt = 52, BandNameSize = 16, BandLineSize = 14, BandMoreSize = 16,
+			ChipSize = Vector2.new(82, 44), ChipIcon = 30, ChipGap = 7, ChipRowWidth = 440, ChipAmountSize = 16, ChipMoreSize = 14,
+			CaptionSize = 14, CaptionHeight = 18, NoteSize = 14, NoteHeight = 18,
+			HeroChip = Vector2.new(178, 58), HeroHeading = 0, HeroGap = 14, HeroPerRow = 2, -- sans intitulé « Héros » (place des badges de niveau)
+			HeroNameSize = 14, HeroLevelSize = 16, HeroBar = 8,
+			ButtonSize = Vector2.new(180, 44), ButtonTextSize = 20,
+			ButtonGap = 12, BottomPad = 0, MinHeight = 0,
+			ReferenceHeight = 390, Margin = 8, MinScale = 0.8, MaxScale = 1.3,
+		},
 	},
 	-- Panneau Quêtes et reveal.
 	Quest = {

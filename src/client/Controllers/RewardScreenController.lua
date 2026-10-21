@@ -20,6 +20,8 @@
 --   7. bouton principal « Continuer » en dernier.
 -- Mise en page : la hauteur du contenu est CALCULÉE (Shared.Sacoche.LootModel.layout, mesures UITheme.Pack.Reward)
 -- et l'échelle tient compte des DEUX axes de l'écran (LootModel.place : entre les monnaies et la hotbar, sinon hotbar masquée).
+-- Téléphone (LootModel.pack, surcharges UITheme.Pack.Reward.Phone) : deux colonnes, monnaies + butin à gauche,
+-- héros (deux par ligne) + « Continuer » à droite, cartes et puces compactes, hotbar masquée.
 -- Défaite : titre Error, sans rayons ni étincelles, sans butin.
 -- API : RewardScreenController.Show(data, onContinue?) ; RewardScreenController.Hide().
 --   data = { Result: "Victory" | "Defeat", FirstClear: boolean?,
@@ -58,10 +60,10 @@ local Animation = UITheme.Animation
 local Spacing = UITheme.Spacing
 local PACK = UITheme.Pack.Reward
 
-local CARD_SIZE = PACK.CardSize
+-- Mesures de la disposition affichée (LootModel.pack : PC / tablette, ou surcharges Phone sur téléphone).
+local L: any = LootModel.pack(Vector2.new(1920, 1080), PACK)
 local CASCADE = 0.05 -- décalage entre deux cartes (design system)
 local RAY_COUNT = 12
-local RAY_LENGTH = 230 -- px, du centre du titre au bout d'un rayon
 local SPARKS = 10
 
 export type Reward = { Kind: string, Amount: number, New: boolean? }
@@ -71,7 +73,6 @@ export type HeroProgress = { InstanceId: string, HeroId: string, XPGranted: numb
 -- Loot : CombatEnded.Loot tel que reçu (lu et validé par LootModel.parse, jamais mélangé à Rewards).
 export type ScreenData = { Result: string, FirstClear: boolean?, Rewards: { Reward }?, Silent: boolean?, Heroes: { HeroProgress }?, Loot: any? }
 
-local HERO_CHIP = PACK.HeroChip
 -- Petits textes de l'écran affiché et leur taille de base : grossis à chaque mise à l'échelle pour rester
 -- lisibles (LootModel.textSize, au moins PACK.MinText px réels).
 local smallTexts: { { Label: TextLabel, Base: number } } = {}
@@ -149,7 +150,7 @@ local function badge(parent: GuiObject, text: string, color: Color3): Frame
 	b.Name = "Badge"
 	b.AnchorPoint = Vector2.new(0.5, 0.5)
 	b.Position = UDim2.new(0.5, 0, 0, 0)
-	b.Size = UDim2.fromOffset(84, 24)
+	b.Size = UDim2.fromOffset(L.NewBadge.X, L.NewBadge.Y)
 	b.BackgroundColor3 = color
 	b.ZIndex = 5
 	b.Parent = parent
@@ -164,7 +165,7 @@ local function card(parent: Instance, reward: Reward, index: number, start: numb
 	local visual = CurrencyVisualConfig.visual(reward.Kind)
 	local frame = Instance.new("Frame")
 	frame.Name = "Carte_" .. reward.Kind
-	frame.Size = UDim2.fromOffset(CARD_SIZE.X, CARD_SIZE.Y)
+	frame.Size = UDim2.fromOffset(L.CardSize.X, L.CardSize.Y)
 	frame.BackgroundColor3 = Colors.Cream
 	frame.BackgroundTransparency = UITheme.Transparency.PanelStrong
 	frame.LayoutOrder = index
@@ -176,29 +177,47 @@ local function card(parent: Instance, reward: Reward, index: number, start: numb
 		border.Thickness = UITheme.Stroke.Thick
 	end
 
-	-- grande zone d'illustration (≥ 60 % de la hauteur), sable semi-transparent
 	local art = Instance.new("Frame")
-	art.Position = UDim2.fromOffset(Spacing.S, Spacing.S + 6)
-	art.Size = UDim2.new(1, -2 * Spacing.S, 0.62, 0)
 	art.BackgroundColor3 = Colors.Sand
 	art.BackgroundTransparency = UITheme.Transparency.PanelStrong
 	art.Parent = frame
 	corner(art, UITheme.Radius.Small)
+	local name = label(frame, if visual then visual.Label else reward.Kind, if L.Compact then L.CardNameSize else Typography.Size.Label, Colors.InkSoft)
+	name.TextXAlignment = Enum.TextXAlignment.Left
+	local amount = label(frame, "×0", if L.Compact then L.CardAmountSize else Typography.Size.Heading, Colors.TextLight, Typography.TextStroke.Medium)
+	if L.Compact then
+		-- téléphone : carte horizontale, monnaie 3D carrée à gauche, nom puis quantité à droite
+		local side = L.CardSize.Y - 2 * Spacing.XS
+		art.Position = UDim2.fromOffset(Spacing.XS, Spacing.XS)
+		art.Size = UDim2.fromOffset(side, side)
+		local left = side + Spacing.XS + Spacing.S
+		name.Position = UDim2.fromOffset(left, Spacing.XS)
+		name.Size = UDim2.new(1, -left - Spacing.XS, 0.5, -Spacing.XS)
+		amount.Position = UDim2.new(0, left, 0.5, 0)
+		amount.Size = UDim2.new(1, -left - Spacing.XS, 0.5, -Spacing.XS)
+		amount.TextXAlignment = Enum.TextXAlignment.Left
+		small(name, L.CardNameSize)
+		small(amount, L.CardAmountSize)
+	else
+		-- grande zone d'illustration (≥ 60 % de la hauteur), sable semi-transparent
+		art.Position = UDim2.fromOffset(Spacing.S, Spacing.S + 6)
+		art.Size = UDim2.new(1, -2 * Spacing.S, 0.62, 0)
+		name.Position = UDim2.new(0, Spacing.S, 0.62, Spacing.S + 6)
+		name.Size = UDim2.new(1, -2 * Spacing.S, 0, 22)
+		amount.AnchorPoint = Vector2.new(1, 1)
+		amount.Position = UDim2.new(1, -Spacing.S, 1, -Spacing.XS)
+		amount.Size = UDim2.fromOffset(90, 30)
+		amount.TextXAlignment = Enum.TextXAlignment.Right
+	end
 	local viewport = CurrencyFx.Preview(reward.Kind, art)
 
-	local name = label(frame, if visual then visual.Label else reward.Kind, Typography.Size.Label, Colors.InkSoft)
-	name.Position = UDim2.new(0, Spacing.S, 0.62, Spacing.S + 6)
-	name.Size = UDim2.new(1, -2 * Spacing.S, 0, 22)
-	name.TextXAlignment = Enum.TextXAlignment.Left
-
-	local amount = label(frame, "×0", Typography.Size.Heading, Colors.TextLight, Typography.TextStroke.Medium)
-	amount.AnchorPoint = Vector2.new(1, 1)
-	amount.Position = UDim2.new(1, -Spacing.S, 1, -Spacing.XS)
-	amount.Size = UDim2.fromOffset(90, 30)
-	amount.TextXAlignment = Enum.TextXAlignment.Right
-
 	if reward.New then
-		badge(frame, "Nouveau", Colors.RoyalRed)
+		local new = badge(frame, "Nouveau", Colors.RoyalRed)
+		if L.Compact then
+			-- carte basse : le badge passe au-dessus du coin droit au lieu de couvrir le nom
+			new.AnchorPoint = Vector2.new(1, 1)
+			new.Position = UDim2.new(1, -Spacing.XS, 0, L.BadgeLift)
+		end
 	end
 
 	local appear = start + (index - 1) * CASCADE
@@ -233,7 +252,7 @@ local function primaryButton(parent: Instance, text: string, onClick: () -> ()):
 	local holder = Instance.new("Frame")
 	holder.Name = "Continuer"
 	holder.AnchorPoint = Vector2.new(0.5, 0)
-	holder.Size = UDim2.fromOffset(220, 56 + UITheme.Shadow.ButtonLip)
+	holder.Size = UDim2.fromOffset(L.ButtonSize.X, L.ButtonSize.Y + L.ButtonLip)
 	holder.BackgroundTransparency = 1
 	holder.Parent = parent
 	local lip = Instance.new("Frame")
@@ -255,7 +274,7 @@ local function primaryButton(parent: Instance, text: string, onClick: () -> ()):
 	gradient.Color = ColorSequence.new(Colors.GoldLight, Colors.GoldDeep)
 	gradient.Rotation = 90
 	gradient.Parent = face
-	local l = label(face, text, Typography.Size.Button, Colors.TextLight, Typography.TextStroke.Medium)
+	local l = label(face, text, L.ButtonTextSize, Colors.TextLight, Typography.TextStroke.Medium)
 	l.ZIndex = 2
 	local scale = Instance.new("UIScale")
 	scale.Parent = holder
@@ -284,7 +303,7 @@ local function rays(parent: Instance): Frame
 	local holder = Instance.new("Frame")
 	holder.Name = "Rayons"
 	holder.AnchorPoint = Vector2.new(0.5, 0.5)
-	holder.Size = UDim2.fromOffset(RAY_LENGTH * 2, RAY_LENGTH * 2)
+	holder.Size = UDim2.fromOffset(L.RayLength * 2, L.RayLength * 2)
 	holder.BackgroundTransparency = 1
 	holder.Parent = parent
 	for i = 1, RAY_COUNT do
@@ -321,7 +340,7 @@ local function sparkles(parent: Instance, delay: number)
 		spark.Rotation = 45
 		local size = random:NextInteger(10, 18)
 		spark.Size = UDim2.fromOffset(size, size)
-		spark.Position = UDim2.new(0.5, random:NextInteger(-230, 230), 0, random:NextInteger(20, 150))
+		spark.Position = UDim2.new(0.5, random:NextInteger(-L.Sparks.X, L.Sparks.X), 0, random:NextInteger(20, L.Sparks.Y))
 		spark.BackgroundColor3 = if i % 3 == 0 then Colors.TextLight else Colors.GoldLight
 		spark.ZIndex = 4
 		spark.Parent = parent
@@ -346,13 +365,13 @@ end
 -- Pastille de ressource : icône du catalogue + « ×n », cadre NEUTRE (aucune rareté, aucune couleur de
 -- rareté pour une ressource). Sans icône publiée : deux lettres du nom.
 local function resourceChip(parent: Instance, resource: LootModel.Resource, order: number): Frame
-	local chip = UIKit.subPanel(parent, UDim2.fromOffset(PACK.ChipSize.X, PACK.ChipSize.Y))
+	local chip = UIKit.subPanel(parent, UDim2.fromOffset(L.ChipSize.X, L.ChipSize.Y))
 	chip.Name = `Ressource_{resource.ResourceId}`
 	chip.LayoutOrder = order
 	local icon = Instance.new("Frame")
 	icon.BackgroundTransparency = 1
-	icon.Position = UDim2.fromOffset(Spacing.XS + 2, (PACK.ChipSize.Y - PACK.ChipIcon) / 2)
-	icon.Size = UDim2.fromOffset(PACK.ChipIcon, PACK.ChipIcon)
+	icon.Position = UDim2.fromOffset(Spacing.XS + 2, (L.ChipSize.Y - L.ChipIcon) / 2)
+	icon.Size = UDim2.fromOffset(L.ChipIcon, L.ChipIcon)
 	icon.Parent = chip
 	if resource.Icon then
 		local image = Instance.new("ImageLabel")
@@ -364,8 +383,8 @@ local function resourceChip(parent: Instance, resource: LootModel.Resource, orde
 	else
 		UIKit.text(icon, InventoryModel.initials(resource.Name), Typography.Size.Caption, { Color = Colors.TextLight })
 	end
-	local left = Spacing.XS + 2 + PACK.ChipIcon + Spacing.XS
-	local amount = small(UIKit.text(chip, `×{resource.AmountText}`, PACK.ChipAmountSize, { Align = Enum.TextXAlignment.Left }), PACK.ChipAmountSize)
+	local left = Spacing.XS + 2 + L.ChipIcon + Spacing.XS
+	local amount = small(UIKit.text(chip, `×{resource.AmountText}`, L.ChipAmountSize, { Align = Enum.TextXAlignment.Left }), L.ChipAmountSize)
 	amount.Name = "Quantite"
 	amount.Position = UDim2.fromOffset(left, 0)
 	amount.Size = UDim2.new(1, -left - Spacing.XS, 1, 0)
@@ -375,7 +394,7 @@ end
 -- Bloc « butin » (#72) : meilleur objet, ligne de pastilles, légende, message de dépassement. Retourne la durée
 -- de l'apparition (s). UN seul son pour tout le bloc.
 local function lootBlock(root: Frame, loot: LootModel.Parsed, chips: { Shown: { LootModel.Resource }, More: number }, layout: LootModel.Layout, start: number): number
-	local center = layout.Width / 2
+	local center = layout.LootX
 	local step = 0
 	local function appear(object: GuiObject)
 		popIn(object, start + step * CASCADE)
@@ -385,8 +404,8 @@ local function lootBlock(root: Frame, loot: LootModel.Parsed, chips: { Shown: { 
 	if best then
 		local head = if loot.MoreItems > 0 then "Meilleur équipement" else "Équipement obtenu"
 		local band = ItemCard.create(root, best, {
-			Variant = "Band", NameSize = PACK.BandNameSize, LineSize = PACK.BandLineSize, ArtSize = PACK.BandArt,
-			Head = head, Size = UDim2.fromOffset(PACK.BandSize.X, PACK.BandSize.Y),
+			Variant = "Band", NameSize = L.BandNameSize, LineSize = L.BandLineSize, ArtSize = L.BandArt,
+			Head = head, Size = UDim2.fromOffset(L.BandSize.X, L.BandSize.Y),
 		})
 		local texts = band:FindFirstChild("Textes")
 		for _, text in if texts then texts:GetChildren() else {} do
@@ -397,7 +416,7 @@ local function lootBlock(root: Frame, loot: LootModel.Parsed, chips: { Shown: { 
 		band.AnchorPoint = Vector2.new(0.5, 0)
 		band.Position = UDim2.fromOffset(center, layout.BandY)
 		if loot.MoreItems > 0 then
-			local more = small(UIKit.text(band, LootModel.moreItemsText(loot.MoreItems), PACK.BandMoreSize, { Color = Colors.GoldLight, Align = Enum.TextXAlignment.Right }), PACK.BandMoreSize)
+			local more = small(UIKit.text(band, LootModel.moreItemsText(loot.MoreItems), L.BandMoreSize, { Color = Colors.GoldLight, Align = Enum.TextXAlignment.Right }), L.BandMoreSize)
 			more.Name = "PlusEquipements"
 			more.AnchorPoint = Vector2.new(1, 0.5)
 			more.Position = UDim2.new(1, -Spacing.M, 0.5, 0)
@@ -410,42 +429,42 @@ local function lootBlock(root: Frame, loot: LootModel.Parsed, chips: { Shown: { 
 		row.Name = "Ressources"
 		row.AnchorPoint = Vector2.new(0.5, 0)
 		row.Position = UDim2.fromOffset(center, layout.ChipsY)
-		row.Size = UDim2.fromOffset(PACK.ChipRowWidth, PACK.ChipSize.Y)
+		row.Size = UDim2.fromOffset(L.ChipRowWidth, L.ChipSize.Y)
 		row.BackgroundTransparency = 1
 		row.Parent = root
 		local rowLayout = Instance.new("UIListLayout")
 		rowLayout.FillDirection = Enum.FillDirection.Horizontal
 		rowLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-		rowLayout.Padding = UDim.new(0, PACK.ChipGap)
+		rowLayout.Padding = UDim.new(0, L.ChipGap)
 		rowLayout.SortOrder = Enum.SortOrder.LayoutOrder
 		rowLayout.Parent = row
 		for index, resource in chips.Shown do
 			appear(resourceChip(row, resource, index))
 		end
 		if chips.More > 0 then
-			local more = UIKit.subPanel(row, UDim2.fromOffset(PACK.ChipSize.X, PACK.ChipSize.Y))
+			local more = UIKit.subPanel(row, UDim2.fromOffset(L.ChipSize.X, L.ChipSize.Y))
 			more.Name = "PlusRessources"
 			more.LayoutOrder = #chips.Shown + 1
-			small(UIKit.text(more, LootModel.moreResourcesText(chips.More), PACK.ChipMoreSize, { Color = Colors.TextMuted }), PACK.ChipMoreSize)
+			small(UIKit.text(more, LootModel.moreResourcesText(chips.More), L.ChipMoreSize, { Color = Colors.TextMuted }), L.ChipMoreSize)
 			appear(more)
 		end
 	end
 	local gained = best ~= nil or #chips.Shown > 0
 	if gained then
-		local caption = small(UIKit.text(root, "Ajoutées à ta Sacoche", PACK.CaptionSize, { Color = Colors.TextMuted }), PACK.CaptionSize)
+		local caption = small(UIKit.text(root, "Ajoutées à ta Sacoche", L.CaptionSize, { Color = Colors.TextMuted }), L.CaptionSize)
 		caption.Name = "Legende"
 		caption.AnchorPoint = Vector2.new(0.5, 0)
 		caption.Position = UDim2.fromOffset(center, layout.CaptionY)
-		caption.Size = UDim2.fromOffset(PACK.ChipRowWidth, PACK.CaptionHeight)
+		caption.Size = UDim2.fromOffset(L.ChipRowWidth, L.CaptionHeight)
 		popIn(caption, start + step * CASCADE)
 		step += 1
 	end
 	if loot.Overflow then
-		local note = small(UIKit.text(root, "Sacoche pleine : équipement non ajouté", PACK.NoteSize, { Color = Colors.TextMuted }), PACK.NoteSize)
+		local note = small(UIKit.text(root, "Sacoche pleine : équipement non ajouté", L.NoteSize, { Color = Colors.TextMuted }), L.NoteSize)
 		note.Name = "SacochePleine"
 		note.AnchorPoint = Vector2.new(0.5, 0)
 		note.Position = UDim2.fromOffset(center, layout.NoteY)
-		note.Size = UDim2.fromOffset(PACK.ChipRowWidth, PACK.NoteHeight)
+		note.Size = UDim2.fromOffset(L.ChipRowWidth, L.NoteHeight)
 		note.TextWrapped = true
 		popIn(note, start + step * CASCADE)
 		step += 1
@@ -498,42 +517,61 @@ end
 local function heroChip(parent: Instance, entry: HeroProgress, index: number, start: number)
 	local info = HeroConfig.Heroes[entry.HeroId]
 	local levelUp = entry.LevelAfter > entry.LevelBefore
-	local chip = UIKit.subPanel(parent, UDim2.fromOffset(HERO_CHIP.X, HERO_CHIP.Y))
+	local size: Vector2 = L.HeroChip
+	local compact = L.Compact == true -- téléphone : nom, puis niveau et « +XP », puis barre ; sans « x / y XP »
+	local pad = if compact then Spacing.XS else Spacing.S
+	local chip = UIKit.subPanel(parent, UDim2.fromOffset(size.X, size.Y))
 	chip.Name = `Heros_{index}`
 	chip.LayoutOrder = index
 	local border = chip:FindFirstChildOfClass("UIStroke")
 	local art = Instance.new("Frame")
 	art.BackgroundColor3 = Colors.Sand
 	art.BackgroundTransparency = UITheme.Transparency.Art
-	art.Position = UDim2.fromOffset(Spacing.S, Spacing.S)
-	art.Size = UDim2.fromOffset(HERO_CHIP.Y - 2 * Spacing.S, HERO_CHIP.Y - 2 * Spacing.S)
+	art.Position = UDim2.fromOffset(pad, pad)
+	art.Size = UDim2.fromOffset(size.Y - 2 * pad, size.Y - 2 * pad)
 	art.Parent = chip
 	corner(art, UITheme.Radius.Small)
 	local model = Icons.heroModel(entry.HeroId)
 	if model then
 		UIKit.portrait(art, model)
 	end
-	local left = HERO_CHIP.Y + Spacing.XS
-	local name = UIKit.text(chip, if info then info.Name else entry.HeroId, Typography.Size.Label, { Align = Enum.TextXAlignment.Left })
-	name.Position = UDim2.fromOffset(left, Spacing.S)
-	name.Size = UDim2.new(1, -left - Spacing.S, 0, 22)
+	local left = size.Y + Spacing.XS
+	local nameSize = if compact then L.HeroNameSize else Typography.Size.Label
+	local levelSize = if compact then L.HeroLevelSize else Typography.Size.Heading
+	local name = UIKit.text(chip, if info then info.Name else entry.HeroId, nameSize, { Align = Enum.TextXAlignment.Left })
 	name.TextTruncate = Enum.TextTruncate.AtEnd
-	local level = UIKit.text(chip, `Nv.{entry.LevelBefore}`, Typography.Size.Heading, { Align = Enum.TextXAlignment.Left })
-	level.Position = UDim2.fromOffset(left, 34)
-	level.Size = UDim2.fromOffset(90, 28)
-	local gain = UIKit.text(chip, `+{entry.XPGranted} XP`, Typography.Size.Heading, { Color = Colors.GoldLight, Align = Enum.TextXAlignment.Right })
-	gain.Position = UDim2.new(1, -Spacing.S - 110, 0, 34)
-	gain.Size = UDim2.fromOffset(110, 28)
-	local bar = UIKit.bar(chip, { Color = Colors.Progress, Size = UDim2.new(1, -left - Spacing.S, 0, 14) })
-	bar.Frame.Position = UDim2.fromOffset(left, 70)
+	local level = UIKit.text(chip, `Nv.{entry.LevelBefore}`, levelSize, { Align = Enum.TextXAlignment.Left })
+	local gain = UIKit.text(chip, `+{entry.XPGranted} XP`, levelSize, { Color = Colors.GoldLight, Align = Enum.TextXAlignment.Right })
+	local bar = UIKit.bar(chip, { Color = Colors.Progress, Size = UDim2.new(1, -left - pad, 0, if compact then L.HeroBar else 14) })
 	local need = entry.XPToNext
 	local maxed = entry.LevelAfter >= entry.MaxLevel
 	local ratio = if maxed then 1 elseif need > 0 then entry.XP / need else 0
 	local before = if levelUp or maxed or need <= 0 then 0 else math.max(entry.XP - entry.XPGranted, 0) / need
 	bar.Set(before)
-	local note = UIKit.text(chip, if maxed then "Niveau max" else `{entry.XP} / {need} XP`, Typography.Size.Caption, { Color = Colors.TextMuted, Align = Enum.TextXAlignment.Left })
-	note.Position = UDim2.fromOffset(left, 90)
-	note.Size = UDim2.new(1, -left - Spacing.S, 0, 18)
+	if compact then
+		local line = (size.Y - 2 * pad - L.HeroBar) / 2 -- deux lignes de texte au-dessus de la barre
+		name.Position = UDim2.fromOffset(left, pad)
+		name.Size = UDim2.new(1, -left - pad, 0, line)
+		level.Position = UDim2.fromOffset(left, pad + line)
+		level.Size = UDim2.new(0.5, -left / 2, 0, line)
+		gain.Position = UDim2.new(0.5, left / 2 - pad, 0, pad + line)
+		gain.Size = UDim2.new(0.5, -left / 2, 0, line)
+		bar.Frame.Position = UDim2.fromOffset(left, size.Y - pad - L.HeroBar)
+		for _, text in { { name, nameSize }, { level, levelSize }, { gain, levelSize } } do
+			small(text[1], text[2])
+		end
+	else
+		name.Position = UDim2.fromOffset(left, Spacing.S)
+		name.Size = UDim2.new(1, -left - Spacing.S, 0, 22)
+		level.Position = UDim2.fromOffset(left, 34)
+		level.Size = UDim2.fromOffset(90, 28)
+		gain.Position = UDim2.new(1, -Spacing.S - 110, 0, 34)
+		gain.Size = UDim2.fromOffset(110, 28)
+		bar.Frame.Position = UDim2.fromOffset(left, 70)
+		local note = UIKit.text(chip, if maxed then "Niveau max" else `{entry.XP} / {need} XP`, Typography.Size.Caption, { Color = Colors.TextMuted, Align = Enum.TextXAlignment.Left })
+		note.Position = UDim2.fromOffset(left, 90)
+		note.Size = UDim2.new(1, -left - Spacing.S, 0, 18)
+	end
 	popIn(chip, start + (index - 1) * CASCADE)
 	task.delay(start + (index - 1) * CASCADE + Animation.Toast.Time, function()
 		if not chip.Parent then
@@ -552,12 +590,12 @@ local function heroChip(parent: Instance, entry: HeroProgress, index: number, st
 		bar.Set(0)
 		bar.Set(ratio, true)
 		level.Text = `Nv.{entry.LevelBefore} → Nv.{entry.LevelAfter}`
-		level.Size = UDim2.fromOffset(170, 28)
+		level.Size = if compact then UDim2.new(1, -left - pad, level.Size.Y.Scale, level.Size.Y.Offset) else UDim2.fromOffset(170, 28)
 		level.TextColor3 = Colors.GoldLight
 		gain.Visible = false
 		local up = UIKit.badge(chip, "NIVEAU SUPÉRIEUR !", Colors.Gold)
-		up.AnchorPoint = Vector2.new(0.5, 0.5)
-		up.Position = UDim2.new(0.5, 0, 0, 0)
+		up.AnchorPoint = if compact then Vector2.new(1, 1) else Vector2.new(0.5, 0.5)
+		up.Position = if compact then UDim2.new(1, -pad, 0, L.BadgeLift) else UDim2.new(0.5, 0, 0, 0)
 		up.ZIndex = 5
 		UIKit.popIn(up, 0, 1.15)
 		UIKit.pop(chip)
@@ -582,7 +620,11 @@ function RewardScreenController.Show(data: ScreenData, onContinue: (() -> ())?)
 	local heroes = if victory then data.Heroes or {} else {}
 	-- butin (#72) : lu à part de Rewards (monnaies), victoire seulement ; entrées inconnues ignorées
 	local loot = if victory then LootModel.parse(data.Loot, LOOT_CONTEXT) else nil
-	local chips = LootModel.chips(if loot then loot.Resources else {}, LootModel.chipSlots(PACK))
+	-- disposition selon l'écran (téléphone : deux colonnes) ; reconstruite si l'écran change de catégorie
+	local camera = Workspace.CurrentCamera
+	L = LootModel.pack(if camera then camera.ViewportSize else Vector2.new(1920, 1080), PACK)
+	local device = L.Device
+	local chips = LootModel.chips(if loot then loot.Resources else {}, LootModel.chipSlots(L))
 	local hasLoot = loot ~= nil and not loot.Empty
 	local layout = LootModel.layout({
 		Cards = #rewards,
@@ -591,7 +633,7 @@ function RewardScreenController.Show(data: ScreenData, onContinue: (() -> ())?)
 		Chips = #chips.Shown + (if chips.More > 0 then 1 else 0),
 		Caption = hasLoot and loot ~= nil and (loot.Best ~= nil or #loot.Resources > 0),
 		Note = hasLoot and loot ~= nil and loot.Overflow,
-	}, PACK)
+	}, L)
 
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "EcranRecompenses"
@@ -627,12 +669,24 @@ function RewardScreenController.Show(data: ScreenData, onContinue: (() -> ())?)
 	root.Parent = gui
 	local uiScale = Instance.new("UIScale")
 	uiScale.Parent = root
-	local camera = Workspace.CurrentCamera
+	local layoutPack = L
 	table.clear(smallTexts)
+	local rebuilding = false
 	local function fit()
-		-- tailles en px pour un écran de 1080 px, réduites si le contenu ne tient pas sur l'un des deux axes ;
-		-- contenu centré entre le bas des monnaies et le haut de la hotbar (jamais par-dessus)
+		-- tailles en px pour l'écran de référence de la disposition (1080 px ; téléphone 390 px), réduites si le
+		-- contenu ne tient pas sur l'un des deux axes ; contenu centré entre le bas des monnaies et le haut de
+		-- la hotbar (sinon hotbar masquée, LootModel.place)
 		local viewport = if camera then camera.ViewportSize else Vector2.new(1920, 1080)
+		if LootModel.pack(viewport, PACK).Device ~= device then
+			-- l'écran change de catégorie (rotation, émulateur) : même écran, reconstruit sans le son du résultat
+			if not rebuilding and current == gui then
+				rebuilding = true
+				local again = table.clone(data)
+				again.Silent = true
+				task.defer(RewardScreenController.Show, again, onContinue)
+			end
+			return
+		end
 		-- AbsolutePosition est mesurée sous la barre de Roblox ; cet écran ignore l'inset : on l'ajoute
 		local inset = GuiService:GetGuiInset().Y
 		local top = 0
@@ -644,7 +698,7 @@ function RewardScreenController.Show(data: ScreenData, onContinue: (() -> ())?)
 		end
 		local bar = GuideTargets.get("Hotbar.Bar")
 		local bottom = if bar then bar.AbsolutePosition.Y + inset else viewport.Y
-		local placed = LootModel.place(viewport, Vector2.new(layout.Width, layout.Height), PACK, top, bottom)
+		local placed = LootModel.place(viewport, Vector2.new(layout.Width, layout.Height), layoutPack, top, bottom)
 		uiScale.Scale = placed.Scale
 		root.Position = UDim2.new(0.5, 0, 0, placed.Y)
 		-- zone trop étroite : le contenu passe sur la hotbar, qui est alors masquée (jamais en silence)
@@ -652,7 +706,7 @@ function RewardScreenController.Show(data: ScreenData, onContinue: (() -> ())?)
 		mask.Position = UDim2.fromOffset(0, bottom)
 		mask.Size = UDim2.new(1, 0, 0, math.max(viewport.Y - bottom, 0))
 		for _, entry in smallTexts do
-			entry.Label.TextSize = LootModel.textSize(entry.Base, placed.Scale, PACK)
+			entry.Label.TextSize = LootModel.textSize(entry.Base, placed.Scale, layoutPack)
 		end
 	end
 	fit()
@@ -679,18 +733,18 @@ function RewardScreenController.Show(data: ScreenData, onContinue: (() -> ())?)
 	local titleFrame = Instance.new("Frame")
 	titleFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 	titleFrame.Position = UDim2.fromOffset(centerX, titleY)
-	titleFrame.Size = UDim2.fromOffset(560, 80)
+	titleFrame.Size = UDim2.fromOffset(L.TitleBox.X, L.TitleBox.Y)
 	titleFrame.BackgroundTransparency = 1
 	titleFrame.ZIndex = 3
 	titleFrame.Parent = root
-	local title = label(titleFrame, if victory then "Victoire !" else "Défaite…", Typography.Size.Hero, if victory then Colors.Gold else Colors.Error, Typography.TextStroke.Large)
+	local title = label(titleFrame, if victory then "Victoire !" else "Défaite…", L.TitleSize, if victory then Colors.Gold else Colors.Error, Typography.TextStroke.Large)
 	title.ZIndex = 3
 	popIn(titleFrame, 0.1)
 
 	if victory and data.FirstClear then
 		local first = badge(root, "Première victoire", Colors.RoyalRed)
-		first.Size = UDim2.fromOffset(170, 30)
-		first.Position = UDim2.fromOffset(centerX, titleY + 58)
+		first.Size = UDim2.fromOffset(L.FirstClearSize.X, L.FirstClearSize.Y)
+		first.Position = UDim2.fromOffset(centerX + L.FirstClearOffset.X, titleY + L.FirstClearOffset.Y)
 		popIn(first, 0.35)
 	end
 
@@ -698,15 +752,15 @@ function RewardScreenController.Show(data: ScreenData, onContinue: (() -> ())?)
 	local cards = Instance.new("Frame")
 	cards.Name = "Cartes"
 	cards.AnchorPoint = Vector2.new(0.5, 0)
-	cards.Position = UDim2.fromOffset(centerX, layout.CardsY)
-	cards.Size = UDim2.fromOffset(PACK.ChipRowWidth, CARD_SIZE.Y + 20)
+	cards.Position = UDim2.fromOffset(layout.CardsX, layout.CardsY)
+	cards.Size = UDim2.fromOffset(L.ChipRowWidth, L.CardSize.Y + 2 * L.CardsPad)
 	cards.BackgroundTransparency = 1
 	cards.Parent = root
 	local cardsLayout = Instance.new("UIListLayout")
 	cardsLayout.FillDirection = Enum.FillDirection.Horizontal
 	cardsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	cardsLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-	cardsLayout.Padding = UDim.new(0, Spacing.XL)
+	cardsLayout.Padding = UDim.new(0, L.CardGap)
 	cardsLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	cardsLayout.Parent = cards
 	local cardsStart = 0.45
@@ -728,27 +782,37 @@ function RewardScreenController.Show(data: ScreenData, onContinue: (() -> ())?)
 		local section = Instance.new("Frame")
 		section.Name = "Heros"
 		section.AnchorPoint = Vector2.new(0.5, 0)
-		section.Position = UDim2.fromOffset(centerX, heroesY)
-		section.Size = UDim2.fromOffset(layout.Width - 2 * PACK.SideMargin, layout.HeroesHeight)
+		section.Position = UDim2.fromOffset(layout.HeroesX, heroesY)
+		section.Size = UDim2.fromOffset(layout.HeroesWidth, layout.HeroesHeight)
 		section.BackgroundTransparency = 1
 		section.Parent = root
-		local heading = small(UIKit.text(section, "Héros", Typography.Size.Label, { Color = Colors.TextMuted }), Typography.Size.Label)
-		heading.Size = UDim2.new(1, 0, 0, PACK.HeroHeading - 4)
-		popIn(heading, heroesStart)
-		local row = Instance.new("Frame")
-		row.BackgroundTransparency = 1
-		row.Position = UDim2.fromOffset(0, PACK.HeroHeading)
-		row.Size = UDim2.new(1, 0, 0, layout.HeroesHeight - PACK.HeroHeading)
-		row.Parent = section
-		local rowLayout = Instance.new("UIListLayout")
-		rowLayout.FillDirection = Enum.FillDirection.Horizontal
-		rowLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-		rowLayout.Wraps = false -- une seule ligne : LootModel.layout élargit l'écran pour tous les héros
-		rowLayout.Padding = UDim.new(0, PACK.HeroGap)
-		rowLayout.SortOrder = Enum.SortOrder.LayoutOrder
-		rowLayout.Parent = row
+		-- téléphone (HeroHeading = 0) : pas d'intitulé, la place sert aux badges « NIVEAU SUPÉRIEUR ! »
+		if L.HeroHeading > 0 then
+			local heading = small(UIKit.text(section, "Héros", Typography.Size.Label, { Color = Colors.TextMuted }), Typography.Size.Label)
+			heading.Size = UDim2.new(1, 0, 0, L.HeroHeading - 4)
+			popIn(heading, heroesStart)
+		end
+		-- PC, tablette : une seule ligne (LootModel.layout élargit l'écran) ; téléphone : HeroPerRow par ligne,
+		-- chaque ligne centrée
+		local rows: { Frame } = {}
+		for r = 1, layout.HeroRows do
+			local row = Instance.new("Frame")
+			row.Name = `Ligne_{r}`
+			row.BackgroundTransparency = 1
+			row.Position = UDim2.fromOffset(0, L.HeroHeading + (r - 1) * (L.HeroChip.Y + L.HeroGap))
+			row.Size = UDim2.new(1, 0, 0, L.HeroChip.Y)
+			row.Parent = section
+			local rowLayout = Instance.new("UIListLayout")
+			rowLayout.FillDirection = Enum.FillDirection.Horizontal
+			rowLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+			rowLayout.Wraps = false
+			rowLayout.Padding = UDim.new(0, L.HeroGap)
+			rowLayout.SortOrder = Enum.SortOrder.LayoutOrder
+			rowLayout.Parent = row
+			rows[r] = row
+		end
 		for index, entry in heroes do
-			heroChip(row, entry, index, heroesStart + 0.1)
+			heroChip(rows[math.ceil(index / layout.HeroPerRow)], entry, index, heroesStart + 0.1)
 		end
 	end
 
@@ -761,7 +825,7 @@ function RewardScreenController.Show(data: ScreenData, onContinue: (() -> ())?)
 			task.delay(Animation.Close.Time, onContinue)
 		end
 	end)
-	button.Position = UDim2.fromOffset(centerX, layout.ButtonY) -- sous le dernier bloc affiché (défaite : sous le titre)
+	button.Position = UDim2.fromOffset(layout.ButtonX, layout.ButtonY) -- sous le dernier bloc affiché (défaite : sous le titre)
 	popIn(button, if #rewards > 0 or #heroes > 0 or lootDuration > 0 then buttonDelay else 0.45, 1.06)
 
 	fit() -- petits textes créés : leur taille suit l'échelle

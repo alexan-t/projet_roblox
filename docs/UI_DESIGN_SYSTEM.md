@@ -292,12 +292,40 @@ ignorée. **Mise en page à hauteur calculée** : `Shared.Sacoche.LootModel.layo
 `UITheme.Pack.Reward`) donne les positions et la hauteur du contenu ; l'échelle (`LootModel.place`) part de
 la référence 1080 px et se réduit si le contenu ne tient pas sur la hauteur **ou** la largeur de la **zone
 libre** : entre le bas des monnaies et le haut de la hotbar, comme la Sacoche, jamais par-dessus la hotbar
-(plancher `MinScale` ; zone trop étroite : tout l'écran). Les héros engagés restent sur **une seule ligne**
+(plancher `MinScale` ; zone trop étroite : hotbar masquée, contenu jusqu'au bas de l'écran, voir téléphone
+ci-dessous). Les héros engagés restent sur **une seule ligne**
 de puces identiques : l'écran s'élargit au lieu de passer à la ligne. Les petits textes du butin
 (« ×n », « +N », légende, message, « Héros ») sont grossis selon l'échelle pour faire au moins
 `MinText` = 14 px réels (`LootModel.textSize`), leurs boîtes sont dimensionnées pour le pire cas.
 Recette #96 (2026-10-20) : avant correction, bouton « Continuer » sur la hotbar et textes à 8–10 px réels
 dans le viewport Studio 1651 × 633.
+
+**Écran de fin sur téléphone (paysage, référence 844 × 390).** Sur téléphone (hauteur < 520, mêmes
+seuils que la Sacoche et l'Expédition, `LootModel.pack`), les surcharges `UITheme.Pack.Reward.Phone`
+remplacent la disposition PC, qui y tombait à l'échelle 0,40 (textes à 11 px réels et moins) :
+
+- **titre** « Victoire ! » à 34 px sur une ligne de 44 px, rayons courts ; « Première victoire » **à
+  droite** du titre ;
+- **deux colonnes** sous le titre : à gauche les **monnaies** (cartes horizontales 136 × 48, monnaie 3D
+  carrée, nom puis « ×n ») puis le **butin**, inchangé dans ses règles (bandeau `ItemCard` 440 × 68 avec
+  la rareté en texte, une ligne de 5 pastilles neutres 82 × 44 dont « +N autres », légende, message
+  `Overflow`) ; à droite les **héros**, deux par ligne (puces 178 × 58 : portrait, nom, « Nv. » et
+  « +XP », barre ; sans « x / y XP » ni intitulé « Héros »), puis « **Continuer** » (180 × 44) aligné
+  sur le bas du contenu. Sans monnaie ni butin (défaite, héros seuls), la colonne droite est centrée ;
+- badges « Nouveau » et « NIVEAU SUPÉRIEUR ! » **posés au-dessus du coin droit** de leur carte
+  (`BadgeLift`), jamais sur un nom ;
+- mesures en px réels à l'échelle 1 (référence 390 px de haut, `MinScale` 0,8) ; **tous** les textes du
+  téléphone, cartes et héros compris, passent par `LootModel.textSize` : jamais sous 14 px réels.
+
+Placement : la zone libre entre les monnaies et la hotbar (~200 px) ne suffit pas au contenu complet
+(280 px). La hotbar est alors **masquée explicitement** (voile `MasqueHotbar`), le contenu descend jusqu'au
+bas de l'écran en restant **sous les monnaies** (`LootModel.place` : plein écran seulement si même cette
+zone ne suffit pas). Un écran court (butin léger, héros seuls) tient au-dessus de la hotbar sans la masquer.
+Si l'écran change de catégorie pendant l'affichage (rotation, émulateur), l'écran de fin est reconstruit
+sans rejouer le son du résultat.
+Recette téléphone (2026-10-21) : vrai `RewardScreenController` et vrai `UITheme` dans Studio, appareil
+844 × 390 simulé au centre du viewport (l'émulateur d'appareils n'est pas pilotable par MCP) ; 0, 2 et
+4 héros, échelle 1, plus petit texte mesuré 14 px réels ; PC 1651 × 633 identique à la recette #96.
 Tests : `tools/test-sacoche.ps1` (modèles purs), `tests/loot-ui.test.mjs` (règles de rareté, état,
 libellés). Aperçu Studio : `Workspace.ApercuEcranRecompenses = true` fait défiler trois cas
 (ressources seules ; équipement + ressources + XP ; beaucoup de ressources + Sacoche pleine).
