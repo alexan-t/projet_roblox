@@ -269,6 +269,9 @@ sont rangés dans `ServerStorage.ZonesRangees_<plot>` et les nouveaux sont copi�
 `ServerStorage.Assets.ZonesArene`. Chaque gabarit porte ZoneId et Nom, et son pivot est celui
 de l'arène de référence. `PivotTo(arena:GetPivot())` conserve les positions relatives sur
 les huit plots. Chaque décor fournit `SourcesEnnemis.FrontEnnemi` et les sources d'entrée.
+Un décor peut déplacer ses repères : dans la Zone 3, sans plateau, `Tente` et `HautRampe` (sorties du boss et
+des ennemis « camp ») sont devant la grande porte du château, `BordPlateau1/2` au pied de la porte et
+`SommetTour` sur la corniche du donjon (`moveMarkers` dans `tools/studio-zones-assets.luau`).
 
 Le décor reste visible pendant l'outro. Une relance explicite avant sa fin installe néanmoins
 le décor du nouveau combat avant sa création. Un décor ou un front absent refuse le lancement.

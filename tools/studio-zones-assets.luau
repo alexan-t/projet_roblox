@@ -729,6 +729,83 @@ local function iceChunks(parent: Instance, at: Vector3, ice: Color3, snow: Color
 	end
 end
 
+-- Igloo : dôme de neige à joints de blocs (anneaux), tunnel d'entrée tourné vers l'arène
+local function igloo(parent: Instance, at: Vector3, yaw: number, C: { [string]: Color3 }, scale: number?)
+	local k = scale or 1
+	local r = rotY(yaw)
+	ball(parent, "Dome", V(9, 7, 9) * k, C.Snow, at + V(0, 0.6, 0) * k)
+	for i = 1, 2 do
+		ball(parent, "Joint", V(9.2 - i * 1.6, 0.4, 9.2 - i * 1.6) * k, C.SnowShade, at + V(0, 1 + i * 1.6, 0) * k)
+	end
+	ball(parent, "Tunnel", V(4, 4, 4.6) * k, C.Snow, at + r:VectorToWorldSpace(V(0, 0.6, 4.2) * k), r)
+	ball(parent, "Entree", V(2.2, 2.6, 1) * k, C.Deep, at + r:VectorToWorldSpace(V(0, 1, 6.4) * k), r)
+end
+
+-- Mare gelée avec un trou de pêche, son tabouret et sa canne
+local function frozenPond(parent: Instance, at: Vector3, d: number, C: { [string]: Color3 })
+	piece(parent, "GlaceMare", Enum.PartType.Cylinder, V(0.15, d, d), C.Ice, at + V(0, 0.03, 0), FLAT, Enum.Material.Ice)
+	for i = 0, 6 do
+		local a = i * math.pi * 2 / 7
+		ball(parent, "BordNeige", V(3, 1, 2), C.Snow, at + V(math.cos(a) * d * 0.52, 0.2, math.sin(a) * d * 0.52), rotY(-a))
+	end
+	piece(parent, "TrouPeche", Enum.PartType.Cylinder, V(0.16, 2.2, 2.2), C.Deep, at + V(2, 0.05, 1), FLAT)
+	column(parent, "Tabouret", 1.2, 1.4, hex("#6A5A4C"), at + V(3.8, 0, 2.4))
+	piece(parent, "Canne", Enum.PartType.Cylinder, V(4, 0.2, 0.2), hex("#6A5A4C"), at + V(3, 1.8, 1.6), CFrame.Angles(0, 0.6, 0.5))
+end
+
+-- Défenses de mammouth croisées en arche, à demi enneigées
+local function mammothTusks(parent: Instance, at: Vector3, yaw: number, C: { [string]: Color3 })
+	local r = rotY(yaw)
+	local ivory = hex("#E8DCC0")
+	for _, side in { -1, 1 } do
+		for i = 0, 2 do
+			ball(parent, "Defense", V(1.4 - i * 0.25, 4, 1.4 - i * 0.25), ivory,
+				at + r:VectorToWorldSpace(V(side * (3.6 - i * 1.3), 1.6 + i * 3.2, 0)), r * CFrame.Angles(0, 0, side * (0.15 + i * 0.45)))
+		end
+	end
+	ball(parent, "NeigeDefense", V(6, 1.6, 3), C.Snow, at + V(0, 0.4, 0), r)
+end
+
+-- Arbre mort givré : tronc sombre, branches nues blanchies de givre
+local function frostTree(parent: Instance, at: Vector3, h: number, yaw: number, C: { [string]: Color3 })
+	local bark = hex("#4A4A58")
+	ball(parent, "Tronc", V(1.8, h, 1.8), bark, at + V(0, h * 0.45, 0), rotY(yaw) * CFrame.Angles(0, 0, 0.06))
+	for _, br in { { 0.6, 0.7, 1.0 }, { 0.75, -0.8, 2.2 }, { 0.88, 0.5, 4.1 } } do
+		local len = h * 0.45
+		ball(parent, "Branche", V(0.8, len, 0.8), bark, at + V(0, h * br[1], 0) + rotY(yaw + br[3]):VectorToWorldSpace(V(0, 0, len * 0.3)),
+			rotY(yaw + br[3]) * CFrame.Angles(br[2], 0, 0))
+		ball(parent, "Givre", V(1.4, len * 0.7, 1.4), C.IceLight, at + V(0, h * br[1] + len * 0.18, 0) + rotY(yaw + br[3]):VectorToWorldSpace(V(0, 0, len * 0.42)),
+			rotY(yaw + br[3]) * CFrame.Angles(br[2], 0, 0), Enum.Material.Ice)
+	end
+	ball(parent, "NeigePied", V(4, 1.4, 3.4), C.Snow, at + V(0, 0.2, 0), rotY(yaw))
+end
+
+-- Repères de sortie des ennemis du décor : sans plateau, la rampe, la porte et les bords du plateau
+-- deviennent la grande porte du château (les ennemis la franchissent puis rejoignent le front) ;
+-- le sommet de la tour devient la corniche du donjon, d'où le boss saute.
+local function moveMarkers(m: Instance)
+	local sources = m:FindFirstChild("SourcesEnnemis")
+	if not sources then return end
+	local function place(name: string, at: Vector3, steps: { Vector3 }?)
+		local marker = sources:FindFirstChild(name)
+		if not marker or not marker:IsA("BasePart") then return end
+		local function put(part: BasePart, pos: Vector3)
+			local world = PIVOT:PointToWorldSpace(Vector3.new(pos.X, 0, pos.Z))
+			part.CFrame = CFrame.new(world.X, GROUND_Y + pos.Y, world.Z) * PIVOT.Rotation
+		end
+		put(marker, at)
+		for i, step in steps or {} do
+			local child = marker:FindFirstChild(`Etape{i}`)
+			if child and child:IsA("BasePart") then put(child, step) end
+		end
+	end
+	place("Tente", V(0, 0, -56), { V(0, 0, -46), V(0, 0, -36) })
+	place("HautRampe", V(0, 0, -56), { V(0, 0, -40) })
+	place("BordPlateau1", V(-5, 0, -54))
+	place("BordPlateau2", V(5, 0, -54))
+	place("SommetTour", V(0, 26.8, -59.4))
+end
+
 local function glacialRealm(m: Instance, C: { [string]: Color3 })
 	-- rempart : couronne de rochers sombres coiffés de neige, congères au pied côté arène, cristaux de glace
 	local r = Instance.new("Folder")
@@ -771,13 +848,24 @@ local function glacialRealm(m: Instance, C: { [string]: Color3 })
 	end
 	local window = ball(c, "Fenetre", V(3, 4.4, 0.8), C.Glow, V(0, 20, -58.9), nil, Enum.Material.Neon)
 	light(window, C.Glow, 22, 1.2)
+	-- grande porte au pied du donjon : les ennemis et le boss de la zone en sortent (repères SourcesEnnemis)
+	piece(c, "FondPorte", Enum.PartType.Block, V(7, 8, 0.6), C.Deep, V(0, 4, -58.6))
+	ball(c, "ArcPorte", V(7, 5, 0.6), C.Deep, V(0, 8, -58.6))
+	for _, side in { -1, 1 } do
+		column(c, "MontantPorte", 9, 1.8, C.Stone:Lerp(Color3.new(0, 0, 0), 0.12), V(side * 4.3, 0, -58))
+		ball(c, "GivreMontant", V(2.2, 1.4, 2.2), C.Snow, V(side * 4.3, 9.2, -58))
+	end
+	ball(c, "ArcGlace", V(11, 4.4, 2.4), C.IceLight, V(0, 10.4, -57.8), nil, Enum.Material.Ice)
+	ball(c, "NeigeArc", V(9, 1.4, 2.2), C.Snow, V(0, 12.4, -57.8))
+	local seuil = ball(c, "LueurSeuil", V(6, 0.4, 1.6), C.Glow, V(0, 0.2, -57.6), nil, Enum.Material.Neon)
+	light(seuil, C.Glow, 12, 0.8)
 	-- glacier : dalles de glace inclinées qui s'appuient contre le château (bleu profond au pied, clair en haut),
 	-- hérissées de grands cristaux ; jamais sur le plateau des sorties (x > 8,4 et z > -54)
 	for _, g in {
 		{ -13, 8, -59, 22, 9, 7, 0.1, 0.55, C.IceDeep },
 		{ 12, 7, -60, 20, 8, 7, -0.05, -0.5, C.IceDeep },
-		{ -4, 5, -56.5, 16, 7, 6, 0.25, 0.1, C.Ice },
-		{ 5, 4, -57, 12, 6, 6, 0.3, -0.15, C.Ice },
+		{ -13, 5, -56, 10, 7, 6, 0.25, 0.1, C.Ice },
+		{ 13, 4, -57, 10, 6, 6, 0.3, -0.15, C.Ice },
 		{ -18, 14, -64, 16, 8, 8, 0, 0.9, C.Ice },
 		{ 17, 12, -66, 14, 8, 8, 0, -0.85, C.Ice },
 		{ -7, 16, -61, 10, 6, 6, 0.3, 0.4, C.IceLight },
@@ -786,7 +874,7 @@ local function glacialRealm(m: Instance, C: { [string]: Color3 })
 		local slab = ball(c, "Glacier", V(g[4], g[5], g[6]), g[9], V(g[1], g[2], g[3]), CFrame.Angles(g[7], 0, g[8]), Enum.Material.Ice)
 		slab.Transparency = 0.08
 	end
-	for _, cr in { { -22, 0, -58, 10 }, { -12, 4, -56, 8 }, { -5, 0, -53, 11 }, { 5, 0, -53, 8 }, { 14, 3, -57, 9 }, { 22, 0, -62, 10 },
+	for _, cr in { { -22, 0, -58, 10 }, { -12, 4, -56, 8 }, { -9, 0, -52, 11 }, { 10, 0, -52, 8 }, { 14, 3, -57, 9 }, { 22, 0, -62, 10 },
 		{ -18, 16, -63, 8 }, { 17, 13, -66, 8 }, { -3, 19, -60, 7 } } do
 		iceCrystal(c, V(cr[1], cr[2], cr[3]), cr[4], C.IceLight)
 	end
@@ -844,7 +932,7 @@ local function glacialRealm(m: Instance, C: { [string]: Color3 })
 	-- allée : neige tassée (hors cases des héros), cristaux à la place des piliers, lanternes à l'entrée
 	local a = Instance.new("Folder")
 	a.Name, a.Parent = "AlleeGivre", m
-	for _, band in { { -15, 11, 46 }, { 42, 9, 14 } } do
+	for _, band in { { -22, 11, 60 }, { 42, 9, 14 } } do
 		-- bande ovale de neige tassée (disque étiré par un SpecialMesh cylindre), hors cases des héros
 		local strip = piece(a, "NeigeTassee", Enum.PartType.Block, V(0.15, band[2], band[3]), C.SnowShade, V(0, 0.02, band[1]), FLAT)
 		local oval = Instance.new("SpecialMesh")
@@ -877,20 +965,26 @@ local function glacialRealm(m: Instance, C: { [string]: Color3 })
 		ball(v, "Congere", V(6, 2, 4), C.Snow, at + V(1.6, 0.2, -2.2))
 	end
 
-	-- ossature des sorties (plateau, rampe, porte, tour) en roche enneigée ; congères aux coins du plateau
-	frame(v, { Body = C.Rock, Top = C.Snow, Trim = C.RockLight, Glow = C.Glow, Dark = hex("#1E3C6E") }, function(parent, top)
-		ball(parent, "DomeVigie", V(5, 3.2, 5), C.Snow, top + V(0, 0.6, 0))
-		iceCrystal(parent, top + V(0, 1.6, 0), 4, C.Ice, C.Glow)
-	end)
-	for _, at in { V(9.6, 2.6, -53.4), V(34.2, 2.6, -53.4), V(34.2, 2.6, -35) } do
-		ball(v, "NeigePlateau", V(6, 2.2, 4.4), C.Snow, at)
+	-- plus de plateau (sortie de la Zone 1) : les ennemis sortent de la grande porte du château.
+	-- À sa place et autour : igloos, mare gelée et trou de pêche, défenses de mammouth, arbres morts givrés.
+	local b = Instance.new("Folder")
+	b.Name, b.Parent = "VieGlaciaire", m
+	igloo(b, V(26, 0, -44), 0.35, C)
+	igloo(b, V(-36, 0, -34), -0.5, C, 0.75)
+	frozenPond(b, V(30, 0, -16), 13, C)
+	mammothTusks(b, V(-24, 0, -46), 0.2, C)
+	for _, t in { { -20, -40, 11, 0.4 }, { 40, -38, 12, -0.6 }, { 46, -4, 10, 1.2 } } do
+		frostTree(b, V(t[1], 0, t[2]), t[3], t[4], C)
 	end
-	-- pied de la tour : rochers enneigés et cristal, pour qu'elle sorte de la roche au lieu d'un simple fût
-	for _, rk in { { 27.2, 4.4, -51.6, 5, 4.6, 4.6, 0.3 }, { 33.6, 4.2, -46.6, 4.6, 4.2, 4.2, -0.4 }, { 32.6, 4, -52.2, 4, 3.6, 3.6, 0.8 } } do
-		ball(v, "RocheTour", V(rk[4], rk[5], rk[6]), C.Rock, V(rk[1], rk[2], rk[3]), rotY(rk[7]))
-		ball(v, "NeigeRocheTour", V(rk[4] * 0.8, 1.2, rk[6] * 0.8), C.Snow, V(rk[1], rk[2] + rk[5] * 0.42, rk[3]), rotY(rk[7]))
+	for _, at in { V(16, 0, -50), V(34, 0, -52), V(-16, 0, -46) } do
+		ball(b, "Congere", V(8, 2.4, 6), C.Snow, at + V(0, 0.2, 0), rotY(at.X))
 	end
-	iceCrystal(v, V(34.4, 3.3, -50.4), 6, C.Ice)
+	-- petits cristaux au pied du rempart, côté arène
+	for i, p in enclosure(6) do
+		if i % 4 == 2 then
+			iceCrystal(b, p.at - (p.at * V(1, 0, 1)).Unit * 9, 3 + (i % 3), C.IceLight)
+		end
+	end
 end
 
 local BUILD = {}
@@ -942,10 +1036,11 @@ end
 
 ---------------------------------------------------------------- Zone 3 : vallée glaciaire du Royaume Gelé
 BUILD[3] = function(m: Instance)
+	moveMarkers(m)
 	glacialRealm(m, {
 		Snow = hex("#F2F7FB"), SnowShade = hex("#D6E3EE"), Rock = hex("#5E7488"), RockLight = hex("#8197AC"),
 		IceDeep = hex("#4F9BD0"), Ice = hex("#8CC8EE"), IceLight = hex("#CDEBFA"), Glow = hex("#6FE3FF"),
-		Roof = hex("#2E4E7E"), Stone = hex("#8A98A6"), Pine = hex("#2E5A44"), Iron = hex("#3E4A5A"),
+		Roof = hex("#2E4E7E"), Stone = hex("#8A98A6"), Pine = hex("#2E5A44"), Iron = hex("#3E4A5A"), Deep = hex("#1E3C6E"),
 	})
 end
 

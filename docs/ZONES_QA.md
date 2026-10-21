@@ -330,3 +330,20 @@ Captures : [vue d'ensemble](../automation/screenshots/zones/zone3-gele-v2-overvi
 | Calottes de neige | KO non bloquant | Calottes du rempart encore un peu plates en vue rasante |
 
 **Verdict : PASS** (1 KO non bloquant). Non testé : combat en Play dans ce décor.
+
+### Zone 3 — grande porte et décors du biome, 22 octobre 2026
+
+Retour : le plateau de la Zone 1 (d'où venait le boss) n'a pas sa place ici, et la zone fait vide.
+Plateau, rampe, porte et tour retirés ; **grande porte** au pied du donjon (fond bleu nuit, montants de pierre,
+arche de glace, seuil lumineux). Repères déplacés sur la porte (`Tente`, `HautRampe`, `BordPlateau1/2`) et sur la
+corniche du donjon (`SommetTour`) : le Roi sans Été (CampBoss : DescenteRampe puis SortieTente) sort du château.
+Décors ajoutés : deux igloos, mare gelée avec trou de pêche, tabouret et canne, défenses de mammouth en arche,
+trois arbres morts givrés, congères, petits cristaux au pied du rempart. Allée de neige prolongée jusqu'à la porte,
+glacier écarté pour dégager le passage.
+
+Captures : [vue d'ensemble](../automation/screenshots/zones/zone3-gele-v3-overview.jpg),
+[porte](../automation/screenshots/zones/zone3-gele-v3-porte.jpg),
+[vue de combat](../automation/screenshots/zones/zone3-gele-v3-combat.jpg).
+
+**Verdict visuel : PASS** (KO non bloquant inchangé : calottes un peu plates). **Non testé en Play** : la sortie
+réelle des ennemis par la porte ; à contrôler au prochain combat de la Zone 3.
