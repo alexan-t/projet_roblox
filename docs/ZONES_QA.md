@@ -257,7 +257,10 @@ zone : il l'y remplace désormais par le nouveau décor.
 Correction du sol du fond : le cercle `SolZone` s'arrêtait vers z -54 alors que le rempart descend
 jusqu'à z -74 ; l'herbe du plot (teintée olive par la vitrine) apparaissait derrière la pyramide.
 Nappe de sable `SolZone.FondArriere` ajoutée ([capture](../automation/screenshots/zones/zone2-sables-fond-sol.jpg)).
-Les zones 3 à 6 utilisent le même cercle et le même rempart : à vérifier.
+Les zones 3 à 6 avaient le même trou (même cercle, même rempart) : la nappe est désormais créée par
+`groundOf` pour toutes les zones et a été ajoutée aux gabarits et aux vitrines des zones 3 à 6, à la couleur
+du sol de chaque zone ([zone 3](../automation/screenshots/zones/zone3-fond-sol.jpg),
+[zone 5](../automation/screenshots/zones/zone5-fond-sol.jpg)).
 
 | Critère | Grille | Observation |
 | --- | --- | --- |

@@ -238,6 +238,12 @@ local function groundOf(parent: Instance, colors: { Color3 })
 	local top = GROUND_TOP - GROUND_Y
 	piece(parent, "Fond", Enum.PartType.Cylinder, Vector3.new(0.4, 112, 112), colors[1], Vector3.new(0.1, top - 0.2, 2.3), FLAT)
 	piece(parent, "FondAvant", Enum.PartType.Block, Vector3.new(112, 0.4, 47.7), colors[1], Vector3.new(0.1, top - 0.2, 26.15))
+	-- fond : le cercle s'arrête vers z -54 alors que le rempart des décors descend jusqu'à z -74 ; nappe elliptique
+	-- (même centre et rayons que le rempart), 0,015 stud sous le cercle pour éviter le z-fighting
+	local back = piece(parent, "FondArriere", Enum.PartType.Block, Vector3.new(0.4, 118, 110), colors[1], Vector3.new(0, top - 0.215, -20), FLAT)
+	local disc = Instance.new("SpecialMesh")
+	disc.MeshType = Enum.MeshType.Cylinder
+	disc.Parent = back
 	local patches = { { -30, 26, 26 }, { 32, 30, 22 }, { -36, -26, 26 }, { 34, -30, 22 }, { -4, -44, 20 }, { 40, 4, 16 }, { -42, 6, 16 } }
 	for index, p in patches do
 		piece(parent, "Tache", Enum.PartType.Cylinder, Vector3.new(0.4, p[3], p[3]), colors[if index % 2 == 0 then 2 else 3],
@@ -535,13 +541,6 @@ local function desertRealm(m: Instance, sand: Color3, stone: Color3, pale: Color
 	local terracotta, wood, cloth, bone = hex("#B4643C"), hex("#9C8058"), hex("#A8452E"), hex("#E8DCC0")
 	local bands = { hex("#B98A62"), hex("#D4AA80"), hex("#A87652") }
 
-	-- sol du fond : le cercle de SolZone s'arrête vers z -54 alors que le rempart descend jusqu'à z -74 ;
-	-- nappe de sable elliptique (même centre et rayons que le rempart), juste sous le cercle pour éviter le z-fighting
-	local back = piece(m:FindFirstChild("SolZone") or m, "FondArriere", Enum.PartType.Block, V(0.4, 118, 110), hex("#D2B078"),
-		V(0, (GROUND_TOP - GROUND_Y) - 0.215, -20), FLAT)
-	local disc = Instance.new("SpecialMesh")
-	disc.MeshType = Enum.MeshType.Cylinder
-	disc.Parent = back
 
 	-- signature : une énorme tête de statue qui sort du sable, côté est, tournée vers l'entrée
 	local t = Instance.new("Folder")
