@@ -1522,6 +1522,62 @@ local function blastFurnace(f: Instance, at: Vector3, C: { [string]: Color3 })
 	ball(f, "MineraiSeau", V(2.2, 1, 2.2), hex("#5A3A2A"), hookX + V(0, armY - 7.5, 0))
 end
 
+-- Limite légère entre l'arène et l'avant du plot (portique, royaume) : muret bas de basalte, poteaux de fer
+-- reliés par des chaînes pendantes, braseros, roches ; un passage au centre (|x| < 10), en face du portique,
+-- encadré de deux piliers à brasero et bannière. Purement visuel (aucune collision).
+local function frontBoundary(f: Instance, z: number, C: { [string]: Color3 })
+	local function zAt(x: number): number
+		return z - (math.abs(x) / 50) ^ 2 * 5 -- légère courbe vers l'arène aux extrémités
+	end
+	for _, side in { -1, 1 } do
+		local posts = {}
+		for x = 11, 50, 6.5 do
+			table.insert(posts, V(side * x, 0, zAt(x)))
+		end
+		for i = 1, #posts - 1 do
+			local a, b = posts[i], posts[i + 1]
+			local d = b - a
+			local r = rotY(math.atan2(d.X, d.Z))
+			local mid = (a + b) / 2
+			piece(f, "MuretLimite", Enum.PartType.Block, V(1.6, 1.2 + (i % 2) * 0.3, d.Magnitude + 0.3), if i % 2 == 0 then C.Basalt else C.BasaltLight, mid + V(0, 0.6, 0), r)
+			piece(f, "ChaperonMuret", Enum.PartType.Block, V(1.8, 0.3, d.Magnitude + 0.3), C.Iron, mid + V(0, 1.35 + (i % 2) * 0.3, 0), r, Enum.Material.DiamondPlate)
+			-- chaîne pendante entre deux poteaux
+			for k = 1, 6 do
+				local t = k / 7
+				local sag = 4 * t * (1 - t) * 0.9
+				ball(f, "ChaineLimite", if k % 2 == 0 then V(0.3, 0.6, 0.8) else V(0.6, 0.6, 0.3), C.Dark, a:Lerp(b, t) + V(0, 3.4 - sag, 0), r, Enum.Material.Metal)
+			end
+		end
+		for i, p in posts do
+			if i == 1 then
+				-- pilier du passage : brasero et bannière tournée vers le portique
+				piece(f, "PilierPassage", Enum.PartType.Block, V(2.6, 6, 2.6), C.BasaltLight, p + V(0, 3, 0))
+				piece(f, "CerclagePilier", Enum.PartType.Block, V(2.9, 0.5, 2.9), C.Iron, p + V(0, 4.6, 0), nil, Enum.Material.DiamondPlate)
+				piece(f, "BraseroPassage", Enum.PartType.Cylinder, V(1.2, 3, 3), C.Iron, p + V(0, 6.6, 0), FLAT, Enum.Material.Metal)
+				local coals = piece(f, "BraisesPassage", Enum.PartType.Cylinder, V(0.3, 2.4, 2.4), C.Neon, p + V(0, 7.25, 0), FLAT, Enum.Material.Neon)
+				light(coals, C.Ember, 16, 1)
+				flame(f, p + V(0, 7.8, 0), 4, 7, C.Ember)
+				piece(f, "BannierePassage", Enum.PartType.Block, V(2.2, 4.4, 0.2), C.Cloth, p + V(0, 2.8, 1.4))
+				piece(f, "EmblemePassage", Enum.PartType.Block, V(1, 1, 0.2), C.Neon, p + V(0, 3.4, 1.55), CFrame.Angles(0, 0, math.pi / 4), Enum.Material.Neon)
+			elseif i % 3 == 1 then
+				-- petit brasero sur socle
+				piece(f, "SocleBrasero", Enum.PartType.Block, V(1.8, 2.6, 1.8), C.Basalt, p + V(0, 1.3, 0))
+				piece(f, "BraseroLimite", Enum.PartType.Cylinder, V(0.9, 2.2, 2.2), C.Iron, p + V(0, 3, 0), FLAT, Enum.Material.Metal)
+				local coals = piece(f, "BraisesLimite", Enum.PartType.Cylinder, V(0.2, 1.8, 1.8), C.Neon, p + V(0, 3.5, 0), FLAT, Enum.Material.Neon)
+				light(coals, C.Ember, 12, 0.8)
+				flame(f, p + V(0, 3.9, 0), 2.5, 5, C.Ember)
+			else
+				column(f, "PoteauLimite", 3.6, 0.6, C.Iron, p, Enum.Material.Metal)
+				ball(f, "TetePoteau", V(0.9, 0.9, 0.9), C.Neon, p + V(0, 3.7, 0), nil, Enum.Material.Neon)
+			end
+		end
+		-- quelques roches le long de la limite, côté arène
+		for k, x in { 22, 36, 47 } do
+			boulder(f, V(side * x, 0, zAt(x) - 2.4), 0.8 + (k % 2) * 0.3, k + (if side > 0 then 2 else 0), C)
+		end
+	end
+end
+
 BUILD[4] = function(m: Instance)
 	-- repères dans l'embrasure : le boss part de l'intérieur de la fournaise, la porte s'ouvre devant lui ;
 	-- saut depuis le dessus du linteau (porte agrandie de 1,35)
@@ -1611,6 +1667,8 @@ BUILD[4] = function(m: Instance)
 	supplies(f, V(-44, 0, 26), 0.5, C)
 	-- petite structure haute du flanc est, entre les deux postes de forge
 	blastFurnace(f, V(48, 0, 1), C)
+	-- limite légère avec l'avant du plot (portique, royaume)
+	frontBoundary(f, 47, C)
 	orePile(f, V(44, 0, -42), C)
 	orePile(f, V(-47, 0, -27), C)
 	for _, c in { { 34, 4, 0.4 }, { 30, -30, 2.2 }, { 36, 20, 2.8 } } do

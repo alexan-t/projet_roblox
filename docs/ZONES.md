@@ -305,6 +305,9 @@ Le serveur et le client lisent les repères du décor courant ; les autres plots
    assez haut pour cacher l'horizon et les plots voisins depuis la caméra de combat (Zone 4 : citadelle de
    42 à 52 studs, cheminées de 66 à 76), et le rempart monter vers le fond. Les flancs, hors zone de bataille,
    sont remplis d'éléments du biome (ateliers, réserves, lumières) : pas de grands sols nus.
+4. **Une limite légère avec l'avant du plot.** Entre l'arène et l'avant du plot (portique d'entrée, royaume),
+   une limite basse en décor du biome, avec un passage au centre en face du portique : elle sépare les deux
+   espaces sans fermer l'arène ni bloquer le joueur (pièces sans collision). Zone 4 : `frontBoundary`.
 
 | Zone | Structure du boss | Zone de bataille |
 | --- | --- | --- |
@@ -354,7 +357,9 @@ dessus. Roches : orgues basaltiques adossées au rempart (`basaltColumns`, deux 
 pied) et roches arrondies (`boulder`, masses gonflées superposées, pas de cubes). Sur le flanc est, une petite
 structure haute : le **haut-fourneau** (`blastFurnace`, environ 30 studs) : tour de basalte cerclée de fer en trois
 étages, meurtrières, bannière, trou de coulée tourné vers l'arène qui verse dans une rigole, gueulard crénelé,
-cheminée qui fume, potence et seau de minerai. Flancs : postes de forge
+cheminée qui fume, potence et seau de minerai. Limite avec l'avant du plot (règle 4, `frontBoundary`, z 47) :
+muret bas de basalte cerclé de fer, poteaux et chaînes pendantes, petits braseros, roches ; passage central
+encadré de deux piliers à brasero et bannière, en face du portique. Flancs : postes de forge
 (`forgeStation` : foyer, hotte, enclume, soufflet, baquet), râteliers d'armes, tonneaux et caisses, tas de
 minerai, fissures de lave dans le sol. Les Neon utilisent `#D2501E` (un `#F08C3C` en Neon ressort jaune) ; les feux (`Fire`) sont
 portés par une pièce droite invisible (`flame`), sinon ils partent de côté sur un cylindre couché.

@@ -433,3 +433,14 @@ entre les deux postes de forge du flanc est, à la place d'une réserve et d'un 
 Vue de combat et vue de près : **PASS** (tour lisible depuis l'arène, environ 30 studs, ne masque pas la porte).
 [Vue de combat](../automation/screenshots/zones/zone4-haut-fourneau-vue.jpg),
 [de près](../automation/screenshots/zones/zone4-haut-fourneau.jpg). Caméra de Studio réinitialisée. **Non testé en Play.**
+
+## Zone 4 — limite avec le portique et le royaume, 22 octobre 2026
+
+Demande de l'équipe : délimiter légèrement la zone de combat de l'avant du plot (royaume, portique). Limite
+basse (`frontBoundary`) à z 47 : muret, chaînes, braseros, roches, passage central encadré de deux piliers à
+bannière en face du portique. Sans collision.
+
+Vue depuis le royaume et vue depuis l'arène : **PASS** (séparation lisible, arène toujours ouverte, passage
+aligné sur le portique). [Depuis le royaume](../automation/screenshots/zones/zone4-limite-royaume.jpg),
+[depuis l'arène](../automation/screenshots/zones/zone4-limite-arene.jpg). Caméra de Studio réinitialisée.
+**Non testé en Play.**
