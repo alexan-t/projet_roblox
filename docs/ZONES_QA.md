@@ -363,7 +363,7 @@ Plateau générique retiré ; repères de sortie déplacés sur la nouvelle port
 | Zone | Porte du boss | Zone de bataille | Coin de l'ancien plateau | Captures |
 | --- | --- | --- | --- | --- |
 | 4 · Les Forges | Gueule de la forge et braises, au pied du fourneau | Dalles chaudes `#8A7462` | Enclume géante, marteau, charbon fumant, lingots | [vue](../automation/screenshots/zones/zone4-bataille-porte.jpg), [porte](../automation/screenshots/zones/zone4-porte.jpg) |
-| 5 · Les Abysses | Porte de temple englouti, coraux et algues, devant l'épave | Sable du fond `#B4A584` | Bénitier géant et perle, algues | [vue](../automation/screenshots/zones/zone5-bataille-porte.jpg), [porte](../automation/screenshots/zones/zone5-porte.jpg) |
+| 5 · La Cité Engloutie | Porte de temple englouti, coraux et algues, devant l'épave | Sable du fond `#B4A584` | Bénitier géant et perle, algues | [vue](../automation/screenshots/zones/zone5-bataille-porte.jpg), [porte](../automation/screenshots/zones/zone5-porte.jpg) |
 | 6 · Les Îles du Ciel | Portail doré à voile de lumière, devant le sanctuaire | Ciel pâle `#BFD6EE` | Cloche dorée sur portique, lanternes d'or | [vue](../automation/screenshots/zones/zone6-bataille-porte.jpg), [porte](../automation/screenshots/zones/zone6-porte.jpg) |
 
 **Verdict visuel : PASS** pour les deux règles (porte lisible depuis l'entrée, zone de bataille nettement

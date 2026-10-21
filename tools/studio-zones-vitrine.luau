@@ -57,7 +57,7 @@ local ZONES = {
 		Border = "Iron",
 	},
 	{
-		Id = 5, Nom = "Les Abysses", X = 690,
+		Id = 5, Nom = "La Cité Engloutie", X = 690,
 		Monsters = { "MeduseCouronnee", "MureneMiroir", "CoffreBernard", "ChevalierNoye", "CrabeCathedrale" }, Boss = "Leviathan",
 		Colors = {
 			Leaf = { hex("#1E5A5A"), hex("#3C8C78") }, Water = { hex("#1E3C6E"), hex("#3C6EA0") }, Foam = { hex("#8CB4DC") },
@@ -66,7 +66,7 @@ local ZONES = {
 		},
 		Ground = hex("#4E6270"),
 		Plants = { Arbre = "Coral", Sapin = "Kelp", Buisson = "Remove" },
-		Border = "Reef",
+		Border = nil,
 	},
 	{
 		Id = 6, Nom = "Les Îles du Ciel", X = 880,
@@ -377,7 +377,9 @@ for _, zone in ZONES do
 	if ax0 == math.huge then ax0, ax1 = zone.X - 62, zone.X + 62 end
 	local edge = Instance.new("Folder")
 	edge.Name, edge.Parent = "LisiereArene", plot
-	transition(edge, zone, ax0, ax1, gateZ, gateX, { edge, props })
+	if zone.Border then -- la Cité Engloutie a sa propre limite légère dans son décor
+		transition(edge, zone, ax0, ax1, gateZ, gateX, { edge, props })
+	end
 
 	-- monstres de la zone devant le front ennemi
 	local show = Instance.new("Model")

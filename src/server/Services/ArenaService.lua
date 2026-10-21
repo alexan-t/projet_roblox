@@ -208,10 +208,12 @@ local function showZone(player: Player)
 	if not c or (prep and prep.phase ~= "Placement") or os.clock() < (outroUntil[player] or 0) then
 		return
 	end
-	local zone = chosenOf(player)
+	local zone, stage = chosenOf(player)
 	if ZoneDecor.current(c.arena) ~= zone and not ZoneDecor.apply(c.arena, zone) then
 		warn(`ArenaService : aucun décor pour la zone {zone} dans {c.plot:GetFullName()}`)
 	end
+	-- Stage choisi : le décor peut changer d'un stage à l'autre (attributs StageMin / StageMax, côté client).
+	c.arena:SetAttribute("StageDecor", stage)
 	local front = c.arena:FindFirstChild("FrontEnnemi", true)
 	if front and front:IsA("BasePart") then c.front = front end
 end
@@ -242,8 +244,9 @@ local function startCombat(player: Player, sessionId: number, classes: { [number
 	if not c or not w then return nil, "arène indisponible" end
 	-- Un joueur peut relancer avant la fin de l'outro précédent. Le décor du nouveau combat
 	-- doit être prêt même si showZone avait différé le changement pour conserver l'outro.
-	local zone = chosenOf(player)
+	local zone, stage = chosenOf(player)
 	if not ZoneDecor.apply(c.arena, zone) then return nil, "décor de zone indisponible" end
+	c.arena:SetAttribute("StageDecor", stage)
 	local front = c.arena:FindFirstChild("FrontEnnemi", true)
 	if not front or not front:IsA("BasePart") then return nil, "repère ennemi indisponible" end
 	c.front = front

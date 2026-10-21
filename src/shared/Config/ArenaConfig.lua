@@ -81,7 +81,7 @@ local ArenaConfig = {
 		[2] = "Le Royaume des Sables",
 		[3] = "Le Royaume Gelé",
 		[4] = "Les Forges",
-		[5] = "Les Abysses",
+		[5] = "La Cité Engloutie",
 		[6] = "Les Îles du Ciel",
 	} :: { [number]: string }),
 	-- Sous-titre d'une zone dans la fenêtre Expédition (texte seulement, maquette figée).
@@ -90,7 +90,7 @@ local ArenaConfig = {
 		[2] = "Dunes, ruines ensevelies et le Colosse Enseveli",
 		[3] = "Neige, glaciers et le Roi sans Été",
 		[4] = "Enclumes, fer rougi et le Maître des Forges",
-		[5] = "Épaves, coraux et le Léviathan",
+		[5] = "Une cité sous la mer, sa protection se fissure, et le Léviathan",
 		[6] = "Nuages, îles flottantes et le Gardien Céleste",
 	} :: { [number]: string }),
 	-- Noms affichés (pancarte, fenêtre des stages, annonce de combat). Boss = le Roi Orc (Zone 1).

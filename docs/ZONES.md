@@ -226,7 +226,7 @@ Aucune rareté de monstre, aucun nouveau système de butin.
 | 2 · Le Royaume des Sables | Temple ensablé (colonnade, pyramide à degrés, temple sur dais), énorme tête de statue qui sort du sable, crêtes de grès, oasis et canal ancien asséché, avant-poste du désert (palissades, auvent, drapeaux déchirés), amphores, ossements | VaseDesSables, ChacalParchemin, ScarabeeForgeSoleil, MangeDune, GardienSansVisage | ColosseEnseveli | 4 |
 | 3 · Le Royaume Gelé | Remparts de glace crénelés et stalactites, château prisonnier d'un glacier au fond, falaises glacées et cascade gelée, lac gelé et pont verglacé, fort gelé (barricades, tour, drapeaux), ruines et statues prises dans la glace, arbres enneigés, lanternes froides | Givrelot, CrocDeGlacier, ArmureGelee, BonhommeRoyal, MammouthCristallin | RoiSansEte | 8 |
 | 4 · Les Forges | Forteresse de basalte : grand fourneau, rigoles de métal en fusion, enclumes | ChevalierRivete, GolemCloche, FourneauAmbulant, Martelet, Chaine | MaitreDesForges | 12 |
-| 5 · Les Abysses | Récif englouti : épave, coquillages géants, bulles, anémones, coffre | MeduseCouronnee, MureneMiroir, CoffreBernard, ChevalierNoye, CrabeCathedrale | Leviathan | 16 |
+| 5 · La Cité Engloutie | Récif englouti : épave, coquillages géants, bulles, anémones, coffre | MeduseCouronnee, MureneMiroir, CoffreBernard, ChevalierNoye, CrabeCathedrale | Leviathan | 16 |
 | 6 · Les Îles du Ciel | Sanctuaire céleste : bancs de nuages, arches de marbre, dôme d'or, statues ailées | GargouilleAilee, MiniColosseCeleste, MoutonNuage, PoissonDuCiel, BecTonnerre | GardienCeleste | 20 |
 
 **Décors** (`tools/studio-zones-assets.luau`) : chaque arène a son propre décor, construit autour des sorties
@@ -315,12 +315,32 @@ Le serveur et le client lisent les repères du décor courant ; les autres plots
 | 2 | Plateau générique (temple sur dais) | **À faire** |
 | 3 | Grande porte du château glaciaire | Neige damée bleutée `#A7C5E0` |
 | 4 | **Porte-Fournaise** : immense porte de métal encastrée dans la grande forge, qui s'ouvre (voir § Porte du boss) | Dalles chaudes `#8A7462` |
-| 5 | Porte du temple englouti couverte de coraux, devant l'épave | Sable du fond `#B4A584` |
+| 5 | Temple-coquille de la Cité Engloutie, porte couverte de coraux (§ Cité Engloutie) | Sable du fond `#B4A584` |
 | 6 | Portail doré à voile de lumière, devant le sanctuaire | Ciel pâle `#BFD6EE` |
 
 Outils : `bossGate` (porte générique : fond sombre arrondi, montants, linteau, seuil lumineux) et
 `moveMarkers(m, porte, sommet)` (repères sur la porte et le sommet du saut du boss) ; l'ancien coin du plateau
 reçoit des accessoires du biome (enclume géante et charbon, bénitier géant, cloche dorée).
+
+### Cité Engloutie (Zone 5)
+
+Une cité sous une protection magique au fond de l'océan : on y marche normalement, l'océan se voit tout autour.
+Décor : `BUILD[5]` de `tools/studio-zones-assets.luau` ; animations : `src/client/Controllers/DecorVivantController.lua`.
+
+- **Décor** : rue de sable du fond bordée de coraux (zone de bataille), barrière de verre bleuté à liseré lumineux,
+  palais de pierre blanche et bleue aux grandes fenêtres, statues de poisson et de pieuvre, fontaine qui coule vers
+  le haut, épave encastrée dans un bâtiment, coquillages-maisons, jardin de coraux sous bulle magique, ancres,
+  temple-coquille d'où sort le boss (structure du boss), limite légère de pierre et de corail vers l'avant.
+- **Derrière la barrière** : fond marin, forêts d'algues, mur d'eau profonde éclairci vers la surface, baleine,
+  bancs de poissons, méduses lumineuses, silhouette géante et Léviathan au loin.
+- **Animé** (tags) : `PoissonPasse` (baleine, bancs, Léviathan), `MeduseFlotte`, `CorailOndule`, `BulleMonte`
+  (fontaine, eau envahie), `GoutteTombe` (fuites), `VagueBarriere` (barrière, bulle, baie), `SequenceOeil`.
+- **Progression** : `ArenaService` pose sur l'arène `StageDecor` (stage choisi) ; le client n'affiche un groupe que si
+  `StageMin <= StageDecor <= StageMax`. Stage 1 calme ; `Fuites` dès 2, `FuitesPlus` dès 3, `GrossesFissures` et
+  jets d'eau dès 4 ; au 5, parties `Envahi` et `SalleDuBoss` (le `Palais` s'arrête au stage 4).
+- **Salle du boss (stage 5)** : colonnade circulaire, gigantesque baie vitrée sur l'océan. Toutes les 40 s : une
+  silhouette passe, revient plus près, puis un œil géant se colle contre la vitre, regarde, et repart.
+- Vitrine : `Plot_Zone5.Arene` porte `StageDecor` (1 à 5) pour prévisualiser chaque stage en Play.
 
 ### Porte du boss (structure animée)
 

@@ -65,7 +65,7 @@ local CombatConfig = {
 		Martelet = table.freeze({ MaxHealth = 70, AttackDamage = 9, AttackInterval = 0.8, AttackRange = 4, MoveSpeed = 10 }), -- comme GobelinDague
 		Chaine = table.freeze({ MaxHealth = 70, AttackDamage = 9, AttackInterval = 0.8, AttackRange = 4, MoveSpeed = 10 }), -- comme GobelinDague
 		MaitreDesForges = table.freeze({ MaxHealth = 450, AttackDamage = 18, AttackInterval = 1.5, AttackRange = 7, MoveSpeed = 6 }), -- comme Boss
-		-- Zone 5 — Les Abysses
+		-- Zone 5 — La Cité Engloutie
 		MeduseCouronnee = table.freeze({ MaxHealth = 65, AttackDamage = 9, AttackInterval = 1.2, AttackRange = 4, MoveSpeed = 6 }), -- comme SlimeLave
 		MureneMiroir = table.freeze({ MaxHealth = 65, AttackDamage = 9, AttackInterval = 1.2, AttackRange = 4, MoveSpeed = 6 }), -- comme SlimeLave
 		CoffreBernard = table.freeze({ MaxHealth = 65, AttackDamage = 9, AttackInterval = 1.2, AttackRange = 4, MoveSpeed = 6 }), -- comme SlimeLave

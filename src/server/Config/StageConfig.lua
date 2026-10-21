@@ -160,7 +160,7 @@ local StageConfig = {
 				},
 			},
 		},
-		-- Zone 5 — Les Abysses : Méduse Couronnée, Murène Miroir, Coffre Bernard, Chevalier Noyé, Crabe Cathédrale ; boss Léviathan.
+		-- Zone 5 — La Cité Engloutie : Méduse Couronnée, Murène Miroir, Coffre Bernard, Chevalier Noyé, Crabe Cathédrale ; boss Léviathan.
 		[5] = {
 			Difficulty = { MaxHealth = 3.3, AttackDamage = 2.85 },
 			Stages = {
