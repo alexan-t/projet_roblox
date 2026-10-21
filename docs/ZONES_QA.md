@@ -467,3 +467,19 @@ les quatre règles (structure du boss, zone de bataille, fond haut et arène hab
 
 Caméra de Studio réinitialisée. **Non testé en Play** : l'invocation pendant un vrai combat contre le Gardien
 Céleste (descente de l'escalier, calage sur `EntranceHold`).
+
+## Zone 6 — observatoire céleste de l'entrée ouest, 22 octobre 2026
+
+Demande de l'équipe : une structure du biome à l'entrée, côté gauche, trop vide. Observatoire céleste
+(`skyObservatory`, environ 34 studs) : tour de marbre sur un nuage, galerie, dôme d'or, sphère armillaire.
+Lanterne voisine décalée.
+
+1. Retour de l'équipe : bien, sauf la porte. Capture : **FIX** (porte petite et plate, à moitié cachée par le
+   nuage du socle, coupée par une bande d'or). [Capture](../automation/screenshots/zones/zone6-observatoire-porte-avant.jpg)
+   → nuage décalé derrière la tour, bandes remontées, vraie porte : pilastres à chapiteau d'or, arc cerclé d'or,
+   deux battants bleu nuit à clous et poignées d'or, cristal en clé de voûte, seuil et marche.
+2. Porte : **PASS**. [Capture](../automation/screenshots/zones/zone6-observatoire-porte.jpg).
+3. Vue de combat : **PASS**. [Capture](../automation/screenshots/zones/zone6-observatoire-vue.jpg).
+
+Caméra de Studio réinitialisée. **Non testé en Play.**
+

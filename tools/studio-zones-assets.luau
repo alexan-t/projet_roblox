@@ -2501,13 +2501,86 @@ local function skyBoundary(f: Instance, z: number, C: { [string]: Color3 })
 	end
 end
 
+-- Observatoire céleste (Zone 6, entrée ouest) : tour ronde de marbre sur un nuage, bandes et fenêtres d'or,
+-- porte tournée vers l'arène, galerie à colonnettes, dôme d'or, sphère armillaire (trois anneaux d'or autour
+-- d'un orbe lumineux) au sommet. Environ 34 studs.
+local function skyObservatory(f: Instance, at: Vector3, C: { [string]: Color3 })
+	local inward = ((V(0, 0, 0) - at) * V(1, 0, 1)).Unit
+	local face = rotY(math.atan2(inward.X, inward.Z))
+	cloud(f, at - inward * 3, C.Cloud, 3.2) -- derrière la tour : l'entrée reste dégagée
+	piece(f, "SocleObservatoire", Enum.PartType.Cylinder, V(1.6, 12, 12), C.MarbleShade, at + V(0, 0.8, 0), FLAT)
+	piece(f, "AnneauSocle", Enum.PartType.Cylinder, V(0.4, 12.4, 12.4), C.Gold, at + V(0, 1.7, 0), FLAT, Enum.Material.Metal)
+	column(f, "TourObservatoire", 15, 8, C.Marble, at + V(0, 1.6, 0))
+	for _, y in { 11.8, 15.2 } do
+		piece(f, "BandeTour", Enum.PartType.Cylinder, V(0.6, 8.4, 8.4), C.Gold, at + V(0, y, 0), FLAT, Enum.Material.Metal)
+	end
+	for k = 0, 3 do
+		local a = math.pi / 4 + k * math.pi / 2
+		local dir = V(math.cos(a), 0, math.sin(a))
+		local win = piece(f, "FenetreTour", Enum.PartType.Block, V(1.2, 3, 0.3), C.GlowGold, at + dir * 4.05 + V(0, 9, 0),
+			rotY(math.atan2(dir.X, dir.Z)), Enum.Material.Neon)
+		if k == 0 then light(win, C.GlowGold, 12, 0.6) end
+	end
+	-- porte vers l'arène : pilastres de marbre à chapiteau d'or, arc cerclé d'or, deux battants bleu nuit à
+	-- clous et poignées d'or, cristal en clé de voûte, marches jusqu'au sol
+	local function d(x: number, y: number, r: number): Vector3
+		return at + face:VectorToWorldSpace(V(x, y, r))
+	end
+	ball(f, "CadreArcPorte", V(4.4, 3.4, 0.4), C.Gold, d(0, 6.3, 4.05), face, Enum.Material.Metal)
+	piece(f, "PorteTour", Enum.PartType.Block, V(3, 4.7, 0.5), C.Night, d(0, 3.95, 4.15), face)
+	ball(f, "ArcPorteTour", V(3, 2.4, 0.5), C.Night, d(0, 6.3, 4.15), face)
+	piece(f, "JointBattants", Enum.PartType.Block, V(0.15, 5.6, 0.56), C.Gold, d(0, 4.4, 4.2), face, Enum.Material.Metal)
+	for _, x in { -0.8, 0.8 } do
+		for _, y in { 2.6, 4.4 } do
+			ball(f, "ClouPorte", V(0.3, 0.3, 0.2), C.Gold, d(x, y, 4.42), face, Enum.Material.Metal)
+		end
+		ball(f, "PoigneePorte", V(0.35, 0.35, 0.3), C.Gold, d(x * 0.45, 3.6, 4.45), face, Enum.Material.Metal)
+	end
+	for _, x in { -2.05, 2.05 } do
+		piece(f, "PilastrePorte", Enum.PartType.Block, V(0.8, 5.4, 0.9), C.Marble, d(x, 4.3, 4.3), face)
+		piece(f, "ChapiteauPorte", Enum.PartType.Block, V(1.1, 0.4, 1.2), C.Gold, d(x, 7.2, 4.35), face, Enum.Material.Metal)
+	end
+	local key = ball(f, "CleDeVoute", V(0.8, 1, 0.5), C.CrystalLit, d(0, 7.75, 4.35), face, Enum.Material.Neon)
+	light(key, C.CrystalLight, 10, 0.6)
+	piece(f, "SeuilTour", Enum.PartType.Block, V(4.6, 0.3, 1.4), C.Gold, d(0, 1.75, 4.9), face, Enum.Material.Metal)
+	piece(f, "MarcheTour", Enum.PartType.Block, V(5, 0.8, 1.4), C.MarbleShade, d(0, 0.4, 6.6), face)
+	-- galerie : plateforme, colonnettes, entablement, dôme d'or
+	local g = 16.6
+	piece(f, "GalerieObservatoire", Enum.PartType.Cylinder, V(0.8, 11, 11), C.MarbleShade, at + V(0, g, 0), FLAT)
+	piece(f, "BordGalerie", Enum.PartType.Cylinder, V(0.4, 11.4, 11.4), C.Gold, at + V(0, g - 0.5, 0), FLAT, Enum.Material.Metal)
+	for k = 0, 7 do
+		local a = k * math.pi / 4
+		column(f, "Colonnette", 5, 0.8, C.Marble, at + V(math.cos(a) * 4.6, g + 0.4, math.sin(a) * 4.6))
+	end
+	piece(f, "EntablementGalerie", Enum.PartType.Cylinder, V(0.8, 10.6, 10.6), C.Marble, at + V(0, g + 5.8, 0), FLAT)
+	piece(f, "FriseGalerie", Enum.PartType.Cylinder, V(0.3, 10.8, 10.8), C.Gold, at + V(0, g + 6.3, 0), FLAT, Enum.Material.Metal)
+	ball(f, "DomeObservatoire", V(9.6, 6, 9.6), C.Gold, at + V(0, g + 6.4, 0), nil, Enum.Material.Metal)
+	column(f, "AxeSphere", 6, 0.4, C.Gold, at + V(0, g + 9, 0), Enum.Material.Metal)
+	-- sphère armillaire : trois anneaux d'or inclinés autour d'un orbe céleste
+	local sphere = at + V(0, g + 13.5, 0)
+	local orb = ball(f, "OrbeCeleste", V(2.4, 2.4, 2.4), C.CrystalLit, sphere, nil, Enum.Material.Neon)
+	light(orb, C.CrystalLight, 20, 1)
+	for _, tilt in { CFrame.Angles(0, 0, 0), CFrame.Angles(math.rad(70), 0, 0), CFrame.Angles(0, 0, math.rad(70)) } do
+		for s = 0, 15 do
+			local a = s * math.pi / 8
+			piece(f, "AnneauSphere", Enum.PartType.Block, V(0.3, 0.3, 1.5), C.Gold,
+				sphere + tilt:VectorToWorldSpace(V(math.cos(a) * 3.6, 0, math.sin(a) * 3.6)), tilt * rotY(-a), Enum.Material.Metal)
+		end
+	end
+	-- petites pierres et nuages qui flottent autour
+	for k, o in { V(6.5, 12, 3), V(-5, 20, -6), V(4, 26, -6.5) } do
+		piece(f, "DallePierre", Enum.PartType.Block, V(1.8, 0.35, 1.5), C.Marble, at + o + V(0, 0.8, 0), rotY(k))
+		ball(f, "PierreFlottante", V(2.2, 1.6, 1.8), C.Rock, at + o, rotY(k))
+	end
+end
+
 ---------------------------------------------------------------- Zone 6 : sanctuaire des îles du ciel
 BUILD[6] = function(m: Instance)
 	local C = {
 		Marble = hex("#F4F0E6"), MarbleShade = hex("#DCD6C8"), Gold = hex("#F5C542"), Cloud = hex("#FFFFFF"), CloudShade = hex("#DCE6F2"),
 		CloudFar = hex("#DDE6F4"), CloudFarShade = hex("#AFC2E2"), GlowLit = hex("#FFF4C8"), Sky = hex("#8CB4DC"), Rock = hex("#A49CB0"), RockDark = hex("#857D94"), Crystal = hex("#7FB8E6"), CrystalDim = hex("#6E9CC8"),
 		CrystalLit = hex("#D8F4FF"), CrystalLight = hex("#9FD8FF"), GlowGold = hex("#FFE08C"), Stream = hex("#7CC4F0"),
-		Wood = hex("#B49A6A"), Leaf = hex("#F2E2A8"), LeafLight = hex("#FFF2C8"),
+		Wood = hex("#B49A6A"), Leaf = hex("#F2E2A8"), LeafLight = hex("#FFF2C8"), Night = hex("#2A3A5E"),
 	}
 	-- repères : le boss naît dans la colonne de lumière, au centre du sanctuaire, puis descend l'escalier suspendu
 	local center = V(0, 11, -66)
@@ -2590,7 +2663,7 @@ BUILD[6] = function(m: Instance)
 	end
 	piece(f, "TraverseCloche", Enum.PartType.Block, V(7.4, 0.8, 0.9), C.Gold, V(30, 9.2, -46), nil, Enum.Material.Metal)
 	ball(f, "Cloche", V(3.4, 4, 3.4), C.Gold, V(30, 7, -46), nil, Enum.Material.Metal)
-	for _, at in { V(36, 0, -20), V(36, 0, 14), V(-44, 0, 22), V(40, 0, 30) } do
+	for _, at in { V(36, 0, -20), V(36, 0, 14), V(-26, 0, 36), V(40, 0, 30) } do
 		column(f, "MatLanterne", 6, 0.4, C.Gold, at, Enum.Material.Metal)
 		local orb = ball(f, "LanterneOr", V(1.4, 1.4, 1.4), C.GlowGold, at + V(0, 6.6, 0), nil, Enum.Material.Neon)
 		light(orb, C.GlowGold, 10, 0.6)
@@ -2602,6 +2675,8 @@ BUILD[6] = function(m: Instance)
 	for _, at in { V(21, 0, -24), V(-19, 0, -24), V(-23, 0, 3) } do
 		cloud(f, at + V(0, 0, -2.4), C.Cloud, 1.4)
 	end
+	-- structure de l'entrée ouest (côté gauche vu de l'arène)
+	skyObservatory(f, V(-42, 0, 28), C)
 	skyBoundary(f, 47, C)
 end
 

@@ -401,7 +401,9 @@ sanctuaire ; derrière, une couronne de nuages bleutés étirés en hauteur (con
 l'horizon) ; quatre îles flottantes (temple, cristal, arbre doré) et des pierres flottantes. Plus de lac : un
 ruisseau de lumière céleste (`skyStream`) tombe en cascade d'une île et longe le flanc ouest ; les repères
 `SautMare` (Mouton Nuage) sont posés dessus. Flancs : colonnades en ruine, îles basses, statues ailées le long de
-l'allée, cloche et lanternes d'or. Limite avant (`skyBoundary`) : balustrade de marbre, poteaux d'or à orbe,
+l'allée, cloche et lanternes d'or ; à l'entrée ouest, l'**observatoire céleste** (`skyObservatory`, environ 34 studs) :
+tour ronde de marbre sur un nuage, bandes et fenêtres d'or, porte tournée vers l'arène, galerie à colonnettes,
+dôme d'or et sphère armillaire (trois anneaux d'or autour d'un orbe lumineux). Limite avant (`skyBoundary`) : balustrade de marbre, poteaux d'or à orbe,
 nuages, passage gardé par deux statues ailées.
 
 ### Assets Studio
