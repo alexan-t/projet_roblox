@@ -795,10 +795,23 @@ local function frostTree(parent: Instance, at: Vector3, h: number, yaw: number, 
 	ball(parent, "NeigePied", V(4, 1.4, 3.4), C.Snow, at + V(0, 0.2, 0), rotY(yaw))
 end
 
+-- Grande porte d'où sortent le boss et les ennemis (règle de décor n° 1) : fond sombre arrondi, deux montants,
+-- linteau en ellipse, seuil lumineux. `kit` : Dark, Post, Lintel, Glow, et Material optionnel des montants.
+local function bossGate(parent: Instance, z: number, w: number, h: number, kit: { [string]: any })
+	piece(parent, "FondPorte", Enum.PartType.Block, V(w, h * 0.7, 0.6), kit.Dark, V(0, h * 0.35, z - 0.6))
+	ball(parent, "ArcPorte", V(w, h * 0.5, 0.6), kit.Dark, V(0, h * 0.7, z - 0.6))
+	for _, side in { -1, 1 } do
+		column(parent, "MontantPorte", h + 1, 2.2, kit.Post, V(side * (w / 2 + 1), 0, z), kit.Material)
+	end
+	ball(parent, "Linteau", V(w + 5, 3, 3), kit.Lintel, V(0, h + 1, z), nil, kit.LintelMaterial)
+	local seuil = ball(parent, "LueurSeuil", V(w * 0.85, 0.4, 1.6), kit.Glow, V(0, 0.2, z + 0.4), nil, Enum.Material.Neon)
+	light(seuil, kit.Glow, 14, 0.9)
+end
+
 -- Repères de sortie des ennemis du décor : sans plateau, la rampe, la porte et les bords du plateau
 -- deviennent la grande porte du château (les ennemis la franchissent puis rejoignent le front) ;
 -- le sommet de la tour devient la corniche du donjon, d'où le boss saute.
-local function moveMarkers(m: Instance)
+local function moveMarkers(m: Instance, door: number?, top: Vector3?)
 	local sources = m:FindFirstChild("SourcesEnnemis")
 	if not sources then return end
 	local function place(name: string, at: Vector3, steps: { Vector3 }?)
@@ -814,11 +827,12 @@ local function moveMarkers(m: Instance)
 			if child and child:IsA("BasePart") then put(child, step) end
 		end
 	end
-	place("Tente", V(0, 0, -56), { V(0, 0, -46), V(0, 0, -36) })
-	place("HautRampe", V(0, 0, -56), { V(0, 0, -40) })
-	place("BordPlateau1", V(-5, 0, -54))
-	place("BordPlateau2", V(5, 0, -54))
-	place("SommetTour", V(0, 26.8, -59.4))
+	local z = door or -56
+	place("Tente", V(0, 0, z), { V(0, 0, z + 10), V(0, 0, -36) })
+	place("HautRampe", V(0, 0, z), { V(0, 0, z + 16) })
+	place("BordPlateau1", V(-5, 0, z + 2))
+	place("BordPlateau2", V(5, 0, z + 2))
+	place("SommetTour", top or V(0, 26.8, -59.4))
 end
 
 local function glacialRealm(m: Instance, C: { [string]: Color3 })
@@ -1057,6 +1071,7 @@ end
 
 ---------------------------------------------------------------- Zone 4 : forteresse des forges
 BUILD[4] = function(m: Instance)
+	moveMarkers(m, -54, V(0, 15.5, -61))
 	local basalt, basaltLight, iron, ember, dark = hex("#3A3432"), hex("#5A524C"), hex("#6E6E72"), hex("#F08C3C"), hex("#1C1614")
 	local f = Instance.new("Folder")
 	f.Name, f.Parent = "Forges", m
@@ -1100,10 +1115,25 @@ BUILD[4] = function(m: Instance)
 			piece(f, "Lingot", Enum.PartType.Block, V(1.4, 0.6, 0.7), hex("#D2A04A"), V(d[1] - 2.6, 0.3 + k * 0.6, d[2] + 1.6), rotY(k * 0.3), Enum.Material.Metal)
 		end
 	end
-	frame(f, { Body = basalt, Top = iron, Trim = basaltLight, Glow = ember, Dark = dark, Material = nil }, function(parent, top)
-		local b = piece(parent, "Brasero", Enum.PartType.Cylinder, V(1, 3.6, 3.6), ember, top + V(0, 0.6, 0), FLAT, Enum.Material.Neon)
-		light(b, ember, 12, 1)
-	end)
+	-- plus de plateau : le boss sort de la gueule de la grande forge, au pied du fourneau
+	bossGate(f, -55.6, 9, 10, { Dark = dark, Post = basaltLight, Lintel = iron, LintelMaterial = Enum.Material.DiamondPlate, Glow = ember })
+	local maw = ball(f, "Brasier", V(6, 2.4, 0.4), ember, V(0, 1.4, -55.9), nil, Enum.Material.Neon) -- braises au fond de la gueule
+	light(maw, ember, 16, 1)
+	-- coin de l'ancien plateau : enclume géante, tas de charbon fumant, lingots
+	piece(f, "SocleGrandeEnclume", Enum.PartType.Block, V(5, 3, 4), basalt, V(26, 1.5, -44))
+	ball(f, "GrandeEnclume", V(9, 2.6, 3.6), iron, V(26, 4.2, -44), nil, Enum.Material.DiamondPlate)
+	ball(f, "Marteau", V(1, 5, 1), hex("#5A4232"), V(29, 6.4, -43), CFrame.Angles(0, 0, 0.9))
+	ball(f, "TeteMarteau", V(2.6, 1.6, 1.6), iron, V(31, 7.6, -43), nil, Enum.Material.DiamondPlate)
+	ball(f, "TasCharbon", V(10, 4, 8), hex("#2A2422"), V(16, 0.6, -50))
+	for i, e in { { 14, 2.4, -49 }, { 18, 2.8, -51 }, { 16, 3.4, -50 } } do
+		local braise = ball(f, "Braise", V(1.2, 0.8, 1.2), ember, V(e[1], e[2], e[3]), rotY(i), Enum.Material.Neon)
+		if i == 2 then light(braise, ember, 10, 0.6) end
+	end
+	for k = 0, 4 do
+		piece(f, "Lingot", Enum.PartType.Block, V(1.8, 0.7, 0.9), hex("#D2A04A"), V(34 + (k % 2) * 1.2, 0.35 + math.floor(k / 2) * 0.7, -38), rotY(k * 0.25),
+			Enum.Material.Metal)
+	end
+	battleground(f, hex("#8A7462"), hex("#6E5A4C"), -42)
 	for _, at in { V(21, 0, -24), V(-19, 0, -24), V(-23, 0, 3) } do
 		piece(f, "Chariot", Enum.PartType.Block, V(4.4, 2.4, 3), iron, at + V(-1.2, 1.6, -2.6), rotY(0.3), Enum.Material.DiamondPlate)
 		ball(f, "Minerai", V(3.6, 2, 2.6), hex("#5A3A2A"), at + V(-1.2, 3, -2.6))
@@ -1113,6 +1143,7 @@ end
 
 ---------------------------------------------------------------- Zone 5 : temple englouti des abysses
 BUILD[5] = function(m: Instance)
+	moveMarkers(m, -53, V(0, 13.6, -55))
 	local rock, rockLight, coralA, coralB, algae, glow, wood = hex("#2E4256"), hex("#4E6A82"), hex("#C8644A"), hex("#E08C64"), hex("#2E7A64"), hex("#64DCDC"), hex("#4A3828")
 	local f = Instance.new("Folder")
 	f.Name, f.Parent = "Abysses", m
@@ -1155,9 +1186,21 @@ BUILD[5] = function(m: Instance)
 	piece(f, "Couvercle", Enum.PartType.Block, V(4.2, 0.8, 2.8), hex("#D2A04A"), V(44, 2.8, 7.4), CFrame.Angles(-0.5, 0, 0), Enum.Material.Metal)
 	column(f, "Ancre", 7, 0.8, hex("#5A6470"), V(38, 0, -16), Enum.Material.Metal)
 	piece(f, "BrasAncre", Enum.PartType.Block, V(4.6, 0.8, 0.8), hex("#5A6470"), V(38, 0.8, -16), nil, Enum.Material.Metal)
-	frame(f, { Body = rock, Top = rockLight, Trim = hex("#6E8296"), Glow = glow, Dark = hex("#0E1A2A"), Material = nil }, function(parent, top)
-		coral(parent, top, coralA, 1.1)
-	end)
+	-- plus de plateau : le boss sort de la porte du temple englouti, devant l'épave ; coraux et algues dessus
+	bossGate(f, -55, 8, 11, { Dark = hex("#0E1A2A"), Post = rockLight, Lintel = hex("#6E8296"), Glow = glow })
+	for _, side in { -1, 1 } do
+		coral(f, V(side * 6.4, 11.5, -55), if side < 0 then coralA else coralB, 1.2)
+		reeds(f, V(side * 7.6, 0, -53), algae, hex("#3C8C78"))
+	end
+	-- coin de l'ancien plateau : bénitier géant entrouvert et sa perle, forêt d'algues
+	ball(f, "ValveBas", V(10, 3, 8), hex("#B4A0C8"), V(26, 1, -44))
+	ball(f, "ValveHaut", V(10, 2.6, 8), hex("#C8B4DC"), V(26, 4.4, -46.4), CFrame.Angles(0.55, 0, 0))
+	local giant = ball(f, "PerleGeante", V(3, 3, 3), hex("#F0F6FA"), V(26, 3.2, -44.4), nil, Enum.Material.Neon)
+	light(giant, glow, 12, 0.8)
+	for _, at in { V(16, 0, -50), V(34, 0, -40), V(20, 0, -36), V(34, 0, -52) } do
+		reeds(f, at, algae, hex("#3C8C78"))
+	end
+	battleground(f, hex("#B4A584"), hex("#9C8E70"), -43)
 	for _, at in { V(21, 0, -24), V(-19, 0, -24), V(-23, 0, 3) } do
 		reeds(f, at + V(-1.2, 0, -2.6), algae, hex("#3C8C78"))
 		coral(f, at + V(1.8, 0, -2), coralB, 0.9)
@@ -1166,6 +1209,7 @@ end
 
 ---------------------------------------------------------------- Zone 6 : sanctuaire des îles du ciel
 BUILD[6] = function(m: Instance)
+	moveMarkers(m, -51, V(0, 21, -58))
 	local marble, marbleDark, gold, cloudC, sky = hex("#F4F0E6"), hex("#DCD6C8"), hex("#F5C542"), hex("#FFFFFF"), hex("#8CB4DC")
 	local f = Instance.new("Folder")
 	f.Name, f.Parent = "Sanctuaire", m
@@ -1207,10 +1251,26 @@ BUILD[6] = function(m: Instance)
 		column(f, "MatBanniere", 9, 0.4, gold, V(d[1] + 2, 0, d[2]), Enum.Material.Metal)
 		piece(f, "Banniere", Enum.PartType.Block, V(0.15, 4, 2.4), sky, V(d[1] + 2, 6.4, d[2] + 1.3))
 	end
-	frame(f, { Body = marbleDark, Top = marble, Trim = gold, Glow = hex("#FFE08C"), Dark = sky, Material = nil }, function(parent, top)
-		local o = ball(parent, "OrbeVigie", V(2.4, 2.4, 2.4), hex("#FFE08C"), top + V(0, 1.6, 0), nil, Enum.Material.Neon)
-		light(o, hex("#FFE08C"), 10, 0.8)
-	end)
+	-- plus de plateau : le boss sort du portail doré du sanctuaire (rideau de lumière bleu ciel)
+	bossGate(f, -53, 8, 12, { Dark = hex("#5E8CC0"), Post = marble, Lintel = gold, LintelMaterial = Enum.Material.Metal, Glow = hex("#FFE08C") })
+	local veil = piece(f, "VoileLumiere", Enum.PartType.Block, V(7, 10, 0.3), hex("#BFE0FF"), V(0, 5, -53.2), nil, Enum.Material.Neon)
+	veil.Transparency = 0.55
+	for _, side in { -1, 1 } do
+		cloud(f, V(side * 7, 0, -51.5), cloudC, 1.3)
+	end
+	-- coin de l'ancien plateau : îlot de nuages, cloche dorée sur son portique, lanternes d'or
+	cloud(f, V(26, 0, -44), cloudC, 2.6)
+	for _, side in { -1, 1 } do
+		column(f, "PortiqueCloche", 9, 0.8, marble, V(26 + side * 3, 0, -46))
+	end
+	piece(f, "TraverseCloche", Enum.PartType.Block, V(7.4, 0.8, 0.9), gold, V(26, 9.2, -46), nil, Enum.Material.Metal)
+	ball(f, "Cloche", V(3.4, 4, 3.4), gold, V(26, 7, -46), nil, Enum.Material.Metal)
+	for _, at in { V(16, 0, -50), V(34, 0, -36) } do
+		column(f, "MatLanterne", 6, 0.4, gold, at, Enum.Material.Metal)
+		local orb = ball(f, "LanterneOr", V(1.4, 1.4, 1.4), hex("#FFE08C"), at + V(0, 6.6, 0), nil, Enum.Material.Neon)
+		light(orb, hex("#FFE08C"), 9, 0.6)
+	end
+	battleground(f, hex("#BFD6EE"), hex("#A9C6E6"), -41)
 	for _, at in { V(21, 0, -24), V(-19, 0, -24), V(-23, 0, 3) } do
 		cloud(f, at + V(0, 0, -2.4), cloudC, 1.4)
 	end

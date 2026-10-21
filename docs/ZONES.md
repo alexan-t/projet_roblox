@@ -297,8 +297,14 @@ Le serveur et le client lisent les repères du décor courant ; les autres plots
 | --- | --- | --- |
 | 1 | Plateau et tour du camp (d'origine) | Clairière de sable |
 | 2 | Plateau générique (temple sur dais) | **À faire** |
-| 3 | Grande porte du château glaciaire | Neige damée bleutée |
-| 4 à 6 | Plateau générique | **À faire** |
+| 3 | Grande porte du château glaciaire | Neige damée bleutée `#A7C5E0` |
+| 4 | Gueule rougeoyante de la grande forge, au pied du fourneau | Dalles chaudes `#8A7462` |
+| 5 | Porte du temple englouti couverte de coraux, devant l'épave | Sable du fond `#B4A584` |
+| 6 | Portail doré à voile de lumière, devant le sanctuaire | Ciel pâle `#BFD6EE` |
+
+Outils : `bossGate` (porte générique : fond sombre arrondi, montants, linteau, seuil lumineux) et
+`moveMarkers(m, porte, sommet)` (repères sur la porte et le sommet du saut du boss) ; l'ancien coin du plateau
+reçoit des accessoires du biome (enclume géante et charbon, bénitier géant, cloche dorée).
 
 ### Assets Studio
 

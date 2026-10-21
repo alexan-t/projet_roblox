@@ -354,3 +354,18 @@ Bande de neige damée bleutée `#A7C5E0` (taches `#93B4D4`) au centre de l'arèn
 sous les cases et le front ennemi (`battleground`) ; la glace du lac passe au-dessus. Première teinte `#C3D6E6`
 trop proche de la neige, foncée après capture. [Capture](../automation/screenshots/zones/zone3-gele-zone-bataille.jpg).
 Règles de décor (structure du boss propre à la zone, zone de bataille) ajoutées à `docs/ZONES.md`.
+
+## Zones 4 à 6 — structure du boss et zone de bataille, 22 octobre 2026
+
+Règles de décor de `docs/ZONES.md` appliquées (la Zone 2 n'est pas concernée, à la demande de l'équipe).
+Plateau générique retiré ; repères de sortie déplacés sur la nouvelle porte (`moveMarkers`) :
+
+| Zone | Porte du boss | Zone de bataille | Coin de l'ancien plateau | Captures |
+| --- | --- | --- | --- | --- |
+| 4 · Les Forges | Gueule de la forge et braises, au pied du fourneau | Dalles chaudes `#8A7462` | Enclume géante, marteau, charbon fumant, lingots | [vue](../automation/screenshots/zones/zone4-bataille-porte.jpg), [porte](../automation/screenshots/zones/zone4-porte.jpg) |
+| 5 · Les Abysses | Porte de temple englouti, coraux et algues, devant l'épave | Sable du fond `#B4A584` | Bénitier géant et perle, algues | [vue](../automation/screenshots/zones/zone5-bataille-porte.jpg), [porte](../automation/screenshots/zones/zone5-porte.jpg) |
+| 6 · Les Îles du Ciel | Portail doré à voile de lumière, devant le sanctuaire | Ciel pâle `#BFD6EE` | Cloche dorée sur portique, lanternes d'or | [vue](../automation/screenshots/zones/zone6-bataille-porte.jpg), [porte](../automation/screenshots/zones/zone6-porte.jpg) |
+
+**Verdict visuel : PASS** pour les deux règles (porte lisible depuis l'entrée, zone de bataille nettement
+distincte du sol). Remarque non bloquante : la Zone 6 reste assez vide hors de l'allée. **Non testé en Play** :
+sortie réelle des ennemis par les nouvelles portes.
