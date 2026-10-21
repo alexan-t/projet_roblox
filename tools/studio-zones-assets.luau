@@ -1998,51 +1998,100 @@ BUILD[5] = function(m: Instance)
 		piece(f, "BrasAncre", Enum.PartType.Block, V(8, 1.2, 1.2), iron, V(d[1], 0.8, d[2]), CFrame.Angles(0, 0, d[3] * 0.3), Enum.Material.Metal)
 	end
 
-	-- jardins de récif à l'entrée de l'arène, de part et d'autre de la zone de bataille (taches de sol vides)
+	-- récif naturel à l'entrée de l'arène, de part et d'autre de la zone de bataille : pas de formes rondes ni
+	-- de symétrie, des éléments dispersés au hasard (tirage fixe) qui se fondent dans le sol du biome
+	local solZone = m:FindFirstChild("SolZone")
+	for _, t in if solZone then solZone:GetChildren() else {} do
+		if t.Name == "Tache" then t:Destroy() end -- les grandes taches rondes du sol de zone
+	end
+	local rng = Random.new(5051)
+	local function R(a: number, b: number): number return a + (b - a) * rng:NextNumber() end
+	local reef = Instance.new("Model")
+	reef.Name, reef.Parent = "RecifEntree", f
+	local placed: { Vector3 } = {}
+	local function free(at: Vector3, gap: number): boolean
+		for _, q in placed do if (q - at).Magnitude < gap then return false end end
+		return true
+	end
+	local function spot(side: number, gap: number): Vector3?
+		for _ = 1, 30 do
+			local z = R(-30, 44)
+			local xmin = if z > 34 then 26 else 25 -- reste hors de la zone de bataille et des bassins sacrés
+			local at = V(side * R(xmin, 50), 0, z)
+			if z < 22 and side < 0 then continue end -- côté ouest : bassins sacrés plus au fond
+			if free(at, gap) then table.insert(placed, at) return at end
+		end
+		return nil
+	end
+	local sands = { hex("#5A7088"), hex("#62788E"), hex("#526882") }
 	for _, side in { -1, 1 } do
-		local cx, cz = side * 36, 28
-		local garden = Instance.new("Model")
-		garden.Name, garden.Parent = "JardinRecif", f
-		-- tapis de sable clair et rochers moussus
-		ball(garden, "SableRecif", V(24, 0.3, 18), hex("#C8BC9C"), V(cx, 0.1, cz))
-		for n, r in { { -7, -4, 3.4 }, { 6, 5, 2.6 }, { 8, -5, 2 }, { -9, 5, 2.2 } } do
-			ball(garden, "RocherRecif", V(r[3] * 1.4, r[3], r[3] * 1.2), stoneBlue, V(cx + side * r[1], r[3] * 0.35, cz + r[2]), rotY(n))
-			ball(garden, "Mousse", V(r[3] * 1.2, 0.4, r[3]), hex("#3C8C78"), V(cx + side * r[1], r[3] * 0.85, cz + r[2]))
+		-- sol plus clair par petites plaques irrégulières qui se chevauchent
+		for _ = 1, 14 do
+			local at = V(side * R(25, 50), 0.07, R(-20, 42))
+			ball(reef, "PlaqueSable", V(R(3, 7), 0.12, R(2, 5)), sands[rng:NextInteger(1, 3)], at, rotY(R(0, math.pi)))
 		end
-		-- bouquets de coraux qui ondulent (grands au fond, petits devant)
-		for n, d in { { -3, -6, 1.5 }, { 3, -3, 1.2 }, { -5, 2, 1 }, { 1, 6, 0.8 }, { 9, 0, 1.1 }, { -10, -1, 0.9 } } do
-			local c = Instance.new("Model")
-			c.Name, c.Parent = "CorailJardin", garden
-			local at = V(cx + side * d[1], 0, cz + d[2])
-			coral(c, at, ({ coralA, coralB, coralC })[n % 3 + 1], d[3])
-			c.WorldPivot = PIVOT * CFrame.new(at.X, GROUND_Y - PIVOT.Position.Y, at.Z)
-			tag(c, "CorailOndule", { Amplitude = 6, Periode = 3 + n * 0.4 })
-		end
-		-- bénitier géant entrouvert et sa perle lumineuse
-		local clamAt = V(cx - side * 2, 0, cz + 1)
-		ball(garden, "ValveBas", V(5.4, 1.8, 4.4), hex("#B4A0C8"), clamAt + V(0, 0.6, 0))
-		ball(garden, "ValveHaut", V(5.4, 1.5, 4.4), hex("#C8B4DC"), clamAt + V(0, 2.2, -1.2), CFrame.Angles(0.55, 0, 0))
-		local pearl = ball(garden, "PerleBenitier", V(1.6, 1.6, 1.6), hex("#F0F6FA"), clamAt + V(0, 1.6, 0.2), nil, Enum.Material.Neon)
-		light(pearl, glow, 10, 0.6)
-		-- anémones lumineuses et étoiles de mer
-		for n, d in { { 5, 2 }, { -6, 6 }, { 10, -4 } } do
-			local a = ball(garden, "Anemone", V(1.8, 1, 1.8), if n == 2 then hex("#F08CC8") else glow, V(cx + side * d[1], 0.4, cz + d[2]), nil, Enum.Material.Neon)
-			light(a, glow, 6, 0.3)
-		end
-		for n, d in { { 2, 7 }, { -8, 3 }, { 7, 7 } } do
-			for k = 0, 4 do
-				local a = k * math.pi * 2 / 5 + n
-				piece(garden, "BrasEtoile", Enum.PartType.Block, V(0.5, 0.25, 1.4), hex("#F0A07C"),
-					V(cx + side * d[1] + math.cos(a) * 0.6, 0.15, cz + d[2] + math.sin(a) * 0.6), rotY(-a + math.pi / 2))
+		for _ = 1, 7 do -- coraux, en petits groupes de 1 à 3
+			local at = spot(side, 4.5)
+			if not at then continue end
+			for k = 1, rng:NextInteger(1, 3) do
+				local c = Instance.new("Model")
+				c.Name, c.Parent = "CorailRecif", reef
+				local pos = at + V(R(-1.8, 1.8), 0, R(-1.8, 1.8))
+				coral(c, pos, ({ coralA, coralB, coralC })[rng:NextInteger(1, 3)], R(0.5, 1.3) / k)
+				c.WorldPivot = PIVOT * CFrame.new(pos.X, GROUND_Y - PIVOT.Position.Y, pos.Z)
+				tag(c, "CorailOndule", { Amplitude = R(4, 8), Periode = R(2.6, 4.4) })
 			end
 		end
-		-- algues et amphore renversée
-		for n = 0, 2 do reeds(garden, V(cx + side * (11 - n * 2), 0, cz - 6 + n * 3), hex("#1E5A5A"), hex("#3C8C78")) end
-		ball(garden, "Amphore", V(1.8, 2.6, 1.8), hex("#C87A50"), V(cx + side * 4, 0.9, cz - 7), CFrame.Angles(0, 0, side * 1.2))
-		ball(garden, "ColAmphore", V(0.9, 1, 0.9), hex("#A8603C"), V(cx + side * 5.6, 1.2, cz - 7), CFrame.Angles(0, 0, side * 1.2))
-		for k = 0, 3 do
-			local b = ball(garden, "BulleJardin", V(0.6, 0.6, 0.6), hex("#C8F0FF"), clamAt + V(0, 1.6 + k * 0.3, 0.2))
-			tag(b, "BulleMonte", { Hauteur = 9, Periode = 3 + k * 0.6 })
+		for _ = 1, 5 do -- rochers irréguliers, parfois empilés, mousse dessus
+			local at = spot(side, 4)
+			if not at then continue end
+			local h = R(1.4, 3.4)
+			ball(reef, "Rocher", V(h * R(1.1, 1.8), h, h * R(1, 1.5)), stoneBlue:Lerp(deepBlue, R(0, 0.5)), at + V(0, h * 0.3, 0), rotY(R(0, 6)) * CFrame.Angles(R(-0.25, 0.25), 0, R(-0.25, 0.25)))
+			if rng:NextNumber() < 0.5 then
+				ball(reef, "RocherHaut", V(h * 0.8, h * 0.6, h * 0.7), stoneBlue, at + V(R(-0.6, 0.6), h * 0.8, R(-0.6, 0.6)), rotY(R(0, 6)))
+			end
+			ball(reef, "Mousse", V(h * 0.9, 0.35, h * 0.7), hex("#3C8C78"), at + V(0, h * 0.62, 0), rotY(R(0, 6)))
+		end
+		for _ = 1, 5 do -- algues
+			local at = spot(side, 3)
+			if at then reeds(reef, at, hex("#1E5A5A"), hex("#3C8C78")) end
+		end
+		for _ = 1, 4 do -- anémones lumineuses
+			local at = spot(side, 2.5)
+			if at then
+				local a = ball(reef, "Anemone", V(R(1.2, 2), R(0.7, 1.1), R(1.2, 2)), if rng:NextNumber() < 0.3 then hex("#F08CC8") else glow, at + V(0, 0.35, 0), nil, Enum.Material.Neon)
+				light(a, glow, 6, 0.3)
+			end
+		end
+		for _ = 1, 4 do -- étoiles de mer
+			local at = spot(side, 2)
+			if at then
+				local turn = R(0, 6)
+				for k = 0, 4 do
+					local a = k * math.pi * 2 / 5 + turn
+					piece(reef, "BrasEtoile", Enum.PartType.Block, V(0.5, 0.25, 1.4), hex("#F0A07C"), at + V(math.cos(a) * 0.6, 0.15, math.sin(a) * 0.6), rotY(-a + math.pi / 2))
+				end
+			end
+		end
+		local clamAt = spot(side, 5) -- un bénitier géant, à demi enfoncé
+		if clamAt then
+			local turn = rotY(R(-0.8, 0.8))
+			ball(reef, "ValveBas", V(5.4, 1.8, 4.4), hex("#B4A0C8"), clamAt + V(0, 0.4, 0), turn)
+			ball(reef, "ValveHaut", V(5.4, 1.5, 4.4), hex("#C8B4DC"), clamAt + V(0, 2, -1.2), turn * CFrame.Angles(0.55, 0, 0))
+			local pearl = ball(reef, "PerleBenitier", V(1.6, 1.6, 1.6), hex("#F0F6FA"), clamAt + V(0, 1.4, 0.2), nil, Enum.Material.Neon)
+			light(pearl, glow, 10, 0.6)
+			for k = 0, 3 do
+				local b = ball(reef, "BulleRecif", V(0.6, 0.6, 0.6), hex("#C8F0FF"), clamAt + V(0, 1.4 + k * 0.3, 0.2))
+				tag(b, "BulleMonte", { Hauteur = 9, Periode = 3 + k * 0.6 })
+			end
+		end
+		local ruin = spot(side, 4) -- débris de la cité : amphore couchée ou colonne brisée
+		if ruin then
+			if side > 0 then
+				ball(reef, "Amphore", V(1.8, 2.6, 1.8), hex("#C87A50"), ruin + V(0, 0.9, 0), CFrame.Angles(0, R(0, 6), 1.2))
+			else
+				piece(reef, "ColonneTombee", Enum.PartType.Cylinder, V(6, 1.4, 1.4), white, ruin + V(0, 0.6, 0), rotY(R(0, 6)))
+			end
 		end
 	end
 	-- limite légère avec l'avant du plot : muret de pierre blanche et coraux, passage en face du portique
