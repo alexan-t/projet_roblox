@@ -224,7 +224,7 @@ Aucune rareté de monstre, aucun nouveau système de butin.
 | Zone | Biome | Ennemis (X-1 à X-5) | Boss X-5 | Niveau cible de simulation |
 | --- | --- | --- | --- | --- |
 | 2 · Le Royaume des Sables | Temple ensablé (colonnade, pyramide à degrés, temple sur dais), énorme tête de statue qui sort du sable, crêtes de grès, oasis et canal ancien asséché, avant-poste du désert (palissades, auvent, drapeaux déchirés), amphores, ossements | VaseDesSables, ChacalParchemin, ScarabeeForgeSoleil, MangeDune, GardienSansVisage | ColosseEnseveli | 4 |
-| 3 · Les Terres Gelées | Donjon de glace : remparts crénelés, tours, stalactites, trône du Roi, lac gelé | Givrelot, CrocDeGlacier, ArmureGelee, BonhommeRoyal, MammouthCristallin | RoiSansEte | 8 |
+| 3 · Le Royaume Gelé | Remparts de glace crénelés et stalactites, château prisonnier d'un glacier au fond, falaises glacées et cascade gelée, lac gelé et pont verglacé, fort gelé (barricades, tour, drapeaux), ruines et statues prises dans la glace, arbres enneigés, lanternes froides | Givrelot, CrocDeGlacier, ArmureGelee, BonhommeRoyal, MammouthCristallin | RoiSansEte | 8 |
 | 4 · Les Forges | Forteresse de basalte : grand fourneau, rigoles de métal en fusion, enclumes | ChevalierRivete, GolemCloche, FourneauAmbulant, Martelet, Chaine | MaitreDesForges | 12 |
 | 5 · Les Abysses | Récif englouti : épave, coquillages géants, bulles, anémones, coffre | MeduseCouronnee, MureneMiroir, CoffreBernard, ChevalierNoye, CrabeCathedrale | Leviathan | 16 |
 | 6 · Les Îles du Ciel | Sanctuaire céleste : bancs de nuages, arches de marbre, dôme d'or, statues ailées | GargouilleAilee, MiniColosseCeleste, MoutonNuage, PoissonDuCiel, BecTonnerre | GardienCeleste | 20 |

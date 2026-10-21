@@ -33,7 +33,7 @@ local ZONES = {
 		Border = "Sandstone",
 	},
 	{
-		Id = 3, Nom = "Les Terres Gelées", X = 310,
+		Id = 3, Nom = "Le Royaume Gelé", X = 310,
 		Monsters = { "Givrelot", "CrocDeGlacier", "ArmureGelee", "BonhommeRoyal", "MammouthCristallin" }, Boss = "RoiSansEte",
 		Colors = {
 			Leaf = { hex("#9AB4C8"), hex("#D2E2EE") }, Water = { hex("#7CA8D2"), hex("#B4D2EB") }, Foam = { hex("#F0F6FA") },

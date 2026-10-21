@@ -92,7 +92,7 @@ local StageConfig = {
 				},
 			},
 		},
-		-- Zone 3 — Les Terres Gelées : Givrelot, Croc de Glacier, Armure Gelée, Bonhomme Royal, Mammouth Cristallin ; boss Roi sans Été.
+		-- Zone 3 — Le Royaume Gelé : Givrelot, Croc de Glacier, Armure Gelée, Bonhomme Royal, Mammouth Cristallin ; boss Roi sans Été.
 		[3] = {
 			Difficulty = { MaxHealth = 2.5, AttackDamage = 2.5 },
 			Stages = {

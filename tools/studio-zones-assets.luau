@@ -152,7 +152,7 @@ local THEMES = {
 		TreeScale = 1,
 	},
 	{
-		Id = 3, Name = "Zone3_TerresGelees", Nom = "Les Terres Gelées",
+		Id = 3, Name = "Zone3_RoyaumeGele", Nom = "Le Royaume Gelé",
 		Colors = {
 			Leaf = { hex("#9AB4C8"), hex("#D2E2EE") }, Water = { hex("#7CA8D2"), hex("#B4D2EB") }, Foam = { hex("#F0F6FA") },
 			Sand = { hex("#DCE6F0"), hex("#F0F4F8") }, Stone = { hex("#6E7E8C"), hex("#9AAAB8") }, Ruin = { hex("#C8D4DE"), hex("#DCE4EC") },
@@ -518,7 +518,7 @@ local function bones(parent: Instance, at: Vector3, yaw: number, bone: Color3, d
 	end
 end
 
-local function cliff(parent: Instance, at: Vector3, yaw: number, len: number, h: number, bands: { Color3 })
+local function cliff(parent: Instance, at: Vector3, yaw: number, len: number, h: number, bands: { Color3 }, cap: Color3?)
 	-- crête de grès le long du rempart : masses très chevauchées de hauteurs inégales, une strate claire
 	-- continue à mi-hauteur et une table rocheuse continue au sommet, éboulis au pied côté arène
 	local r = rotY(yaw)
@@ -532,9 +532,16 @@ local function cliff(parent: Instance, at: Vector3, yaw: number, len: number, h:
 		if i % 2 == 0 then
 			ball(parent, "Eboulis", V(3.4, 2, 2.8), bands[3], base + r:VectorToWorldSpace(V(1.2, 0.4, 6)), r * rotY(i))
 		end
+		if cap then
+			-- calotte (neige) posée sur le sommet de chaque masse : rien ne flotte
+			ball(parent, "Calotte", V(len / n * 1.5, 2, 6.4 + (i % 3)), cap, base + V(0, hi * 0.33 + hi * 0.56, 0),
+				r * CFrame.Angles(0, ((i % 3) - 1) * 0.12, ((i % 3) - 1) * 0.06))
+		end
 	end
-	ball(parent, "Strate", V(len * 0.9, 1.8, 10.8), bands[2], at + V(0, h * 0.45, 0), r)
-	ball(parent, "Table", V(len * 0.6, 2.4, 7), bands[2], at + V(0, h * 0.82, 0), r)
+	if not cap then
+		ball(parent, "Strate", V(len * 0.9, 1.8, 10.8), bands[2], at + V(0, h * 0.45, 0), r)
+		ball(parent, "Table", V(len * 0.6, 2.4, 7), bands[2], at + V(0, h * 0.82, 0), r)
+	end
 end
 
 local function desertRealm(m: Instance, sand: Color3, stone: Color3, pale: Color3, gold: Color3, dark: Color3)
@@ -643,6 +650,191 @@ local function desertRealm(m: Instance, sand: Color3, stone: Color3, pale: Color
 	end
 end
 
+---------------------------------------------------------------- Zone 3 : le Royaume Gelé
+-- Ce qui remplace la Zone 1 : falaises glacées (falaises vertes), rivière gelée et pont verglacé (rivière),
+-- fort gelé (camp ennemi). Signature : un château prisonnier d'un glacier, au fond.
+
+local function snowyPine(parent: Instance, at: Vector3, h: number, needle: Color3, snow: Color3)
+	column(parent, "Tronc", h * 0.3, 0.9, hex("#5A4A3C"), at)
+	for i = 0, 2 do
+		local w = (4.4 - i * 1.2) * h / 9
+		local y = h * (0.3 + i * 0.2)
+		ball(parent, "Branches", V(w, h * 0.3, w), needle, at + V(0, y + h * 0.1, 0))
+		ball(parent, "NeigeBranches", V(w * 0.8, h * 0.12, w * 0.8), snow, at + V(0, y + h * 0.22, 0))
+	end
+end
+
+local function iceBlocks(parent: Instance, at: Vector3, ice: Color3, snow: Color3)
+	for i, b in { { 0, 0, 3.4, 0.3 }, { 2.6, 1.2, 2.4, -0.5 }, { -1.2, 2.4, 2, 0.9 } } do
+		local k = b[3]
+		local block = piece(parent, "BlocGlace", Enum.PartType.Block, V(k, k * 0.9, k), ice, at + V(b[1], k * 0.45, b[2]),
+			CFrame.Angles(if i == 3 then 0.35 else 0, b[4], 0), Enum.Material.Ice)
+		block.Transparency = 0.15
+		piece(parent, "NeigeBloc", Enum.PartType.Block, V(k * 0.9, 0.25, k * 0.9), snow, at + V(b[1], k * 0.9 + 0.1, b[2]), CFrame.Angles(0, b[4], 0))
+	end
+end
+
+-- statue de chevalier prise dans une gangue de glace translucide, sur socle, tournée vers l'arène
+local function frozenStatue(parent: Instance, at: Vector3, yaw: number, stoneC: Color3, ice: Color3, snow: Color3)
+	local r = rotY(yaw)
+	local function p(x: number, y: number, z: number): Vector3
+		return at + r:VectorToWorldSpace(V(x, y, z))
+	end
+	piece(parent, "Socle", Enum.PartType.Block, V(3.6, 1.2, 3.6), stoneC:Lerp(Color3.new(0, 0, 0), 0.15), p(0, 0.6, 0), r)
+	ball(parent, "Corps", V(2.6, 3.6, 2), stoneC, p(0, 3, 0), r)
+	ball(parent, "Tete", V(1.6, 1.7, 1.6), stoneC, p(0, 5.4, 0.1), r)
+	ball(parent, "Heaume", V(1.9, 1.1, 1.9), stoneC:Lerp(Color3.new(0, 0, 0), 0.1), p(0, 5.9, 0), r)
+	ball(parent, "Bouclier", V(2, 2.6, 0.6), stoneC:Lerp(Color3.new(0, 0, 0), 0.08), p(-1.3, 3.2, 1), r * CFrame.Angles(0, -0.3, 0))
+	column(parent, "Epee", 4.6, 0.35, stoneC, p(1.3, 1.4, 0.9))
+	local shell = ball(parent, "Gangue", V(4.8, 7.6, 4), ice, p(0, 3.6, 0.2), r, Enum.Material.Ice)
+	shell.Transparency = 0.45
+	ball(parent, "NeigeGangue", V(3.6, 1, 3), snow, p(0, 7.3, 0.2), r)
+end
+
+-- ruine (colonne brisée et arc tombé) prisonnière d'un bloc de glace
+local function frozenRuin(parent: Instance, at: Vector3, stoneC: Color3, ice: Color3, snow: Color3)
+	column(parent, "ColonneRuine", 6, 1.8, stoneC, at)
+	piece(parent, "Chapiteau", Enum.PartType.Block, V(2.6, 0.7, 2.6), stoneC, at + V(0, 6.3, 0))
+	piece(parent, "Troncon", Enum.PartType.Cylinder, V(3, 1.6, 1.6), stoneC, at + V(2.6, 0.8, 1), CFrame.Angles(0, 0.5, 0))
+	piece(parent, "ArcTombe", Enum.PartType.Block, V(5, 1.2, 1.4), stoneC:Lerp(Color3.new(0, 0, 0), 0.08), at + V(-1.8, 1.6, 1.6),
+		CFrame.Angles(0, 0.3, 0.35))
+	local shell = ball(parent, "Gangue", V(9, 8.4, 6.4), ice, at + V(0.2, 3, 0.8), rotY(0.4), Enum.Material.Ice)
+	shell.Transparency = 0.45
+	ball(parent, "NeigeGangue", V(6.4, 1.4, 4.4), snow, at + V(0.2, 7, 0.8), rotY(0.4))
+end
+
+local function coldLantern(parent: Instance, at: Vector3, iron: Color3, glow: Color3, snow: Color3)
+	column(parent, "Poteau", 4.4, 0.4, iron, at)
+	piece(parent, "Potence", Enum.PartType.Block, V(1.6, 0.3, 0.3), iron, at + V(0.6, 4.3, 0))
+	piece(parent, "Cage", Enum.PartType.Block, V(1.1, 1.4, 1.1), iron, at + V(1.2, 3.4, 0))
+	local core = ball(parent, "LueurFroide", V(0.8, 1, 0.8), glow, at + V(1.2, 3.4, 0), nil, Enum.Material.Neon)
+	light(core, glow, 10, 0.7)
+	ball(parent, "NeigeLanterne", V(1.3, 0.4, 1.3), snow, at + V(1.2, 4.25, 0))
+end
+
+local function frozenBarricade(parent: Instance, at: Vector3, yaw: number, wood: Color3, ice: Color3, snow: Color3)
+	for _, tilt in { -0.6, 0.6 } do
+		piece(parent, "Rondin", Enum.PartType.Cylinder, V(5.4, 0.8, 0.8), wood, at + V(0, 1.6, 0), rotY(yaw) * CFrame.Angles(0, 0, tilt))
+	end
+	piece(parent, "Traverse", Enum.PartType.Cylinder, V(6, 0.7, 0.7), wood, at + V(0, 2.6, 0), rotY(yaw))
+	ball(parent, "Givre", V(6.4, 0.6, 1.2), snow, at + V(0, 3, 0), rotY(yaw))
+	local shard = piece(parent, "PicGlace", Enum.PartType.Wedge, V(0.8, 1.8, 0.8), ice, at + V(1.2, 0.9, 0.6), rotY(yaw), Enum.Material.Ice)
+	shard.Transparency = 0.15
+end
+
+local function frozenRealm(m: Instance, ice: Color3, iceDark: Color3, snow: Color3, glow: Color3, deep: Color3)
+	local stoneC, roof, iron, blue = hex("#8A98A6"), hex("#2E4E7E"), hex("#3E4A5A"), hex("#2E5A9E")
+	local bands = { hex("#8FA9BF"), hex("#AFC6D8"), hex("#6F8CA6") }
+
+	-- signature : château prisonnier d'un glacier, au fond (à la place du trône) ; les toits sortent de la glace
+	local c = Instance.new("Folder")
+	c.Name, c.Parent = "ChateauGlacier", m
+	column(c, "Donjon", 26, 11, stoneC, V(0, 0, -66))
+	for i = 0, 7 do
+		local a = i * math.pi / 4
+		piece(c, "Creneau", Enum.PartType.Block, V(2, 2, 2), stoneC, V(math.cos(a) * 4.8, 27, -66 + math.sin(a) * 4.8), rotY(-a))
+	end
+	for i = 0, 3 do
+		column(c, "Toit", 3, 10 - i * 2.6, roof, V(0, 28 + i * 2.6, -66))
+	end
+	for _, side in { -1, 1 } do
+		column(c, "Tourelle", 19, 6, stoneC, V(side * 10, 0, -62))
+		for i = 0, 2 do
+			column(c, "ToitTourelle", 2.4, 6.4 - i * 2, roof, V(side * 10, 19 + i * 2.2, -62))
+		end
+		ball(c, "NeigeToit", V(3.6, 1, 3.6), snow, V(side * 10, 24.4, -62))
+	end
+	local window = piece(c, "Fenetre", Enum.PartType.Block, V(2.4, 3.6, 0.6), glow, V(0, 22, -60.6), nil, Enum.Material.Neon)
+	light(window, glow, 22, 1.2)
+	ball(c, "NeigeToitDonjon", V(2.6, 1.4, 2.6), snow, V(0, 38.9, -66))
+	-- le glacier : grandes masses translucides qui avalent le bas du château
+	for _, g in { { 0, 8, -61, 34, 20, 14 }, { -13, 10, -66, 20, 26, 14 }, { 14, 9, -66, 18, 22, 13 }, { -4, 15, -70, 24, 16, 10 } } do
+		local mass = ball(c, "Glacier", V(g[4], g[5], g[6]), hex("#BFE0F5"), V(g[1], g[2], g[3]), rotY(g[1] * 0.02), Enum.Material.Ice)
+		mass.Transparency = 0.3
+	end
+	for i, sh in { { -16, 18, -60, 0.3 }, { 12, 17, -59, -0.4 }, { -6, 21, -62, 0.1 }, { 18, 14, -62, -0.7 } } do
+		local shard = piece(c, "Eclat", Enum.PartType.Wedge, V(2.4, 6 - i * 0.6, 2.4), hex("#BFE0F5"), V(sh[1], sh[2], sh[3]),
+			CFrame.Angles(0, sh[4], 0.2 * (i % 2 * 2 - 1)), Enum.Material.Ice)
+		shard.Transparency = 0.2
+	end
+
+	-- falaises glacées (strate et table de neige sur les rebords)
+	local cl = Instance.new("Folder")
+	cl.Name, cl.Parent = "FalaisesGlacees", m
+	cliff(cl, V(49, 0, -41), 1.94, 28, 15, bands, snow)
+	cliff(cl, V(-47, 0, -41), 1.08, 26, 14, bands, snow)
+	cliff(cl, V(-51, 0, -10), math.pi / 2, 12, 9, bands, snow)
+	-- cascade gelée sur la falaise ouest, figée jusque dans une flaque de glace
+	local wr = rotY(1.08)
+	local face = V(-47, 0, -41) + wr:VectorToWorldSpace(V(0, 0, 4.6))
+	for i, d in { { 0, 4.6, 13, 2.2, 6.4 }, { -2, 1.6, 8, 1.4, 4 }, { 2.1, 1.4, 6, 1.2, 3 } } do
+		local fall = ball(cl, "CascadeGelee", V(d[2], d[3], d[4]), hex("#CDEBFA"),
+			face + V(0, d[5], 0) + wr:VectorToWorldSpace(V(d[1], 0, 0.4 * (i - 1))), wr * CFrame.Angles(-0.12, 0, 0), Enum.Material.Ice)
+		fall.Transparency = 0.15
+	end
+	local pool = ball(cl, "FlaqueGelee", V(8, 0.6, 6), hex("#BFE0F5"), face + wr:VectorToWorldSpace(V(0, 0, 4)) + V(0, 0.1, 0), wr,
+		Enum.Material.Ice)
+	pool.Transparency = 0.1
+
+	-- rivière gelée : pont verglacé au-dessus du ruisseau sud du lac
+	local b = Instance.new("Folder")
+	b.Name, b.Parent = "PontVerglace", m
+	for i = -1, 1 do
+		local deck = piece(b, "Tablier", Enum.PartType.Block, V(2.6, 0.5, 3), ice, V(-29.5 + i * 2.5, 0.9 - math.abs(i) * 0.35, -24.1),
+			CFrame.Angles(0, 0, -i * 0.25), Enum.Material.Ice)
+		deck.Transparency = 0.1
+		for _, side in { -1, 1 } do
+			ball(b, "NeigeRambarde", V(2.8, 0.7, 0.6), snow, V(-29.5 + i * 2.5, 1.6 - math.abs(i) * 0.35, -24.1 + side * 1.4),
+				CFrame.Angles(0, 0, -i * 0.25))
+		end
+	end
+	coldLantern(b, V(-25, 0, -21.5), iron, glow, snow)
+
+	-- fort gelé (à la place du camp ennemi), côté est de l'entrée : barricades de pieux de glace, tour, drapeaux
+	local fort = Instance.new("Folder")
+	fort.Name, fort.Parent = "FortGele", m
+	palisade(fort, V(24, 0, 36), V(44, 0, 38), iceDark)
+	palisade(fort, V(46, 0, 34), V(48, 0, 16), iceDark)
+	for _, p in fort:GetChildren() do
+		if p:IsA("BasePart") then
+			p.Material = Enum.Material.Ice
+			if p.Name == "TetePieu" then p.Color = snow end
+		end
+	end
+	column(fort, "TourFort", 9, 6, ice, V(38, 0, 26), Enum.Material.Ice)
+	for i = 0, 5 do
+		local a = i * math.pi / 3
+		piece(fort, "Creneau", Enum.PartType.Block, V(1.4, 1.4, 1.4), ice, V(38 + math.cos(a) * 2.6, 9.6, 26 + math.sin(a) * 2.6), rotY(-a),
+			Enum.Material.Ice)
+	end
+	ball(fort, "NeigeTour", V(5.4, 1, 5.4), snow, V(38, 9.2, 26))
+	iceBlocks(fort, V(28, 0, 20), ice, snow)
+	flag(fort, V(24, 0, 34), 8, iron, blue, snow)
+	flag(fort, V(46, 0, 18), 7, iron, blue, snow)
+	coldLantern(fort, V(30, 0, 30), iron, glow, snow)
+
+	-- vestiges : ruines et statues prises dans la glace, barricades, blocs, arbres enneigés, lanternes de l'allée
+	local v = Instance.new("Folder")
+	v.Name, v.Parent = "VestigesGeles", m
+	frozenRuin(v, V(-44, 0, 30), stoneC, ice, snow)
+	frozenRuin(v, V(50, 0, -2), stoneC, ice, snow)
+	frozenStatue(v, V(40, 0, -24), -0.5, stoneC, ice, snow)
+	frozenStatue(v, V(-42, 0, -4), 0.6, stoneC, ice, snow)
+	frozenBarricade(v, V(18, 0, 40), 0.3, hex("#6A5A4C"), ice, snow)
+	frozenBarricade(v, V(-18, 0, 40), -0.3, hex("#6A5A4C"), ice, snow)
+	for _, at in { V(18, 0, 2), V(-14, 0, -50), V(20, 0, -60), V(30, 0, 46), V(-24, 0, 46) } do
+		iceBlocks(v, at, ice, snow)
+	end
+	for _, t in { { -46, 16, 9 }, { -36, 40, 8 }, { -52, 4, 7 }, { 52, -26, 8 }, { 52, -14, 7 } } do
+		snowyPine(v, V(t[1], 0, t[2]), t[3], hex("#2E5A44"), snow)
+	end
+	for _, x in { -12, 12 } do
+		coldLantern(v, V(x, 0, 44), iron, glow, snow)
+	end
+	-- neige sur les rebords du plateau
+	piece(v, "NeigePlateau", Enum.PartType.Block, V(27.8, 0.2, 20.8), snow, V(21.9, 3.4, -44.1))
+end
+
 local BUILD = {}
 
 ---------------------------------------------------------------- Zone 2 : temple ensablé du désert
@@ -724,17 +916,6 @@ BUILD[3] = function(m: Instance)
 			light(c, glow, 12, 0.8)
 		end
 	end
-	-- trône du Roi sans Été au fond : grande porte de glace et cristal
-	for _, side in { -1, 1 } do
-		column(f, "PilierTrone", 22, 5, iceDark, V(side * 9, 0, -66), Enum.Material.Ice)
-		local tip = piece(f, "PointePilier", Enum.PartType.Wedge, V(4, 5, 4), glow, V(side * 9, 24.5, -66), nil, Enum.Material.Ice)
-		tip.Transparency = 0.1
-	end
-	piece(f, "ArcheTrone", Enum.PartType.Block, V(22, 3, 4), ice, V(0, 21, -66), nil, Enum.Material.Ice)
-	piece(f, "FondTrone", Enum.PartType.Block, V(13, 19, 1), deep, V(0, 9.5, -67.5))
-	local heart = piece(f, "CoeurDeGlace", Enum.PartType.Block, V(3, 6, 3), glow, V(0, 11, -66.8), CFrame.Angles(0, 0.78, 0), Enum.Material.Neon)
-	light(heart, glow, 22, 1.4)
-	piece(f, "Trone", Enum.PartType.Block, V(6, 5, 3), snow, V(0, 2.5, -65.5), nil, Enum.Material.Ice)
 	-- piliers gelés le long de l'allée, braseros à flamme froide
 	for _, x in { -14, 14 } do
 		for _, z in { -10, -24, -38 } do
@@ -757,6 +938,7 @@ BUILD[3] = function(m: Instance)
 		spikes(f, at + V(-1.5, 0, -2.4), glow, Enum.Material.Ice, 1.5)
 		ball(f, "Congere", V(6, 2, 4), snow, at + V(1.6, 0.2, -2.2))
 	end
+	frozenRealm(m, ice, iceDark, snow, glow, deep)
 end
 
 ---------------------------------------------------------------- Zone 4 : forteresse des forges

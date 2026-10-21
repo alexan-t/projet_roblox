@@ -51,7 +51,7 @@ local CombatConfig = {
 		MangeDune = table.freeze({ MaxHealth = 70, AttackDamage = 6, AttackInterval = 1.2, AttackRange = 4, MoveSpeed = 6 }), -- comme SlimePlante
 		GardienSansVisage = table.freeze({ MaxHealth = 55, AttackDamage = 8, AttackInterval = 1.3, AttackRange = 4, MoveSpeed = 5 }), -- comme SlimeChampignon
 		ColosseEnseveli = table.freeze({ MaxHealth = 520, AttackDamage = 16, AttackInterval = 1.3, AttackRange = 7, MoveSpeed = 5 }), -- comme KingSlime
-		-- Zone 3 — Les Terres Gelées
+		-- Zone 3 — Le Royaume Gelé
 		Givrelot = table.freeze({ MaxHealth = 70, AttackDamage = 6, AttackInterval = 1.2, AttackRange = 4, MoveSpeed = 6 }), -- comme SlimePlante
 		CrocDeGlacier = table.freeze({ MaxHealth = 70, AttackDamage = 6, AttackInterval = 1.2, AttackRange = 4, MoveSpeed = 6 }), -- comme SlimePlante
 		ArmureGelee = table.freeze({ MaxHealth = 80, AttackDamage = 8, AttackInterval = 1.0, AttackRange = 5, MoveSpeed = 8 }), -- comme Gobelin

@@ -273,3 +273,32 @@ du sol de chaque zone ([zone 3](../automation/screenshots/zones/zone3-fond-sol.j
 | Falaises | KO non bloquant | Crêtes rocheuses basses (9 à 15 studs), pas de vraies falaises hautes |
 
 **Verdict : PASS** (1 KO non bloquant). Non testé : combat en Play dans ce décor (repères inchangés).
+
+## Zone 3 — Royaume Gelé, 21 octobre 2026
+
+Les Terres Gelées complétées d'après les recos et renommées **Le Royaume Gelé**. Gabarit reconstruit dans
+« test 3 » (Zone 3 seule) et reposé dans sa vitrine `Workspace.PlotsZones.Plot_Zone3` (panneau renommé),
+aucune copie dans le hub.
+
+Ajouts : **château prisonnier d'un glacier** au fond (signature, à la place du trône ; donjon et tourelles
+à toits bleus qui sortent de masses de glace translucides, fenêtre lumineuse), falaises glacées à calottes
+de neige, cascade gelée sur la falaise ouest, pont verglacé sur le ruisseau du lac gelé, fort gelé (pieux de
+glace, tour crénelée, drapeaux bleus), ruines et statues de chevalier prises dans la glace, barricades gelées,
+blocs de glace, arbres enneigés, lanternes froides le long de l'allée, neige sur le plateau. Repères
+`SourcesEnnemis`, portique et cases inchangés.
+
+Captures : [vue d'ensemble](../automation/screenshots/zones/zone3-gele-overview.jpg),
+[château](../automation/screenshots/zones/zone3-gele-chateau.jpg),
+[cascade et pont](../automation/screenshots/zones/zone3-gele-cascade-pont.jpg),
+[fort](../automation/screenshots/zones/zone3-gele-fort.jpg).
+
+| Critère | Grille | Observation |
+| --- | --- | --- |
+| Brief | OK | Tous les éléments des recos présents, signature lisible depuis l'entrée |
+| Zone / palette | OK | Neige, glace bleutée, toits bleu roi, lueurs cyan |
+| Lisibilité de l'arène | OK | Cases, allée et front ennemi dégagés |
+| Volumes | OK | Strates en soucoupes et cascade en boules corrigées (calottes posées, cascade d'un seul tenant) |
+| Géométrie / clipping visible | OK | Château décollé du rempart ; rien ne flotte |
+| Blocs de glace | KO non bloquant | Blocs cubiques (demandés par les recos), seule forme anguleuse du décor |
+
+**Verdict : PASS** (1 KO non bloquant). Non testé : combat en Play dans ce décor (repères inchangés).
