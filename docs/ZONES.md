@@ -206,11 +206,12 @@ les points d'accès au gameplay.
 
 **Vitrine visitable (sandbox « test 3 »)** : `tools/studio-zones-vitrine.luau` (après
 `studio-zones-assets.luau`) reconstruit `Workspace.PlotsZones.Plot_Zone2` à `Plot_Zone6` : cinq copies du plot
-alignées au sud du Lobby (z ≈ −360, x = 120 à 880), entrée tournée vers le Lobby. Tout le terrain prend le
-biome de sa zone (arène, pelouse, royaume, bordure ; arbres remplacés par colonnes, cheminées, coraux ou nuages ;
-sol de biome sous le terrain, `PlotsZones.SolsBiomes`). Une limite du biome (`LimiteArene` : muret de grès,
-blocs de glace, grille de fer et braseros, récif, banc de nuages) sépare l'avant (royaume, portail) de l'arène,
-ouverte au portique. Chaque arène expose ses six monstres (`MonstresDeLaZone`). On y va à pied par le passage
+alignées au sud du Lobby (z ≈ −360, x = 120 à 880), entrée tournée vers le Lobby. **L'avant (herbe, royaume,
+portail) reste celui du plot, toujours en herbe** ; seul ce qui est derrière le portique prend le biome (arène,
+bordure ; arbres remplacés par colonnes, cheminées, coraux ou nuages ; sol de biome ovale autour de l'arène,
+`PlotsZones.SolsBiomes`). La jonction est une lisière irrégulière (`LisiereArene` : dunes, congères, basalte et
+braises, récifs et coraux, nuages), posée en désordre avec des taches de sol du biome qui mordent sur l'herbe,
+ouverte au portique ; pas de mur. Chaque arène expose ses six monstres (`MonstresDeLaZone`). On y va à pied par le passage
 du mur sud du Lobby (x ≈ 331, `PlotsZones.CheminZones` ; murs et arbres retirés rangés dans
 `ServerStorage.Archive_PassageZones`). Aucun script, aucun combat : ce sont des lieux à visiter.
 

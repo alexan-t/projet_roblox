@@ -3,9 +3,9 @@
 -- Assets uniquement, aucun Source de script. À lancer APRÈS tools/studio-zones-assets.luau (décors et modèles).
 -- Reconstruit Workspace.PlotsZones à chaque lancement :
 --   1. cinq copies du plot de référence (Lobby.Plots.Plot_1) alignées au sud du Lobby, entrée vers le Lobby ;
---   2. tout le terrain prend le biome de sa zone : arène (décor ZonesArene), pelouse, royaume, bordure,
---      végétation remplacée par les accessoires du biome, sol de biome sous le terrain (plus de baseplate vert) ;
---   3. une limite du biome sépare l'avant (royaume, portail) de l'arène de combat, ouverte au portique ;
+--   2. derrière le portique, le terrain prend le biome de sa zone : arène (décor ZonesArene), bordure, végétation
+--      remplacée par les accessoires du biome, sol de biome ovale autour de l'arène (plus de baseplate vert) ;
+--   3. l'avant (herbe, royaume, portail) ne change jamais ; une lisière irrégulière du biome le sépare de l'arène ;
 --   4. les monstres de la zone exposés devant le front ennemi ; chemin de dalles et passage dans le mur sud.
 -- Rien n'est un point d'accès au gameplay : les combats se lancent depuis l'arène du plot du joueur.
 -- Une étape ChangeHistoryService (Ctrl+Z).
@@ -196,53 +196,78 @@ local function propColor(zone: any, kind: string): Color3
 	return zone.Colors.Foam[1] -- Cloud
 end
 
------------------------------------------------------------------- limite avant / arène
+------------------------------------------------------------------ lisière entre l'avant (herbe) et l'arène
 
--- Segments de x0 à x1 sur la ligne z, ouverts sur |x - gateX| < gap.
-local function border(parent: Instance, zone: any, x0: number, x1: number, z: number, gateX: number, ignore: { Instance })
-	local step, gap = 6, 9
-	local index = 0
-	for x = x0 + step / 2, x1 - step / 2, step do
-		if math.abs(x - gateX) < gap then continue end
-		index += 1
-		local y = groundAt(x, z, ignore)
-		local at = Vector3.new(x, y, z)
+-- Lisière irrégulière (pas de mur) : touffes du biome posées en désordre le long de l'avant de l'arène, et
+-- des taches de sol du biome qui mordent un peu sur l'herbe, ouverte au portique. Tirage fixe par zone
+-- (Random) : relancer l'outil redonne la même lisière.
+local function transition(parent: Instance, zone: any, x0: number, x1: number, z: number, gateX: number, ignore: { Instance })
+	local rng = Random.new(zone.Id * 7919)
+	local function rand(a: number, b: number): number
+		return a + (b - a) * rng:NextNumber()
+	end
+	local gap = 8
+	local x = x0 + 2
+	while x < x1 - 2 do
+		x += rand(3.5, 6.5)
+		local dist = math.abs(x - gateX)
+		if dist < gap then continue end
+		local px, pz = x + rand(-1.5, 1.5), z + rand(-7, 2.5) -- pz < z : côté arène
+		local at = Vector3.new(px, groundAt(px, pz, ignore), pz)
+		local k = rand(0.65, 1.35) * (if dist < gap + 6 then 0.75 else 1) -- plus discret près du portique
+		if rng:NextNumber() < 0.7 then
+			local d = rand(5, 10)
+			ellipsoid(piece(parent, "TacheSol", Enum.PartType.Block, Vector3.new(d, 0.12, d * rand(0.6, 1)), zone.Ground,
+				CFrame.new(at + Vector3.new(0, 0.07, rand(-1, 1.5))) * CFrame.Angles(0, rand(0, math.pi), 0)))
+		end
+		local roll = rng:NextNumber()
+		local turn = CFrame.Angles(0, rand(0, math.pi), 0)
 		local style = zone.Border
 		if style == "Sandstone" then
-			piece(parent, "Muret", Enum.PartType.Block, Vector3.new(step, 2.4, 1.6), zone.Colors.Ruin[1], CFrame.new(at + Vector3.new(0, 1.2, 0)))
-			if index % 4 == 1 then BIOME.Pillar(parent, at, zone.Colors.Ruin[2], 0.8) end
-		elseif style == "Ice" then
-			piece(parent, "BlocGlace", Enum.PartType.Block, Vector3.new(step, 2.6, 1.6), zone.Colors.Water[2],
-				CFrame.new(at + Vector3.new(0, 1.3, 0)) * CFrame.Angles(0, (index % 3 - 1) * 0.06, 0), Enum.Material.Ice)
-			if index % 4 == 1 then BIOME.Spikes(parent, at, hex("#8CE0FF"), 0.9, Enum.Material.Ice) end
-		elseif style == "Iron" then
-			piece(parent, "Poteau", Enum.PartType.Cylinder, Vector3.new(3.2, 0.6, 0.6), zone.Colors.Stone[1], CFrame.new(at + Vector3.new(-step / 2, 1.6, 0)) * FLAT)
-			for _, h in { 1.1, 2.4 } do
-				piece(parent, "Lisse", Enum.PartType.Block, Vector3.new(step, 0.3, 0.3), zone.Colors.Stone[2], CFrame.new(at + Vector3.new(0, h, 0)))
+			if roll < 0.5 then
+				ellipsoid(piece(parent, "Dune", Enum.PartType.Block, Vector3.new(5, 1.6, 3.6) * k, zone.Colors.Sand[1],
+					CFrame.new(at + Vector3.new(0, 0.3 * k, 0)) * turn))
+			elseif roll < 0.8 then
+				BIOME.Spikes(parent, at, zone.Colors.Stone[2], 0.6 * k)
+			else
+				BIOME.Pillar(parent, at, zone.Colors.Ruin[1], 0.55 * k)
 			end
-			if index % 4 == 1 then
-				piece(parent, "Brasero", Enum.PartType.Cylinder, Vector3.new(0.5, 1.4, 1.4), hex("#F08C3C"),
-					CFrame.new(at + Vector3.new(-step / 2, 3.4, 0)) * FLAT, Enum.Material.Neon)
+		elseif style == "Ice" then
+			if roll < 0.5 then
+				ellipsoid(piece(parent, "Congere", Enum.PartType.Block, Vector3.new(5, 1.5, 3.4) * k, zone.Colors.Foam[1],
+					CFrame.new(at + Vector3.new(0, 0.3 * k, 0)) * turn))
+			elseif roll < 0.8 then
+				BIOME.Spikes(parent, at, hex("#8CE0FF"), 0.6 * k, Enum.Material.Ice)
+			else
+				ellipsoid(piece(parent, "Rocher", Enum.PartType.Block, Vector3.new(2.6, 2, 2.4) * k, zone.Colors.Stone[2],
+					CFrame.new(at + Vector3.new(0, 0.7 * k, 0)) * turn * CFrame.Angles(rand(-0.3, 0.3), 0, 0)))
+			end
+		elseif style == "Iron" then
+			if roll < 0.55 then
+				ellipsoid(piece(parent, "Basalte", Enum.PartType.Block, Vector3.new(3, 2.2, 2.6) * k, zone.Colors.Stone[1],
+					CFrame.new(at + Vector3.new(0, 0.8 * k, 0)) * turn * CFrame.Angles(rand(-0.3, 0.3), 0, rand(-0.2, 0.2))))
+			elseif roll < 0.8 then
+				BIOME.Spikes(parent, at, zone.Colors.Stone[2], 0.6 * k)
+			else
+				ellipsoid(piece(parent, "Braise", Enum.PartType.Block, Vector3.new(1.6 * k, 0.5, 1.2 * k), hex("#F08C3C"),
+					CFrame.new(at + Vector3.new(0, 0.2, 0)) * turn, Enum.Material.Neon))
 			end
 		elseif style == "Reef" then
-			ellipsoid(piece(parent, "Recif", Enum.PartType.Block, Vector3.new(step + 0.6, 2.2, 2.2), zone.Colors.Stone[2],
-				CFrame.new(at + Vector3.new(0, 0.9, 0)) * CFrame.Angles(0, index * 0.4, 0)))
-			if index % 3 == 1 then BIOME.Coral(parent, at + Vector3.new(0, 1.2, 0), zone.Colors.Flower[2], 0.9) end
+			if roll < 0.4 then
+				ellipsoid(piece(parent, "Recif", Enum.PartType.Block, Vector3.new(3.2, 1.8, 2.6) * k, zone.Colors.Stone[2],
+					CFrame.new(at + Vector3.new(0, 0.6 * k, 0)) * turn))
+			elseif roll < 0.75 then
+				BIOME.Coral(parent, at, if roll < 0.6 then zone.Colors.Flower[1] else zone.Colors.Flower[2], 0.75 * k)
+			else
+				BIOME.Kelp(parent, at, zone.Colors.Leaf[2], 0.7 * k)
+			end
 		else -- Cloud
-			BIOME.Cloud(parent, at, zone.Colors.Foam[1], 1.3)
-			if index % 4 == 1 then
-				piece(parent, "PoteauDore", Enum.PartType.Cylinder, Vector3.new(3, 0.5, 0.5), hex("#F5C542"), CFrame.new(at + Vector3.new(0, 1.5, 0)) * FLAT)
+			if roll < 0.8 then
+				BIOME.Cloud(parent, at, zone.Colors.Foam[1], 0.9 * k)
+			else
+				BIOME.Spikes(parent, at, hex("#F5D778"), 0.45 * k) -- éclats dorés
 			end
 		end
-	end
-	-- deux repères plus hauts de part et d'autre du portique
-	for _, side in { -1, 1 } do
-		local x = gateX + side * (gap + 1)
-		local at = Vector3.new(x, groundAt(x, z, ignore), z)
-		local kind = if zone.Border == "Iron" then "Chimney" elseif zone.Border == "Reef" then "Coral" elseif zone.Border == "Cloud" then "Pillar"
-			elseif zone.Border == "Ice" then "Spikes" else "Pillar"
-		local color = if kind == "Pillar" and zone.Border == "Cloud" then hex("#F5C542") else propColor(zone, kind)
-		BIOME[kind](parent, at, color, 1.3)
 	end
 end
 
@@ -292,51 +317,7 @@ for _, zone in ZONES do
 	decor:PivotTo(arena:GetPivot())
 	decor.Parent = zonesFolder
 
-	-- tout le reste du terrain prend la palette du biome
-	for _, d in plot:GetDescendants() do
-		if d:IsA("BasePart") and not d:IsDescendantOf(zonesFolder) and not d:IsDescendantOf(arena:FindFirstChild("Emplacements") or zonesFolder) then
-			local fam = family(d.Color, d.Material)
-			local ramp = zone.Colors[fam]
-			if ramp then d.Color = shade(d.Color, fam, ramp) end
-		end
-	end
-	for _, d in plot.PanneauProprietaire:GetDescendants() do
-		if d:IsA("TextLabel") then d.Text = zone.Nom end
-	end
-
-	-- végétation de la pelouse : accessoires du biome
-	local nature = plot:FindFirstChild("Nature")
-	local props = Instance.new("Folder")
-	props.Name, props.Parent = "DecorBiome", plot
-	if nature then
-		for _, item in nature:GetChildren() do
-			local kind = zone.Plants[item.Name]
-			if not kind then continue end
-			local cf, size
-			if item:IsA("Model") then cf, size = item:GetBoundingBox() elseif item:IsA("BasePart") then cf, size = item.CFrame, item.Size end
-			if not cf then continue end
-			local foot = Vector3.new(cf.Position.X, cf.Position.Y - size.Y / 2, cf.Position.Z)
-			item:Destroy()
-			if kind ~= "Remove" then
-				local k = if item.Name == "Arbre" then 1.3 elseif item.Name == "Sapin" then 1.1 else 0.8
-				BIOME[kind](props, foot, propColor(zone, kind), k)
-			end
-		end
-	end
-
-	-- sol de biome sous le terrain (remplace le vert du baseplate)
-	local x0, x1, z0, z1 = math.huge, -math.huge, math.huge, -math.huge
-	for _, d in plot:GetDescendants() do
-		if d:IsA("BasePart") and d.Position.Y < 12 then
-			x0, x1 = math.min(x0, d.Position.X - d.Size.X / 2), math.max(x1, d.Position.X + d.Size.X / 2)
-			z0, z1 = math.min(z0, d.Position.Z - d.Size.Z / 2), math.max(z1, d.Position.Z + d.Size.Z / 2)
-		end
-	end
-	local floor = piece(floors, `Sol_Zone{zone.Id}`, Enum.PartType.Block, Vector3.new(188, 0.1, (z1 - z0) + 40), zone.Ground,
-		CFrame.new(zone.X, 0.05, (z0 + z1) / 2 - 8))
-	floor.CanCollide, floor.CanQuery = true, true
-
-	-- limite entre l'avant (royaume, portail) et l'arène, ouverte au portique EntreeZone
+	-- portique EntreeZone : frontière entre l'avant (herbe, royaume, portail) et l'arène
 	local entry = decor:FindFirstChild("EntreeZone")
 	local gateX, gateZ = zone.X, LINE_Z + 23
 	if entry then
@@ -349,6 +330,61 @@ for _, zone in ZONES do
 		end
 		gateX, gateZ = (gx0 + gx1) / 2, gz + 1.5
 	end
+	local plotCf = plot:GetPivot()
+	local gateLocal = plotCf:PointToObjectSpace(Vector3.new(gateX, 0, gateZ)).Z
+	local function behind(position: Vector3): boolean
+		return plotCf:PointToObjectSpace(position).Z < gateLocal - 1
+	end
+
+	-- l'avant reste la pelouse du plot, jamais changée ; seul ce qui est derrière le portique prend le biome
+	local slots = arena:FindFirstChild("Emplacements")
+	for _, d in plot:GetDescendants() do
+		if d:IsA("BasePart") and behind(d.Position) and not d:IsDescendantOf(zonesFolder)
+			and not (slots and d:IsDescendantOf(slots)) then
+			local fam = family(d.Color, d.Material)
+			local ramp = zone.Colors[fam]
+			if ramp then d.Color = shade(d.Color, fam, ramp) end
+		end
+	end
+	for _, d in plot.PanneauProprietaire:GetDescendants() do
+		if d:IsA("TextLabel") then d.Text = zone.Nom end
+	end
+
+	-- végétation derrière le portique : accessoires du biome (devant : la nature du plot, intacte)
+	local nature = plot:FindFirstChild("Nature")
+	local props = Instance.new("Folder")
+	props.Name, props.Parent = "DecorBiome", plot
+	for _, item in if nature then nature:GetChildren() else {} do
+		local kind = zone.Plants[item.Name]
+		if not kind then continue end
+		local cf, size
+		if item:IsA("Model") then cf, size = item:GetBoundingBox() elseif item:IsA("BasePart") then cf, size = item.CFrame, item.Size end
+		if not cf or not behind(cf.Position) then continue end
+		local foot = Vector3.new(cf.Position.X, cf.Position.Y - size.Y / 2, cf.Position.Z)
+		local name = item.Name
+		item:Destroy()
+		if kind ~= "Remove" then
+			local k = if name == "Arbre" then 1.3 elseif name == "Sapin" then 1.1 else 0.8
+			BIOME[kind](props, foot, propColor(zone, kind), k)
+		end
+	end
+
+	-- sol de biome ovale autour de l'arène, derrière le portique : le vert du baseplate ne dépasse plus
+	-- derrière l'arène, et l'avant garde l'herbe du Lobby
+	local x0, x1, z0 = math.huge, -math.huge, math.huge
+	for _, d in arena:GetDescendants() do
+		if d:IsA("BasePart") and d.Position.Y < 15 then
+			x0, x1 = math.min(x0, d.Position.X - d.Size.X / 2), math.max(x1, d.Position.X + d.Size.X / 2)
+			z0 = math.min(z0, d.Position.Z - d.Size.Z / 2)
+		end
+	end
+	local depth = (gateZ - z0) + 30
+	local floor = piece(floors, `Sol_Zone{zone.Id}`, Enum.PartType.Block, Vector3.new(math.min(186, (x1 - x0) + 50), 0.1, depth * 1.6),
+		zone.Ground, CFrame.new((x0 + x1) / 2, 0.05, gateZ - depth * 0.8))
+	ellipsoid(floor)
+	floor.CanCollide, floor.CanQuery = true, true
+
+	-- lisière entre l'avant et l'arène, ouverte au portique
 	local ax0, ax1 = math.huge, -math.huge
 	for _, d in decor:GetDescendants() do
 		if d:IsA("BasePart") and math.abs(d.Position.Z - gateZ) < 12 and d.Position.Y < 15 then
@@ -356,9 +392,9 @@ for _, zone in ZONES do
 		end
 	end
 	if ax0 == math.huge then ax0, ax1 = zone.X - 62, zone.X + 62 end
-	local limit = Instance.new("Folder")
-	limit.Name, limit.Parent = "LimiteArene", plot
-	border(limit, zone, ax0, ax1, gateZ, gateX, { limit, props })
+	local edge = Instance.new("Folder")
+	edge.Name, edge.Parent = "LisiereArene", plot
+	transition(edge, zone, ax0, ax1, gateZ, gateX, { edge, props })
 
 	-- monstres de la zone devant le front ennemi
 	local show = Instance.new("Model")
