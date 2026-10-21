@@ -284,8 +284,9 @@ commande, **sans créer de Script ou modifier de Source** :
    Si les modèles de base manquent, il copie Slime_Eau, GobLanceT_A et RoiOrc ; il conserve
    les versions de combat existantes. Les copies supplémentaires sont statiques et utilisent
    la mise en scène générique (charge/bascule), pas un nouveau squelette animé.
-2. `tools/studio-zone-stage-signs.luau` installe les pancartes Expédition manquantes sur les
-   huit arènes, relativement à PointEtendard. Il conserve toute pancarte déjà présente.
+2. `tools/studio-zone-stage-signs.luau` installe les pancartes Expédition manquantes et replace les
+   existantes, sur les huit arènes et les vitrines `PlotsZones` : bord droit de la zone de préparation
+   (PointEtendard + (20 ; 18,7)), face avant tournée vers les cases, hors du centre de l'arène.
    Les textes et interactions viennent du contrôleur client et de UITheme.
 
 Les outils enregistrent une étape ChangeHistoryService. Relancer Rojo depuis ce checkout et
