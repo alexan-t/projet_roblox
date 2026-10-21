@@ -254,6 +254,11 @@ Le décor est posé à son emplacement prévu, la vitrine `Workspace.PlotsZones.
 et non dans les arènes du hub. L'outil d'assets supprimait la copie de la vitrine en reconstruisant une
 zone : il l'y remplace désormais par le nouveau décor.
 
+Correction du sol du fond : le cercle `SolZone` s'arrêtait vers z -54 alors que le rempart descend
+jusqu'à z -74 ; l'herbe du plot (teintée olive par la vitrine) apparaissait derrière la pyramide.
+Nappe de sable `SolZone.FondArriere` ajoutée ([capture](../automation/screenshots/zones/zone2-sables-fond-sol.jpg)).
+Les zones 3 à 6 utilisent le même cercle et le même rempart : à vérifier.
+
 | Critère | Grille | Observation |
 | --- | --- | --- |
 | Brief | OK | Tous les éléments des recos présents, signature lisible depuis l'entrée |

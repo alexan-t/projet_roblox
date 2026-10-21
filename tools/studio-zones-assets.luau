@@ -535,6 +535,14 @@ local function desertRealm(m: Instance, sand: Color3, stone: Color3, pale: Color
 	local terracotta, wood, cloth, bone = hex("#B4643C"), hex("#9C8058"), hex("#A8452E"), hex("#E8DCC0")
 	local bands = { hex("#B98A62"), hex("#D4AA80"), hex("#A87652") }
 
+	-- sol du fond : le cercle de SolZone s'arrête vers z -54 alors que le rempart descend jusqu'à z -74 ;
+	-- nappe de sable elliptique (même centre et rayons que le rempart), juste sous le cercle pour éviter le z-fighting
+	local back = piece(m:FindFirstChild("SolZone") or m, "FondArriere", Enum.PartType.Block, V(0.4, 118, 110), hex("#D2B078"),
+		V(0, (GROUND_TOP - GROUND_Y) - 0.215, -20), FLAT)
+	local disc = Instance.new("SpecialMesh")
+	disc.MeshType = Enum.MeshType.Cylinder
+	disc.Parent = back
+
 	-- signature : une énorme tête de statue qui sort du sable, côté est, tournée vers l'entrée
 	local t = Instance.new("Folder")
 	t.Name, t.Parent = "TeteColossale", m
