@@ -223,11 +223,15 @@ Aucune rareté de monstre, aucun nouveau système de butin.
 
 | Zone | Biome | Ennemis (X-1 à X-5) | Boss X-5 | Niveau cible de simulation |
 | --- | --- | --- | --- | --- |
-| 2 · Le Désert des Ruines | Dunes, grès, colonnes brisées, oasis | VaseDesSables, ChacalParchemin, ScarabeeForgeSoleil, MangeDune, GardienSansVisage | ColosseEnseveli | 4 |
-| 3 · Les Terres Gelées | Neige, sapins givrés, cristaux et mares de glace | Givrelot, CrocDeGlacier, ArmureGelee, BonhommeRoyal, MammouthCristallin | RoiSansEte | 8 |
-| 4 · Les Forges | Roche noire, cheminées de fer, métal en fusion | ChevalierRivete, GolemCloche, FourneauAmbulant, Martelet, Chaine | MaitreDesForges | 12 |
-| 5 · Les Abysses | Fond marin bleu, coraux, algues, épaves | MeduseCouronnee, MureneMiroir, CoffreBernard, ChevalierNoye, CrabeCathedrale | Leviathan | 16 |
-| 6 · Les Îles du Ciel | Prairie claire, falaises blanches, nuages posés | GargouilleAilee, MiniColosseCeleste, MoutonNuage, PoissonDuCiel, BecTonnerre | GardienCeleste | 20 |
+| 2 · Le Désert des Ruines | Temple ensablé : colonnade, pyramide à degrés, temple sur dais, statue, oasis | VaseDesSables, ChacalParchemin, ScarabeeForgeSoleil, MangeDune, GardienSansVisage | ColosseEnseveli | 4 |
+| 3 · Les Terres Gelées | Donjon de glace : remparts crénelés, tours, stalactites, trône du Roi, lac gelé | Givrelot, CrocDeGlacier, ArmureGelee, BonhommeRoyal, MammouthCristallin | RoiSansEte | 8 |
+| 4 · Les Forges | Forteresse de basalte : grand fourneau, rigoles de métal en fusion, enclumes | ChevalierRivete, GolemCloche, FourneauAmbulant, Martelet, Chaine | MaitreDesForges | 12 |
+| 5 · Les Abysses | Récif englouti : épave, coquillages géants, bulles, anémones, coffre | MeduseCouronnee, MureneMiroir, CoffreBernard, ChevalierNoye, CrabeCathedrale | Leviathan | 16 |
+| 6 · Les Îles du Ciel | Sanctuaire céleste : bancs de nuages, arches de marbre, dôme d'or, statues ailées | GargouilleAilee, MiniColosseCeleste, MoutonNuage, PoissonDuCiel, BecTonnerre | GardienCeleste | 20 |
+
+**Décors** (`tools/studio-zones-assets.luau`) : chaque arène a son propre décor, construit autour des sorties
+d'ennemis de `SourcesEnnemis` (plateau, rampe, porte, tour, trois sorties au sol, aux mêmes places que la Zone 1).
+De la Zone 1, on ne garde que le lac (couleur et matière du biome), le portique d'entrée et ces repères invisibles.
 
 **Équilibrage conservé** : chaque nouveau monstre reprend les stats de l'archétype qu'il remplace
 dans les vagues de la version précédente (ex. `VaseDesSables` = `Slime`, `ColosseEnseveli` = `KingSlime`,

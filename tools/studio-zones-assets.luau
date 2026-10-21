@@ -3,7 +3,7 @@
 -- Assets uniquement, aucun Source de script. Répétable : reconstruit ses propres objets, ne touche à rien d'autre.
 --   1. ReplicatedStorage.Assets.Combat.Ennemi_<EnemyId> : copies de combat statiques des monstres VALIDÉS
 --      (Workspace, docs/ART_DIRECTION.md § 1), pivot tourné de 180° (l'avant du pivot = le visage), CouleurEffet.
---   2. ServerStorage.Assets.ZonesArene.Zone<n>_<Nom> : décor de chaque zone (désert, glace, forges, abysses, ciel), dérivé du décor de la Zone 1 de
+--   2. ServerStorage.Assets.ZonesArene.Zone<n>_<Nom> : décor de chaque zone (désert, glace, forges, abysses, ciel), propre à chaque biome (lac, portique et repères SourcesEnnemis repris de la Zone 1 de
 --      l'arène de Plot_1 (même plan, mêmes repères SourcesEnnemis / FrontEnnemi), WorldPivot = pivot de l'arène :
 --      ZoneDecor le pose dans l'arène de n'importe quel plot avec PivotTo(arena:GetPivot()).
 -- Une étape ChangeHistoryService (Ctrl+Z).
@@ -347,68 +347,361 @@ local function cloneProp(parent: Instance, source: Instance?, at: Vector3, scale
 	copy.Parent = parent
 end
 
--- Emplacements libres du décor de la Zone 1 (coordonnées locales de l'arène, relevés dans Studio : hors
--- chemins, hors cases héros et front ennemi, hors accessoires ; l'allée d'entrée |x| < 9 reste dégagée).
-local SPOTS = {
-	Left = { Vector3.new(-48, 0, 34), Vector3.new(-42, 0, 28), Vector3.new(-36, 0, 34), Vector3.new(-30, 0, 28), Vector3.new(-24, 0, 34),
-		Vector3.new(-18, 0, 30), Vector3.new(-42, 0, -8) },
-	Right = { Vector3.new(24, 0, 34), Vector3.new(30, 0, 28), Vector3.new(36, 0, 34), Vector3.new(42, 0, 28), Vector3.new(48, 0, 40),
-		Vector3.new(42, 0, 40), Vector3.new(42, 0, -14) },
-	Back = { Vector3.new(12, 0, -38) },
-}
+-- Décors propres à chaque zone (aucune réutilisation du décor de la Zone 1, sauf le lac et le portique).
+-- Coordonnées locales de l'arène (Y = hauteur au-dessus du sol du plot). Repères imposés par les sorties
+-- d'ennemis de SourcesEnnemis (relevés dans Studio) : plateau 27 × 20 de 3 de haut en (21,9 ; -44,1) avec
+-- sa rampe en (12,6 ; -30,2), porte (« Tente ») sur le plateau en (20,1 ; -47,4), sommet de tour à 13,5 en
+-- (30,4 ; -49), sorties au sol (« Buisson ») en (21 ; -24), (-19 ; -24), (-23 ; 3). Lac (CoinSlimes) gardé à
+-- l'ouest ; cases des héros (|x| < 13, z 5 à 33) et allée centrale (|x| < 9) dégagées.
 
-local function props(parent: Instance, base: Instance, id: number)
-	local veg = base:FindFirstChild("Vegetation")
-	local tree = veg and veg:FindFirstChild("Arbre")
-	local pine = veg and veg:FindFirstChild("Sapin")
-	local camp = base:FindFirstChild("CampGobelin")
-	local rocks = base:FindFirstChild("Rochers")
-	local rock = rocks and rocks:FindFirstChild("Rocher")
-	local all = {}
-	for _, list in { SPOTS.Left, SPOTS.Right, SPOTS.Back } do
-		for _, p in list do table.insert(all, p) end
+local KEEP = { SourcesEnnemis = true, EntreeZone = true, CoinSlimes = true }
+local LAKE = { Mare = true, MareCentre = true, Bord = true, Ruisseau = true, RuisseauJoint = true }
+
+local function V(x: number, y: number, z: number): Vector3
+	return Vector3.new(x, y, z)
+end
+local function rotY(a: number): CFrame
+	return CFrame.Angles(0, a, 0)
+end
+local function ball(parent: Instance, name: string, size: Vector3, color: Color3, at: Vector3, rotation: CFrame?, material: Enum.Material?): Part
+	local p = piece(parent, name, Enum.PartType.Block, size, color, at, rotation, material)
+	local mesh = Instance.new("SpecialMesh")
+	mesh.MeshType = Enum.MeshType.Sphere
+	mesh.Parent = p
+	return p
+end
+local function column(parent: Instance, name: string, h: number, d: number, color: Color3, at: Vector3, material: Enum.Material?): Part
+	return piece(parent, name, Enum.PartType.Cylinder, V(h, d, d), color, at + V(0, h / 2, 0), FLAT, material)
+end
+local function light(part: BasePart, color: Color3, range: number, brightness: number)
+	local l = Instance.new("PointLight")
+	l.Color, l.Range, l.Brightness = color, range, brightness
+	l.Parent = part
+end
+
+-- Points d'un rempart en U autour du fond de l'arène : deux flancs (x = ±58, z de +18 à -20) puis un arc
+-- de fond (centre z -20, rayons 58 × 54). Renvoie { position, angle de la tangente }.
+local function enclosure(step: number): { { at: Vector3, yaw: number, back: boolean } }
+	local list = {}
+	for z = 18, -20, -step do
+		table.insert(list, { at = V(-58, 0, z), yaw = math.pi / 2, back = false })
+		table.insert(list, { at = V(58, 0, z), yaw = math.pi / 2, back = false })
 	end
-	if id == 2 then
-		-- Désert des Ruines : colonnes brisées, dunes de grès, petites oasis
-		for index, p in all do
-			if index % 3 == 1 then pillar(parent, p, hex("#C8A87E"))
-			elseif index % 3 == 2 then spikes(parent, p, hex("#D2B078"), nil, 1.4)
-			else pool(parent, p, 3.5, hex("#3E8C8C"), hex("#B4946A")) end
+	local count = math.floor(math.pi * 56 / step)
+	for i = 1, count - 1 do
+		local a = math.pi * i / count
+		local x, z = -58 * math.cos(a), -20 - 54 * math.sin(a)
+		table.insert(list, { at = V(x, 0, z), yaw = -a + math.pi / 2, back = math.abs(x) < 20 })
+	end
+	return list
+end
+
+-- Plateau + rampe + porte + tour : la même ossature imposée par les sorties, habillée par chaque biome.
+type Kit = {
+	Body: Color3, Top: Color3, Trim: Color3, Glow: Color3, Dark: Color3, Material: Enum.Material?,
+}
+local function frame(parent: Instance, kit: Kit, towerTop: (Instance, Vector3) -> ())
+	-- plateau (le dessus à 3)
+	piece(parent, "Plateau", Enum.PartType.Block, V(27, 3, 20), kit.Body, V(21.9, 1.5, -44.1), nil, kit.Material)
+	piece(parent, "DessusPlateau", Enum.PartType.Block, V(27.6, 0.4, 20.6), kit.Top, V(21.9, 3.1, -44.1), nil, kit.Material)
+	-- rampe : trois marches vers l'allée
+	for i = 0, 2 do
+		piece(parent, "Marche", Enum.PartType.Block, V(4.6, 3 - i, 2.4), kit.Top, V(12.6, (3 - i) / 2, -32.6 + i * 2.4), nil, kit.Material)
+	end
+	-- porte sur le plateau, ouverte vers l'allée (+z)
+	for _, side in { -1, 1 } do
+		piece(parent, "MontantPorte", Enum.PartType.Block, V(1.4, 6.5, 1.6), kit.Trim, V(20.1 + side * 2.8, 3 + 3.25, -48.6), nil, kit.Material)
+	end
+	piece(parent, "LintPorte", Enum.PartType.Block, V(7.4, 1.4, 1.8), kit.Trim, V(20.1, 3 + 7.2, -48.6), nil, kit.Material)
+	piece(parent, "FondPorte", Enum.PartType.Block, V(4.4, 6.4, 0.4), kit.Dark, V(20.1, 3 + 3.2, -49.4), nil, Enum.Material.SmoothPlastic)
+	local glow = piece(parent, "LueurPorte", Enum.PartType.Block, V(3.6, 0.3, 0.6), kit.Glow, V(20.1, 3 + 0.15, -48.9), nil, Enum.Material.Neon)
+	light(glow, kit.Glow, 10, 1)
+	-- tour : fût jusqu'à 12,9, plateforme à 13,5 (point de saut)
+	column(parent, "Tour", 12.9, 5, kit.Body, V(30.4, 0, -49), kit.Material)
+	piece(parent, "Balcon", Enum.PartType.Cylinder, V(0.6, 6.6, 6.6), kit.Top, V(30.4, 13.2, -49), FLAT, kit.Material)
+	towerTop(parent, V(30.4, 13.5, -49))
+end
+
+local BUILD = {}
+
+---------------------------------------------------------------- Zone 2 : temple ensablé du désert
+BUILD[2] = function(m: Instance)
+	local sand, stone, light2, gold, dark = hex("#D8B47C"), hex("#C49A64"), hex("#E6CCA0"), hex("#F5C542"), hex("#3A2A1E")
+	local f = Instance.new("Folder")
+	f.Name, f.Parent = "Temple", m
+	-- rempart : colonnade de grès et murs écroulés, obélisques aux angles
+	for i, p in enclosure(7) do
+		local h = if p.back then 15 else 9 + (i % 3) * 2.5
+		piece(f, "MurGres", Enum.PartType.Block, V(7.6, h, 3), if i % 2 == 0 then stone else sand, p.at + V(0, h / 2, 0), rotY(p.yaw))
+		if i % 2 == 1 then
+			column(f, "Colonne", h + 3, 2.2, light2, p.at + V(0, 0, 0) + (CFrame.Angles(0, p.yaw, 0).LookVector * -2.2))
+			piece(f, "Chapiteau", Enum.PartType.Block, V(3, 0.8, 3), sand, p.at + V(0, h + 3.4, 0) + (CFrame.Angles(0, p.yaw, 0).LookVector * -2.2))
 		end
-	elseif id == 3 then
-		-- Terres Gelées : sapins enneigés, cristaux de glace, mares gelées
-		for index, p in all do
-			if index % 3 == 1 then cloneProp(parent, pine, p, 1, index)
-			elseif index % 3 == 2 then spikes(parent, p, hex("#8CE0FF"), Enum.Material.Ice, 1.2)
-			else pool(parent, p, 4, hex("#B4D2EB"), hex("#DCE6F0"), Enum.Material.Ice) end
+	end
+	-- pyramide à degrés au fond, coiffe dorée
+	for i = 0, 5 do
+		local w = 34 - i * 5.4
+		piece(f, "Degre", Enum.PartType.Block, V(w, 3.2, w * 0.7), if i % 2 == 0 then sand else stone, V(-6, 1.6 + i * 3.2, -66))
+	end
+	local cap = piece(f, "CoiffeDoree", Enum.PartType.Block, V(3.2, 2.6, 2.4), gold, V(-6, 20.5, -66), nil, Enum.Material.Neon)
+	light(cap, gold, 18, 1)
+	-- obélisques le long de l'allée
+	for _, x in { -14, 14 } do
+		for _, z in { -12, -38 } do
+			piece(f, "Obelisque", Enum.PartType.Block, V(1.8, 9, 1.8), stone, V(x, 4.5, z))
+			piece(f, "Pointe", Enum.PartType.Wedge, V(1.8, 1.6, 1.8), gold, V(x, 9.8, z))
 		end
-	elseif id == 4 then
-		-- Forges : cheminées, bassins de métal en fusion, rochers
-		for index, p in all do
-			if index % 3 == 1 then chimney(parent, p, hex("#4A4440"), hex("#F08C3C"))
-			elseif index % 3 == 2 then pool(parent, p, 3.5, hex("#E0641E"), hex("#3E3A38"))
-			else cloneProp(parent, rock, p, 1.1, index) end
-		end
-	elseif id == 5 then
-		-- Abysses : coraux, algues, rochers
-		for index, p in all do
-			if index % 3 == 1 then coral(parent, p, hex("#C8644A"))
-			elseif index % 3 == 2 then reeds(parent, p, hex("#1E5A5A"), hex("#3C8C78"))
-			else cloneProp(parent, rock, p, 1.1, index) end
-		end
-	elseif id == 6 then
-		-- Îles du Ciel : nuages posés, colonnes claires, arbres
-		for index, p in all do
-			if index % 3 == 1 then cloud(parent, p, hex("#F0F6FA"), 1.6)
-			elseif index % 3 == 2 then pillar(parent, p, hex("#E0DCD0"), 0.9)
-			else cloneProp(parent, tree, p, 0.9, index) end
-		end
+	end
+	-- tête de statue à demi ensevelie, côté est
+	ball(f, "TeteStatue", V(9, 8, 8), light2, V(44, 2.5, -10))
+	piece(f, "Coiffe", Enum.PartType.Block, V(10, 3, 7), stone, V(44, 7, -10))
+	for _, side in { -1, 1 } do
+		piece(f, "Oeil", Enum.PartType.Block, V(1.6, 0.8, 0.5), dark, V(44 + side * 2, 3.6, -6.1))
+	end
+	-- dunes
+	for _, d in { { 36, -30, 14 }, { 46, 8, 12 }, { -46, -50, 16 }, { 40, -62, 14 } } do
+		ball(f, "Dune", V(d[3], 3, d[3] * 0.7), sand, V(d[1], 0.4, d[2]), rotY(d[1]))
+	end
+	-- ossature des sorties : temple sur dais, porte du temple, obélisque-vigie
+	frame(f, { Body = stone, Top = light2, Trim = sand, Glow = gold, Dark = dark }, function(parent, top)
+		piece(parent, "Vigie", Enum.PartType.Block, V(3, 3, 3), sand, top + V(0, 1.5, 0))
+		piece(parent, "PointeVigie", Enum.PartType.Wedge, V(3, 2.4, 3), gold, top + V(0, 4.2, 0))
+	end)
+	-- sorties au sol : blocs de statue brisée
+	for _, at in { V(21, 0, -24), V(-19, 0, -24), V(-23, 0, 3) } do
+		piece(f, "BlocBrise", Enum.PartType.Block, V(4.6, 3.4, 3.2), stone, at + V(-1.5, 1.7, -2.6), rotY(0.4))
+		ball(f, "TasSable", V(6, 1.6, 4), sand, at + V(1.6, 0.2, -2.2))
 	end
 end
 
-local function bottomOf(model: Model): number
-	local cf, size = model:GetBoundingBox()
-	return cf.Position.Y - size.Y / 2
+---------------------------------------------------------------- Zone 3 : donjon de glace
+BUILD[3] = function(m: Instance)
+	local ice, iceDark, snow, glow, deep = hex("#A8D2EE"), hex("#7CB0D8"), hex("#F0F6FA"), hex("#8CE0FF"), hex("#1E3C6E")
+	local f = Instance.new("Folder")
+	f.Name, f.Parent = "Donjon", m
+	-- dallage de glace polie sous l'allée et le front ennemi (damier)
+	for x = -12, 12, 6 do
+		for z = -54, -6, 6 do
+			piece(f, "DalleGlace", Enum.PartType.Block, V(6, 0.2, 6), if (x + z) % 12 == 0 then hex("#BFE0F5") else hex("#A5CDEB"),
+				V(x, 0.1, z), nil, Enum.Material.Ice)
+		end
+	end
+	-- remparts de glace crénelés, tours rondes, stalactites
+	for i, p in enclosure(8) do
+		local h = if p.back then 20 else 14
+		local rot = rotY(p.yaw)
+		piece(f, "MurGlace", Enum.PartType.Block, V(8.4, h, 3.4), if i % 2 == 0 then ice else iceDark, p.at + V(0, h / 2, 0), rot, Enum.Material.Ice)
+		piece(f, "Neige", Enum.PartType.Block, V(8.6, 0.8, 3.8), snow, p.at + V(0, h + 0.4, 0), rot)
+		for c = -1, 1, 2 do
+			piece(f, "Creneau", Enum.PartType.Block, V(2.2, 2, 3.4), ice, p.at + (CFrame.Angles(0, p.yaw, 0).RightVector * c * 2.6) + V(0, h + 1.8, 0), rot, Enum.Material.Ice)
+		end
+		local inward = -(p.at * V(1, 0, 1)).Unit
+		for s = -1, 1 do
+			local len = 2 + (i + s) % 3
+			piece(f, "Stalactite", Enum.PartType.Wedge, V(0.8, len, 0.8), glow, p.at + inward * 1.9 + (CFrame.Angles(0, p.yaw, 0).RightVector * s * 2.4)
+				+ V(0, h - len / 2, 0), rot * CFrame.Angles(math.pi, 0, 0), Enum.Material.Ice)
+		end
+		if i % 5 == 0 then
+			column(f, "TourGlace", h + 8, 7, iceDark, p.at, Enum.Material.Ice)
+			ball(f, "DomeGlace", V(7.6, 5, 7.6), snow, p.at + V(0, h + 8, 0))
+			local c = piece(f, "CristalTour", Enum.PartType.Block, V(1.4, 3.4, 1.4), glow, p.at + V(0, h + 11.8, 0), CFrame.Angles(0, 0.78, 0), Enum.Material.Neon)
+			light(c, glow, 12, 0.8)
+		end
+	end
+	-- trône du Roi sans Été au fond : grande porte de glace et cristal
+	for _, side in { -1, 1 } do
+		column(f, "PilierTrone", 22, 5, iceDark, V(side * 9, 0, -66), Enum.Material.Ice)
+		local tip = piece(f, "PointePilier", Enum.PartType.Wedge, V(4, 5, 4), glow, V(side * 9, 24.5, -66), nil, Enum.Material.Ice)
+		tip.Transparency = 0.1
+	end
+	piece(f, "ArcheTrone", Enum.PartType.Block, V(22, 3, 4), ice, V(0, 21, -66), nil, Enum.Material.Ice)
+	piece(f, "FondTrone", Enum.PartType.Block, V(13, 19, 1), deep, V(0, 9.5, -67.5))
+	local heart = piece(f, "CoeurDeGlace", Enum.PartType.Block, V(3, 6, 3), glow, V(0, 11, -66.8), CFrame.Angles(0, 0.78, 0), Enum.Material.Neon)
+	light(heart, glow, 22, 1.4)
+	piece(f, "Trone", Enum.PartType.Block, V(6, 5, 3), snow, V(0, 2.5, -65.5), nil, Enum.Material.Ice)
+	-- piliers gelés le long de l'allée, braseros à flamme froide
+	for _, x in { -14, 14 } do
+		for _, z in { -10, -24, -38 } do
+			column(f, "PilierGele", 8, 2.2, ice, V(x, 0, z), Enum.Material.Ice)
+			local fl = piece(f, "FlammeFroide", Enum.PartType.Block, V(1.2, 1.6, 1.2), glow, V(x, 8.8, z), CFrame.Angles(0, 0.78, 0), Enum.Material.Neon)
+			light(fl, glow, 9, 0.6)
+		end
+	end
+	-- congères et cristaux côté est
+	for _, d in { { 42, -8 }, { 46, 10 }, { 38, -64 }, { -44, -54 } } do
+		ball(f, "Congere", V(10, 3, 7), snow, V(d[1], 0.4, d[2]), rotY(d[2]))
+		spikes(f, V(d[1] + 3, 0, d[2] - 2), glow, Enum.Material.Ice, 1.4)
+	end
+	frame(f, { Body = iceDark, Top = ice, Trim = snow, Glow = glow, Dark = deep, Material = Enum.Material.Ice }, function(parent, top)
+		ball(parent, "DomeVigie", V(5, 3.2, 5), snow, top + V(0, 0.6, 0))
+		local c = piece(parent, "CristalVigie", Enum.PartType.Block, V(1.2, 3, 1.2), glow, top + V(0, 3.4, 0), CFrame.Angles(0, 0.78, 0), Enum.Material.Neon)
+		light(c, glow, 10, 0.7)
+	end)
+	for _, at in { V(21, 0, -24), V(-19, 0, -24), V(-23, 0, 3) } do
+		spikes(f, at + V(-1.5, 0, -2.4), glow, Enum.Material.Ice, 1.5)
+		ball(f, "Congere", V(6, 2, 4), snow, at + V(1.6, 0.2, -2.2))
+	end
+end
+
+---------------------------------------------------------------- Zone 4 : forteresse des forges
+BUILD[4] = function(m: Instance)
+	local basalt, basaltLight, iron, ember, dark = hex("#3A3432"), hex("#5A524C"), hex("#6E6E72"), hex("#F08C3C"), hex("#1C1614")
+	local f = Instance.new("Folder")
+	f.Name, f.Parent = "Forges", m
+	-- murs de basalte cerclés de fer, rivets, cheminées
+	for i, p in enclosure(8) do
+		local h = if p.back then 18 else 12 + (i % 2) * 2
+		local rot = rotY(p.yaw)
+		piece(f, "MurBasalte", Enum.PartType.Block, V(8.4, h, 3.6), if i % 2 == 0 then basalt else basaltLight, p.at + V(0, h / 2, 0), rot)
+		for _, y in { h * 0.3, h * 0.75 } do
+			piece(f, "Cerclage", Enum.PartType.Block, V(8.6, 0.7, 3.9), iron, p.at + V(0, y, 0), rot, Enum.Material.DiamondPlate)
+		end
+		if i % 4 == 0 then
+			chimney(f, p.at + V(0, h, 0), basalt, ember, 1.2)
+		end
+	end
+	-- grand fourneau au fond : dôme, bouche rougeoyante, deux cheminées
+	ball(f, "Fourneau", V(26, 20, 18), basaltLight, V(0, 6, -66))
+	piece(f, "Socle", Enum.PartType.Block, V(28, 3, 16), basalt, V(0, 1.5, -64))
+	local mouth = piece(f, "BoucheFourneau", Enum.PartType.Block, V(9, 6, 1), ember, V(0, 6, -57.4), nil, Enum.Material.Neon)
+	light(mouth, ember, 26, 1.5)
+	piece(f, "GrilleBouche", Enum.PartType.Block, V(10, 0.6, 1.4), iron, V(0, 9.2, -57.1), nil, Enum.Material.DiamondPlate)
+	for _, side in { -1, 1 } do
+		column(f, "GrandeCheminee", 26, 4, basalt, V(side * 9, 0, -70))
+		local b = piece(f, "BraiseCheminee", Enum.PartType.Cylinder, V(0.3, 3, 3), ember, V(side * 9, 26.2, -70), FLAT, Enum.Material.Neon)
+		light(b, ember, 10, 0.8)
+	end
+	-- rigoles de métal en fusion vers l'allée
+	for _, x in { -11, 11 } do
+		local g = piece(f, "Rigole", Enum.PartType.Block, V(1.6, 0.25, 42), ember, V(x, 0.15, -36), nil, Enum.Material.Neon)
+		light(g, ember, 8, 0.4)
+		for _, side in { -1, 1 } do
+			piece(f, "BordRigole", Enum.PartType.Block, V(0.6, 0.6, 42), iron, V(x + side * 1.1, 0.3, -36), nil, Enum.Material.DiamondPlate)
+		end
+	end
+	-- enclumes, lingots, chaînes
+	for _, d in { { -22, -8 }, { 40, -10 }, { 44, 10 }, { -42, -52 } } do
+		piece(f, "SocleEnclume", Enum.PartType.Block, V(2, 2, 2), basalt, V(d[1], 1, d[2]))
+		piece(f, "Enclume", Enum.PartType.Block, V(3.6, 1.2, 1.6), iron, V(d[1], 2.6, d[2]), nil, Enum.Material.DiamondPlate)
+		piece(f, "Bigorne", Enum.PartType.Wedge, V(1.6, 1, 1.6), iron, V(d[1] + 2.4, 2.6, d[2]), rotY(-math.pi / 2), Enum.Material.DiamondPlate)
+		for k = 0, 2 do
+			piece(f, "Lingot", Enum.PartType.Block, V(1.4, 0.6, 0.7), hex("#D2A04A"), V(d[1] - 2.6, 0.3 + k * 0.6, d[2] + 1.6), rotY(k * 0.3), Enum.Material.Metal)
+		end
+	end
+	frame(f, { Body = basalt, Top = iron, Trim = basaltLight, Glow = ember, Dark = dark, Material = nil }, function(parent, top)
+		local b = piece(parent, "Brasero", Enum.PartType.Cylinder, V(1, 3.6, 3.6), ember, top + V(0, 0.6, 0), FLAT, Enum.Material.Neon)
+		light(b, ember, 12, 1)
+	end)
+	for _, at in { V(21, 0, -24), V(-19, 0, -24), V(-23, 0, 3) } do
+		piece(f, "Chariot", Enum.PartType.Block, V(4.4, 2.4, 3), iron, at + V(-1.2, 1.6, -2.6), rotY(0.3), Enum.Material.DiamondPlate)
+		ball(f, "Minerai", V(3.6, 2, 2.6), hex("#5A3A2A"), at + V(-1.2, 3, -2.6))
+		ball(f, "Scories", V(5, 1.4, 3.6), basalt, at + V(1.8, 0.2, -1.8))
+	end
+end
+
+---------------------------------------------------------------- Zone 5 : temple englouti des abysses
+BUILD[5] = function(m: Instance)
+	local rock, rockLight, coralA, coralB, algae, glow, wood = hex("#2E4256"), hex("#4E6A82"), hex("#C8644A"), hex("#E08C64"), hex("#2E7A64"), hex("#64DCDC"), hex("#4A3828")
+	local f = Instance.new("Folder")
+	f.Name, f.Parent = "Abysses", m
+	-- récif : rochers arrondis couverts de coraux et d'algues
+	for i, p in enclosure(7) do
+		local h = if p.back then 16 else 10 + (i % 3) * 2
+		-- amas de 3 roches de tailles différentes, basses et penchées (pas un bloc lisse)
+		local right = CFrame.Angles(0, p.yaw, 0).RightVector
+		for r = -1, 1 do
+			local rh = h * (if r == 0 then 0.75 else 0.5) * (0.85 + ((i + r) % 3) * 0.15)
+			ball(f, "Recif", V(5.5 + (i + r) % 3, rh, 5 + (i % 2) * 1.5), if (i + r) % 2 == 0 then rock else rockLight,
+				p.at + right * r * 3 + V(0, rh * 0.35, 0), rotY(p.yaw + i + r) * CFrame.Angles(((i + r) % 3 - 1) * 0.25, 0, r * 0.2))
+		end
+		if i % 2 == 0 then coral(f, p.at + V(0, h * 0.55, 0), if i % 4 == 0 then coralA else coralB, 1.4) end
+		if i % 3 == 0 then reeds(f, p.at + (-(p.at * V(1, 0, 1)).Unit * 3.5), algae, hex("#3C8C78")) end
+	end
+	-- épave au fond : coque, mât brisé
+	piece(f, "Coque", Enum.PartType.Block, V(30, 7, 9), wood, V(-4, 3.5, -66), CFrame.Angles(0, 0.2, 0.12))
+	piece(f, "Proue", Enum.PartType.Wedge, V(9, 7, 8), wood, V(13, 3.5, -62.5), CFrame.Angles(0, 0.2 - math.pi / 2, 0.12))
+	piece(f, "Pont", Enum.PartType.Block, V(28, 0.6, 8), hex("#5E4632"), V(-4, 7.1, -66), CFrame.Angles(0, 0.2, 0.12))
+	column(f, "Mat", 16, 1.2, wood, V(-6, 7, -66))
+	piece(f, "VergueBrisee", Enum.PartType.Block, V(10, 0.8, 0.8), wood, V(-4, 18, -66), CFrame.Angles(0, 0.2, 0.5))
+	-- arche de coquillage géant au milieu du fond
+	for _, side in { -1, 1 } do
+		ball(f, "Coquille", V(12, 16, 3), hex("#E6C8B4"), V(side * 26, 7, -52), rotY(side * 0.6))
+	end
+	local pearl = ball(f, "Perle", V(4, 4, 4), hex("#F0F6FA"), V(-26, 2, -50), nil, Enum.Material.Neon)
+	light(pearl, glow, 12, 0.8)
+	-- colonnes de bulles, anémones lumineuses
+	for _, d in { { -14, -14 }, { 14, -14 }, { -14, -40 }, { 14, -40 }, { 42, -6 } } do
+		for k = 0, 4 do
+			local b = ball(f, "Bulle", V(1.2 - k * 0.15, 1.2 - k * 0.15, 1.2 - k * 0.15), hex("#B4DCF0"), V(d[1] + math.sin(k) * 0.4, 1 + k * 2.2, d[2]))
+			b.Transparency = 0.45
+		end
+		local a = ball(f, "Anemone", V(2.4, 1.4, 2.4), glow, V(d[1], 0.5, d[2]), nil, Enum.Material.Neon)
+		light(a, glow, 8, 0.5)
+	end
+	-- coffre au trésor et ancre côté est
+	piece(f, "Coffre", Enum.PartType.Block, V(4, 2.4, 2.6), wood, V(44, 1.2, 8))
+	piece(f, "Couvercle", Enum.PartType.Block, V(4.2, 0.8, 2.8), hex("#D2A04A"), V(44, 2.8, 7.4), CFrame.Angles(-0.5, 0, 0), Enum.Material.Metal)
+	column(f, "Ancre", 7, 0.8, hex("#5A6470"), V(38, 0, -16), Enum.Material.Metal)
+	piece(f, "BrasAncre", Enum.PartType.Block, V(4.6, 0.8, 0.8), hex("#5A6470"), V(38, 0.8, -16), nil, Enum.Material.Metal)
+	frame(f, { Body = rock, Top = rockLight, Trim = hex("#6E8296"), Glow = glow, Dark = hex("#0E1A2A"), Material = nil }, function(parent, top)
+		coral(parent, top, coralA, 1.1)
+	end)
+	for _, at in { V(21, 0, -24), V(-19, 0, -24), V(-23, 0, 3) } do
+		reeds(f, at + V(-1.2, 0, -2.6), algae, hex("#3C8C78"))
+		coral(f, at + V(1.8, 0, -2), coralB, 0.9)
+	end
+end
+
+---------------------------------------------------------------- Zone 6 : sanctuaire des îles du ciel
+BUILD[6] = function(m: Instance)
+	local marble, marbleDark, gold, cloudC, sky = hex("#F4F0E6"), hex("#DCD6C8"), hex("#F5C542"), hex("#FFFFFF"), hex("#8CB4DC")
+	local f = Instance.new("Folder")
+	f.Name, f.Parent = "Sanctuaire", m
+	-- banc de nuages et arches de marbre à liseré d'or
+	for i, p in enclosure(8) do
+		cloud(f, p.at + V(0, 1, 0), cloudC, 2.4)
+		if i % 3 == 0 then
+			local h = if p.back then 16 else 11
+			local right = CFrame.Angles(0, p.yaw, 0).RightVector
+			for _, s in { -1, 1 } do
+				column(f, "ColonneMarbre", h, 1.8, marble, p.at + right * s * 3)
+			end
+			piece(f, "ArcheMarbre", Enum.PartType.Block, V(8.4, 1.4, 2), marbleDark, p.at + V(0, h + 0.7, 0), rotY(p.yaw))
+			piece(f, "LisereOr", Enum.PartType.Block, V(8.6, 0.3, 2.2), gold, p.at + V(0, h + 1.55, 0), rotY(p.yaw), Enum.Material.Metal)
+		end
+	end
+	-- sanctuaire rond au fond : colonnade, dôme d'or, orbe
+	for k = 0, 7 do
+		local a = k * math.pi / 4
+		column(f, "ColonneSanctuaire", 14, 1.6, marble, V(math.cos(a) * 8, 2, -64 + math.sin(a) * 6))
+	end
+	piece(f, "SocleSanctuaire", Enum.PartType.Cylinder, V(2, 20, 20), marbleDark, V(0, 1, -64), FLAT)
+	ball(f, "Dome", V(19, 9, 15), gold, V(0, 16.5, -64), nil, Enum.Material.Metal)
+	local orb = ball(f, "Orbe", V(3.6, 3.6, 3.6), hex("#FFE08C"), V(0, 22.5, -64), nil, Enum.Material.Neon)
+	light(orb, hex("#FFE08C"), 24, 1.2)
+	-- statues ailées de part et d'autre de l'allée
+	for _, x in { -15, 15 } do
+		for _, z in { -14, -40 } do
+			column(f, "Piedestal", 3, 3, marbleDark, V(x, 0, z))
+			ball(f, "Statue", V(2, 4, 1.6), marble, V(x, 5, z))
+			for _, s in { -1, 1 } do
+				ball(f, "Aile", V(0.5, 3.4, 2.6), gold, V(x + s * 1.3, 5.6, z), CFrame.Angles(0, 0, s * 0.5), Enum.Material.Metal)
+			end
+		end
+	end
+	-- îlots de nuages posés et bannières côté est
+	for _, d in { { 42, -8 }, { 46, 10 }, { 38, -62 }, { -44, -54 } } do
+		cloud(f, V(d[1], 0, d[2]), cloudC, 1.8)
+		column(f, "MatBanniere", 9, 0.4, gold, V(d[1] + 2, 0, d[2]), Enum.Material.Metal)
+		piece(f, "Banniere", Enum.PartType.Block, V(0.15, 4, 2.4), sky, V(d[1] + 2, 6.4, d[2] + 1.3))
+	end
+	frame(f, { Body = marbleDark, Top = marble, Trim = gold, Glow = hex("#FFE08C"), Dark = sky, Material = nil }, function(parent, top)
+		local o = ball(parent, "OrbeVigie", V(2.4, 2.4, 2.4), hex("#FFE08C"), top + V(0, 1.6, 0), nil, Enum.Material.Neon)
+		light(o, hex("#FFE08C"), 10, 0.8)
+	end)
+	for _, at in { V(21, 0, -24), V(-19, 0, -24), V(-23, 0, 3) } do
+		cloud(f, at + V(0, 0, -2.4), cloudC, 1.4)
+	end
 end
 
 for _, theme in THEMES do
@@ -420,38 +713,27 @@ for _, theme in THEMES do
 	for key, value in base:GetAttributes() do model:SetAttribute(key, value) end
 	model:SetAttribute("ZoneId", theme.Id)
 	model:SetAttribute("Nom", theme.Nom)
-	model:SetAttribute("Note", "Décor généré par tools/studio-zones-assets.luau depuis Zone1_PlaineDuRoyaume")
+	model:SetAttribute("Note", "Décor propre à la zone (tools/studio-zones-assets.luau) ; repères SourcesEnnemis, portique et lac repris de la Zone 1")
 
-	-- retraits (ex. slimes de décor de la Zone 1 hors de la Mare aux Slimes) et remplacements
-	local replaced: { Vector3 } = {}
-	for _, d in model:GetDescendants() do
-		if theme.Replace and theme.Replace[d.Name] and d:IsA("Model") and d.Parent then
-			local cf, size = d:GetBoundingBox()
-			local at = PIVOT:PointToObjectSpace(cf.Position)
-			table.insert(replaced, Vector3.new(at.X, cf.Position.Y - size.Y / 2 - GROUND_Y, at.Z))
-			d:Destroy()
-		elseif theme.Remove[d.Name] and d.Parent then
-			d:Destroy()
-		end
-	end
-	-- arbres plus grands dans les forêts (pied recalé au sol)
-	if theme.TreeScale ~= 1 then
-		for _, d in model:GetDescendants() do
-			if d:IsA("Model") and (d.Name == "Arbre" or d.Name == "Sapin") and not d:IsDescendantOf(model.Rempart) then
-				local bottom = bottomOf(d)
-				d:ScaleTo(d:GetScale() * theme.TreeScale)
-				d:PivotTo(d:GetPivot() + Vector3.new(0, bottom - bottomOf(d), 0))
+	-- on ne garde que les repères de combat, le portique d'entrée et le lac
+	for _, child in model:GetChildren() do
+		if not KEEP[child.Name] then
+			child:Destroy()
+		elseif child.Name == "CoinSlimes" then
+			child.Name = "Lac"
+			for _, d in child:GetChildren() do
+				if not LAKE[d.Name] then d:Destroy() end
 			end
 		end
 	end
-	-- couleurs par famille, matière de l'eau, lumières
+	-- couleurs du biome sur ce qui reste (portique, eau du lac), matière de l'eau
 	for _, d in model:GetDescendants() do
 		if d:IsA("BasePart") and not d:IsDescendantOf(model.SourcesEnnemis) and d.Name ~= "Flamme" then
 			local fam = family(d.Color, d.Material)
 			local ramp = theme.Colors[fam]
 			if ramp then d.Color = shade(d.Color, fam, ramp) end
 			if theme.LavaWater and (fam == "Water" or fam == "Foam") then
-				d.Material = Enum.Material.SmoothPlastic
+				d.Material = Enum.Material.Neon
 			elseif theme.IceWater and fam == "Water" then
 				d.Material = Enum.Material.Ice
 			end
@@ -461,38 +743,11 @@ for _, theme in THEMES do
 			d.Text = `Zone {theme.Id}`
 		end
 	end
-	if theme.LavaWater then
-		-- lueur de la lave : quelques lumières orangées dans la rivière et les mares
-		for _, name in { "Bassin", "MareCentre" } do
-			for _, d in model:GetDescendants() do
-				if d.Name == name and d:IsA("BasePart") then
-					local light = Instance.new("PointLight")
-					light.Color, light.Range, light.Brightness = hex("#FF8C28"), 14, 1.2
-					light.Parent = d
-				end
-			end
-		end
-	end
-	-- sol de la zone : recouvre l'herbe du plot dans l'arène (taches peintes de 3 nuances)
+	-- sol de la zone (recouvre l'herbe du plot dans l'arène), puis le décor propre au biome
 	local ground = Instance.new("Folder")
 	ground.Name, ground.Parent = "SolZone", model
 	groundOf(ground, theme.Ground)
-	local extra = Instance.new("Folder")
-	extra.Name, extra.Parent = "DecorZone", model
-	props(extra, model, theme.Id)
-	for index, at in replaced do
-		if theme.ReplaceWith == "Pillar" then
-			pillar(extra, at, hex("#C8A87E"), 1.5)
-		elseif theme.ReplaceWith == "Chimney" then
-			chimney(extra, at, hex("#4A4440"), hex("#F08C3C"), 1.4)
-		elseif theme.ReplaceWith == "Cloud" then
-			cloud(extra, at, hex("#F0F6FA"), 2.2)
-		elseif theme.ReplaceWith == "Coral" then
-			coral(extra, at, if index % 2 == 0 then hex("#C8644A") else hex("#E08C64"), 1.8)
-		else
-			spikes(extra, at, if index % 4 == 0 then hex("#E07028") else hex("#5A4C48"), if index % 4 == 0 then Enum.Material.Neon else nil, 1.8)
-		end
-	end
+	BUILD[theme.Id](model)
 	model.WorldPivot = PIVOT
 	for _, previous in templates:GetChildren() do
 		if previous.Name == theme.Name or previous:GetAttribute("ZoneId") == theme.Id then previous:Destroy() end
@@ -500,7 +755,8 @@ for _, theme in THEMES do
 	-- copies d'un ancien décor de cette zone posées dans une arène ou rangées (ServerStorage.ZonesRangees_<plot>)
 	for _, holder in { workspace, ServerStorage } do
 		for _, d in holder:GetDescendants() do
-			if d:IsA("Model") and d:GetAttribute("ZoneId") == theme.Id and not d:IsDescendantOf(templates) then
+			if d:IsA("Model") and d:GetAttribute("ZoneId") == theme.Id and d.Parent and d.Parent.Name == "Zones"
+				or d:IsA("Model") and d:GetAttribute("ZoneId") == theme.Id and d.Parent and d.Parent.Name:match("^ZonesRangees_") then
 				d:Destroy()
 			end
 		end
