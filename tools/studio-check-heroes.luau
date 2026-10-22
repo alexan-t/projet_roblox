@@ -7,11 +7,9 @@
 --   3. l'objet tenu des héros corrigés (#25, #47, #58) et l'épée et le bouclier de l'Écuyer touchent
 --      bien un bras, au Bestiaire et dans la copie de jeu ; le cristal de #25 est une sphère ;
 --   4. chaque copie de jeu (ServerStorage.Assets.Heros) est identique au modèle du Bestiaire ;
---   5. chaque objet tenu a sa Prise sur le Poing de son bras, son manche traverse le poing et le
---      croise en travers (au moins 45° de l'avant-bras, mesuré sur le maillage).
+--   5. chaque objet tenu a sa Prise sur le Poing de son bras et son manche traverse le poing.
 -- Les brouillons Brise-Braise (socles 10 et 11, hors catalogue) sont signalés « connu », sans compter.
 -- Renvoie le nombre de problèmes : 0 = PASS.
-local AssetService = game:GetService("AssetService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
@@ -253,69 +251,6 @@ local function crosses(parts: { BasePart }, point: Vector3, axis: Vector3): bool
 	return false
 end
 
--- Sommets réels d'une MeshPart, dans le monde. Les rayons et GetPartsInPart touchent l'enveloppe de
--- collision (CollisionFidelity Default), qui bouche le creux du poing et arrondit l'avant-bras : seul
--- le maillage dit dans quel sens va le bras (#04 passait toutes les mesures par rayons).
-local vertexCache: { [string]: { Vector3 } } = {}
-local function meshVertices(part: BasePart): { Vector3 }
-	if not part:IsA("MeshPart") or part.MeshId == "" then
-		return {}
-	end
-	local cached = vertexCache[part.MeshId]
-	if not cached then
-		local found: { Vector3 } = {}
-		local ok, mesh = pcall(function()
-			return AssetService:CreateEditableMeshAsync(Content.fromUri(part.MeshId))
-		end)
-		if ok and mesh then
-			for _, id in mesh:GetVertices() do
-				table.insert(found, mesh:GetPosition(id))
-			end
-			mesh:Destroy()
-		end
-		vertexCache[part.MeshId] = found
-		cached = found
-	end
-	local scale = part.Size / part.MeshSize
-	local points = table.create(#cached)
-	for i, point in cached do
-		points[i] = part.CFrame:PointToWorldSpace(point * scale)
-	end
-	return points
-end
-
--- Angle (degrés, 0 à 90) entre le manche `axis` et l'avant-bras : axe principal des sommets du bras à
--- moins de 1,2 stud du Poing. nil si le bras n'a pas de maillage lisible.
-local function forearmCross(armParts: { BasePart }, poing: Vector3, axis: Vector3): number?
-	local near: { Vector3 } = {}
-	local mean = Vector3.zero
-	for _, part in armParts do
-		for _, point in meshVertices(part) do
-			if (point - poing).Magnitude < 1.2 then
-				table.insert(near, point)
-				mean += point
-			end
-		end
-	end
-	if #near < 10 then
-		return nil
-	end
-	mean /= #near
-	local direction = Vector3.new(0.3, 1, 0.2).Unit
-	for _ = 1, 40 do
-		local sum = Vector3.zero
-		for _, point in near do
-			local d = point - mean
-			sum += d * d:Dot(direction)
-		end
-		if sum.Magnitude < 1e-9 then
-			break
-		end
-		direction = sum.Unit
-	end
-	return math.deg(math.acos(math.clamp(math.abs(direction:Dot(axis)), 0, 1)))
-end
-
 local function checkGrips(label: string, model: Model, inWorkspace: boolean)
 	local GRIP = Skeleton.Grip
 	local markers = model:FindFirstChild("ReperesPrise")
@@ -338,11 +273,9 @@ local function checkGrips(label: string, model: Model, inWorkspace: boolean)
 	end
 	local resolution = Skeleton.resolve(descriptors, SkeletonConfig.Models[model.Name])
 	local poings: { [string]: Attachment } = {}
-	local arms: { [string]: { BasePart } } = { ArmeGauche = {}, ArmeDroite = {} }
 	for hand, armBone in HAND_ARM do
 		for index, part in list do
 			if resolution.targets[index] == armBone then
-				table.insert(arms[hand], part)
 				local found = part:FindFirstChild(GRIP.Hand)
 				if found and found:IsA("Attachment") then
 					poings[hand] = found
@@ -384,7 +317,6 @@ local function checkGrips(label: string, model: Model, inWorkspace: boolean)
 			measure.Angle = math.deg(math.acos(math.clamp(prise.WorldAxis:Dot(poing.WorldAxis), -1, 1)))
 			measure.Free = prise:GetAttribute(GRIP.Free) == true
 			measure.Checked = prise:GetAttribute(GRIP.Checked) == true
-			measure.Cross = forearmCross(arms[hand], poing.WorldPosition, prise.WorldAxis)
 			if inWorkspace then
 				measure.Before = crosses(parts, prise.WorldPosition - prise.WorldAxis * GRIP.Through, prise.WorldAxis)
 				measure.After = crosses(parts, prise.WorldPosition + prise.WorldAxis * GRIP.Through, prise.WorldAxis)

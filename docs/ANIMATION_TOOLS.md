@@ -95,12 +95,18 @@ Kit.hideGrips(model)
 Une ligne « À VÉRIFIER EN CAPTURE » ou un manche qui longe le poing se corrige avec `Kit.aim`
 (direction du manche, glissement le long du manche), puis nouvelle capture.
 
-Un manche à moins de 45° de l'avant-bras (« il embroche le poing ») se corrige aussi avec `Kit.aim` :
-le manche passe dans le plan de l'avant-bras et du trou du poing (grand axe des sommets du poing,
-perpendiculaire au bras), à 60° de l'avant-bras, tête de l'arme du même côté du bras qu'avant et
-tournée vers l'avant du héros (+Z au Bestiaire, côté de la plaque du socle). Méthode appliquée le
-22/10/2026 à 14 héros (`HEROES_QA.md`). Contrôler chaque héros en capture : une lance tenue bras en
-avant reste mieux à son angle d'origine.
+Le PASS de `Kit.checkGrips` ne suffit pas (`SKELETON.md` § Prise, limite des mesures). Pour chaque
+arme, capture rapprochée de la main **arme masquée** (`LocalTransparencyModifier = 1` sur les pièces
+de l'arme) pour lire le poing, puis arme visible, de face et de profil :
+
+- **Poing percé** (trou modelé, souvent peint rouge sombre à l'intérieur) : le manche suit l'axe du
+  trou et passe par son centre. Paroi du trou = sommets du bras proches du centre du poing ; leur axe
+  principal donne la direction (#24, #36, #37, #40, #42 le 22/10/2026).
+- **Poing fermé** (doigts empilés, pas de trou) : le manche suit la rangée des doigts, en pratique
+  l'axe épaule → bout du poing, et passe par le centre du poing (#34, #44, #50, #59). Une arme dont la
+  tête partirait dans le bras est retournée (tête en bas) ; une lame qui entre dans le socle est
+  inclinée vers l'avant.
+- Prise validée en capture : attribut `PriseControlee` sur la Prise, date dans `HEROES_QA.md`.
 
 ## Profils de marche
 

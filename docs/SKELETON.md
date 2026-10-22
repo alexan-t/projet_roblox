@@ -114,23 +114,19 @@ Le Brise-Pierre (#05) tenait son marteau par le talon posé sur le poing, alors 
 - **Une arme changée** (nouvel équipement) n'a besoin que de sa Prise : elle prend sa place au Poing.
 - Constantes et règles dans `Skeleton.Grip` et `Skeleton.gripProblems` (module pur, testé) :
   écart Prise / Poing ≤ 0,05 stud, axes à moins de 5°, Poing à moins de 0,35 stud du centre du poing
-  mesuré, manche présent à 0,25 stud de part et d'autre du Poing (« il traverse le poing »), manche
-  à au moins 45° de l'avant-bras (`MinCross`, « il le croise en travers »).
-- **Le manche croise l'avant-bras.** Un poing fermé serre en travers, le long des jointures. Le #04
-  tenait son bâton dans l'axe du bras tendu (28°) : le bâton embrochait le poing fermé et toutes les
-  autres mesures passaient. L'angle se mesure sur les **sommets réels** du bras
-  (`AssetService:CreateEditableMeshAsync`), axe principal des sommets à moins de 1,2 stud du Poing.
-  Les rayons et `GetPartsInPart` ne voient que l'enveloppe de collision des MeshParts
-  (`CollisionFidelity` Default), qui bouche le creux du poing : ils ne disent rien de la prise.
-  Seuil 45° : en dessous, le manche longe le bras (#04, #44, #36 : 18 à 28°) ; au-dessus, il le
-  croise (#67, lance tenue bras en avant, 47°). Sautée pour `PriseLibre` (bouclier sanglé dans l'axe
-  de l'avant-bras) et `PriseControlee`.
+  mesuré, manche présent à 0,25 stud de part et d'autre du Poing (« il traverse le poing »).
 - `PriseLibre` (attribut de la Prise) : objet sans manche qui traverse le poing (bouclier, cartes,
   lanterne par l'anse, cloche par sa couronne, livre ; mots de `Skeleton.Grip.FreeWords`). Seul le
   test « traverse » est sauté.
 - `PriseControlee` (attribut de la Prise) : prise validée en capture quand une mesure approximative
   se trompe (bout de manche recourbé caché dans le gant). Le centre du poing et le test « traverse »
   sont sautés ; l'écart Prise / Poing reste contrôlé.
+- **Limite des mesures : elles ne voient pas le trou du poing.** Rayons et `GetPartsInPart` touchent
+  l'enveloppe de collision des MeshParts (`CollisionFidelity` Default), qui bouche le creux du poing :
+  un manche qui passe dans le gant, sous le poing ou à côté passe le contrôle (#04, #24, #40, #42, #50
+  le 22/10/2026). Aucune mesure automatique essayée (angle manche / avant-bras, axe ou tunnel du
+  poing sur les sommets réels) ne séparait les bonnes prises des mauvaises. Le contrôle reste donc
+  la **capture de la main, arme masquée puis arme visible** (`ANIMATION_TOOLS.md` § Prise des armes).
 
 Outils (`tools/animation/AnimationKit.luau`, mode Edit, modèle dans le Workspace) :
 

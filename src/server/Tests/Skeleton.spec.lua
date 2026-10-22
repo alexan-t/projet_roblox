@@ -229,17 +229,6 @@ return function(Skeleton: any, skeletonConfig: any)
 		assert(#beside == 1, "Poing placed beside the real fist")
 	end)
 
-	test("gripProblems: a handle along the forearm skewers the fist", function()
-		-- Apprenti Pyromancien (#04) avant correction : bâton dans l'axe du bras tendu, 28°.
-		local skewer = { Piece = "staff_geom", HasPrise = true, HasPoing = true, Gap = 0, Angle = 0, Offset = 0.06, Before = true, After = true, Cross = 28 }
-		local found = Skeleton.gripProblems(skewer)
-		assert(#found == 1 and string.find(found[1], "embroche", 1, true), found[1])
-		skewer.Cross = 60
-		assert(#Skeleton.gripProblems(skewer) == 0)
-		skewer.Cross, skewer.Free = 11, true
-		assert(#Skeleton.gripProblems(skewer) == 0, "a strapped shield follows the forearm")
-	end)
-
 	test("gripProblems: PriseControlee skips the approximate measures, never the Prise/Poing gap", function()
 		local checked = { Piece = "mallet_geom", HasPrise = true, HasPoing = true, Gap = 0, Angle = 0, Offset = 1.2, Before = false, After = true, Checked = true }
 		assert(#Skeleton.gripProblems(checked) == 0)
