@@ -119,7 +119,7 @@ Ou d'un coup à la préparation : `prepare({ ..., Attack = "Epee", Preview = "At
 
 | Style | Pour | Durée | Impact | Mouvement |
 | --- | --- | --- | --- | --- |
-| `Epee` | arme à une main + bouclier (validé sur l'Écuyer) | 0,6 s | 0,2 s | armé de côté, coup en diagonale à travers le corps, petit pas en avant, bouclier gardé devant |
+| `Epee` | arme à une main + bouclier (validé sur l'Écuyer) | 0,6 s | 0,2 s | armé de côté, coup en diagonale à travers le corps, petit pas en avant, bouclier gardé devant ; l'arme tourne dans la main à l'impact pour finir vers le bas-gauche sans entrer dans le bouclier (`HEROES_QA.md`) |
 | `Griffe` | gros monstre à mains nues (validé sur le Tréant) | 1,0 s | 0,35 s | gros revers de la main droite : bras armé en arrière, buste tourné, balayage à travers le corps, bras gauche en contrepoids |
 | `Ecrasement` | variante (non retenue pour le Tréant) | 1,0 s | 0,32 s | deux bras levés, abattus au sol devant lui, buste plié, rebond lourd |
 
@@ -182,7 +182,9 @@ tenaient (aucun `Motor6D` orphelin).
 ## Ultime du héros de départ
 
 `Kit.ultimate(model, "Rempart")` crée la séquence « Ultime » de l'Écuyer du Rempart (0,9 s, impact
-0,3 s) : ramassé derrière le bouclier, épée tirée en arrière, puis grand estoc.
+0,3 s) : ramassé derrière le bouclier, épée tirée en arrière, puis grand estoc. L'arme est tournée
+dans la main (`weaponRight`) pour que la pointe vise l'avant pendant l'estoc ; ces angles sont
+mesurés sur l'Écuyer : les remesurer pour un autre modèle (`HEROES_QA.md`).
 
 ```lua
 local Kit = _G.AnimationKit
