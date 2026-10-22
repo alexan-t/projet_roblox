@@ -28,9 +28,12 @@ local REMPART = {
 -- Héros corrigés : socle, modèle, objet tenu (chemin depuis le modèle), écart toléré (studs).
 -- Une arme tenue au poing doit entrer dans le bras (écart 0). Le bouclier de l'Écuyer est tenu par sa
 -- poignée, poing plaqué au dos : écart mesuré 0,14 stud, lu comme tenu sur les captures.
+-- Passation du 22 octobre : bouclier de #15 recollé à l'avant-bras, lance de #67 glissée dans le poing.
 local TENUS = {
 	{ "Socle_01", "EcuyerDuRempart", "short_sword.short_sword_geom", 0 },
 	{ "Socle_01", "EcuyerDuRempart", "shield.shield_geom", 0.2 },
+	{ "Socle_15", "ChevalierDuLierre", "shield.shield", 0.2 },
+	{ "Socle_67", "AureonPorteurDeLaPremiereAube", "equipement.Lance", 0 },
 	{ "Socle_25", "PretresseAuxLucioles", "baton_fleur.baton_fleur_geom", 0 },
 	{ "Socle_47", "TisseurDeDestins", "quenouille.quenouille_geom", 0 },
 	{ "Socle_58", "ReineDuFirmamentDore", "sceptre.sceptre_geom", 0 },
@@ -134,7 +137,7 @@ for _, entry in TENUS do
 		continue
 	end
 	local gap = math.huge
-	for _, armPath in { "right_arm.right_arm_geom", "left_arm.left_arm_geom" } do
+	for _, armPath in { "right_arm.right_arm_geom", "left_arm.left_arm_geom", "right_arm.right_arm", "left_arm.left_arm" } do
 		local arm = find(model, armPath)
 		if arm and arm:IsA("BasePart") then gap = math.min(gap, gapToArm(arm, held)) end
 	end

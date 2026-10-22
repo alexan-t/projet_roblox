@@ -41,6 +41,41 @@ Les deux brouillons de Brise-Braise (socles 10 et 11, hors catalogue) restent no
 Les anciennes séquences sont archivées (`Archive_Heros_QA.EcuyerDuRempart_*_avant_QA`) ;
 la copie de `ServerStorage.RBX_ANIMSAVES.EcuyerDuRempart` a reçu les mêmes poses.
 
+## Passation du 22 octobre 2026 : visages, armes, coquilles
+
+Repasse complète des 62 modèles du Bestiaire (place test 3) : planche des 62 têtes de face,
+gros plans des visages douteux, planche des 62 héros en pied (trois par capture), puis mesure de
+prise de chaque arme et vues isolées bras + arme pour les cas douteux.
+
+| Héros | Défaut vu | Correction | Après |
+| --- | --- | --- | --- |
+| #15 Chevalier du Lierre | Bouclier qui flotte devant l'avant-bras gauche (écart 0,79 stud, vide visible de dessus et de profil). Le rapport du 20 le disait « sanglé », mais il ne touchait pas le bras | Recollé de 0,76 stud vers le bras (Bestiaire et copie de jeu, position par rapport au buste) | Écart 0,03 stud, contact ; capture de trois-quarts |
+| #67 Auréon | Lance tenue par l'extrême bout du manche, poing au ras du talon | Glissée de 2,1 studs le long de son axe : poing au tiers bas du manche, talon au-dessus du sol | Manche qui traverse le poing de haut en bas (capture de face) ; pas de copie de jeu |
+
+Ces deux retouches n'ont pas d'étape Ctrl+Z : `ChangeHistoryService:TryBeginRecording` renvoie
+`nil` dans cette session de Studio (un enregistrement est resté ouvert plus tôt). Elles sont
+gardées par `tools/studio-check-heroes.luau`.
+
+**Visages**
+
+- **PASS** : les 50 héros non cités ci-dessous (hors brouillons #10 et #11). Expression lisible (sourcils, yeux, bouche) et cohérente avec la DA.
+- **Voulus, laissés tels quels** :
+  - visage caché par un masque, une capuche ou un heaume : #53, #56, #52 et #26 ;
+  - peau de pierre ou spectrale : #64, #51 et #49 ;
+  - #60 : aveugle aux yeux bandés (pas de nez, bouche à peine marquée).
+- **FIX à décider** :
+  - #54 Lame du Serment Brisé : sous le heaume, orbites noires à points rouges, mais ni bouche ni
+    sourcils ; le visage est vide de face. Il faut repeindre la texture de la tête, donc un envoi
+    d'image (à valider avant).
+  - #22 Cartomancienne : cou nettement plus rouge que le visage (mineur, texture).
+- **Observation** : #46, de trois-quarts, la lame du glaive passe devant le visage ; de face, il
+  est dégagé.
+
+**Armes** (au repos, 62 modèles) : toutes tenues après les deux corrections. Mesure et vues
+isolées confirment la prise de #18, #19, #51 et #53, que la mesure automatique donnait douteux
+(manches portés hors du centre du poing). #26 tient la cloche par sa couronne ; #42 a la tête du
+marteau au sol, manche dans le poing.
+
 ## Résultats par héros (au repos)
 
 **PASS** (arme dans le poing, orientation lisible de face et de profil, pas d'interpénétration
@@ -48,7 +83,8 @@ visible) : #01 à #05, #14 à #24, #25 (après correction), #26 à #46, #47 (apr
 #48 à #57, #58 (après correction), #59 à #68.
 
 Cas vérifiés de plus près et laissés tels quels, car voulus :
-- #15, #21 : bouclier sanglé à l'avant-bras (pas dans le poing) ; #36 : cloche portée dans le dos ;
+- #15, #21 : bouclier sanglé à l'avant-bras (pas dans le poing ; #15 recollé le 22 octobre, voir
+  plus haut) ; #36 : cloche portée dans le dos ;
   #19 : luth au dos ; #17 : faucon sur le bras levé ; #22 : cartes en éventail entre les doigts.
 - #30, #31, #61 : cristaux cubiques tournés à 45°, lus comme le losange de la DA.
 - #44 : masse tenue en garde vers l'avant ; #45 : clé géante tenue en travers.
@@ -99,3 +135,11 @@ Résultats du 20 octobre 2026 (place test 3) :
 | Captures de #01 (face, profil), #25 (face), #47 et #58 après corrections | PASS |
 | Script Studio : 0 problème ; brouillons #10 (5/8 pièces sans texture) et #11 (7/8) | CONNU (FIX) |
 | `node --test tests/heroes-weapons.test.mjs` : 7 tests | PASS (7/7) |
+
+Résultats du 22 octobre 2026 (place test 3), après la passation :
+
+| Contrôle | Résultat |
+| --- | --- |
+| Prise : bouclier #15 Chevalier du Lierre (toléré 0,2) et lance #67 Auréon (0) | PASS |
+| Script Studio : 0 problème ; brouillons #10 et #11 | CONNU (FIX) |
+| Visage de #54 (sans bouche ni sourcils) | FIX, en attente d'accord pour l'envoi de texture |
