@@ -22,7 +22,7 @@ Règles permanentes pour tous les agents. Le détail est dans `docs/`.
 
 ## Avant de déclarer terminé
 
-- Capture d'écran réelle, puis contrôle avec `docs/VISUAL_QA.md`. Seuls résultats possibles : **PASS** ou **FIX**. Pas de PASS sans capture.
+- Capture d'écran réelle, puis contrôle avec `docs/VISUAL_QA.md` (créature, interface, icône ou VFX : chacun a sa grille). Seuls résultats possibles : **PASS** ou **FIX**. Pas de PASS sans capture.
 - Après des captures avec `screen_capture`, réinitialiser la caméra de Studio (procédure dans `docs/MONSTER_PRODUCTION.md`, § Outils), sinon l'utilisateur perd le clic droit et le clic molette.
 
 ## Projet

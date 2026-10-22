@@ -357,6 +357,9 @@ existant : tonneau, pièce, parchemin, tour), le rendre de trois quarts sur fond
 256 ou 512 px, ajouter le contour, puis l'importer en `ImageLabel`. Héros et monstres : portrait
 3D en **ViewportFrame** (déjà le cas dans la main de préparation).
 
+**Contrôle** : grille PASS / FIX de `docs/VISUAL_QA.md` § 7 (icône seule, à 32 px, en contexte,
+à côté de ses voisines).
+
 Icônes à produire en priorité : pièce d'or, gemme, ticket d'invocation, collection de héros,
 quêtes (parchemin), royaume (tour), carte des zones, combat (épées croisées), paramètres
 (roue en bois), cadenas, coche, ultime (éclat doré), icône de chaque classe de héros.
@@ -454,6 +457,10 @@ Moins de fenêtres, plus d'interaction avec le monde : on **prend** un héros et
   des éléments du décor, pas des contours UI.
 
 ## 11. Contrôle avant de livrer une interface
+
+Le contrôle officiel est la grille **PASS / FIX** de `docs/VISUAL_QA.md` : § 6 pour une interface,
+§ 7 pour une icône, § 8 pour un effet visuel. Pas de PASS sans capture. Les points ci-dessous en
+sont le résumé :
 
 1. Capture réelle en Studio **par-dessus le monde** (fond clair et fond sombre).
 2. Le monde se voit derrière tous les panneaux, sauf les infobulles.
