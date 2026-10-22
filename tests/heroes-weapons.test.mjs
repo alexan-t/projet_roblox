@@ -107,6 +107,17 @@ test('the corrected heroes checked in Studio exist in HeroConfig and in the QA r
 	}
 });
 
+test('the Studio check controls the grips of every hero with the pure Skeleton rules', () => {
+	const skeleton = read('src/shared/Animation/Skeleton.lua');
+	assert.match(skeleton, /Hand = "Poing"/);
+	assert.match(skeleton, /Weapon = "Prise"/);
+	assert.match(skeleton, /function Skeleton\.gripProblems\(/);
+	assert.match(check, /Skeleton\.gripProblems\(measure\)/);
+	assert.match(check, /checkGrips\(`Prise \{socle\.Name\}`, model, true\)/);
+	assert.match(check, /checkGrips\("Prise copie", copy, false\)/);
+	assert.match(qa, /Archive_Prises_20261022/);
+});
+
 test('the QA report points to the Studio check and keeps the drafts as known FIX', () => {
 	assert.match(qa, /tools\/studio-check-heroes\.luau/);
 	assert.match(qa, /\*\*Verdict global : FIX\.\*\*/);

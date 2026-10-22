@@ -67,7 +67,7 @@ chaque membre (`OsAncre`).
 
 ## Dire « cette pièce = tel os »
 
-Chaque pièce visible du modèle est accrochée à un os. Trois façons de le dire, de la plus forte à la
+Chaque pièce visible du modèle est accrochée à un os. Quatre façons de le dire, de la plus forte à la
 plus faible :
 
 1. **La fiche du modèle** dans `src/shared/Config/SkeletonConfig.lua` (Git, relue en PR) :
@@ -77,7 +77,9 @@ plus faible :
      pièces de ce nom).
 2. **L'attribut texte `Os`** posé sur la pièce dans Studio (ex. `Os = "ArmeGauche"`). Pratique pour
    une pièce au nom générique (`Part`, `MeshPart`) ou en double.
-3. **La détection par le nom** (format IA) : `torso_geom` / `body_geom` / `chest_geom` -> `Buste`,
+3. **Le groupe** : une pièce rangée dans un sous-modèle suit ce que dit le nom du sous-modèle
+   (`cristal_luciole` dans `baton_fleur` suit le bâton ; `Lame_1` dans `halo_lames` reste au buste).
+4. **La détection par le nom** (format IA) : `torso_geom` / `body_geom` / `chest_geom` -> `Buste`,
    `head_geom` / `mask_head_geom` / `skull_geom` -> `Tete`, `left_arm_geom` -> `BrasGauche`... Une
    pièce dont le nom évoque un objet tenu (`weapon`, `sword`, `buckler`, `staff`, `hache`,
    `etendard`...) va dans la main la plus proche ; tout le reste est porté par le buste (cape,
@@ -93,6 +95,45 @@ du même modèle (après `Kit.unrig`) retrouve le même branchement, et le code 
 pièces d'un os (`AnimationSets.pieces(model, "ArmeDroite")`). Une valeur inconnue dans une fiche ou
 un attribut est signalée en avertissement `[AnimationKit]` et ignorée ; un membre obligatoire sans
 pièce arrête le rig avec le nom du membre.
+
+## Prise : l'arme toujours dans la main
+
+Le Brise-Pierre (#05) tenait son marteau par le talon posé sur le poing, alors que la mesure
+« l'arme touche le bras » passait. Deux repères règlent la question une fois pour toutes, par modèle.
+
+| Attachment | Posé sur | Position | Axes |
+| --- | --- | --- | --- |
+| `Poing` | la pièce du bras (ou son poing séparé, #43) | centre du poing fermé | X = sens du manche vers la tête de l'arme, Y = côté du tranchant |
+| `Prise` | l'objet tenu (pièce principale de la main) | point du manche que serre le poing | mêmes axes que le Poing |
+
+- **`Kit.rig`** recolle chaque objet tenu à son Poing (la Prise vient sur le Poing, les décors de
+  l'arme suivent) et met le **pivot de l'os** `ArmeGauche` / `ArmeDroite` **au centre du Poing**.
+  Pendant une animation, l'arme ne peut pas quitter la main ; une rotation `weaponRight` /
+  `weaponLeft` la fait tourner autour du poing. Vérifié sur le #05 riggé : épaule levée de 110°, arme
+  tournée de 50°, écart Prise / Poing 0,000 stud.
+- **Une arme changée** (nouvel équipement) n'a besoin que de sa Prise : elle prend sa place au Poing.
+- Constantes et règles dans `Skeleton.Grip` et `Skeleton.gripProblems` (module pur, testé) :
+  écart Prise / Poing ≤ 0,05 stud, axes à moins de 5°, Poing à moins de 0,35 stud du centre du poing
+  mesuré, manche présent à 0,25 stud de part et d'autre du Poing (« il traverse le poing »).
+- `PriseLibre` (attribut de la Prise) : objet sans manche qui traverse le poing (bouclier, cartes,
+  lanterne par l'anse, cloche par sa couronne, livre ; mots de `Skeleton.Grip.FreeWords`). Seul le
+  test « traverse » est sauté.
+- `PriseControlee` (attribut de la Prise) : prise validée en capture quand une mesure approximative
+  se trompe (bout de manche recourbé caché dans le gant). Le centre du poing et le test « traverse »
+  sont sautés ; l'écart Prise / Poing reste contrôlé.
+
+Outils (`tools/animation/AnimationKit.luau`, mode Edit, modèle dans le Workspace) :
+
+| Fonction | Rôle |
+| --- | --- |
+| `Kit.grip(model)` | pose Prise et Poing d'après la prise actuelle : centre du poing mesuré (volume du bout du bras), axe de l'arme mesuré sur sa surface, manche recentré dans le poing jusqu'à 0,9 stud ; au-delà, rien ne bouge et le compte rendu dit « À VÉRIFIER EN CAPTURE » |
+| `Kit.checkGrips(model)` | défauts de prise (liste vide = PASS) |
+| `Kit.aim(model, main, direction, côté?, glisse?)` | réoriente l'arme autour du Poing (et le Poing avec) ; `glisse` déplace la prise le long du manche |
+| `Kit.showGrips(model)` / `Kit.hideGrips(model)` | repères visibles pour la capture : tige verte = axe, boule rouge = Poing, boule violette = centre du poing mesuré |
+
+Le contrôle `tools/studio-check-heroes.luau` (section 5) refait ces mesures sur les 62 héros du
+Bestiaire et les 22 copies de jeu : un objet tenu sans Prise, un bras sans Poing ou une arme déplacée
+après coup donne un problème.
 
 ## Animations liées au squelette
 

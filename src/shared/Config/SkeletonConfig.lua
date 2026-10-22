@@ -52,6 +52,26 @@ local SkeletonConfig = {
 			Attaque = "Fendoir",
 			CouvercleBras = table.freeze({ 76, 111, 41 }),
 		}),
+
+		-- Héros du Bestiaire dont une pièce sort de la détection par le nom (relevé du 22/10/2026,
+		-- docs/HEROES_QA.md). Pas encore de jeu d'animations : ces fiches servent au rig et aux prises.
+		-- #17 : faucon posé sur le bras levé.
+		-- Couteau de chasse rangé au fourreau, à la ceinture.
+		FauconnierGris = table.freeze({ Pieces = table.freeze({ falcon = "BrasProche", hunting_knife = "Buste" }) }),
+		-- #21 : ronces enroulées sur chaque bras.
+		GardienDesRonces = table.freeze({
+			Pieces = table.freeze({ ronces_left_arm = "BrasGauche", ronces_right_arm = "BrasDroit" }),
+		}),
+		-- #32 : le bras droit est un gantelet de golem.
+		ArchitecteDeGolems = table.freeze({ Membres = table.freeze({ BrasDroit = "gantelet_golem_geom" }) }),
+		-- #36 : cloche portée dans le dos, maillet en main.
+		GardienneDeLaDerniereCloche = table.freeze({ Pieces = table.freeze({ cloche_geom = "Buste" }) }),
+		-- #45 : clé géante tenue en travers.
+		MaitreDesPortesOubliees = table.freeze({ Pieces = table.freeze({ cle_geom = "MainProche" }) }),
+		-- #52 : bec de corbin (marteau de guerre) en main.
+		RoiDesCorbeauxSansOmbre = table.freeze({ Pieces = table.freeze({ BecDeCorbin = "MainProche" }) }),
+		-- #43 : poing droit séparé du bras.
+		SorciereDesMareesLunaires = table.freeze({ Pieces = table.freeze({ poing_droit_geom = "BrasDroit" }) }),
 	} :: { [string]: Entry }),
 }
 

@@ -58,6 +58,28 @@ Ces deux retouches n'ont pas d'étape Ctrl+Z : `ChangeHistoryService:TryBeginRec
 `nil` dans cette session de Studio (un enregistrement est resté ouvert plus tôt). Elles sont
 gardées par `tools/studio-check-heroes.luau`.
 
+**Prises (Poing et Prise, `SKELETON.md` § Prise)** — après un second signalement du #05 (le manche
+longeait encore l'extérieur du poignet), chaque arme est maintenant accrochée à un repère de poing :
+
+- `Kit.grip` lancé sur les 62 héros du Bestiaire (originaux archivés dans
+  `ServerStorage.Archive_Prises_20261022`) : Prise sur l'arme, Poing au centre du poing mesuré,
+  manche recentré dans le poing (0 à 0,82 stud, médiane 0,17). Report à l'identique sur les 22 copies
+  de jeu.
+- Vérifié en vues isolées bras + arme, de face et de profil : #02, #04, #05, #10, #14, #16, #27, #30,
+  #35, #36, #37, #42, #43, #50, #57, #59, #61 (les plus gros recentrages et tous les cas signalés par
+  l'outil en cours de mise au point).
+- Corrigés à la main : **#05 Brise-Pierre** (manche recentré dans le poing, de face comme de profil) ;
+  **#36 Gardienne de la Dernière Cloche** (le bout du maillet était collé au côté du gant : manche
+  glissé de 0,45 stud dans la fente du gant).
+- Fiches ajoutées (`SkeletonConfig`) : #17 (couteau au fourreau, faucon au bras), #21 (ronces des
+  bras), #32 (bras droit = gantelet), #36 (cloche dans le dos), #43 (poing séparé), #45 (clé géante en
+  main), #52 (bec de corbin en main).
+- Contrôle (section 5) : 95 mains contrôlées, 0 défaut. Il attrape le #05 dans l'état de la capture
+  de l'utilisateur (Prise à 0,83 stud du Poing) comme dans l'état d'avant ce chantier (0,19).
+- Pendant une animation : #05 riggé dans l'atelier (`AtelierAnimation.BrisePierre_Prise`, jeu
+  `BrisePierre`, attaque d'aperçu `Epee`), épaule levée de 110° et arme tournée de 50° : écart
+  Prise / Poing 0,000 stud ; marteau dans le poing pendant l'attaque en Play.
+
 **Visages**
 
 - **PASS** : les 50 héros non cités ci-dessous (hors brouillons #10 et #11). Expression lisible (sourcils, yeux, bouche) et cohérente avec la DA.
@@ -146,5 +168,7 @@ Résultats du 22 octobre 2026 (place test 3), après la passation :
 | Contrôle | Résultat |
 | --- | --- |
 | Prise : marteaux #05 et #24, bouclier #15 Chevalier du Lierre (toléré 0,2), lance #67 Auréon | PASS |
+| Prises Poing / Prise : 62 héros du Bestiaire et 22 copies de jeu, 95 mains | PASS |
+| `tools/test-skeleton.ps1` : Skeleton 20 tests, AnimationSets 14 tests | PASS |
 | Script Studio : 0 problème ; brouillons #10 et #11 | CONNU (FIX) |
 | Visage de #54 (sans bouche ni sourcils) | FIX, en attente d'accord pour l'envoi de texture |
