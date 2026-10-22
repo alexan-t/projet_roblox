@@ -221,9 +221,17 @@ Contrôle fait : pose d'impact de chacun des 60 héros en capture (trois-quarts)
 animés). Sans visée : #20 (mains nues). Elyria (#68) a deux jambes invisibles ajoutées à sa copie
 d'atelier (le squelette commun en demande deux) et lévite à 1 stud.
 
-**Pas encore en combat** : seul l'Écuyer a un modèle articulé dans `ReplicatedStorage.Assets.Combat`
-(`HeroConfig.CombatTemplate`). Pour les autres, copier la copie riggée en asset de combat (étape 7 de
-`SKELETON.md`) et poser son `CombatTemplate`.
+**En combat (23/10/2026, place test 3)** : les 59 autres héros ont leur modèle articulé
+`ReplicatedStorage.Assets.Combat.Heros_<Modèle>` (copie de l'atelier, tags et attributs d'aperçu
+retirés) et leur `CombatTemplate` dans `HeroConfig`. Attributs : `JeuAnimations = <Modèle>`,
+`JeuAnimationsCommun = Squelette_Leger` (marche commune, générée sur #03), `Squelette = Humanoide`,
+`HauteurPieds` = hauteur du pivot au-dessus des pieds : `ArenaService` pose le héros avec, car le bas
+de la boîte est l'arme pour #05 et #59 (ils flottaient) ; Elyria : ourlet + 1 stud (lévitation).
+Une place qui n'a pas encore ces modèles (DEV) montre le vrai modèle du héros, par son HeroId.
+Vérifié en combat réel (stage 1-1, #05, #14, #16, #44) : chaque héros joue sa marche (0,6 s) puis son
+attaque (Masse 0,65 s, Tir 0,8 s, Sort 0,7 s), posé sur sa case. L'Écuyer de test 3 est resté sur
+l'ancien squelette (la DEV a sa version migrée). **À faire** : importer dans la DEV les 59 modèles,
+les jeux `<Modèle>` et `Squelette_Leger`, puis publier les séquences (`AssetId`).
 
 ## Aperçu au Play
 
