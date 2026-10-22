@@ -203,21 +203,46 @@ vagues physiques, mini-boss) ne pourra être testé qu'avec #8.
 
 Le parcours reste celui de WORLD.md : le joueur choisit une expédition depuis **son arène**,
 le décor change sur place. Les plots de démonstration de `Workspace.PlotsZones` ne sont pas
-les points d'accès au gameplay. Les documents antérieurs ne fixaient pas cinq biomes nommés :
-les déclinaisons ci-dessous réutilisent les monstres **validés** de ART_DIRECTION.md § 1.
-Aucun nouveau monstre, aucune rareté de monstre, aucun nouveau système de butin.
+les points d'accès au gameplay.
 
-| Zone | Ambiance | Ennemis | Boss X-5 | Niveau cible de simulation |
+**Vitrine visitable (sandbox « test 3 »)** : `tools/studio-zones-vitrine.luau` (après
+`studio-zones-assets.luau`) reconstruit `Workspace.PlotsZones.Plot_Zone2` à `Plot_Zone6` : cinq copies du plot
+alignées au sud du Lobby (z ≈ −360, x = 120 à 880), entrée tournée vers le Lobby. **L'avant (herbe, royaume,
+portail) reste celui du plot, toujours en herbe** ; seul ce qui est derrière le portique prend le biome (arène,
+bordure ; arbres remplacés par colonnes, cheminées, coraux ou nuages ; aucun sol ne dépasse du plot).
+La jonction est une lisière irrégulière (`LisiereArene` : dunes, congères, basalte et
+braises, récifs et coraux, nuages), posée en désordre avec des taches de sol du biome qui mordent sur l'herbe,
+ouverte au portique ; pas de mur. Chaque arène expose ses six monstres (`MonstresDeLaZone`). On y va à pied par le passage
+du mur sud du Lobby (x ≈ 331, `PlotsZones.CheminZones` ; murs et arbres retirés rangés dans
+`ServerStorage.Archive_PassageZones`). Aucun script, aucun combat : ce sont des lieux à visiter.
+
+**Version B (octobre 2026)** : chaque zone a sa propre faune, celle des fiches de production des
+monstres (`automation/briefs`, socles Monstres #23 à #52 du Bestiaire). Cinq monstres communs par zone ;
+en X-5, le **monstre fort de fin de zone** de la fiche sert de boss. Les trois boss validés (Roi Orc,
+Slime King, King Tréant) ne servent plus qu'en Zone 1 (Roi Orc) et restent dans `CombatConfig`.
+Aucune rareté de monstre, aucun nouveau système de butin.
+
+| Zone | Biome | Ennemis (X-1 à X-5) | Boss X-5 | Niveau cible de simulation |
 | --- | --- | --- | --- | --- |
-| 2 · La Mare aux Slimes | Mares, roseaux, champignons | Slime, SlimePlante, SlimeChampignon | KingSlime | 4 |
-| 3 · La Forêt des Tréants | Sous-bois dense, champignons | SlimePlante, Gobelin, Treant | KingTreant | 8 |
-| 4 · Le Camp de la Horde | Tentes, palissades, terre ocre | Gobelin, GobelinDague | Boss (Roi Orc) | 12 |
-| 5 · Les Grottes de Lave | Roche sombre, coulées orange, stalagmites arrondies | SlimeLave, GobelinDague | KingSlime | 16 |
-| 6 · Le Bois Ancien | Grands arbres, mousse, champignons cyan | Treant, TreantArbre, SlimeChampignon | KingTreant | 20 |
+| 2 · Le Royaume des Sables | Temple ensablé (colonnade, pyramide à degrés, temple sur dais), énorme tête de statue qui sort du sable, crêtes de grès, oasis et canal ancien asséché, avant-poste du désert (palissades, auvent, drapeaux déchirés), amphores, ossements | VaseDesSables, ChacalParchemin, ScarabeeForgeSoleil, MangeDune, GardienSansVisage | ColosseEnseveli | 4 |
+| 3 · Le Royaume Gelé | Remparts de glace crénelés et stalactites, château prisonnier d'un glacier au fond, falaises glacées et cascade gelée, lac gelé et pont verglacé, fort gelé (barricades, tour, drapeaux), ruines et statues prises dans la glace, arbres enneigés, lanternes froides | Givrelot, CrocDeGlacier, ArmureGelee, BonhommeRoyal, MammouthCristallin | RoiSansEte | 8 |
+| 4 · Les Forges | Forteresse de basalte : grand fourneau, rigoles de métal en fusion, enclumes | ChevalierRivete, GolemCloche, FourneauAmbulant, Martelet, Chaine | MaitreDesForges | 12 |
+| 5 · La Cité Engloutie | Récif englouti : épave, coquillages géants, bulles, anémones, coffre | MeduseCouronnee, MureneMiroir, CoffreBernard, ChevalierNoye, CrabeCathedrale | Leviathan | 16 |
+| 6 · Les Îles du Ciel | Sanctuaire céleste : bancs de nuages, arches de marbre, dôme d'or, statues ailées | GargouilleAilee, MiniColosseCeleste, MoutonNuage, PoissonDuCiel, BecTonnerre | GardienCeleste | 20 |
+
+**Décors** (`tools/studio-zones-assets.luau`) : chaque arène a son propre décor, construit autour des sorties
+d'ennemis de `SourcesEnnemis` (plateau, rampe, porte, tour, trois sorties au sol, aux mêmes places que la Zone 1).
+De la Zone 1, on ne garde que le lac (couleur et matière du biome), le portique d'entrée et ces repères invisibles.
+
+**Équilibrage conservé** : chaque nouveau monstre reprend les stats de l'archétype qu'il remplace
+dans les vagues de la version précédente (ex. `VaseDesSables` = `Slime`, `ColosseEnseveli` = `KingSlime`,
+`MaitreDesForges` = `Boss`). Les vagues gardent les mêmes totaux de PV et de dégâts ; la simulation #13
+(`CombatEngine.spec`) passe sans retouche des niveaux cibles. L'archétype de chaque monstre est noté
+à côté de ses stats dans `CombatConfig` (« comme Slime »…). Valeurs Alpha provisoires, pas un balancing final.
 
 Chaque zone comprend cinq stages. X-1 est débloqué par le First Clear de (X-1)-5 ;
-X-2 à X-5 suivent les First Clears de leur prédécesseur. Les trois boss validés reviennent
-une seconde fois, renforcés par la difficulté de zone. Après une victoire, la sélection peut
+X-2 à X-5 suivent les First Clears de leur prédécesseur. Chaque boss X-5 est le monstre fort
+de la faune de sa zone, renforcé par la difficulté de zone. Après une victoire, la sélection peut
 passer au premier stage de la zone suivante ; après 6-5, elle reste sur 6-5.
 Les flèches du titre d'Expédition permettent de consulter les zones voisines, y compris
 verrouillées. Les onglets Élite ne sont proposés que pour une zone réellement configurée :
@@ -245,23 +270,157 @@ sont rangés dans `ServerStorage.ZonesRangees_<plot>` et les nouveaux sont copi�
 `ServerStorage.Assets.ZonesArene`. Chaque gabarit porte ZoneId et Nom, et son pivot est celui
 de l'arène de référence. `PivotTo(arena:GetPivot())` conserve les positions relatives sur
 les huit plots. Chaque décor fournit `SourcesEnnemis.FrontEnnemi` et les sources d'entrée.
+Un décor peut déplacer ses repères : dans la Zone 3, sans plateau, `Tente` et `HautRampe` (sorties du boss et
+des ennemis « camp ») sont devant la grande porte du château, `BordPlateau1/2` au pied de la porte et
+`SommetTour` sur la corniche du donjon (`moveMarkers` dans `tools/studio-zones-assets.luau`).
 
 Le décor reste visible pendant l'outro. Une relance explicite avant sa fin installe néanmoins
 le décor du nouveau combat avant sa création. Un décor ou un front absent refuse le lancement.
 Le serveur et le client lisent les repères du décor courant ; les autres plots ne changent pas.
+
+### Règles de décor (obligatoires pour chaque zone)
+
+**Structure type**, du point de vue de la caméra du joueur, à garder pour toutes les zones :
+
+| Plan | Contenu |
+| --- | --- |
+| Bas | Zone des héros (cases `CaseHeros`) |
+| Milieu | Voie de combat (zone de bataille, règle 2) |
+| Haut | Zone ennemie (`FrontEnnemi`) |
+| Tout en haut, au fond | Structure du boss (règle 1) : porte, temple, forge, trône, faille, autel ou plateforme |
+
+1. **Structure d'apparition du boss, propre à la zone.** Le petit plateau de la Zone 1 (plateau, rampe,
+   porte et tour derrière le front ennemi) n'est **pas** un élément obligatoire des autres zones : il ne servait
+   qu'à faire apparaître le boss de la Zone 1. Chaque zone doit avoir **sa propre belle structure**, dans son
+   biome, d'où le boss sort : par exemple la grande porte du château prisonnier du glacier en Zone 3. Les
+   repères de `SourcesEnnemis` utilisés par le boss (`Tente` = SortieTente, `HautRampe` = DescenteRampe, avec
+   leurs `Etape1`, `Etape2`…) sont posés sur cette structure, et les repères restants du plateau
+   (`BordPlateau1/2`, `SommetTour`) sont déplacés dessus ou à son pied (`moveMarkers`). Ne pas recopier le plateau.
+2. **Zone de bataille au centre.** Comme la clairière de sable de la Zone 1 (`Sol.Clairiere` : large bande au
+   milieu de l'arène, d'une autre couleur que l'herbe, aux bouts arrondis), chaque zone a au centre un sol
+   **d'une couleur nettement différente** de son sol, là où les unités se battent : de l'entrée jusqu'à la
+   structure du boss, sous les cases des héros et `FrontEnnemi`. Outil : `battleground` (bande de 44 studs,
+   disques avant et fond, quelques taches plus sombres), juste au-dessus du sol de zone et sous les accessoires.
+   Zone 3 : neige damée bleutée `#A7C5E0` sur la neige `#E4EDF5`.
+3. **Un fond haut et impressionnant, une arène habitée.** Derrière la structure du boss, le décor doit monter
+   assez haut pour cacher l'horizon et les plots voisins depuis la caméra de combat (Zone 4 : citadelle de
+   42 à 52 studs, cheminées de 66 à 76), et le rempart monter vers le fond. Les flancs, hors zone de bataille,
+   sont remplis d'éléments du biome (ateliers, réserves, lumières) : pas de grands sols nus.
+4. **Une limite légère avec l'avant du plot.** Entre l'arène et l'avant du plot (portique d'entrée, royaume),
+   une limite basse en décor du biome, avec un passage au centre en face du portique : elle sépare les deux
+   espaces sans fermer l'arène ni bloquer le joueur (pièces sans collision). Zone 4 : `frontBoundary`.
+
+| Zone | Structure du boss | Zone de bataille |
+| --- | --- | --- |
+| 1 | Plateau et tour du camp (d'origine) | Clairière de sable |
+| 2 | Plateau générique (temple sur dais) | **À faire** |
+| 3 | Grande porte du château glaciaire | Neige damée bleutée `#A7C5E0` |
+| 4 | **Porte-Fournaise** : immense porte de métal encastrée dans la grande forge, qui s'ouvre (voir § Porte du boss) | Dalles chaudes `#8A7462` |
+| 5 | Temple-coquille de la Cité Engloutie, porte couverte de coraux (§ Cité Engloutie) | Sable du fond `#B4A584` |
+| 6 | **Sanctuaire du Ciel** : plateforme céleste flottante, invocation du boss (voir § Porte du boss) | Ciel pâle `#BFD6EE` |
+
+Outils : `bossGate` (porte générique : fond sombre arrondi, montants, linteau, seuil lumineux) et
+`moveMarkers(m, porte, sommet)` (repères sur la porte et le sommet du saut du boss) ; l'ancien coin du plateau
+reçoit des accessoires du biome (enclume géante et charbon, bénitier géant, cloche dorée).
+
+### Cité Engloutie (Zone 5)
+
+Une cité sous une protection magique au fond de l'océan : on y marche normalement, l'océan se voit tout autour.
+Décor : `BUILD[5]` de `tools/studio-zones-assets.luau` ; animations : `src/client/Controllers/DecorVivantController.lua`.
+
+- **Décor** : rue de sable du fond bordée de coraux (zone de bataille), barrière de verre bleuté à liseré lumineux,
+  palais de pierre blanche et bleue aux grandes fenêtres, statues de poisson et de pieuvre, fontaine qui coule vers
+  le haut, épave encastrée dans un bâtiment, coquillages-maisons, jardin de coraux sous bulle magique, ancres,
+  temple-coquille d'où sort le boss (structure du boss), limite légère de pierre et de corail vers l'avant.
+- **Derrière la barrière**, sans sortir de la délimitation du plot (barrière en U de rayons 52 × 50, mur d'eau
+  profonde sur la bordure, 57 × 55) : bande d'eau avec fond marin, algues, baleine, bancs de poissons, méduses
+  lumineuses, silhouette géante et Léviathan (silhouettes fines, sombres), eau éclaircie vers la surface.
+- **Animé** (tags) : `PoissonPasse` (baleine, bancs, Léviathan), `MeduseFlotte`, `CorailOndule`, `BulleMonte`
+  (fontaine, eau envahie), `GoutteTombe` (fuites), `VagueBarriere` (barrière, bulle, baie), `SequenceOeil`.
+- **Progression** : `ArenaService` pose sur l'arène `StageDecor` (stage choisi) ; le client n'affiche un groupe que si
+  `StageMin <= StageDecor <= StageMax`. Stage 1 calme ; `Fuites` dès 2, `FuitesPlus` dès 3, `GrossesFissures` et
+  jets d'eau dès 4 ; au 5, parties `Envahi` et `SalleDuBoss` (le `Palais` s'arrête au stage 4).
+- **Salle du boss (stage 5)** : colonnade circulaire, gigantesque baie vitrée sur l'océan. Toutes les 40 s : une
+  silhouette passe, revient plus près, puis un œil géant se colle contre la vitre, regarde, et repart.
+- Vitrine : `Plot_Zone5.Arene` porte `StageDecor` (1 à 5) pour prévisualiser chaque stage en Play.
+
+### Porte du boss (structure animée)
+
+Une structure de boss peut s'animer à l'entrée du boss : le décor contient alors un modèle **`PorteBoss`**, que
+le client (`src/client/Combat/BossGate.lua`) anime localement juste avant l'entrée d'un ennemi au style
+`Heavy` (`CampBoss`), puis referme après son arrivée. Purement visuel, aucune règle.
+
+| Partie de `PorteBoss` | Rôle à l'entrée du boss |
+| --- | --- |
+| Pièces à attribut `Lueur` (et `LueurAllumee`, Color3) | La forge s'allume : couleur allumée, lumières plus fortes |
+| `Marteaux/<Model>` : `Axe` (pivot) et `Bras` (partie mobile) | Les marteaux mécaniques frappent leur enclume |
+| `Chaines/<Model>` : `Poulie` en haut | Les chaînes se tendent, les contrepoids remontent |
+| `Battants/<Model>` : `Charniere` (pivot), attribut `Sens` (±1) | Les battants s'ouvrent lentement vers l'arène |
+| `Effets/Foyer` : émetteurs `Fumee` et `Braises` | Fumée et braises jaillissent de la fournaise |
+
+Les repères du boss (`HautRampe`, `Tente`) sont posés **dans l'embrasure, derrière les battants** : le boss
+apparaît porte ouverte et sort de la structure. Durées : `EnemyPresentationConfig.Gate` (ouverture prise sur le
+budget d'entrée du boss) ; le budget du boss est allongé en conséquence dans `CombatConfig.Presentation.Entrance`
+(`MaitreDesForges` = 4,4 s).
+
+**Zone 4 — Porte-Fournaise** (`furnaceGate` dans l'outil d'assets) : arche de métal riveté sur socles de
+basalte, linteau, couronne et sceau forgé, deux battants cerclés de fer avec symboles en losange (métal
+refroidi au repos, orange braise une fois allumés), intérieur rougeoyant, tuyaux avec vapeur continue et
+vannes, deux chaînes à contrepoids, deux marteaux mécaniques sur enclumes. Construite à l'échelle du boss
+(8,5 studs de haut), puis agrandie de 1,35 autour du pied de la porte.
+
+**Zone 4 — fond et flancs** (règle 3) : rempart de basalte de 14 studs à l'entrée à 34 au fond, contreforts à
+braseros ; derrière, la citadelle-forge (`forgeCitadel`) : onze tours de 42 à 52 studs, meurtrières rougeoyantes,
+créneaux, bannières, trois hautes cheminées fumantes, grand engrenage au-dessus de la porte, creuset suspendu
+qui verse du métal en fusion ; deux cascades de lave. Pas de lac ni de bassins ronds : un **courant de lave**
+(`lavaRiver` : lit en segments, croûtes sombres, berges de roches, braises) part du pied de chaque cascade, à
+l'ouest le long du flanc jusque sous le rempart, à l'est vers l'angle du fond ; les repères `SautMare` sont posés
+dessus. Roches : orgues basaltiques adossées au rempart (`basaltColumns`, deux rangs, tons chauds, éboulis au
+pied) et roches arrondies (`boulder`, masses gonflées superposées, pas de cubes). Sur le flanc est, une petite
+structure haute : le **haut-fourneau** (`blastFurnace`, environ 30 studs) : tour de basalte cerclée de fer en trois
+étages, meurtrières, bannière, trou de coulée tourné vers l'arène qui verse dans une rigole, gueulard crénelé,
+cheminée qui fume, potence et seau de minerai. Limite avec l'avant du plot (règle 4, `frontBoundary`, z 47) :
+muret bas de basalte cerclé de fer, poteaux et chaînes pendantes, petits braseros, roches ; passage central
+encadré de deux piliers à brasero et bannière, en face du portique. Flancs : postes de forge
+(`forgeStation` : foyer, hotte, enclume, soufflet, baquet), râteliers d'armes, tonneaux et caisses, tas de
+minerai, fissures de lave dans le sol. Les Neon utilisent `#D2501E` (un `#F08C3C` en Neon ressort jaune) ; les feux (`Fire`) sont
+portés par une pièce droite invisible (`flame`), sinon ils partent de côté sur un cylindre couché.
+Variante possible plus tard : le boss assemblé sur place, pièce par pièce, devant la fournaise.
+
+**Zone 6 — Sanctuaire du Ciel** (`skySanctuary`, Style `Sanctuaire`) : plateforme circulaire de marbre cerclée
+d'or, flottante sur un dessous de roche en pointe ; colonnade blanche ouverte vers l'arène (chapiteaux et frise
+d'or), deux statues ailées, escalier suspendu de marches séparées jusqu'au sol ; grand cristal lévitant dans un
+halo d'or et six cristaux en couronne ; cercle de runes au sol. **Invocation du boss** (variante forte, même
+module `BossGate`, durée `GardienCeleste` = 4,4 s) : les cristaux, le cercle et le halo s'allument (`Lueur`),
+trois anneaux de lumière tournent et montent (`Anneaux`, attributs `Tours`, `Monte`), la colonne de lumière
+apparaît (`Apparition` 0,4), le vent et des étincelles jaillissent (émetteurs à `Rafale`), une ombre traverse
+l'arène (`Effets/Ombre`, `Course`). Le boss naît dans la colonne, au centre de la plateforme (`HautRampe`),
+puis descend l'escalier (`Etape1` en haut, `Etape2` au pied).
+
+**Zone 6 — fond, flancs, limite** : mer de nuages (`cumulus`) qui monte vers le fond, dégagée derrière le
+sanctuaire ; derrière, une couronne de nuages bleutés étirés en hauteur (contraste avec le marbre, cache
+l'horizon) ; quatre îles flottantes (temple, cristal, arbre doré) et des pierres flottantes. Plus de lac : un
+ruisseau de lumière céleste (`skyStream`) tombe en cascade d'une île et longe le flanc ouest ; les repères
+`SautMare` (Mouton Nuage) sont posés dessus. Flancs : colonnades en ruine, îles basses, statues ailées le long de
+l'allée, cloche et lanternes d'or ; à l'entrée ouest, l'**observatoire céleste** (`skyObservatory`, environ 34 studs) :
+tour ronde de marbre sur un nuage, bandes et fenêtres d'or, porte tournée vers l'arène, galerie à colonnettes,
+dôme d'or et sphère armillaire (trois anneaux d'or autour d'un orbe lumineux). Limite avant (`skyBoundary`) : balustrade de marbre, poteaux d'or à orbe,
+nuages, passage gardé par deux statues ailées.
 
 ### Assets Studio
 
 Dans le sandbox « test 3 », exécuter les outils d'assets en mode Edit via MCP ou la barre de
 commande, **sans créer de Script ou modifier de Source** :
 
-1. `tools/studio-zones-assets.luau` copie les huit monstres validés supplémentaires vers
+1. `tools/studio-zones-assets.luau` copie les monstres de chaque zone (30 pour la version B) vers
    `ReplicatedStorage.Assets.Combat` et construit les cinq décors depuis la Zone 1 de Plot_1.
    Si les modèles de base manquent, il copie Slime_Eau, GobLanceT_A et RoiOrc ; il conserve
    les versions de combat existantes. Les copies supplémentaires sont statiques et utilisent
    la mise en scène générique (charge/bascule), pas un nouveau squelette animé.
-2. `tools/studio-zone-stage-signs.luau` installe les pancartes Expédition manquantes sur les
-   huit arènes, relativement à PointEtendard. Il conserve toute pancarte déjà présente.
+2. `tools/studio-zone-stage-signs.luau` installe les pancartes Expédition manquantes et replace les
+   existantes, sur les huit arènes et les vitrines `PlotsZones` : à l'entrée, devant le portique côté droit
+   (PointEtendard + (16,9 ; 50,2), tournée vers l'allée d'arrivée), hors de tout décor de zone. On y choisit
+   le stage, ou une autre zone avec les flèches de la fenêtre, avant d'entrer dans l'arène.
    Les textes et interactions viennent du contrôleur client et de UITheme.
 
 Les outils enregistrent une étape ChangeHistoryService. Relancer Rojo depuis ce checkout et
