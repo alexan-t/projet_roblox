@@ -211,4 +211,24 @@ Résultats du 22 octobre 2026 (place test 3), après la passation :
 | Contrôle | Résultat |
 | --- | --- |
 | Captures rapprochées des 9 mains, arme masquée puis visible | PASS |
+
+### Orientation des armes (contrôle global, même jour)
+
+Vue de trois-quarts face des 60 héros du Bestiaire (#01 à #05, #14 à #68 ; brouillons #10 et #11
+exclus). Armes mal orientées, toutes issues de la rotation à 60° du premier correctif :
+
+| Héros | Défaut | Correction |
+| --- | --- | --- |
+| #62 Gardien du Trône Vide | hallebarde à l'horizontale | debout, tête en haut, 12° vers l'avant |
+| #47 Tisseur de Destins | quenouille à l'horizontale | debout, tête en haut |
+| #52 Roi des Corbeaux sans Ombre | bec-de-corbin caché contre l'épaule | debout, écarté de 22° vers l'extérieur |
+| #57 Séraphin des Sept Sceaux | épée à l'horizontale vers le côté | pointe vers le bas et l'avant |
+
+#37 et #42 (épée et marteau tenus à l'horizontale vers l'avant) se lisent bien de profil : laissés.
+Ces 4 Prises portent `PriseControlee` ; aucun n'a de copie de jeu.
+
+| Contrôle | Résultat |
+| --- | --- |
+| Vue de trois-quarts des 60 héros, puis des 4 héros corrigés | PASS |
+| `Kit.checkGrips` sur les 60 modèles | PASS (0 problème) |
 | `Kit.checkGrips` sur les 60 modèles du Bestiaire | PASS (0 problème) |

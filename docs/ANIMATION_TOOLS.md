@@ -108,6 +108,15 @@ de l'arme) pour lire le poing, puis arme visible, de face et de profil :
   inclinée vers l'avant.
 - Prise validée en capture : attribut `PriseControlee` sur la Prise, date dans `HEROES_QA.md`.
 
+Orientation au repos (contrôle global du 22/10/2026, vue de trois-quarts face de chaque héros) :
+
+- **Arme à hampe** (bâton, hallebarde, lance, quenouille, bec-de-corbin, sceptre) : debout, tête en
+  haut, penchée d'environ 12° vers l'avant (+Z) et un peu vers l'extérieur ; si la tête se cache
+  contre l'épaule, l'écarter davantage (#52 : 22°).
+- **Arme à une main** (épée, marteau, masse, coutelas) : pointe ou tête vers le bas et vers l'avant
+  (environ 40°), ou tenue en garde vers l'avant à hauteur de hanche. Jamais à l'horizontale vers le
+  côté, jamais cachée dans le bras ni plantée dans le socle.
+
 ## Profils de marche
 
 La marche est une **courbe continue** (sinus) échantillonnée en 16 clés linéaires par cycle. Un
