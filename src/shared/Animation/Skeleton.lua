@@ -318,6 +318,10 @@ Skeleton.Grip = table.freeze({
 	MaxAngle = 5, -- écart toléré entre leurs axes (degrés)
 	MaxOffset = 0.35, -- écart toléré entre le Poing et le centre du poing mesuré sur le bras (studs)
 	Through = 0.25, -- le manche doit être présent à cette distance de part et d'autre du Poing (studs)
+	-- Angle minimal entre le manche et l'avant-bras (degrés) : un poing fermé serre en travers, le
+	-- long des jointures. Un manche dans l'axe d'un bras tendu embroche le poing (#04 avant correction,
+	-- 28°) alors que toutes les autres mesures passent.
+	MinCross = 45,
 })
 
 export type GripMeasure = {
@@ -329,6 +333,7 @@ export type GripMeasure = {
 	Offset: number?, -- distance Poing <-> centre du poing mesuré
 	Before: boolean?, -- manche présent côté talon (Prise - Through)
 	After: boolean?, -- manche présent côté tête (Prise + Through)
+	Cross: number?, -- angle entre le manche et l'avant-bras (degrés, 0 à 90), mesuré sur le maillage
 	Free: boolean?, -- attribut PriseLibre
 	Checked: boolean?, -- attribut PriseControlee
 }
@@ -365,6 +370,9 @@ function Skeleton.gripProblems(measure: GripMeasure): { string }
 		end
 		if measure.After == false then
 			table.insert(problems, `{piece} : rien ne sort du poing côté tête`)
+		end
+		if measure.Cross and measure.Cross < grip.MinCross then
+			table.insert(problems, string.format("%s : manche à %.0f° de l'avant-bras, il embroche le poing (minimum %d°)", piece, measure.Cross, grip.MinCross))
 		end
 	end
 	return problems

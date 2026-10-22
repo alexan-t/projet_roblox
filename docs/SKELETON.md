@@ -114,7 +114,17 @@ Le Brise-Pierre (#05) tenait son marteau par le talon posé sur le poing, alors 
 - **Une arme changée** (nouvel équipement) n'a besoin que de sa Prise : elle prend sa place au Poing.
 - Constantes et règles dans `Skeleton.Grip` et `Skeleton.gripProblems` (module pur, testé) :
   écart Prise / Poing ≤ 0,05 stud, axes à moins de 5°, Poing à moins de 0,35 stud du centre du poing
-  mesuré, manche présent à 0,25 stud de part et d'autre du Poing (« il traverse le poing »).
+  mesuré, manche présent à 0,25 stud de part et d'autre du Poing (« il traverse le poing »), manche
+  à au moins 45° de l'avant-bras (`MinCross`, « il le croise en travers »).
+- **Le manche croise l'avant-bras.** Un poing fermé serre en travers, le long des jointures. Le #04
+  tenait son bâton dans l'axe du bras tendu (28°) : le bâton embrochait le poing fermé et toutes les
+  autres mesures passaient. L'angle se mesure sur les **sommets réels** du bras
+  (`AssetService:CreateEditableMeshAsync`), axe principal des sommets à moins de 1,2 stud du Poing.
+  Les rayons et `GetPartsInPart` ne voient que l'enveloppe de collision des MeshParts
+  (`CollisionFidelity` Default), qui bouche le creux du poing : ils ne disent rien de la prise.
+  Seuil 45° : en dessous, le manche longe le bras (#04, #44, #36 : 18 à 28°) ; au-dessus, il le
+  croise (#67, lance tenue bras en avant, 47°). Sautée pour `PriseLibre` (bouclier sanglé dans l'axe
+  de l'avant-bras) et `PriseControlee`.
 - `PriseLibre` (attribut de la Prise) : objet sans manche qui traverse le poing (bouclier, cartes,
   lanterne par l'anse, cloche par sa couronne, livre ; mots de `Skeleton.Grip.FreeWords`). Seul le
   test « traverse » est sauté.

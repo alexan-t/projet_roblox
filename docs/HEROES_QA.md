@@ -177,3 +177,45 @@ Résultats du 22 octobre 2026 (place test 3), après la passation :
 | `tools/test-skeleton.ps1` : Skeleton 20 tests, AnimationSets 14 tests | PASS |
 | Script Studio : 0 problème ; brouillons #10 et #11 | CONNU (FIX) |
 | Visage de #54 (sans bouche ni sourcils) | FIX, en attente d'accord pour l'envoi de texture |
+
+## Prises en travers du 22 octobre 2026 (second signalement)
+
+L'utilisateur a montré une capture du #04 Apprenti Pyromancien : le bâton passe dans l'axe du bras
+tendu, à travers un poing fermé, alors que le contrôle donnait PASS. Cause : toutes les mesures de
+prise (centre du poing, « traverse ») passent par l'enveloppe de collision des MeshParts, qui bouche
+le creux du poing ; aucune ne regardait le sens du manche par rapport au bras. Nouvelle règle
+`MinCross` (`SKELETON.md` § Prise) : manche à au moins 45° de l'avant-bras, mesuré sur les sommets.
+
+Mesure sur les 67 mains du Bestiaire, puis captures de trois-quarts face (caméra sur la main) :
+
+| Héros | Arme | Avant | Après |
+| --- | --- | --- | --- |
+| #04 Apprenti Pyromancien | bâton | 28° | 55°, tête vers l'avant |
+| #44 Chevalier de l'Éclipse Blanche | masse | 18° | 60° |
+| #36 Gardienne de la Dernière Cloche | maillet | 18° | 60° |
+| #29 Chevalier du Soleil Creux | épée | 21° | 60° |
+| #37 Prince des Racines d'Or | épée | 23° | 60° |
+| #61 Forgeâme | marteau | 24° | 60° |
+| #54 Lame du Serment Brisé | épée | 26° | 60° |
+| #57 Séraphin des Sept Sceaux | épée-clé | 28° | 60° |
+| #59 Chevalier de l'Aube Infinie | épée | 33° | 60° |
+| #34 Chasseur de Comètes | marteau-comète | 35° | 60° |
+| #62 Gardien du Trône Vide | hallebarde | 35° | 60° |
+| #52 Roi des Corbeaux sans Ombre | bec-de-corbin | 40° | 60° |
+| #47 Tisseur de Destins | quenouille | 41° | 60° |
+| #27 Veneur de Givre | coutelas | 44° | 60° |
+
+- Laissés tels quels : #49 (46°), #67 (47°, lance tenue bras en avant, lue comme tenue), #40 (48°)
+  et au-dessus. Les mains `PriseLibre` (boucliers sanglés de #01, #03, #15 : 11 à 14°) suivent
+  l'avant-bras par construction.
+- Copies de jeu mises à jour : #04, #27, #29 (les seules des 14 dans `ServerStorage.Assets.Heros`) ;
+  écart Prise / Poing 0,0001 stud.
+- Sauvegarde avant correction : `ServerStorage.Sauvegarde_Prises` (modèles du Bestiaire et copies).
+- Le premier essai prenait l'avant du héros sur le pivot ou sur les pieds : faux pour #37, #44 et
+  #54 (armes tournées vers l'arrière). Tous les héros du Bestiaire regardent +Z (plaque du socle).
+
+| Contrôle | Résultat |
+| --- | --- |
+| Captures de trois-quarts face des 14 héros corrigés, #04 aussi de profil | PASS |
+| Script Studio, contrôles 3 à 5 avec la règle `MinCross` : 126 OK | PASS |
+| `tools/test-skeleton.ps1` : Skeleton 21 tests, AnimationSets 14 tests | PASS |

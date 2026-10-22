@@ -20,6 +20,7 @@
 -- Les os, les fiches de modèles et la recherche des animations sont du code de jeu synchronisé par
 -- Rojo (ReplicatedStorage.Shared) : ce fichier les lit, il ne les recopie pas.
 
+local AssetService = game:GetService("AssetService")
 local ChangeHistoryService = game:GetService("ChangeHistoryService")
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -204,6 +205,69 @@ local function only(parts: { BasePart }): RaycastParams
 	params.FilterType = Enum.RaycastFilterType.Include
 	params.FilterDescendantsInstances = parts
 	return params
+end
+
+-- Sommets réels d'une MeshPart, dans le monde. Les rayons et GetPartsInPart touchent l'enveloppe de
+-- collision (CollisionFidelity Default), qui bouche le creux du poing et arrondit l'avant-bras : seul
+-- le maillage dit dans quel sens va le bras (#04 passait toutes les mesures par rayons).
+local vertexCache: { [string]: { Vector3 } } = {}
+local function meshVertices(part: BasePart): { Vector3 }
+	if not part:IsA("MeshPart") or part.MeshId == "" then
+		return {}
+	end
+	local cached = vertexCache[part.MeshId]
+	if not cached then
+		local found: { Vector3 } = {}
+		local ok, mesh = pcall(function()
+			return AssetService:CreateEditableMeshAsync(Content.fromUri(part.MeshId))
+		end)
+		if ok and mesh then
+			for _, id in mesh:GetVertices() do
+				table.insert(found, mesh:GetPosition(id))
+			end
+			mesh:Destroy()
+		end
+		vertexCache[part.MeshId] = found
+		cached = found
+	end
+	local scale = part.Size / part.MeshSize
+	local points = table.create(#cached)
+	for i, point in cached do
+		points[i] = part.CFrame:PointToWorldSpace(point * scale)
+	end
+	return points
+end
+
+-- Angle (degrés, 0 à 90) entre le manche `axis` et l'avant-bras : axe principal des sommets du bras à
+-- moins de 1,2 stud du Poing. nil si le bras n'a pas de maillage lisible.
+local function forearmCross(armParts: { BasePart }, poing: Vector3, axis: Vector3): number?
+	local near: { Vector3 } = {}
+	local mean = Vector3.zero
+	for _, part in armParts do
+		for _, point in meshVertices(part) do
+			if (point - poing).Magnitude < 1.2 then
+				table.insert(near, point)
+				mean += point
+			end
+		end
+	end
+	if #near < 10 then
+		return nil
+	end
+	mean /= #near
+	local direction = Vector3.new(0.3, 1, 0.2).Unit
+	for _ = 1, 40 do
+		local sum = Vector3.zero
+		for _, point in near do
+			local d = point - mean
+			sum += d * d:Dot(direction)
+		end
+		if sum.Magnitude < 1e-9 then
+			break
+		end
+		direction = sum.Unit
+	end
+	return math.deg(math.acos(math.clamp(math.abs(direction:Dot(axis)), 0, 1)))
 end
 
 -- Points de surface d'une pièce : rayons tirés d'une sphère autour d'elle vers son centre.
@@ -529,6 +593,7 @@ function Kit.checkGrips(model: Model, options: { [string]: any }?): { string }
 			local axis = prise.WorldAxis
 			measure.Before = sectionCenter(grip.held, prise.WorldPosition - axis * GRIP.Through, axis) ~= nil
 			measure.After = sectionCenter(grip.held, prise.WorldPosition + axis * GRIP.Through, axis) ~= nil
+			measure.Cross = forearmCross(grip.armParts, poing.WorldPosition, axis)
 		end
 		for _, problem in Skeleton.gripProblems(measure) do
 			table.insert(problems, `{grip.hand} {problem}`)
