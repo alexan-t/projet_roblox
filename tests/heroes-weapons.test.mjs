@@ -90,6 +90,8 @@ test('the corrected heroes checked in Studio exist in HeroConfig and in the QA r
 		['Socle_47', 'TisseurDeDestins', 'tisseur_de_destins', '#47 Tisseur de Destins'],
 		['Socle_58', 'ReineDuFirmamentDore', 'reine_du_firmament_dore', '#58 Reine du Firmament Doré'],
 		['Socle_01', 'EcuyerDuRempart', 'ecuyer_du_rempart', '#01 Écuyer du Rempart'],
+		['Socle_05', 'BrisePierre', 'brise_pierre', '#05 Brise-Pierre'],
+		['Socle_24', 'ForgeronRunique', 'forgeron_runique', '#24 Forgeron Runique'],
 		['Socle_15', 'ChevalierDuLierre', 'chevalier_du_lierre', '#15 Chevalier du Lierre'],
 		['Socle_67', 'AureonPorteurDeLaPremiereAube', 'aureon_porteur_de_la_premiere_aube', '#67 Auréon'],
 	];

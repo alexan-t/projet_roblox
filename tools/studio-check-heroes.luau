@@ -28,11 +28,14 @@ local REMPART = {
 -- Héros corrigés : socle, modèle, objet tenu (chemin depuis le modèle), écart toléré (studs).
 -- Une arme tenue au poing doit entrer dans le bras (écart 0). Le bouclier de l'Écuyer est tenu par sa
 -- poignée, poing plaqué au dos : écart mesuré 0,14 stud, lu comme tenu sur les captures.
--- Passation du 22 octobre : bouclier de #15 recollé à l'avant-bras, lance de #67 glissée dans le poing.
+-- Passation du 22 octobre : bouclier de #15 recollé à l'avant-bras, lance de #67 et marteaux de #05 et
+-- #24 glissés le long du manche pour qu'il traverse le poing (le talon s'arrêtait sur le dessus).
 local TENUS = {
 	{ "Socle_01", "EcuyerDuRempart", "short_sword.short_sword_geom", 0 },
 	{ "Socle_01", "EcuyerDuRempart", "shield.shield_geom", 0.2 },
+	{ "Socle_05", "BrisePierre", "hammer.hammer_geom", 0 },
 	{ "Socle_15", "ChevalierDuLierre", "shield.shield", 0.2 },
+	{ "Socle_24", "ForgeronRunique", "marteau.marteau_body.marteau_geom", 0 },
 	{ "Socle_67", "AureonPorteurDeLaPremiereAube", "equipement.Lance", 0 },
 	{ "Socle_25", "PretresseAuxLucioles", "baton_fleur.baton_fleur_geom", 0 },
 	{ "Socle_47", "TisseurDeDestins", "quenouille.quenouille_geom", 0 },

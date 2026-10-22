@@ -50,6 +50,8 @@ prise de chaque arme et vues isolées bras + arme pour les cas douteux.
 | Héros | Défaut vu | Correction | Après |
 | --- | --- | --- | --- |
 | #15 Chevalier du Lierre | Bouclier qui flotte devant l'avant-bras gauche (écart 0,79 stud, vide visible de dessus et de profil). Le rapport du 20 le disait « sanglé », mais il ne touchait pas le bras | Recollé de 0,76 stud vers le bras (Bestiaire et copie de jeu, position par rapport au buste) | Écart 0,03 stud, contact ; capture de trois-quarts |
+| #05 Brise-Pierre | Talon du manche posé sur le dessus du poing : le manche ne le traverse pas (repéré par l'utilisateur) | Marteau glissé de 0,8 stud le long du manche (Bestiaire et copie de jeu) | Vue isolée bras + marteau de profil : le manche entre par le haut du poing et le talon ressort dessous |
+| #24 Forgeron Runique | Même défaut : le manche s'arrête contre le côté du gant | Marteau glissé de 0,8 stud le long du manche (Bestiaire et copie de jeu) | Vue isolée de profil : le manche traverse le gant |
 | #67 Auréon | Lance tenue par l'extrême bout du manche, poing au ras du talon | Glissée de 2,1 studs le long de son axe : poing au tiers bas du manche, talon au-dessus du sol | Manche qui traverse le poing de haut en bas (capture de face) ; pas de copie de jeu |
 
 Ces deux retouches n'ont pas d'étape Ctrl+Z : `ChangeHistoryService:TryBeginRecording` renvoie
@@ -71,7 +73,10 @@ gardées par `tools/studio-check-heroes.luau`.
 - **Observation** : #46, de trois-quarts, la lame du glaive passe devant le visage ; de face, il
   est dégagé.
 
-**Armes** (au repos, 62 modèles) : toutes tenues après les deux corrections. Mesure et vues
+**Armes** (au repos, 62 modèles) : toutes tenues après les quatre corrections. Attention, la
+mesure « l'arme touche le bras » ne suffit pas : un talon de manche posé sur le poing la passe
+(#05). Les armes à manche ont donc été revues en vue isolée bras + arme, de face et de profil :
+le manche doit traverser le poing. #42, #44, #48, #50, #61 et #63 passent ainsi. Mesure et vues
 isolées confirment la prise de #18, #19, #51 et #53, que la mesure automatique donnait douteux
 (manches portés hors du centre du poing). #26 tient la cloche par sa couronne ; #42 a la tête du
 marteau au sol, manche dans le poing.
@@ -140,6 +145,6 @@ Résultats du 22 octobre 2026 (place test 3), après la passation :
 
 | Contrôle | Résultat |
 | --- | --- |
-| Prise : bouclier #15 Chevalier du Lierre (toléré 0,2) et lance #67 Auréon (0) | PASS |
+| Prise : marteaux #05 et #24, bouclier #15 Chevalier du Lierre (toléré 0,2), lance #67 Auréon | PASS |
 | Script Studio : 0 problème ; brouillons #10 et #11 | CONNU (FIX) |
 | Visage de #54 (sans bouche ni sourcils) | FIX, en attente d'accord pour l'envoi de texture |
