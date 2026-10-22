@@ -71,6 +71,11 @@ longeait encore l'extérieur du poignet), chaque arme est maintenant accrochée 
 - Corrigés à la main : **#05 Brise-Pierre** (manche recentré dans le poing, de face comme de profil) ;
   **#36 Gardienne de la Dernière Cloche** (le bout du maillet était collé au côté du gant : manche
   glissé de 0,45 stud dans la fente du gant).
+- **#05, troisième signalement** : le trou du poing est presque horizontal (axe mesuré par les lignes
+  qui traversent le poing sans toucher le bras, entourées sur 7 côtés sur 8) ; un marteau levé à la
+  verticale ne pouvait que le longer. Marteau réorienté dans l'axe du trou, tenu devant, tête
+  légèrement vers le bas ; Poing posé au centre du trou (Bestiaire et copie de jeu). Leçon : le Poing
+  doit suivre l'axe du trou de la main, pas celui de l'arme (voir la proposition « squelette d'arme »).
 - Fiches ajoutées (`SkeletonConfig`) : #17 (couteau au fourreau, faucon au bras), #21 (ronces des
   bras), #32 (bras droit = gantelet), #36 (cloche dans le dos), #43 (poing séparé), #45 (clé géante en
   main), #52 (bec de corbin en main).
