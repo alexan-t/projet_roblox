@@ -176,6 +176,55 @@ vers la gauche, +rz = bras droit vers l'extérieur (bras gauche : -rz). Les jamb
 buste, compenser sur les jambes une inclinaison ou une rotation du buste pour garder les pieds au sol.
 L'`Easing` d'une clé règle le trajet vers la clé suivante (`In` = accélère vers le coup).
 
+## Attaques des héros (22/10/2026)
+
+Les 60 héros du Bestiaire ont une attaque de base, rangée dans leur jeu propre
+`ReplicatedStorage.Assets.Animations.<NomDuModèle>` (séquence `Attaque`, attribut `Impact`). L'Écuyer
+garde son attaque validée dans `EcuyerDuRempart` ; la version de l'atelier est dans
+`Atelier_EcuyerDuRempart`. Copies riggées : `Workspace.AtelierAnimation.<Nom>_Anim`, en grille à
+X = -140…-32, Z = -280…-360, attaque en boucle au Play.
+
+Six styles par famille d'arme (`Kit.Attacks`), plus le miroir main gauche (suffixe `_G`) :
+
+| Style | Arme | Durée | Impact | Mouvement |
+| --- | --- | --- | --- | --- |
+| `Epee` | épée, coutelas, épée-clé | 0,6 s | 0,2 s | armé à l'épaule, diagonale vers le bas devant soi |
+| `Masse` | masse, marteau, maillet, glaive, faux | 0,65 s | 0,25 s | levée derrière la tête, abattue devant |
+| `Estoc` | lance, hallebarde, harpon, trident, étendard | 0,6 s | 0,25 s | pointe abaissée, estoc bras tendu |
+| `Sort` | bâton, sceptre, quenouille | 0,7 s | 0,3 s | bâton contre l'épaule, tête pointée vers la cible, main libre en avant |
+| `Tir` / `Arbalete` | arc / arbalète | 0,8 s | 0,45 s | buste tourné, corde tirée, lâcher à l'impact |
+| `Poing` | mains nues (#20) | 0,5 s | 0,2 s | fente avant, poings projetés (bras modelés levés) |
+
+| Style | Héros |
+| --- | --- |
+| `Epee` | #01, #15, #23, #27, #29, #37, #40, #49, #54, #57, #59 |
+| `Masse` | #05, #21, #24, #26, #34, #36, #42, #44, #45, #46, #50, #61, #63, #65, #66 ; `Masse_G` #19 |
+| `Estoc` | #03, #18, #30, #31, #39, #52, #62, #64, #67 ; `Estoc_G` #56 |
+| `Sort` | #04, #16, #25, #28, #33, #35, #38, #41, #43, #47, #48, #51, #53, #58, #60, #68 ; `Sort_G` #17, #22, #32, #55 |
+| `Tir` / `Arbalete` / `Poing` | #14 / #02 / #20 |
+
+**Visée de l'arme** : les héros ne tiennent pas leur arme pareil au repos (debout, tête en bas, en
+travers). Un angle d'arme commun les envoyait dans toutes les directions (lance pointée vers le
+ciel, arbalète vers le sol). `Kit.aimedAttack(model, style, options)` garde les poses du style et
+calcule, pour chaque clé, la rotation de l'os d'arme qui amène le manche (axe de la `Prise`) sur la
+direction de `Kit.AttackAims`. Options : `Flip` quand la Prise pointe vers le talon (#55,
+champignon), `Free` pour un bâton dont la Prise est libre (#41, #51, #65).
+
+```lua
+local Kit = _G.AnimationKit
+local m = workspace.AtelierAnimation.LanciereDesSources_Anim -- copie riggée (Kit.copy + Kit.rig)
+Kit.install(m, "LanciereDesSources", Kit.attack(m, Kit.aimedAttack(m, "Estoc")))
+Kit.preview(m, "LanciereDesSources", "Attaque")
+```
+
+Contrôle fait : pose d'impact de chacun des 60 héros en capture (trois-quarts), puis Play (60/60
+animés). Sans visée : #20 (mains nues). Elyria (#68) a deux jambes invisibles ajoutées à sa copie
+d'atelier (le squelette commun en demande deux) et lévite à 1 stud.
+
+**Pas encore en combat** : seul l'Écuyer a un modèle articulé dans `ReplicatedStorage.Assets.Combat`
+(`HeroConfig.CombatTemplate`). Pour les autres, copier la copie riggée en asset de combat (étape 7 de
+`SKELETON.md`) et poser son `CombatTemplate`.
+
 ## Aperçu au Play
 
 `MonsterAnimationController` anime en boucle tout modèle tagué `ApercuAnimation` (Attente, puis
@@ -299,7 +348,7 @@ de design, pas une source de vérité gameplay.
   l'attribut `AssetId` de la séquence (lu par `MonsterAnimationController`).
 - Pas de genoux ni de pieds articulés : les modèles IA ont une seule pièce par jambe.
 - Les capes et tabards sont fixés au buste, sans mouvement secondaire.
-- Marche, attaque de base et ultime (Écuyer) sont générés ; pas encore d'Attente (repos).
+- Marche (commune), attaque de base (60 héros) et ultime (Écuyer) sont générés ; pas encore d'Attente (repos).
 - **Bras en coque** (Roi Orc) : ses bras sont ouverts sur toute leur face intérieure (côté buste).
   Au repos le buste cache l'ouverture ; dès que le bras s'écarte, on voit l'intérieur, noir.
   `Kit.closeArms(model, couleurPeau)` ferme cette face avec un ellipsoïde couleur peau porté par le
