@@ -90,6 +90,10 @@ test('the corrected heroes checked in Studio exist in HeroConfig and in the QA r
 		['Socle_47', 'TisseurDeDestins', 'tisseur_de_destins', '#47 Tisseur de Destins'],
 		['Socle_58', 'ReineDuFirmamentDore', 'reine_du_firmament_dore', '#58 Reine du Firmament Doré'],
 		['Socle_01', 'EcuyerDuRempart', 'ecuyer_du_rempart', '#01 Écuyer du Rempart'],
+		['Socle_05', 'BrisePierre', 'brise_pierre', '#05 Brise-Pierre'],
+		['Socle_24', 'ForgeronRunique', 'forgeron_runique', '#24 Forgeron Runique'],
+		['Socle_15', 'ChevalierDuLierre', 'chevalier_du_lierre', '#15 Chevalier du Lierre'],
+		['Socle_67', 'AureonPorteurDeLaPremiereAube', 'aureon_porteur_de_la_premiere_aube', '#67 Auréon'],
 	];
 	for (const [socle, model, id, label] of corrected) {
 		assert.match(check, new RegExp(`\\{ "${socle}", "${model}", "[\\w.]+", [\\d.]+ \\}`), `${model} dans TENUS`);
@@ -101,6 +105,17 @@ test('the corrected heroes checked in Studio exist in HeroConfig and in the QA r
 	for (const [, path, tolerance] of tolerances) {
 		assert.equal(Number(tolerance), path.startsWith('shield.') ? 0.2 : 0, path);
 	}
+});
+
+test('the Studio check controls the grips of every hero with the pure Skeleton rules', () => {
+	const skeleton = read('src/shared/Animation/Skeleton.lua');
+	assert.match(skeleton, /Hand = "Poing"/);
+	assert.match(skeleton, /Weapon = "Prise"/);
+	assert.match(skeleton, /function Skeleton\.gripProblems\(/);
+	assert.match(check, /Skeleton\.gripProblems\(measure\)/);
+	assert.match(check, /checkGrips\(`Prise \{socle\.Name\}`, model, true\)/);
+	assert.match(check, /checkGrips\("Prise copie", copy, false\)/);
+	assert.match(qa, /Archive_Prises_20261022/);
 });
 
 test('the QA report points to the Studio check and keeps the drafts as known FIX', () => {

@@ -178,6 +178,71 @@ return function(Skeleton: any, skeletonConfig: any)
 		assert(#Skeleton.animationSets({ JeuAnimations = "" }) == 0)
 	end)
 
+	test("member names: variants of the Bestiaire (no suffix, space) are detected", function()
+		for _, names in { { "torso", "head", "left_arm", "right_arm", "left_leg", "right_leg" },
+			{ "torso_geom", "head_geom", "left arm_geom", "right arm_geom", "left leg_geom", "right leg_geom" } } do
+			local r = Skeleton.resolve(pieces(names), nil)
+			assert(#r.missing == 0, table.concat(r.missing, ","))
+		end
+	end)
+
+	test("guess: halos and crowns stay worn even with a held word, new held words", function()
+		assert(Skeleton.guess("halo_lames") == "Buste")
+		assert(Skeleton.guess("menhir crown_geom") == "Buste")
+		assert(Skeleton.guess("wide_brim_hat_geom") == "Buste")
+		for _, name in { "sceptre_geom", "glaive_geom", "harpoon_geom", "trident_geom", "maul_geom", "carte_1", "hallebarde_geom" } do
+			assert(Skeleton.guess(name) == Skeleton.NearestHand, name)
+		end
+		assert(Skeleton.explicit("falcon") == nil, "no word: no explicit target")
+	end)
+
+	test("resolve: a piece follows its group (weapon decoration, halo blade)", function()
+		local list = pieces(STANDARD)
+		table.insert(list, { Name = "cristal_luciole", Groupe = "baton_fleur" })
+		table.insert(list, { Name = "Lame_1", Groupe = "halo_lames" })
+		table.insert(list, { Name = "falcon", Groupe = "falcon" })
+		table.insert(list, { Name = "hammer_geom", Groupe = "equipement" })
+		table.insert(list, { Name = "fente_1", Groupe = "cloche" })
+		local r = Skeleton.resolve(list, { Pieces = { falcon = "BrasGauche" } })
+		assert(#r.warnings == 0, table.concat(r.warnings, ";"))
+		assert(targetOf(r, list, "cristal_luciole") == Skeleton.NearestHand)
+		assert(targetOf(r, list, "Lame_1") == "Buste", "the halo group wins over 'lame'")
+		assert(targetOf(r, list, "falcon") == "BrasGauche", "config by group name")
+		assert(targetOf(r, list, "hammer_geom") == Skeleton.NearestHand, "neutral group: piece name decides")
+		assert(targetOf(r, list, "fente_1") == Skeleton.NearestHand)
+	end)
+
+	test("gripProblems: a grip on the Poing, through the fist, is clean", function()
+		local good = { Piece = "hammer_geom", HasPrise = true, HasPoing = true, Gap = 0.01, Angle = 1, Offset = 0.1, Before = true, After = true }
+		assert(#Skeleton.gripProblems(good) == 0)
+	end)
+
+	test("gripProblems: missing attachments, moved weapon, butt resting on the fist", function()
+		local missing = Skeleton.gripProblems({ Piece = "w", HasPrise = false, HasPoing = false })
+		assert(#missing == 2)
+		local moved = Skeleton.gripProblems({ Piece = "w", HasPrise = true, HasPoing = true, Gap = 0.8, Angle = 30, Before = true, After = true })
+		assert(#moved == 2, table.concat(moved, ";"))
+		-- Brise-Pierre (#05) avant correction : talon du manche posé sur le dessus du poing.
+		local butt = Skeleton.gripProblems({ Piece = "hammer_geom", HasPrise = true, HasPoing = true, Gap = 0, Angle = 0, Before = false, After = true })
+		assert(#butt == 1 and string.find(butt[1], "talon", 1, true), butt[1])
+		local beside = Skeleton.gripProblems({ Piece = "w", HasPrise = true, HasPoing = true, Gap = 0, Angle = 0, Offset = 0.8, Before = true, After = true })
+		assert(#beside == 1, "Poing placed beside the real fist")
+	end)
+
+	test("gripProblems: PriseControlee skips the approximate measures, never the Prise/Poing gap", function()
+		local checked = { Piece = "mallet_geom", HasPrise = true, HasPoing = true, Gap = 0, Angle = 0, Offset = 1.2, Before = false, After = true, Checked = true }
+		assert(#Skeleton.gripProblems(checked) == 0)
+		checked.Gap = 0.5
+		assert(#Skeleton.gripProblems(checked) == 1, "a weapon moved after the check is still caught")
+	end)
+
+	test("gripProblems: PriseLibre skips only the through test", function()
+		local cards = { Piece = "carte_1", HasPrise = true, HasPoing = true, Gap = 0, Angle = 0, Before = false, After = false, Free = true }
+		assert(#Skeleton.gripProblems(cards) == 0)
+		cards.Gap = 1
+		assert(#Skeleton.gripProblems(cards) == 1, "a free grip still has to sit on the Poing")
+	end)
+
 	print(`Skeleton: {passed} passed, {failed} failed`)
 	if failed > 0 then
 		error(`{failed} Skeleton test(s) failed`)

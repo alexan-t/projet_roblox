@@ -41,7 +41,7 @@ Un agent fait la même chose avec `execute_luau` (contenu du fichier, puis l'app
 | Étape | Fonction | Résultat |
 | --- | --- | --- |
 | Copie | `Kit.copy` | clone dans `Workspace.AtelierAnimation`. **Le modèle source n'est jamais modifié** (le Bestiaire contient les références de DA). |
-| Squelette | `Kit.rig` | `HumanoidRootPart` invisible et ancrée, os invisibles communs (dossier `Os`), `AnimationController` + `Animator`, articulations `Motor6D` ; attribut `Os` sur chaque pièce (voir `SKELETON.md`) |
+| Squelette | `Kit.rig` | `HumanoidRootPart` invisible et ancrée, os invisibles communs (dossier `Os`), `AnimationController` + `Animator`, articulations `Motor6D` ; attribut `Os` sur chaque pièce ; chaque arme recollée à son `Poing`, os de l'arme pivotant au centre du poing (voir `SKELETON.md` § Prise) |
 | Marche | `Kit.walk` | `KeyframeSequence` « Marche » en boucle, priorité `Movement`, `Pose` nommées d'après les os |
 | Rangement | `Kit.share` / `Kit.install` | marche dans le jeu commun de la fiche (`Assets.Animations.Squelette_Leger`...), attaque et ultime dans `Assets.Animations.<Set>` (jeu propre) ; copie dans `ServerStorage.RBX_ANIMSAVES.<modèle>` pour l'Animation Editor |
 | Aperçu | `Kit.preview` | jeu `Apercu_<Set>` + tag `ApercuAnimation` (voir plus bas) |
@@ -77,6 +77,45 @@ Le format des modèles générés par l'IA de Studio : une pièce par membre, no
 - Constaté le 01/10/2026 dans Test 3 : 20 héros sur 30 suivent ce format. Les autres (et la
   plupart des slimes et des monstres non humanoïdes) demandent un squelette adapté : `Kit.rig`
   s'arrête avec un message qui nomme la pièce manquante.
+
+## Prise des armes
+
+Avant de brancher le squelette sur un héros, ses armes doivent avoir leur `Prise` et ses bras leur `Poing`
+(`SKELETON.md` § Prise). Les 62 héros du Bestiaire et les 22 copies de jeu les ont depuis le
+22/10/2026. Pour un nouveau héros (sur le modèle source, dans le Workspace) :
+
+```lua
+local Kit = _G.AnimationKit
+print(table.concat(Kit.grip(model), "\n"))   -- pose Prise et Poing, recentre le manche
+Kit.showGrips(model)                          -- capture de la main de face et de profil
+print(table.concat(Kit.checkGrips(model), "\n")) -- vide = PASS
+Kit.hideGrips(model)
+```
+
+Une ligne « À VÉRIFIER EN CAPTURE » ou un manche qui longe le poing se corrige avec `Kit.aim`
+(direction du manche, glissement le long du manche), puis nouvelle capture.
+
+Le PASS de `Kit.checkGrips` ne suffit pas (`SKELETON.md` § Prise, limite des mesures). Pour chaque
+arme, capture rapprochée de la main **arme masquée** (`LocalTransparencyModifier = 1` sur les pièces
+de l'arme) pour lire le poing, puis arme visible, de face et de profil :
+
+- **Poing percé** (trou modelé, souvent peint rouge sombre à l'intérieur) : le manche suit l'axe du
+  trou et passe par son centre. Paroi du trou = sommets du bras proches du centre du poing ; leur axe
+  principal donne la direction (#24, #36, #37, #40, #42 le 22/10/2026).
+- **Poing fermé** (doigts empilés, pas de trou) : le manche suit la rangée des doigts, en pratique
+  l'axe épaule → bout du poing, et passe par le centre du poing (#34, #44, #50, #59). Une arme dont la
+  tête partirait dans le bras est retournée (tête en bas) ; une lame qui entre dans le socle est
+  inclinée vers l'avant.
+- Prise validée en capture : attribut `PriseControlee` sur la Prise, date dans `HEROES_QA.md`.
+
+Orientation au repos (contrôle global du 22/10/2026, vue de trois-quarts face de chaque héros) :
+
+- **Arme à hampe** (bâton, hallebarde, lance, quenouille, bec-de-corbin, sceptre) : debout, tête en
+  haut, penchée d'environ 12° vers l'avant (+Z) et un peu vers l'extérieur ; si la tête se cache
+  contre l'épaule, l'écarter davantage (#52 : 22°).
+- **Arme à une main** (épée, marteau, masse, coutelas) : pointe ou tête vers le bas et vers l'avant
+  (environ 40°), ou tenue en garde vers l'avant à hauteur de hanche. Jamais à l'horizontale vers le
+  côté, jamais cachée dans le bras ni plantée dans le socle.
 
 ## Profils de marche
 
