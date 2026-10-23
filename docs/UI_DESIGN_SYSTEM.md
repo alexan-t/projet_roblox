@@ -294,11 +294,19 @@ la référence 1080 px et se réduit si le contenu ne tient pas sur la hauteur *
 libre** : entre le bas des monnaies et le haut de la hotbar, comme la Sacoche, jamais par-dessus la hotbar
 (plancher `MinScale` ; zone trop étroite : hotbar masquée, contenu jusqu'au bas de l'écran, voir téléphone
 ci-dessous). Les héros engagés restent sur **une seule ligne**
-de puces identiques : l'écran s'élargit au lieu de passer à la ligne. Les petits textes du butin
-(« ×n », « +N », légende, message, « Héros ») sont grossis selon l'échelle pour faire au moins
-`MinText` = 14 px réels (`LootModel.textSize`), leurs boîtes sont dimensionnées pour le pire cas.
+de puces identiques : l'écran s'élargit au lieu de passer à la ligne. **Tous** les petits textes de la
+disposition PC / tablette (butin, « Héros », badges « Première victoire », « Nouveau » et « NIVEAU
+SUPÉRIEUR ! », nom et quantité des cartes de monnaie, nom, « Nv. », « +XP » et « x / y XP » des héros,
+« Continuer ») sont grossis selon l'échelle pour faire au moins `MinText` = 14 px réels jusqu'à
+`MinScale` (`LootModel.textSize`) ; leurs boîtes sont dimensionnées pour le pire cas (28 px du design) :
+- cartes de monnaie 132 × 176 : illustration 60 %, puis nom et quantité sur deux lignes séparées ;
+- puces de héros 440 × 120 : quatre lignes (nom ; « Nv. » | « +XP » ; barre ; « x / y XP ») ; au pire,
+  seuls les noms de plus de ~23 caractères sont tronqués « … » ;
+- badges : ils s'élargissent et grandissent avec leur texte ; « NIVEAU SUPÉRIEUR ! » est posé **au-dessus**
+  de la puce, dans la bande de l'intitulé « Héros » (qui n'est alors pas affiché), jamais sur un nom.
 Recette #96 (2026-10-20) : avant correction, bouton « Continuer » sur la hotbar et textes à 8–10 px réels
-dans le viewport Studio 1651 × 633.
+dans le viewport Studio 1651 × 633. Recette PC (2026-10-23), même viewport, 2 à 4 héros, butin complet,
+Sacoche pleine : échelle 0,51, plus petit texte mesuré 14,3 px réels (7 px avant), aucun chevauchement.
 
 **Écran de fin sur téléphone (paysage, référence 844 × 390).** Sur téléphone (hauteur < 520, mêmes
 seuils que la Sacoche et l'Expédition, `LootModel.pack`), les surcharges `UITheme.Pack.Reward.Phone`
