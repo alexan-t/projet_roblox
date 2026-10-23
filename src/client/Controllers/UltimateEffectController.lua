@@ -1,5 +1,8 @@
 --!strict
--- Effet de l'ultime « Charge du Rempart » (purement visuel, côté client) — issue #16.
+-- Effets des ultimes (purement visuels, côté client) — issue #16, brief docs/ultimes/ULTIMES.md.
+-- Chaque héros choisit son effet par l'attribut texte « EffetUltime » de son modèle de combat
+-- (RempartFerme, DernierCarreau) ; l'instant du coup est l'attribut Impact de sa séquence « Ultime ».
+-- Sans attribut : « Charge du Rempart », décrite ci-dessous.
 -- Le héros joue son animation « Ultime » (MonsterAnimationController) ; cet effet l'accompagne :
 --   1. lueur dorée sur le héros et étincelles qui montent pendant qu'il se ramasse ;
 --   2. à l'impact de l'animation (ANIMATION_IMPACT), une lame d'énergie dorée part de l'épée et
@@ -8,8 +11,8 @@
 --      des étincelles et une bouffée de poussière dorée.
 -- Le serveur a déjà appliqué les dégâts : CombatViewController retarde de IMPACT_DELAY les chiffres
 -- de dégâts et la disparition des ennemis touchés pour qu'ils tombent avec l'anneau.
--- API : UltimateEffectController.Play(caster, center, radius, speed?) ; ImpactDelay(speed?) : instant
--- réel où l'anneau éclate (IMPACT_DELAY à x1, divisé par la vitesse du combat).
+-- API : UltimateEffectController.Play(caster, center, radius, speed?) ; ImpactDelay(speed?, caster?) :
+-- instant réel où le coup touche (impact de l'animation + trajet de l'effet, divisé par la vitesse).
 -- Tag "ApercuUltime" (Model riggé, Studio) : démonstration en boucle, cible à 10 studs devant lui.
 --   Attribut optionnel ApercuPause (s entre deux ultimes).
 
@@ -43,8 +46,28 @@ local UltimateEffectController = {}
 
 UltimateEffectController.IMPACT_DELAY = ANIMATION_IMPACT + TRAVEL_TIME
 
-function UltimateEffectController.ImpactDelay(speed: number?): number
-	return UltimateEffectController.IMPACT_DELAY / (speed or 1)
+-- Trajet (s, à x1) entre l'impact de l'animation et le coup sur la cible, par effet.
+local SHIELD_TRAVEL = 0.15
+local BOLT_TRAVEL = 0.12
+local TRAVEL: { [string]: number } = { Rempart = TRAVEL_TIME, RempartFerme = SHIELD_TRAVEL, DernierCarreau = BOLT_TRAVEL }
+
+local function effectOf(caster: Model?): string
+	local name = caster and caster:GetAttribute("EffetUltime")
+	return if typeof(name) == "string" and TRAVEL[name] then name else "Rempart"
+end
+
+-- Instant du coup dans l'animation « Ultime » du héros (attribut Impact de la séquence).
+local function impactOf(caster: Model?): number
+	local sequence = caster and AnimationSets.find(caster, "Ultime", true)
+	local impact = sequence and sequence:GetAttribute("Impact")
+	return if typeof(impact) == "number" then impact else ANIMATION_IMPACT
+end
+
+function UltimateEffectController.ImpactDelay(speed: number?, caster: Model?): number
+	if not caster then
+		return UltimateEffectController.IMPACT_DELAY / (speed or 1)
+	end
+	return (impactOf(caster) + TRAVEL[effectOf(caster)]) / (speed or 1)
 end
 
 local function effectPart(props: { [string]: any }): Part
@@ -104,7 +127,7 @@ local function weaponPosition(caster: Model, fallback: Vector3): Vector3
 end
 
 -- 1. Lueur sur le héros pendant qu'il se ramasse.
-local function aura(caster: Model, box: CFrame, size: Vector3, speed: number)
+local function aura(caster: Model, box: CFrame, size: Vector3, speed: number, impact: number)
 	local glow = Instance.new("Highlight")
 	glow.Name = "UltimeLueur"
 	glow.Adornee = caster
@@ -114,9 +137,9 @@ local function aura(caster: Model, box: CFrame, size: Vector3, speed: number)
 	glow.OutlineTransparency = 0.1
 	glow.DepthMode = Enum.HighlightDepthMode.Occluded
 	glow.Parent = caster
-	local fade = TweenInfo.new(0.55 / speed, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, ANIMATION_IMPACT * 0.6 / speed)
+	local fade = TweenInfo.new(0.55 / speed, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, impact * 0.6 / speed)
 	TweenService:Create(glow, fade, { FillTransparency = 1, OutlineTransparency = 1 }):Play()
-	task.delay((ANIMATION_IMPACT + 0.7) / speed, function()
+	task.delay((impact + 0.7) / speed, function()
 		glow:Destroy()
 	end)
 	local host = effectPart({ Transparency = 1, Size = Vector3.new(size.X, 0.2, size.Z), CFrame = box * CFrame.new(0, -size.Y / 2, 0) })
@@ -211,6 +234,106 @@ local function wave(from: Vector3, center: Vector3, radius: number, speed: numbe
 		task.delay(RING_TIME + 1.2, function()
 			disc:Destroy()
 			host:Destroy()
+		end)
+	end)
+end
+
+local WOOD = Color3.fromHex("#6B4426")
+
+-- Bouffée au sol : poussière claire et éclats (fin d'un choc, impact d'un carreau).
+local function puff(at: Vector3, color: Color3, amount: number)
+	local host = effectPart({ Transparency = 1, Size = Vector3.new(1.5, 0.2, 1.5), CFrame = CFrame.new(at) })
+	emitter(host, {
+		Texture = DUST_TEXTURE,
+		Color = ColorSequence.new(color),
+		Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(1, 1.8) }),
+		Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.4), NumberSequenceKeypoint.new(1, 1) }),
+		Lifetime = NumberRange.new(0.35, 0.6),
+		Speed = NumberRange.new(2, 4),
+		SpreadAngle = Vector2.new(60, 60),
+		EmissionDirection = Enum.NormalId.Top,
+		Drag = 4,
+	}):Emit(amount)
+	sparkEmitter(host, 0.35, NumberRange.new(4, 8)):Emit(amount)
+	task.delay(1, function()
+		host:Destroy()
+	end)
+end
+
+-- 01 Écuyer « Rempart Fermé » : un choc court en forme d'écu (rectangle + pointe) part du bouclier
+-- planté et frappe devant lui, quelques studs seulement, puis s'efface.
+local function shieldShock(caster: Model, center: Vector3, speed: number)
+	local box, size = caster:GetBoundingBox()
+	local feet = box.Position - Vector3.new(0, size.Y / 2, 0)
+	local toward = Vector3.new(center.X - feet.X, 0, center.Z - feet.Z)
+	local look = if toward.Magnitude > 1e-3 then toward.Unit else caster:GetPivot().LookVector
+	local start = feet + look * 1.4 + Vector3.new(0, math.max(1.2, size.Y * 0.32), 0)
+	local finish = start + look * math.clamp(toward.Magnitude - 1.5, 2, 5)
+	local top = effectPart({ Name = "UltimeEcu", Color = GOLD_LIGHT, Transparency = 0.25, Size = Vector3.new(2, 1.2, 0.15) })
+	local tip = effectPart({ Name = "UltimeEcuPointe", Color = GOLD_LIGHT, Transparency = 0.25, Size = Vector3.new(1.42, 1.42, 0.15) })
+	local travel = SHIELD_TRAVEL / speed
+	local fade = 0.2 / speed
+	local started = os.clock()
+	local loop: RBXScriptConnection
+	loop = RunService.RenderStepped:Connect(function()
+		local t = os.clock() - started
+		local eased = 1 - (1 - math.clamp(t / travel, 0, 1)) ^ 2
+		local scale = 1 + 0.35 * eased
+		local at = start:Lerp(finish, eased)
+		local frame = CFrame.lookAt(at, at + look)
+		top.Size = Vector3.new(2 * scale, 1.2 * scale, 0.15)
+		top.CFrame = frame * CFrame.new(0, 0.35 * scale, 0)
+		tip.Size = Vector3.new(1.42 * scale, 1.42 * scale, 0.15)
+		tip.CFrame = frame * CFrame.new(0, -0.25 * scale, 0) * CFrame.Angles(0, 0, math.rad(45))
+		local alpha = if t <= travel then 0.25 else 0.25 + 0.75 * math.clamp((t - travel) / fade, 0, 1)
+		top.Transparency, tip.Transparency = alpha, alpha
+		if t >= travel + fade then
+			loop:Disconnect()
+			top:Destroy()
+			tip:Destroy()
+		end
+	end)
+	task.delay(travel, function()
+		puff(Vector3.new(finish.X, feet.Y + 0.1, finish.Z), CREAM, 8)
+	end)
+end
+
+-- 02 Tireuse « Le Dernier Carreau » : un carreau lourd part de l'arbalète et traverse la cible (tir
+-- perforant) en laissant une fine traînée tendue ; éclats de bois à l'impact.
+local function heavyBolt(caster: Model, center: Vector3, speed: number)
+	local box = caster:GetBoundingBox()
+	local from = weaponPosition(caster, box.Position)
+	local target = center + Vector3.new(0, 1.2, 0)
+	local direction = target - from
+	if direction.Magnitude < 1e-3 then
+		return
+	end
+	local finish = target + direction.Unit * 3
+	local bolt = effectPart({ Name = "UltimeCarreau", Material = Enum.Material.Wood, Color = WOOD, Size = Vector3.new(0.16, 0.16, 1.4), CFrame = CFrame.lookAt(from, target) })
+	local tail1 = Instance.new("Attachment")
+	tail1.Position = Vector3.new(0, 0.05, 0.7)
+	tail1.Parent = bolt
+	local tail2 = Instance.new("Attachment")
+	tail2.Position = Vector3.new(0, -0.05, 0.7)
+	tail2.Parent = bolt
+	local trail = Instance.new("Trail")
+	trail.Attachment0, trail.Attachment1 = tail1, tail2
+	trail.Color = ColorSequence.new(CREAM)
+	trail.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 1) })
+	trail.Lifetime = 0.3 / speed
+	trail.LightEmission = 0.6
+	trail.FaceCamera = true
+	trail.Parent = bolt
+	local travel = BOLT_TRAVEL / speed
+	local through = travel * (direction.Magnitude + 3) / direction.Magnitude
+	TweenService:Create(bolt, TweenInfo.new(through, Enum.EasingStyle.Linear), { CFrame = CFrame.lookAt(finish, finish + direction.Unit) }):Play()
+	task.delay(travel, function()
+		puff(target, WOOD:Lerp(CREAM, 0.5), 10)
+	end)
+	task.delay(through + 0.05, function()
+		bolt.Transparency = 1
+		task.delay(0.4, function()
+			bolt:Destroy()
 		end)
 	end)
 end
@@ -312,17 +435,25 @@ function UltimateEffectController.Play(caster: Model, center: Vector3, radius: n
 		return 0
 	end
 	local box, size = caster:GetBoundingBox()
-	aura(caster, box, size, scale)
-	-- sons (#18) : lancement, puis l'anneau qui éclate
+	local impact = impactOf(caster)
+	local effect = effectOf(caster)
+	aura(caster, box, size, scale, impact)
+	-- sons (#18) : lancement, puis le coup
 	AudioController.Play("UltimeLancement", { Position = box.Position })
-	AudioController.Play("UltimeImpact", { Delay = UltimateEffectController.ImpactDelay(scale), Position = center })
-	task.delay(ANIMATION_IMPACT / scale, function()
+	AudioController.Play("UltimeImpact", { Delay = UltimateEffectController.ImpactDelay(scale, caster), Position = center })
+	task.delay(impact / scale, function()
 		if not caster.Parent then
 			return
 		end
-		wave(weaponPosition(caster, box.Position), center, radius or DEFAULT_RADIUS, scale)
+		if effect == "RempartFerme" then
+			shieldShock(caster, center, scale)
+		elseif effect == "DernierCarreau" then
+			heavyBolt(caster, center, scale)
+		else
+			wave(weaponPosition(caster, box.Position), center, radius or DEFAULT_RADIUS, scale)
+		end
 	end)
-	return UltimateEffectController.ImpactDelay(scale)
+	return UltimateEffectController.ImpactDelay(scale, caster)
 end
 
 -- Démonstration Studio : l'animation « Ultime » du jeu de combat du modèle (attribut

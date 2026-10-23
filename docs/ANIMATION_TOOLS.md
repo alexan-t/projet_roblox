@@ -233,6 +233,32 @@ attaque (Masse 0,65 s, Tir 0,8 s, Sort 0,7 s), posé sur sa case. L'Écuyer de t
 l'ancien squelette (la DEV a sa version migrée). **À faire** : importer dans la DEV les 59 modèles,
 les jeux `<Modèle>` et `Squelette_Leger`, puis publier les séquences (`AssetId`).
 
+## Ultimes des héros (brief `docs/ultimes/ULTIMES.md`)
+
+Chaque ultime = une séquence « Ultime » dans le jeu propre du héros (style de `Kit.Attacks`) + un
+effet du client choisi par l'attribut texte `EffetUltime` du modèle de combat
+(`UltimateEffectController`, une fonction par effet). L'instant où l'effet part est l'attribut
+`Impact` de la séquence, plus le trajet de l'effet (`TRAVEL`) : les dégâts et disparitions tombent
+au coup (`ImpactDelay(speed, caster)`). Sans attribut : onde dorée « Charge du Rempart ».
+
+| Héros | Ultime | Style | Durée / impact | `EffetUltime` |
+| --- | --- | --- | --- | --- |
+| #01 Écuyer du Rempart | Rempart Fermé | `RempartFerme` | 0,7 s / 0,3 s | `RempartFerme` : écu doré qui frappe 2 à 5 studs devant lui |
+| #02 Tireuse des Faubourgs | Le Dernier Carreau | `DernierCarreau` (visé) | 0,8 s / 0,45 s | `DernierCarreau` : carreau lourd qui traverse la cible, traînée fine |
+
+```lua
+local Kit = _G.AnimationKit
+local m = workspace.AtelierAnimation.TireuseDesFaubourgs_Anim
+Kit.install(m, "TireuseDesFaubourgs", Kit.ultimate(m, Kit.aimedAttack(m, "DernierCarreau")))
+-- puis attribut EffetUltime = "DernierCarreau" sur Assets.Combat.Heros_TireuseDesFaubourgs
+```
+
+Vérifié le 23/10/2026 (test 3) : captures à x0,1 dans l'atelier (pose d'impact de profil, écu,
+carreau et traînée) ; combat réel stage 1-1, chaque héros seul : l'Écuyer lance l'écu, la Tireuse
+attaque 5 fois puis l'ultime, carreau parti 0,47 s après le début de l'animation. Dans test 3,
+l'ultime de l'Écuyer est dans `Atelier_EcuyerDuRempart` (son jeu `EcuyerDuRempart` y est encore sur
+l'ancien squelette) ; dans la DEV, le ranger dans `EcuyerDuRempart` à la place du style `Rempart`.
+
 ## Aperçu au Play
 
 `MonsterAnimationController` anime en boucle tout modèle tagué `ApercuAnimation` (Attente, puis

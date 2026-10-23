@@ -1279,6 +1279,72 @@ Kit.Attacks = {
 			{ Time = 0.5, Easing = "InOut", Poses = {} },
 		},
 	},
+	-- Ultimes des Communs (docs/ultimes/ULTIMES.md, 23/10/2026). Effet visuel : attribut EffetUltime du
+	-- modèle de combat, joué par UltimateEffectController à l'Impact de la séquence.
+	-- 01 Écuyer « Rempart Fermé » : ramassé derrière le bouclier, pas en avant, bouclier planté à la
+	-- verticale devant lui, épée ramenée en arrière ; le choc en forme d'écu part à l'impact.
+	RempartFerme = {
+		Length = 0.7, Impact = 0.3,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.12, Easing = "In", Poses = {
+				torso = { 6, 0, 0, -0.15 },
+				leftArm = { 55, 0, 10 }, weaponLeft = { -10, 0, 0 },
+				rightArm = { -15, 0, 20 },
+				leftLeg = { -6, 0, 0 }, rightLeg = { 6, 0, 0 },
+				head = { -4, 0, 0 },
+			} },
+			{ Time = 0.3, Easing = "Out", Poses = {
+				torso = { -14, 0, 0, -0.35 },
+				leftArm = { 38, 0, 5 }, weaponLeft = { -20, 0, 0 },
+				rightArm = { -25, 0, 25 },
+				leftLeg = { 38, 0, 0 }, rightLeg = { -12, 0, 0 },
+				head = { 10, 0, 0 },
+			} },
+			{ Time = 0.45, Easing = "InOut", Poses = {
+				torso = { -12, 0, 0, -0.32 },
+				leftArm = { 36, 0, 5 }, weaponLeft = { -18, 0, 0 },
+				rightArm = { -22, 0, 22 },
+				leftLeg = { 36, 0, 0 }, rightLeg = { -11, 0, 0 },
+				head = { 9, 0, 0 },
+			} },
+			{ Time = 0.7, Easing = "InOut", Poses = {} },
+		},
+	},
+	-- 02 Tireuse « Le Dernier Carreau » : position de tir basse (jambes d'une pièce : pas de vrai genou
+	-- à terre ; buste descendu, jambe avant levée, jambe arrière tirée en arrière, rien sous le sol),
+	-- arbalète épaulée, recul au tir. Arme visée par Kit.aimedAttack (Kit.AttackAims.DernierCarreau).
+	DernierCarreau = {
+		Length = 0.8, Impact = 0.45,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.2, Easing = "InOut", Poses = {
+				torso = { 0, 28, 0, -0.55 },
+				rightArm = { 82, 0, 14 }, leftArm = { 75, 0, 22 },
+				leftLeg = { 66, -28, 0 }, rightLeg = { -56, -28, 0 },
+				head = { 0, -23, 0 },
+			} },
+			{ Time = 0.4, Easing = "In", Poses = {
+				torso = { 0, 30, 0, -0.6 },
+				rightArm = { 85, 0, 15 }, leftArm = { 80, 0, 28 },
+				leftLeg = { 70, -30, 0 }, rightLeg = { -60, -30, 0 },
+				head = { 0, -25, 0 },
+			} },
+			{ Time = 0.45, Easing = "Out", Poses = {
+				torso = { -6, 30, 0, -0.6 },
+				rightArm = { 92, 0, 15 }, leftArm = { 86, 0, 25 },
+				leftLeg = { 70, -30, 0 }, rightLeg = { -60, -30, 0 },
+				head = { -3, -25, 0 },
+			} },
+			{ Time = 0.6, Easing = "InOut", Poses = {
+				torso = { -2, 29, 0, -0.58 },
+				rightArm = { 86, 0, 15 }, leftArm = { 80, 0, 25 },
+				leftLeg = { 68, -29, 0 }, rightLeg = { -58, -29, 0 },
+				head = { 0, -24, 0 },
+			} },
+			{ Time = 0.8, Easing = "InOut", Poses = {} },
+		},
+	},
 	-- Variante : les deux bras levés puis abattus au sol, buste plié, rebond lourd.
 	Ecrasement = {
 		Length = 1.0, Impact = 0.32,
@@ -1367,6 +1433,7 @@ Kit.AttackAims = {
 	Sort = { [0.15] = Vector3.new(0.1, 0.95, 0.3), [0.3] = Vector3.new(0, 0.55, -0.85), [0.42] = Vector3.new(0, 0.6, -0.8) },
 	Tir = { [0.25] = "rest", [0.4] = "rest", [0.45] = "rest", [0.55] = "rest" },
 	Arbalete = { [0.25] = Vector3.new(0, 0, -1), [0.4] = Vector3.new(0, 0, -1), [0.45] = Vector3.new(0, 0.15, -1), [0.55] = Vector3.new(0, 0.05, -1) },
+	DernierCarreau = { [0.2] = Vector3.new(0, 0, -1), [0.4] = Vector3.new(0, 0.02, -1), [0.45] = Vector3.new(0, 0.2, -1), [0.6] = Vector3.new(0, 0.06, -1) },
 }
 
 local AIM_JOINTS = { torso = "Racine", head = "Cou", leftArm = "EpauleGauche", rightArm = "EpauleDroite",
