@@ -5,7 +5,7 @@ Périmètre : les 4 modèles de combat à la DA du jeu, **62 AssetIds** (31 mesh
 publiés par `cypher1359`. Propriétaire cible : `nxtoma` (User `11714751172`). Les mannequins R15 de
 `Assets.Combat` sont hors lot (provisoires, à remplacer plutôt qu'à republier).
 
-État : **préparé, rien de publié ni de remplacé.**
+État : **préparé, rien de publié ni de remplacé.** Voie retenue : C (Open Cloud), en attente de la clé de `nxtoma` pour le test du n°44.
 
 ## Ce qui a été vérifié dans la place DEV (session de `nxtoma`)
 
@@ -32,9 +32,13 @@ puis le publier avec `AssetService:CreateAssetAsync` (Mesh / Image) : l'asset cr
 session. **Essayée le 23/10/2026 sur la texture n°44 (`107504521703864`) : échec.** La lecture
 réussit (image 1024 × 1024), mais `CreateAssetAsync` répond « CreateAssetAsync and
 CreateAssetVersionAsync are not available yet ». Rien n'a été publié. Voie A fermée tant que Roblox
-n'ouvre pas cette API : passer par la voie B.
+n'ouvre pas cette API.
 
-**Voie B — export puis import, par l'utilisateur (`nxtoma`).**
+**Voie C — Open Cloud, outil local (recommandée, à valider sur le n°44).** Détail : § Voie C plus bas.
+Télécharger le fichier d'origine de chaque asset (Asset Delivery), le contrôler, le republier sous
+`nxtoma` (Assets API) et produire le `MAPPING`, sans manipulation par asset.
+
+**Voie B — export puis import, par l'utilisateur (`nxtoma`).** Repli si la voie C est refusée.
 1. Studio, session `nxtoma`. Pour chaque pièce du tableau : la sélectionner dans
    `ReplicatedStorage.Assets.Combat`, clic droit → **Exporter la sélection** (`.obj` + texture).
    Nommer le fichier d'après la pièce (ex. `Gobelin_right_arm`).
@@ -69,6 +73,101 @@ et appartient à `nxtoma`.
 
 En cas de problème : Ctrl+Z (une étape) ou rouvrir la place sans enregistrer. Les anciens assets
 restent en place sur Roblox : rien n'est supprimé.
+
+## Voie C — Open Cloud (étude du 23/10/2026)
+
+### Verdict : faisable, sous réserve d'un test réel sur le n°44
+
+La voie est prévue par Roblox : l'Assets API accepte un mesh « uniquement s'il a été téléchargé par
+l'Asset Delivery API » et renvoie vers l'Importer « si vous n'essayez pas de télécharger puis
+republier des meshes ». Les images se republient directement (PNG/JPEG). L'outil
+`tools/republish-assets.mjs` fait tout le circuit ; il est testé contre un faux Roblox
+(`tests/republish-assets.test.mjs`). Le seul point que la documentation ne tranche pas est le
+droit de **télécharger un asset de `cypher1359`** avec une clé de `nxtoma` (voir plus bas) : c'est
+ce que le test du n°44 établit.
+
+### Endpoints officiels
+
+| Étape | Endpoint | Scope | Quota |
+|---|---|---|---|
+| Télécharger l'original | `GET apis.roblox.com/asset-delivery-api/v1/assetId/{id}` → `location` (URL CDN temporaire, gzip possible) | `legacy-asset:manage` (clé d'un **compte**, pas de groupe) | 1 000/min |
+| Publier | `POST apis.roblox.com/assets/v1/assets` (multipart : `request` JSON + `fileContent`) | `asset:read` + `asset:write` | 120/min |
+| Suivre la publication | `GET apis.roblox.com/assets/v1/operations/{operationId}` (`done`, `response.assetId`, `moderationResult`) | `asset:read` | 300/min |
+| Vérifier le propriétaire | `GET apis.roblox.com/assets/v1/assets/{id}` (`creationContext.creator`) | `asset:read` | 120/min |
+| (Repli) Partager des assets | `PATCH apis.roblox.com/asset-permissions-api/v1/assets/permissions` (bêta, par lot) | `asset-permissions:write` | 100/min |
+
+Limites : un asset par appel, 20 Mo, images < 8000 px ; Image et Mesh ne se mettent pas à jour
+(chaque publication crée un nouvel identifiant) ; pas d'endpoint de lot pour le téléchargement.
+Sans clé, les deux endpoints répondent 403 (vérifié). Sources :
+[usage-assets](https://create.roblox.com/docs/cloud/guides/usage-assets),
+[référence Assets](https://create.roblox.com/docs/en-us/cloud/reference/features/assets.md),
+[Asset Delivery](https://create.roblox.com/docs/cloud/reference/domains/assetdelivery.md),
+[confidentialité des assets](https://create.roblox.com/docs/en-us/projects/assets/privacy).
+
+### Droit de lire les assets de `cypher1359`
+
+- Roblox ne documente pas le contrôle d'accès d'Asset Delivery. Les images et meshes sont en
+  « Open Use » par défaut, sauf si leur créateur a activé la confidentialité des assets (« Restricted ») ;
+  un asset restreint ne se charge que pour les comptes ou expériences autorisés.
+- Indice favorable : dans la session Studio de `nxtoma`, `CreateEditableMeshAsync` et
+  `CreateEditableImageAsync` lisent ces assets (ils exigent pourtant un droit d'usage).
+- Si le téléchargement répond 401/403/404 pour un identifiant valide, l'accès est refusé : passer
+  au repli ci-dessous. Aucun cookie de session ni API privée.
+
+### Ce que l'utilisateur (`nxtoma`) doit faire
+
+1. **Créer la clé** : Creator Hub → Open Cloud → Clés API → *Créer une clé*, propriétaire `nxtoma`
+   (compte personnel). Autorisations : *Assets* (lecture + écriture) et *Legacy Assets*
+   (`legacy-asset:manage`). Restreindre à son adresse IP et mettre une expiration courte (7 jours).
+2. **La rendre disponible localement, hors Git** : soit
+   `$env:ROBLOX_OPEN_CLOUD_KEY = '<clé>'` dans le terminal où l'outil tourne, soit un fichier hors du
+   dépôt (ex. `C:\Users\<toi>\.roblox\open-cloud-key.txt`) et `$env:ROBLOX_OPEN_CLOUD_KEY_FILE` vers
+   ce fichier. Ne jamais la coller dans le chat, un fichier du dépôt ni la donner au collaborateur.
+3. **Donner son accord** à chaque publication (pilote d'un asset, puis le lot).
+
+### Ce qui est automatisé
+
+```bash
+node tools/republish-assets.mjs download automation/republication/lot-pilote-combat.json --only 107504521703864
+```
+
+Téléchargement (sans clé envoyée à l'URL CDN), décompression, contrôle du format (signature PNG/JPEG
+et dimensions, en-tête de mesh `version x.yz`, taille), empreinte SHA-256, journal
+`build/republication/<lot>/journal.jsonl`, état `state.json` (reprise : un asset déjà contrôlé
+n'est pas retéléchargé). Aucune écriture côté Roblox.
+
+```bash
+node tools/republish-assets.mjs publish automation/republication/lot-pilote-combat.json --confirm --only 107504521703864
+```
+
+Publication sous `targetOwner.userId` du lot, **un seul asset par défaut** (`--limit N` pour plus),
+attente de l'opération, relecture du propriétaire, doublons de contenu publiés une seule fois,
+nouvel essai sur 429/5xx (avec `Retry-After`), espacement des appels selon les quotas, messages et
+journal sans la clé. Puis `status` et `mapping` : `build/republication/<lot>/mapping.luau` contient
+le bloc `MAPPING` de `tools/studio-replace-asset-ids.luau`, limité aux assets **approuvés** et au bon
+propriétaire. Pour les lots suivants : `node tools/republish-assets.mjs lot <nom> <sortie.tsv> 11714751172`
+construit le lot à partir de la sortie de `tools/studio-check-asset-ownership.luau`.
+
+### Ordre de marche
+
+1. Clé créée et chargée (utilisateur) → `download --only 107504521703864` : verdict d'accès et de format.
+2. Si OK : `download` sur les 62 (lecture seule).
+3. Accord de l'utilisateur → `publish --only 107504521703864` (un exemplaire) → contrôle sur le
+   Creator Hub (propriétaire, modération) et en Studio sur une copie.
+4. Accord → `publish --limit 62`, puis `mapping`.
+5. Remplacement (§ 3 de la procédure, `DRY_RUN` d'abord) et contrôle (§ 4). Aucun AssetId n'est
+   modifié dans Studio avant que les nouveaux fichiers soient vérifiés et approuvés.
+
+### Replis si le téléchargement est refusé
+
+1. **Le collaborateur partage ses assets avec `nxtoma`** : Creator Hub → asset → Permissions, ou en
+   une requête avec sa propre clé (`asset-permissions:write`, `PATCH .../assets/permissions`). Puis
+   reprendre l'ordre de marche.
+2. **Le collaborateur télécharge lui-même** avec sa propre clé (`legacy-asset:manage` sur ses
+   propres assets) : `download` seulement, puis il transmet le dossier
+   `build/republication/<lot>/` (fichiers + `state.json`, **jamais la clé**) ; `nxtoma` lance
+   `publish` sur ce dossier.
+3. **Export Studio** (voie B), pièce par pièce : dernier recours.
 
 ## Inventaire du lot
 
