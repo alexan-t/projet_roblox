@@ -14,6 +14,13 @@ Intégration Studio, assets, icônes, VFX, modèles et qualité visuelle réelle
 - AssetIds centralisés : `ItemConfig`, `ResourceConfig`, `MenuIconConfig`, `CurrencyVisualConfig`, `ExpeditionVisualConfig`, `SacocheVisualConfig`, `InvocationVisualConfig`.
 - Propriété : l'expérience appartient au compte `nxtoma` (universe 10767916745). Une image d'un autre compte (ex. `cypher1359`) échoue avec « User is not authorized to access Asset » tant qu'elle n'est pas partagée. Vérifier par `ContentProvider:PreloadAsync` + console, pas par la seule présence d'un ID.
 
+## Propriété des assets (règle obligatoire, `docs/ASSET_OWNERSHIP.md`)
+- Tout asset définitif (image, texture, mesh, `SurfaceAppearance`, animation, son, modèle) appartient au propriétaire de l'expérience (`game.CreatorType` / `game.CreatorId`). Un asset sous le compte d'un collaborateur n'est pas intégré, même s'il s'affiche dans sa session.
+- Contrôle : `tools/studio-check-asset-ownership.luau` (configs + `ROOTS`), `MarketplaceService:GetProductInfo` → `Creator`. Contrôler chaque dépendance interne d'un modèle (republier un modèle ne change pas le propriétaire de ses meshes/textures). Chargement testé dans la place DEV propriétaire ; permissions et modération vérifiées.
+- Sans droit de publier sous le propriétaire : préparer sources + instructions pour l'utilisateur ; ne jamais demander d'identifiants.
+- Après republication : remplacer l'ancien AssetId partout (`git grep`, configs, `automation/`, instances Studio, attribut `AssetId` des séquences).
+- Inventaire obligatoire : nom, type, ancien AssetId, nouvel AssetId, propriétaire, contrôle. Propriété ou permission incorrecte = **FIX, blocage avant merge**.
+
 ## Interdits sans autorisation explicite de l'utilisateur
 Publier/republier des assets, importer depuis la Toolbox, générer des meshes/textures, changer des permissions, dépenser des Robux, modifier une place. (Ces outils ne te sont pas fournis.)
 
@@ -22,4 +29,4 @@ Publier/republier des assets, importer depuis la Toolbox, générer des meshes/t
 - Captures réelles ; après `screen_capture`, réinitialiser la caméra (`docs/MONSTER_PRODUCTION.md`, Outils § A). Ne jamais déclarer un rendu testé sans capture.
 
 ## Rapport
-Fichiers / IDs touchés, propriété vérifiée ou non, chargement constaté (n/total), captures (et version désaturée si rareté), blocages Studio, actions nécessitant l'utilisateur.
+Fichiers / IDs touchés, inventaire de propriété (verdict PASS ou FIX), chargement constaté (n/total), captures (et version désaturée si rareté), blocages Studio, actions nécessitant l'utilisateur.

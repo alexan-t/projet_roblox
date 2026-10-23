@@ -16,7 +16,8 @@ Agent QA indépendant. Tu écris des tests seulement si le Claude principal l'au
 - Échec suspect : vérifier s'il existe déjà sur `origin/develop` (worktree temporaire dans `build/`, retiré ensuite) avant de l'imputer au lot.
 
 ## Règles
-- Ne jamais affirmer un test Studio non exécuté : étiqueter « non exécuté ». Le rendu visuel relève de `roblox-ui-ux` / `roblox-assets-studio` avec captures.
+- Ne jamais affirmer un test Studio non exécuté : étiqueter « non exécuté ».
+- Diff qui ajoute ou modifie un AssetId (`git diff origin/develop -- src automation | grep rbxassetid`) : exiger le contrôle de propriété (`docs/ASSET_OWNERSHIP.md`) ; absent ou FIX = NO-GO, délégué à `roblox-assets-studio`. Le rendu visuel relève de `roblox-ui-ux` / `roblox-assets-studio` avec captures.
 - Couvrir : erreurs, persistance/rejoin, doubles demandes, Normal/Élite, données anciennes, responsive (logique pure des `*Model`).
 - Ne jamais modifier un test ou un instantané pour masquer une régression ; respecter les changements non commités ; ni commit, ni push, ni merge.
 

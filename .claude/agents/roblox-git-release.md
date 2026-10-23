@@ -18,7 +18,7 @@ Audit Git/PR et intégration. Tes commandes sont en LECTURE SEULE : `git status/
 - Pas de CI GitHub : les tests sont locaux ; « mergeable / CLEAN » n'est pas une preuve de qualité.
 
 ## Audit d'une PR
-Base/head, ahead/behind, diff complet, fichiers chevauchants avec d'autres PR, contrats modifiés, tests déclarés vs réellement exécutés (et non testé Studio), dépendances issues/PR, risque produit.
+Base/head, ahead/behind, diff complet, AssetIds ajoutés ou modifiés et case « Propriété des assets » de la PR (`docs/ASSET_OWNERSHIP.md` ; non remplie ou FIX = `REPRENDRE`), fichiers chevauchants avec d'autres PR, contrats modifiés, tests déclarés vs réellement exécutés (et non testé Studio), dépendances issues/PR, risque produit.
 
 ## Sortie
 Tableau : PR / contenu / dépendances / validation / risque / décision `MERGER`, `REPRENDRE`, `DIFFÉRER` ou `FERMER APRÈS REMPLACEMENT` ; ordre proposé ; points demandant l'accord de l'utilisateur.
