@@ -245,6 +245,10 @@ au coup (`ImpactDelay(speed, caster)`). Sans attribut : onde dorée « Charge du
 | --- | --- | --- | --- | --- |
 | #01 Écuyer du Rempart | Rempart Fermé | `RempartFerme` | 0,7 s / 0,3 s | `RempartFerme` : écu doré qui frappe 2 à 5 studs devant lui |
 | #02 Tireuse des Faubourgs | Le Dernier Carreau | `DernierCarreau` (visé) | 0,8 s / 0,45 s | `DernierCarreau` : carreau lourd qui traverse la cible, traînée fine |
+| #03 Lancier des Champs | Haie de Lances | `HaieDeLances` (visé) | 0,85 s / 0,3 s | `HaieDeLances` : trois traits de fer en éventail depuis la pointe, un par estoc |
+| #04 Apprenti Pyromancien | Braise Indocile | `BraiseIndocile` (visé) | 0,85 s / 0,45 s | `BraiseIndocile` : prélude, la gemme tousse trois braises ; une braise frappe la cible puis rebondit sur une seconde |
+| #05 Brise-Pierre | Fendaille de Carrière | `FendailleDeCarriere` (visé) | 0,9 s / 0,42 s | `FendailleDeCarriere` : fissure en zigzag d'une longueur de masse, partie de la tête de la masse, poussière |
+| #06 Guetteuse des Pins | Cor des Cimes | `CorDesCimes` (visé) | 0,95 s / 0,62 s | `CorDesCimes` : prélude, deux ondes d'appel depuis sa tête ; flèche à traînée vert pâle jusqu'au contour fin d'un pin |
 
 ```lua
 local Kit = _G.AnimationKit
@@ -253,7 +257,16 @@ Kit.install(m, "TireuseDesFaubourgs", Kit.ultimate(m, Kit.aimedAttack(m, "Dernie
 -- puis attribut EffetUltime = "DernierCarreau" sur Assets.Combat.Heros_TireuseDesFaubourgs
 ```
 
-Vérifié le 23/10/2026 (test 3) : captures à x0,1 dans l'atelier (pose d'impact de profil, écu,
+Préludes (`PRELUDE` du contrôleur) : effets qui partent dès le début de l'animation, avant le coup
+(braises de #04, cor de #06). #06 : le modèle n'a pas de cor à la ceinture ; la main libre monte à
+la bouche et les ondes disent l'appel (à revoir si un cor est ajouté au modèle).
+
+Peu communs vérifiés le 23/10/2026 (test 3) : poses clés en Edit (éventail de #03 vu de dessus, sol
+contrôlé par mesure : rien sous le sol sauf la masse de #05 qui mord de 0,1 stud), effets à x0,1
+dans l'atelier, combat réel stage 1-1 : les quatre ultimes partent (traits, braises, fissure, cor et
+pin).
+
+Communs vérifiés le 23/10/2026 (test 3) : captures à x0,1 dans l'atelier (pose d'impact de profil, écu,
 carreau et traînée) ; combat réel stage 1-1, chaque héros seul : l'Écuyer lance l'écu, la Tireuse
 attaque 5 fois puis l'ultime, carreau parti 0,47 s après le début de l'animation. Dans test 3,
 l'ultime de l'Écuyer est dans `Atelier_EcuyerDuRempart` (son jeu `EcuyerDuRempart` y est encore sur

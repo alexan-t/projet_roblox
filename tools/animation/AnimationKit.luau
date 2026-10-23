@@ -1345,6 +1345,199 @@ Kit.Attacks = {
 			{ Time = 0.8, Easing = "InOut", Poses = {} },
 		},
 	},
+	-- Ultimes des Peu communs (23/10/2026). Armes visées par Kit.aimedAttack (Kit.AttackAims).
+	-- 03 Lancier « Haie de Lances » : lance pivotée à l'horizontale, puis trois estocs en éventail
+	-- (gauche, centre, droite ; 0,3 / 0,45 / 0,6 s), le buste suit chaque estoc.
+	HaieDeLances = {
+		Length = 0.85, Impact = 0.3,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.14, Easing = "In", Poses = {
+				torso = { 4, -15, 0, -0.1 },
+				rightArm = { 30, 0, 15 },
+				leftArm = { 35, 0, -10 },
+				rightLeg = { -4, 15, 0 },
+				leftLeg = { 8, 15, 0 },
+				head = { 0, 12, 0 },
+			} },
+			{ Time = 0.3, Easing = "Out", Poses = {
+				torso = { -10, 40, 0, -0.12 },
+				rightArm = { 60, 0, -5 },
+				leftArm = { 30, 0, -10 },
+				rightLeg = { -6, -40, 0 },
+				leftLeg = { 25, -40, 0 },
+				head = { 6, -32, 0 },
+			} },
+			{ Time = 0.38, Easing = "InOut", Poses = {
+				torso = { -4, 30, 0, -0.1 },
+				rightArm = { 30, 0, 5 },
+				leftArm = { 30, 0, -10 },
+				rightLeg = { -6, -30, 0 },
+				leftLeg = { 20, -30, 0 },
+				head = { 4, -25, 0 },
+			} },
+			{ Time = 0.45, Easing = "Out", Poses = {
+				torso = { -10, 25, 0, -0.12 },
+				rightArm = { 60, 0, -5 },
+				leftArm = { 30, 0, -10 },
+				rightLeg = { -6, -25, 0 },
+				leftLeg = { 25, -25, 0 },
+				head = { 6, -20, 0 },
+			} },
+			{ Time = 0.53, Easing = "InOut", Poses = {
+				torso = { -4, 15, 0, -0.1 },
+				rightArm = { 30, 0, 5 },
+				leftArm = { 30, 0, -10 },
+				rightLeg = { -6, -15, 0 },
+				leftLeg = { 20, -15, 0 },
+				head = { 4, -12, 0 },
+			} },
+			{ Time = 0.6, Easing = "Out", Poses = {
+				torso = { -10, 8, 0, -0.12 },
+				rightArm = { 60, 0, -5 },
+				leftArm = { 30, 0, -10 },
+				rightLeg = { -6, -8, 0 },
+				leftLeg = { 25, -8, 0 },
+				head = { 6, -5, 0 },
+			} },
+			{ Time = 0.85, Easing = "InOut", Poses = {} },
+		},
+	},
+	-- 04 Pyromancien « Braise Indocile » : gemme levée (elle tousse trois braises), bâton ramené en
+	-- arrière, puis propulsé vers la cible (la braise rebondit sur une seconde cible).
+	BraiseIndocile = {
+		Length = 0.85, Impact = 0.45,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.15, Easing = "InOut", Poses = {
+				torso = { 6, -10, 0, -0.14 },
+				rightArm = { 45, 0, 5 },
+				leftArm = { 20, 0, -15 },
+				rightLeg = { -3, 10, 0 },
+				leftLeg = { 4, 10, 0 },
+				head = { -8, 8, 0 },
+			} },
+			{ Time = 0.3, Easing = "In", Poses = {
+				torso = { 10, -25, 0, -0.17 },
+				rightArm = { 25, 0, 20 },
+				leftArm = { 35, 0, -20 },
+				rightLeg = { -6, 25, 0 },
+				leftLeg = { 8, 25, 0 },
+				head = { -6, 20, 0 },
+			} },
+			{ Time = 0.45, Easing = "Out", Poses = {
+				torso = { -12, 20, 0, -0.08 },
+				rightArm = { 70, 0, -5 },
+				leftArm = { 50, 0, -15 },
+				rightLeg = { -6, -20, 0 },
+				leftLeg = { 22, -20, 0 },
+				head = { 8, -16, 0 },
+			} },
+			{ Time = 0.6, Easing = "InOut", Poses = {
+				torso = { -10, 18, 0, -0.07 },
+				rightArm = { 66, 0, -5 },
+				leftArm = { 46, 0, -15 },
+				rightLeg = { -6, -18, 0 },
+				leftLeg = { 20, -18, 0 },
+				head = { 7, -14, 0 },
+			} },
+			{ Time = 0.85, Easing = "InOut", Poses = {} },
+		},
+	},
+	-- 05 Brise-Pierre « Fendaille de Carrière » : masse ramenée derrière la tête à deux mains, tenue,
+	-- puis coup massif : la tête de la masse mord le sol (0,1 stud), d'où part la fissure.
+	FendailleDeCarriere = {
+		Length = 0.9, Impact = 0.42,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.25, Easing = "Out", Poses = {
+				torso = { 14, -12, 0, -0.3 },
+				rightArm = { 80, 0, 15 },
+				leftArm = { 70, 0, -10 },
+				rightLeg = { -14, 12, 0 },
+				leftLeg = { 2, 12, 0 },
+				head = { -10, 10, 0 },
+			} },
+			{ Time = 0.32, Easing = "In", Poses = {
+				torso = { 16, -14, 0, -0.33 },
+				rightArm = { 82, 0, 16 },
+				leftArm = { 72, 0, -10 },
+				rightLeg = { -15, 14, 0 },
+				leftLeg = { 2, 14, 0 },
+				head = { -11, 11, 0 },
+			} },
+			{ Time = 0.42, Easing = "Out", Poses = {
+				torso = { -26, 12, 0, -0.35 },
+				rightArm = { 65, 0, -12 },
+				leftArm = { 60, 0, -8 },
+				rightLeg = { -8, -12, 0 },
+				leftLeg = { 34, -12, 0 },
+				head = { 12, -10, 0 },
+			} },
+			{ Time = 0.58, Easing = "InOut", Poses = {
+				torso = { -24, 10, 0, -0.33 },
+				rightArm = { 63, 0, -12 },
+				leftArm = { 58, 0, -8 },
+				rightLeg = { -8, -10, 0 },
+				leftLeg = { 32, -10, 0 },
+				head = { 11, -9, 0 },
+			} },
+			{ Time = 0.9, Easing = "InOut", Poses = {} },
+		},
+	},
+	-- 06 Guetteuse « Cor des Cimes » : la main libre monte à la bouche (le modèle n'a pas de cor :
+	-- l'appel est dit par l'effet), tête levée, puis le tir de Tir ; flèche lâchée à 0,62 s.
+	CorDesCimes = {
+		Length = 0.95, Impact = 0.62,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.15, Easing = "InOut", Poses = {
+				torso = { -6, 0, 0, 0.05 },
+				leftArm = { 120, 0, 40 },
+				rightArm = { 10, 0, 10 },
+				head = { -14, 0, 0 },
+			} },
+			{ Time = 0.3, Easing = "InOut", Poses = {
+				torso = { -8, 0, 0, 0.05 },
+				leftArm = { 122, 0, 42 },
+				rightArm = { 10, 0, 10 },
+				head = { -16, 0, 0 },
+			} },
+			{ Time = 0.45, Easing = "InOut", Poses = {
+				torso = { 0, 33, 0, 0 },
+				rightArm = { 85, 0, 23 },
+				leftArm = { 70, 0, 70 },
+				rightLeg = { 0, -33, 0 },
+				leftLeg = { 10, -33, 0 },
+				head = { 0, -28, 0 },
+			} },
+			{ Time = 0.58, Easing = "In", Poses = {
+				torso = { 0, 35, 0, 0 },
+				rightArm = { 85, 0, 25 },
+				leftArm = { 70, 0, 75 },
+				rightLeg = { 0, -35, 0 },
+				leftLeg = { 10, -35, 0 },
+				head = { 0, -30, 0 },
+			} },
+			{ Time = 0.62, Easing = "Out", Poses = {
+				torso = { -3, 35, 0, 0 },
+				rightArm = { 84, 0, 25 },
+				leftArm = { 60, 0, 20 },
+				rightLeg = { 0, -35, 0 },
+				leftLeg = { 10, -35, 0 },
+				head = { 0, -30, 0 },
+			} },
+			{ Time = 0.72, Easing = "InOut", Poses = {
+				torso = { -2, 32, 0, 0 },
+				rightArm = { 80, 0, 22 },
+				leftArm = { 55, 0, 15 },
+				rightLeg = { 0, -32, 0 },
+				leftLeg = { 9, -32, 0 },
+				head = { 0, -27, 0 },
+			} },
+			{ Time = 0.95, Easing = "InOut", Poses = {} },
+		},
+	},
 	-- Variante : les deux bras levés puis abattus au sol, buste plié, rebond lourd.
 	Ecrasement = {
 		Length = 1.0, Impact = 0.32,
@@ -1434,6 +1627,10 @@ Kit.AttackAims = {
 	Tir = { [0.25] = "rest", [0.4] = "rest", [0.45] = "rest", [0.55] = "rest" },
 	Arbalete = { [0.25] = Vector3.new(0, 0, -1), [0.4] = Vector3.new(0, 0, -1), [0.45] = Vector3.new(0, 0.15, -1), [0.55] = Vector3.new(0, 0.05, -1) },
 	DernierCarreau = { [0.2] = Vector3.new(0, 0, -1), [0.4] = Vector3.new(0, 0.02, -1), [0.45] = Vector3.new(0, 0.2, -1), [0.6] = Vector3.new(0, 0.06, -1) },
+	HaieDeLances = { [0.14] = Vector3.new(-0.2, 0, -1), [0.3] = Vector3.new(-0.4, 0.02, -1), [0.38] = Vector3.new(-0.25, 0, -1), [0.45] = Vector3.new(0, 0.02, -1), [0.53] = Vector3.new(0.15, 0, -1), [0.6] = Vector3.new(0.4, 0.02, -1) },
+	BraiseIndocile = { [0.15] = Vector3.new(0, 1, -0.35), [0.3] = Vector3.new(0.25, 0.8, 0.55), [0.45] = Vector3.new(0, 0.3, -1), [0.6] = Vector3.new(0, 0.35, -1) },
+	FendailleDeCarriere = { [0.25] = Vector3.new(0.1, 0.6, 0.8), [0.32] = Vector3.new(0.1, 0.55, 0.85), [0.42] = Vector3.new(0, -0.6, -1), [0.58] = Vector3.new(0, -0.62, -1) },
+	CorDesCimes = { [0.45] = "rest", [0.58] = "rest", [0.62] = "rest", [0.72] = "rest" },
 }
 
 local AIM_JOINTS = { torso = "Racine", head = "Cou", leftArm = "EpauleGauche", rightArm = "EpauleDroite",
