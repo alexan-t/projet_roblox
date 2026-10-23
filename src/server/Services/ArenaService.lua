@@ -122,15 +122,18 @@ local function stagesOf(player: Player, mode: string?): { any }
 	return list
 end
 
-local function spawnModel(templateName: string, parent: Instance, feet: Vector3, lookAt: Vector3, attributes: any): Model?
+-- fallbackHeroId : héros dont le modèle de combat dédié manque dans cette place (assets pas encore
+-- importés) : son vrai modèle prend sa place, plutôt qu'une case vide.
+local function spawnModel(templateName: string, parent: Instance, feet: Vector3, lookAt: Vector3, attributes: any, fallbackHeroId: string?): Model?
 	local assets = ReplicatedStorage:FindFirstChild("Assets")
 	local templates = assets and assets:FindFirstChild("Combat")
 	local template = templates and templates:FindFirstChild(templateName)
 	if not template then
 		-- Héros sans modèle de combat dédié : son vrai modèle (copie de HeroService), par HeroId.
 		local heroes = assets and assets:FindFirstChild("Heros")
+		local heroId = fallbackHeroId or templateName
 		for _, candidate in if heroes then heroes:GetChildren() else {} do
-			if candidate:GetAttribute("HeroId") == templateName then
+			if candidate:GetAttribute("HeroId") == heroId then
 				template = candidate
 				break
 			end
@@ -150,7 +153,10 @@ local function spawnModel(templateName: string, parent: Instance, feet: Vector3,
 	end
 	local box, size = model:GetBoundingBox()
 	local pivot = model:GetPivot()
-	local position = feet + Vector3.new(0, pivot.Position.Y - box.Position.Y + size.Y / 2, 0)
+	-- HauteurPieds (attribut du modèle articulé) : hauteur du pivot au-dessus des pieds. Le bas de la
+	-- boîte ne convient pas quand l'arme descend sous les pieds (#05, #59) ou pour un héros qui lévite.
+	local footHeight = model:GetAttribute("HauteurPieds")
+	local position = feet + Vector3.new(0, if typeof(footHeight) == "number" then footHeight else pivot.Position.Y - box.Position.Y + size.Y / 2, 0)
 	model:PivotTo(CFrame.lookAt(position, Vector3.new(lookAt.X, position.Y, lookAt.Z)))
 	for key, value in attributes or {} do model:SetAttribute(key, value) end
 	model.Parent = parent
@@ -211,7 +217,7 @@ local function rebuild(player: Player, w: any, c: any)
 	for slot, id in w.prep.formation do
 		local hero = HeroService:GetCombatHero(player, id)
 		if hero then spawnModel(hero.CombatTemplate, w.heroes, feet(c.poses[slot]), c.front.Position,
-			{ HeroClass = hero.CombatProfile, HeroId = hero.HeroId, HeroInstanceId = id, Slot = slot, OwnerUserId = player.UserId }) end
+			{ HeroClass = hero.CombatProfile, HeroId = hero.HeroId, HeroInstanceId = id, Slot = slot, OwnerUserId = player.UserId }, hero.HeroId) end
 	end
 end
 
@@ -289,7 +295,7 @@ local function startCombat(player: Player, sessionId: number, classes: { [number
 			local template = if ally then (if hero then hero.CombatTemplate else nil) else Config.EnemyTemplates[unit.TypeId]
 			return if template then spawnModel(template, if ally then w.heroes else w.enemies, position, lookAt,
 				{ OwnerUserId = player.UserId, HeroClass = if ally then unit.TypeId else nil,
-					HeroId = if hero then hero.HeroId else nil, HeroInstanceId = instanceId }) else nil
+					HeroId = if hero then hero.HeroId else nil, HeroInstanceId = instanceId }, if hero then hero.HeroId else nil) else nil
 		end,
 	})
 end
