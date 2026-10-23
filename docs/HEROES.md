@@ -212,3 +212,9 @@ donne des tickets.
 ./tools/test-migrations.ps1 -LuauPath <chemin-vers-luau.exe>  # migration v1 -> v2
 ./tools/test-summon.ps1 -LuauPath <chemin-vers-luau.exe>      # HeroService et invocation
 ```
+
+## Ultimes (brief)
+
+Proposition d'ultime pour chacun des 60 héros (animation, intention de gameplay, durée cible) :
+[`docs/ultimes/ULTIMES.md`](ultimes/ULTIMES.md) et ses données [`ultimes_60_heros.json`](ultimes/ultimes_60_heros.json).
+Concepts à valider et équilibrer, rien n'est encore développé (sauf l'ultime actuel de l'Écuyer).
