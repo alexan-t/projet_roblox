@@ -58,6 +58,12 @@ local TRAVEL: { [string]: number } = {
 	BraiseIndocile = 0.2,
 	FendailleDeCarriere = 0.03,
 	CorDesCimes = 0.15,
+	MurailleDeLierre = 0.1,
+	LaVeillee = 0.25,
+	PiqueDuFauconnier = 0.5,
+	SermentDeLaSource = 0.18,
+	AccordDeFer = 0.05,
+	TroisPasRasants = 0.05,
 }
 
 local function effectOf(caster: Model?): string
@@ -249,6 +255,29 @@ end
 
 local WOOD = Color3.fromHex("#6B4426")
 
+-- Pieds du héros : HauteurPieds (modèle de combat), sinon bas des jambes, sinon bas de la boîte. Le
+-- bas de la boîte ne convient pas quand l'arme ou un objet descend sous les pieds.
+local function feetOf(caster: Model): Vector3
+	local box, size = caster:GetBoundingBox()
+	local y = box.Position.Y - size.Y / 2
+	local footHeight = caster:GetAttribute("HauteurPieds")
+	if typeof(footHeight) == "number" then
+		y = caster:GetPivot().Position.Y - footHeight
+	else
+		local legs = AnimationSets.pieces(caster, "JambeGauche")
+		for _, piece in AnimationSets.pieces(caster, "JambeDroite") do
+			table.insert(legs, piece)
+		end
+		if #legs > 0 then
+			y = math.huge
+			for _, piece in legs do
+				y = math.min(y, piece.Position.Y - piece.Size.Y / 2)
+			end
+		end
+	end
+	return Vector3.new(box.Position.X, y, box.Position.Z)
+end
+
 -- Bouffée au sol : poussière claire et éclats (fin d'un choc, impact d'un carreau).
 local function puff(at: Vector3, color: Color3, amount: number)
 	local host = effectPart({ Transparency = 1, Size = Vector3.new(1.5, 0.2, 1.5), CFrame = CFrame.new(at) })
@@ -272,8 +301,8 @@ end
 -- 01 Écuyer « Rempart Fermé » : un choc court en forme d'écu (rectangle + pointe) part du bouclier
 -- planté et frappe devant lui, quelques studs seulement, puis s'efface.
 local function shieldShock(caster: Model, center: Vector3, speed: number)
-	local box, size = caster:GetBoundingBox()
-	local feet = box.Position - Vector3.new(0, size.Y / 2, 0)
+	local _, size = caster:GetBoundingBox()
+	local feet = feetOf(caster)
 	local toward = Vector3.new(center.X - feet.X, 0, center.Z - feet.Z)
 	local look = if toward.Magnitude > 1e-3 then toward.Unit else caster:GetPivot().LookVector
 	local start = feet + look * 1.4 + Vector3.new(0, math.max(1.2, size.Y * 0.32), 0)
@@ -471,26 +500,9 @@ end
 -- 05 Brise-Pierre « Fendaille de Carrière » : sous la masse, le sol s'ouvre en une fissure d'une seule
 -- longueur de masse, poussière de pierre.
 local function quarryCrack(caster: Model, center: Vector3, speed: number)
-	local box, size = caster:GetBoundingBox()
-	-- Sol = pieds du héros (HauteurPieds, sinon bas des jambes), pas le bas de la boîte : la masse y
-	-- est déjà enfoncée.
-	local footHeight = caster:GetAttribute("HauteurPieds")
-	local floor = box.Position.Y - size.Y / 2
-	if typeof(footHeight) == "number" then
-		floor = caster:GetPivot().Position.Y - footHeight
-	else
-		local legs = AnimationSets.pieces(caster, "JambeGauche")
-		for _, piece in AnimationSets.pieces(caster, "JambeDroite") do
-			table.insert(legs, piece)
-		end
-		if #legs > 0 then
-			floor = math.huge
-			for _, piece in legs do
-				floor = math.min(floor, piece.Position.Y - piece.Size.Y / 2)
-			end
-		end
-	end
-	floor += 0.06
+	local box = caster:GetBoundingBox()
+	-- Sol = pieds du héros, pas le bas de la boîte : la masse y est déjà enfoncée.
+	local floor = feetOf(caster).Y + 0.06
 	local head = weaponTip(caster, box.Position, true)
 	local look = flatLook(caster:GetPivot().Position, center, caster)
 	local side = look:Cross(Vector3.yAxis)
@@ -600,6 +612,248 @@ local function pineArrow(caster: Model, center: Vector3, speed: number)
 	end)
 end
 
+local IVY = Color3.fromHex("#4F8A3A")
+local AMBER = Color3.fromHex("#F2A93B")
+local WATER = Color3.fromHex("#5BB8E8")
+local STEEL = Color3.fromHex("#B8C2CC")
+local WIND = Color3.fromHex("#DDF3FF")
+
+-- Petite pièce qui suit un chemin (t de 0 à 1) en laissant une traînée ; détruite à la fin.
+local function ribbon(color: Color3, width: number, duration: number, path: (number) -> Vector3, onDone: (() -> ())?)
+	local head = effectPart({ Name = "UltimeRuban", Shape = Enum.PartType.Ball, Color = color, Transparency = 0.2, Size = Vector3.one * width * 1.4, CFrame = CFrame.new(path(0)) })
+	local a0 = Instance.new("Attachment")
+	a0.Position = Vector3.new(0, width / 2, 0)
+	a0.Parent = head
+	local a1 = Instance.new("Attachment")
+	a1.Position = Vector3.new(0, -width / 2, 0)
+	a1.Parent = head
+	local trail = Instance.new("Trail")
+	trail.Attachment0, trail.Attachment1 = a0, a1
+	trail.Color = ColorSequence.new(color)
+	trail.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.15), NumberSequenceKeypoint.new(1, 1) })
+	trail.Lifetime = math.max(0.15, duration * 0.5)
+	trail.LightEmission = 0.5
+	trail.FaceCamera = true
+	trail.Parent = head
+	local started = os.clock()
+	local loop: RBXScriptConnection
+	loop = RunService.RenderStepped:Connect(function()
+		local t = math.clamp((os.clock() - started) / duration, 0, 1)
+		head.CFrame = CFrame.new(path(t))
+		if t >= 1 then
+			loop:Disconnect()
+			head.Transparency = 1
+			if onDone then
+				onDone()
+			end
+			task.delay(trail.Lifetime + 0.1, function()
+				head:Destroy()
+			end)
+		end
+	end)
+end
+
+-- Alliés proches du lanceur dans l'arène (modèles frères qui portent HeroInstanceId) ; sinon deux
+-- points de part et d'autre, derrière lui (atelier).
+local function nearAllies(caster: Model, count: number): { Vector3 }
+	local list: { { Vector3 } } = {}
+	local origin = caster:GetPivot().Position
+	local parent = caster.Parent
+	for _, other in if parent then parent:GetChildren() else {} do
+		if other ~= caster and other:IsA("Model") and other:GetAttribute("HeroInstanceId") then
+			local p = other:GetPivot().Position
+			table.insert(list, { p, (p - origin).Magnitude } :: any)
+		end
+	end
+	table.sort(list, function(a: any, b: any): boolean
+		return a[2] < b[2]
+	end)
+	local result: { Vector3 } = {}
+	for i = 1, math.min(count, #list) do
+		table.insert(result, (list[i] :: any)[1])
+	end
+	if #result == 0 then
+		local frame = caster:GetPivot()
+		result = { (frame * CFrame.new(-4, 0, 3)).Position, (frame * CFrame.new(4, 0, 3)).Position }
+	end
+	return result
+end
+
+-- 07 Chevalier du Lierre « Muraille de Lierre » : trois grosses tiges de lierre jaillissent devant
+-- le bouclier comme un parapet miniature, puis se rétractent.
+local function ivyWall(caster: Model, center: Vector3, speed: number)
+	local feet = feetOf(caster)
+	local look = flatLook(feet, center, caster)
+	local side = look:Cross(Vector3.yAxis)
+	for i, offset in { -1.3, 0, 1.3 } do
+		local base = feet + look * 2.2 + side * offset
+		local height = if i == 2 then 2.6 else 2.1
+		local stalk = effectPart({ Name = "UltimeLierre", Material = Enum.Material.Grass, Shape = Enum.PartType.Cylinder, Color = IVY, Size = Vector3.new(0.1, 0.7, 0.7), CFrame = CFrame.new(base) * CFrame.Angles(0, 0, math.rad(90)) })
+		local up = TweenInfo.new(0.14 / speed, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, false, (i - 1) * 0.04 / speed)
+		TweenService:Create(stalk, up, { Size = Vector3.new(height, 0.7, 0.7), CFrame = CFrame.new(base + Vector3.new(0, height / 2, 0)) * CFrame.Angles(0, 0, math.rad(90)) }):Play()
+		task.delay(0.65 / speed, function()
+			TweenService:Create(stalk, TweenInfo.new(0.2 / speed, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Size = Vector3.new(0.1, 0.7, 0.7), CFrame = CFrame.new(base) * CFrame.Angles(0, 0, math.rad(90)) }):Play()
+			task.delay(0.22 / speed, function()
+				stalk:Destroy()
+			end)
+		end)
+	end
+	puff(feet + look * 2.2, IVY:Lerp(CREAM, 0.5), 8)
+end
+
+-- 08 Mage des Lanternes « La Veillée » : un ruban ambré part de la lanterne, rejoint deux alliés,
+-- puis revient dans la lanterne.
+local function lanternVigil(caster: Model, _center: Vector3, speed: number)
+	local held = AnimationSets.pieces(caster, "ArmeGauche")
+	local box = caster:GetBoundingBox()
+	local lantern = if held[1] then held[1].Position else box.Position
+	for i, ally in nearAllies(caster, 2) do
+		local target = ally + Vector3.new(0, 1.5, 0)
+		local function arc(a: Vector3, b: Vector3): (number) -> Vector3
+			return function(t: number): Vector3
+				return a:Lerp(b, t) + Vector3.new(0, math.sin(t * math.pi) * 1.5, 0)
+			end
+		end
+		task.delay((i - 1) * 0.05 / speed, function()
+			ribbon(AMBER, 0.25, 0.25 / speed, arc(lantern, target), function()
+				puff(ally, AMBER, 5)
+				ribbon(AMBER, 0.18, 0.3 / speed, arc(target, lantern))
+			end)
+		end)
+	end
+end
+
+-- 09 Fauconnier Gris « Piqué du Fauconnier » : le faucon quitte le gant en spirale, replie les ailes,
+-- pique sur la cible, puis revient se poser. Le vrai faucon est masqué pendant le vol (copie).
+local function falconDive(caster: Model, center: Vector3, speed: number)
+	local falcon: BasePart? = nil
+	for _, item in caster:GetDescendants() do
+		if item:IsA("BasePart") and string.find(string.lower(item.Name), "falcon", 1, true) then
+			falcon = item
+		end
+	end
+	if not falcon then
+		return
+	end
+	local bird = falcon:Clone()
+	for _, child in bird:GetChildren() do
+		if not child:IsA("SurfaceAppearance") then
+			child:Destroy()
+		end
+	end
+	bird.Name = "UltimeFaucon"
+	bird.Anchored, bird.CanCollide, bird.CanQuery, bird.CanTouch = true, false, false, false
+	bird.Parent = Workspace
+	falcon.LocalTransparencyModifier = 1
+	local start = falcon.CFrame
+	local target = center + Vector3.new(0, 1.2, 0)
+	local apex = start.Position:Lerp(target, 0.35) + Vector3.new(0, 6, 0)
+	local rise, dive, back = 0.3 / speed, 0.2 / speed, 0.35 / speed
+	local started = os.clock()
+	local loop: RBXScriptConnection
+	loop = RunService.RenderStepped:Connect(function()
+		local t = os.clock() - started
+		local at: Vector3
+		local facing: Vector3
+		if t < rise then
+			local u = t / rise
+			local angle = u * math.pi * 2
+			at = start.Position:Lerp(apex, u) + Vector3.new(math.cos(angle), 0, math.sin(angle)) * 1.5 * (1 - u)
+			facing = apex - at
+		elseif t < rise + dive then
+			local u = (t - rise) / dive
+			at = apex:Lerp(target, u * u)
+			facing = target - apex
+		else
+			local u = math.clamp((t - rise - dive) / back, 0, 1)
+			local home = falcon.Position
+			at = target:Lerp(home, u) + Vector3.new(0, math.sin(u * math.pi) * 2.5, 0)
+			facing = home - target
+		end
+		bird.CFrame = if facing.Magnitude > 1e-3 then CFrame.lookAt(at, at + facing) else CFrame.new(at)
+		if t >= rise + dive + back then
+			loop:Disconnect()
+			bird:Destroy()
+			falcon.LocalTransparencyModifier = 0
+		end
+	end)
+	task.delay(rise + dive, function()
+		puff(center, CREAM, 8)
+	end)
+end
+
+-- 10 Lancière des Sources « Serment de la Source » : un étroit ruban d'eau suit la pointe en
+-- demi-cercle devant elle, puis éclate en gouttes contre la première ligne.
+local function sourceArc(caster: Model, center: Vector3, speed: number)
+	local feet = feetOf(caster)
+	local look = flatLook(feet, center, caster)
+	local side = look:Cross(Vector3.yAxis)
+	local radius = 3.2
+	local height = feet.Y + 1.6
+	ribbon(WATER, 0.3, 0.18 / speed, function(t: number): Vector3
+		local angle = math.rad(-80 + 160 * t)
+		local p = feet + look * math.cos(angle) * radius - side * math.sin(angle) * radius
+		return Vector3.new(p.X, height, p.Z)
+	end, function()
+		local front = feet + look * (radius + 1.5)
+		local host = effectPart({ Transparency = 1, Size = Vector3.new(2, 0.2, 2), CFrame = CFrame.new(front + Vector3.new(0, 1, 0)) })
+		emitter(host, {
+			Color = ColorSequence.new(WATER),
+			Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.25), NumberSequenceKeypoint.new(1, 0.05) }),
+			Lifetime = NumberRange.new(0.3, 0.5),
+			Speed = NumberRange.new(5, 9),
+			SpreadAngle = Vector2.new(60, 60),
+			EmissionDirection = Enum.NormalId.Top,
+			Acceleration = Vector3.new(0, -30, 0),
+			LightEmission = 0.2,
+		}):Emit(18)
+		task.delay(1, function()
+			host:Destroy()
+		end)
+	end)
+end
+
+-- Onde au sol : anneau fin qui s'élargit (notes du Barde, poussée du Moine).
+local function groundRing(at: Vector3, color: Color3, reach: number, duration: number)
+	local ring = effectPart({ Name = "UltimeOnde", Shape = Enum.PartType.Cylinder, Color = color, Transparency = 0.25, Size = Vector3.new(0.08, 0.8, 0.8), CFrame = CFrame.new(at + Vector3.new(0, 0.08, 0)) * CFrame.Angles(0, 0, math.rad(90)) })
+	TweenService:Create(ring, TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(0.08, reach, reach), Transparency = 1 }):Play()
+	task.delay(duration + 0.05, function()
+		ring:Destroy()
+	end)
+end
+
+-- 11 Barde de Fer « Accord de Fer » : la cloche-masse frappe ; deux notes métalliques visibles (deux
+-- ondes d'acier) se propagent au sol l'une après l'autre.
+local function ironChord(caster: Model, center: Vector3, speed: number)
+	local feet = feetOf(caster)
+	local look = flatLook(feet, center, caster)
+	local origin = feet + look * 1.6
+	for i = 0, 1 do
+		task.delay(i * 0.14 / speed, function()
+			groundRing(origin, STEEL, 9 + i * 3, 0.45 / speed)
+		end)
+	end
+	puff(origin, STEEL:Lerp(CREAM, 0.5), 6)
+end
+
+-- 12 Moine du Vent Bas « Trois Pas Rasants » : deux frappes de paume (souffles d'air de part et
+-- d'autre) puis une poussée circulaire autour de lui.
+local function lowWind(caster: Model, center: Vector3, speed: number)
+	local feet = feetOf(caster)
+	local look = flatLook(feet, center, caster)
+	local side = look:Cross(Vector3.yAxis)
+	for i, dir in { side, -side } do
+		task.delay((i - 1) * 0.15 / speed, function()
+			if caster.Parent then
+				puff(feet + look * 1.5 + dir * 1.2 + Vector3.new(0, 1, 0), WIND, 8)
+			end
+		end)
+	end
+	task.delay(0.32 / speed, function()
+		groundRing(feet, WIND, 8, 0.35 / speed)
+	end)
+end
+
 -- Effets au coup (impact de l'animation) et préludes (début de l'animation), par EffetUltime.
 local STRIKES: { [string]: (Model, Vector3, number) -> () } = {
 	RempartFerme = shieldShock,
@@ -608,6 +862,12 @@ local STRIKES: { [string]: (Model, Vector3, number) -> () } = {
 	BraiseIndocile = emberBounce,
 	FendailleDeCarriere = quarryCrack,
 	CorDesCimes = pineArrow,
+	MurailleDeLierre = ivyWall,
+	LaVeillee = lanternVigil,
+	PiqueDuFauconnier = falconDive,
+	SermentDeLaSource = sourceArc,
+	AccordDeFer = ironChord,
+	TroisPasRasants = lowWind,
 }
 local PRELUDE: { [string]: (Model, number) -> () } = {
 	BraiseIndocile = emberCough,

@@ -1538,6 +1538,222 @@ Kit.Attacks = {
 			{ Time = 0.95, Easing = "InOut", Poses = {} },
 		},
 	},
+	-- Ultimes des Rares (23/10/2026). Hauteur du buste réglée pour qu'aucune pose ne passe sous le sol.
+	-- 07 Chevalier du Lierre « Muraille de Lierre » : bouclier levé puis frappé au sol devant lui (son
+	-- bas touche le sol), épée dressée ; trois tiges de lierre jaillissent devant (effet).
+	MurailleDeLierre = {
+		Length = 1.0, Impact = 0.38,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.2, Easing = "In", Poses = {
+				torso = { 8, 0, 0, 0.05 },
+				leftArm = { 75, 0, 10 },
+				rightArm = { 30, 0, 25 },
+				leftLeg = { -4, 0, 0 },
+				rightLeg = { 6, 0, 0 },
+				head = { -6, 0, 0 },
+			} },
+			{ Time = 0.38, Easing = "Out", Poses = {
+				torso = { -16, 0, 0, -0.09 },
+				leftArm = { 35, 0, 5 },
+				weaponLeft = { -20, 0, 0 },
+				rightArm = { 20, 0, 30 },
+				leftLeg = { 36, 0, 0 },
+				rightLeg = { -14, 0, 0 },
+				head = { 10, 0, 0 },
+			} },
+			{ Time = 0.62, Easing = "InOut", Poses = {
+				torso = { -14, 0, 0, -0.08 },
+				leftArm = { 34, 0, 5 },
+				weaponLeft = { -18, 0, 0 },
+				rightArm = { 18, 0, 28 },
+				leftLeg = { 34, 0, 0 },
+				rightLeg = { -13, 0, 0 },
+				head = { 9, 0, 0 },
+			} },
+			{ Time = 1.0, Easing = "InOut", Poses = {} },
+		},
+	},
+	-- 08 Mage des Lanternes « La Veillée » : lanterne (main gauche) ramenée en arrière puis balancée
+	-- devant, bâton levé ; le ruban ambré part de la lanterne vers deux alliés (effet).
+	LaVeillee = {
+		Length = 1.0, Impact = 0.45,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.22, Easing = "InOut", Poses = {
+				torso = { 4, -15, 0, 0 },
+				leftArm = { -25, 0, -10 },
+				rightArm = { 40, 0, 10 },
+				leftLeg = { 4, 15, 0 },
+				rightLeg = { -3, 15, 0 },
+				head = { -4, 10, 0 },
+			} },
+			{ Time = 0.45, Easing = "Out", Poses = {
+				torso = { -8, 18, 0, 0 },
+				leftArm = { 85, 0, -15 },
+				rightArm = { 55, 0, 5 },
+				leftLeg = { 18, -18, 0 },
+				rightLeg = { -5, -18, 0 },
+				head = { 4, -14, 0 },
+			} },
+			{ Time = 0.7, Easing = "InOut", Poses = {
+				torso = { -6, 15, 0, 0 },
+				leftArm = { 78, 0, -15 },
+				rightArm = { 52, 0, 5 },
+				leftLeg = { 15, -15, 0 },
+				rightLeg = { -4, -15, 0 },
+				head = { 3, -12, 0 },
+			} },
+			{ Time = 1.0, Easing = "InOut", Poses = {} },
+		},
+	},
+	-- 09 Fauconnier Gris « Piqué du Fauconnier » : bras du faucon armé puis lancé vers le ciel, tête qui
+	-- suit le vol ; le faucon (copie, le vrai est masqué) monte en spirale, pique, revient (effet).
+	PiqueDuFauconnier = {
+		Length = 1.0, Impact = 0.35,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.18, Easing = "In", Poses = {
+				torso = { 6, -20, 0, -0.01 },
+				rightArm = { 30, 0, 30 },
+				leftArm = { 20, 0, -15 },
+				rightLeg = { -4, 20, 0 },
+				leftLeg = { 6, 20, 0 },
+				head = { -6, 15, 0 },
+			} },
+			{ Time = 0.35, Easing = "Out", Poses = {
+				torso = { -8, 20, 0, 0.05 },
+				rightArm = { 110, 0, -5 },
+				leftArm = { 15, 0, -15 },
+				rightLeg = { -4, -20, 0 },
+				leftLeg = { 14, -20, 0 },
+				head = { -12, -15, 0 },
+			} },
+			{ Time = 0.7, Easing = "InOut", Poses = {
+				torso = { -4, 12, 0, 0.03 },
+				rightArm = { 95, 0, 0 },
+				leftArm = { 15, 0, -15 },
+				rightLeg = { -3, -12, 0 },
+				leftLeg = { 10, -12, 0 },
+				head = { -14, -10, 0 },
+			} },
+			{ Time = 1.0, Easing = "InOut", Poses = {} },
+		},
+	},
+	-- 10 Lancière des Sources « Serment de la Source » : lance armée à droite puis balayée en
+	-- demi-cercle vers la gauche ; un ruban d'eau suit la pointe et éclate en gouttes (effet).
+	SermentDeLaSource = {
+		Length = 1.0, Impact = 0.42,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.2, Easing = "In", Poses = {
+				torso = { 4, -35, 0, -0.1 },
+				rightArm = { 55, 0, 15 },
+				leftArm = { 35, 0, -10 },
+				rightLeg = { -4, 35, 0 },
+				leftLeg = { 8, 35, 0 },
+				head = { 0, 28, 0 },
+			} },
+			{ Time = 0.42, Easing = "Out", Poses = {
+				torso = { -10, 35, 0, -0.12 },
+				rightArm = { 60, 0, -10 },
+				leftArm = { 30, 0, -10 },
+				rightLeg = { -6, -35, 0 },
+				leftLeg = { 25, -35, 0 },
+				head = { 6, -28, 0 },
+			} },
+			{ Time = 0.65, Easing = "InOut", Poses = {
+				torso = { -8, 32, 0, -0.1 },
+				rightArm = { 56, 0, -10 },
+				leftArm = { 30, 0, -10 },
+				rightLeg = { -6, -32, 0 },
+				leftLeg = { 22, -32, 0 },
+				head = { 5, -25, 0 },
+			} },
+			{ Time = 1.0, Easing = "InOut", Poses = {} },
+		},
+	},
+	-- 11 Barde de Fer « Accord de Fer » : main droite au luth (porté au flanc droit), puis la cloche-masse
+	-- (main gauche) levée et abattue devant ; deux ondes d'acier partent au sol (effet).
+	AccordDeFer = {
+		Length = 1.05, Impact = 0.55,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.2, Easing = "InOut", Poses = {
+				torso = { 4, 15, 0, 0 },
+				rightArm = { 25, 0, -25 },
+				leftArm = { 20, 0, -10 },
+				head = { 8, -10, 0 },
+			} },
+			{ Time = 0.4, Easing = "In", Poses = {
+				torso = { 10, 20, 0, 0.05 },
+				rightArm = { 20, 0, -20 },
+				leftArm = { 80, 0, -15 },
+				rightLeg = { 4, -20, 0 },
+				leftLeg = { -10, -20, 0 },
+				head = { -6, -15, 0 },
+			} },
+			{ Time = 0.55, Easing = "Out", Poses = {
+				torso = { -18, -15, 0, -0.05 },
+				rightArm = { 15, 0, -15 },
+				leftArm = { 30, 0, 15 },
+				rightLeg = { 26, 15, 0 },
+				leftLeg = { -6, 15, 0 },
+				head = { 10, 12, 0 },
+			} },
+			{ Time = 0.75, Easing = "InOut", Poses = {
+				torso = { -15, -12, 0, -0.04 },
+				rightArm = { 15, 0, -15 },
+				leftArm = { 28, 0, 15 },
+				rightLeg = { 23, 12, 0 },
+				leftLeg = { -5, 12, 0 },
+				head = { 9, 10, 0 },
+			} },
+			{ Time = 1.05, Easing = "InOut", Poses = {} },
+		},
+	},
+	-- 12 Moine du Vent Bas « Trois Pas Rasants » : ramassé très bas, deux fentes (paume droite, paume
+	-- gauche) avec rotation du buste, puis poussée des deux bras ; souffles et onde (effet).
+	-- Sans visée : mains nues, bras modelés levés (comme Poing).
+	TroisPasRasants = {
+		Length = 1.0, Impact = 0.3,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.15, Easing = "In", Poses = {
+				torso = { 20, -10, 0, 0.02 },
+				rightArm = { 0, 0, 10 },
+				leftArm = { 0, 0, -10 },
+				rightLeg = { -30, 10, 0 },
+				leftLeg = { 45, 10, 0 },
+				head = { -15, 8, 0 },
+			} },
+			{ Time = 0.3, Easing = "Out", Poses = {
+				torso = { -25, 35, 0, -0.09 },
+				rightArm = { -20, 0, -5 },
+				leftArm = { 15, 0, 5 },
+				rightLeg = { -10, -35, 0 },
+				leftLeg = { 40, -35, 0 },
+				head = { 18, -28, 0 },
+			} },
+			{ Time = 0.45, Easing = "Out", Poses = {
+				torso = { -25, -35, 0, -0.06 },
+				rightArm = { 15, 0, -5 },
+				leftArm = { -20, 0, 5 },
+				rightLeg = { 40, 35, 0 },
+				leftLeg = { -10, 35, 0 },
+				head = { 18, 28, 0 },
+			} },
+			{ Time = 0.62, Easing = "Out", Poses = {
+				torso = { -20, 0, 0, -0.22 },
+				rightArm = { -30, 0, 20 },
+				leftArm = { -30, 0, -20 },
+				rightLeg = { -8, 0, 0 },
+				leftLeg = { 30, 0, 0 },
+				head = { 14, 0, 0 },
+			} },
+			{ Time = 1.0, Easing = "InOut", Poses = {} },
+		},
+	},
 	-- Variante : les deux bras levés puis abattus au sol, buste plié, rebond lourd.
 	Ecrasement = {
 		Length = 1.0, Impact = 0.32,
@@ -1631,6 +1847,13 @@ Kit.AttackAims = {
 	BraiseIndocile = { [0.15] = Vector3.new(0, 1, -0.35), [0.3] = Vector3.new(0.25, 0.8, 0.55), [0.45] = Vector3.new(0, 0.3, -1), [0.6] = Vector3.new(0, 0.35, -1) },
 	FendailleDeCarriere = { [0.25] = Vector3.new(0.1, 0.6, 0.8), [0.32] = Vector3.new(0.1, 0.55, 0.85), [0.42] = Vector3.new(0, -0.6, -1), [0.58] = Vector3.new(0, -0.62, -1) },
 	CorDesCimes = { [0.45] = "rest", [0.58] = "rest", [0.62] = "rest", [0.72] = "rest" },
+	MurailleDeLierre = { [0.2] = Vector3.new(0.2, 1, 0.1), [0.38] = Vector3.new(0.3, 1, -0.3), [0.62] = Vector3.new(0.3, 1, -0.3) },
+	LaVeillee = { [0.22] = Vector3.new(0, 1, 0.1), [0.45] = Vector3.new(0.1, 1, -0.35), [0.7] = Vector3.new(0.1, 1, -0.3) },
+	SermentDeLaSource = { [0.2] = Vector3.new(1, 0.05, -0.4), [0.42] = Vector3.new(-0.75, 0.02, -0.65), [0.65] = Vector3.new(-0.7, 0, -0.7) },
+	-- Barde : le style est déjà écrit pour la main gauche (cloche-masse), pas en miroir. Kit.aimedAttack
+	-- ne vise la main gauche que pour un style « _G » (miroir) : ces directions ont été appliquées à
+	-- l'os ArmeGauche à la main dans Studio (23/10/2026) ; à reprendre si la séquence est régénérée.
+	AccordDeFer = { [0.4] = Vector3.new(-0.1, 0.7, 0.7), [0.55] = Vector3.new(0, -0.5, -0.9), [0.75] = Vector3.new(0, -0.55, -0.85) },
 }
 
 local AIM_JOINTS = { torso = "Racine", head = "Cou", leftArm = "EpauleGauche", rightArm = "EpauleDroite",

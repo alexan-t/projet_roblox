@@ -248,6 +248,12 @@ au coup (`ImpactDelay(speed, caster)`). Sans attribut : onde dorée « Charge du
 | #03 Lancier des Champs | Haie de Lances | `HaieDeLances` (visé) | 0,85 s / 0,3 s | `HaieDeLances` : trois traits de fer en éventail depuis la pointe, un par estoc |
 | #04 Apprenti Pyromancien | Braise Indocile | `BraiseIndocile` (visé) | 0,85 s / 0,45 s | `BraiseIndocile` : prélude, la gemme tousse trois braises ; une braise frappe la cible puis rebondit sur une seconde |
 | #05 Brise-Pierre | Fendaille de Carrière | `FendailleDeCarriere` (visé) | 0,9 s / 0,42 s | `FendailleDeCarriere` : fissure en zigzag d'une longueur de masse, partie de la tête de la masse, poussière |
+| #07 Chevalier du Lierre | Muraille de Lierre | `MurailleDeLierre` (épée visée) | 1 s / 0,38 s | `MurailleDeLierre` : trois tiges de lierre jaillissent devant le bouclier puis se rétractent |
+| #08 Mage des Lanternes | La Veillée | `LaVeillee` (bâton visé) | 1 s / 0,45 s | `LaVeillee` : ruban ambré de la lanterne vers les deux alliés les plus proches, puis retour |
+| #09 Fauconnier Gris | Piqué du Fauconnier | `PiqueDuFauconnier` | 1 s / 0,35 s | `PiqueDuFauconnier` : le faucon (copie, le vrai masqué) monte en spirale, pique sur la cible, revient se poser |
+| #10 Lancière des Sources | Serment de la Source | `SermentDeLaSource` (visé) | 1 s / 0,42 s | `SermentDeLaSource` : ruban d'eau en demi-cercle, éclat de gouttes devant |
+| #11 Barde de Fer | Accord de Fer | `AccordDeFer` (cloche-masse visée, main gauche) | 1,05 s / 0,55 s | `AccordDeFer` : deux ondes d'acier au sol, l'une après l'autre |
+| #12 Moine du Vent Bas | Trois Pas Rasants | `TroisPasRasants` | 1 s / 0,3 s | `TroisPasRasants` : deux souffles d'air de part et d'autre, puis une onde autour de lui |
 | #06 Guetteuse des Pins | Cor des Cimes | `CorDesCimes` (visé) | 0,95 s / 0,62 s | `CorDesCimes` : prélude, deux ondes d'appel depuis sa tête ; flèche à traînée vert pâle jusqu'au contour fin d'un pin |
 
 ```lua
@@ -260,6 +266,14 @@ Kit.install(m, "TireuseDesFaubourgs", Kit.ultimate(m, Kit.aimedAttack(m, "Dernie
 Préludes (`PRELUDE` du contrôleur) : effets qui partent dès le début de l'animation, avant le coup
 (braises de #04, cor de #06). #06 : le modèle n'a pas de cor à la ceinture ; la main libre monte à
 la bouche et les ondes disent l'appel (à revoir si un cor est ajouté au modèle).
+
+Rares vérifiés le 23/10/2026 (test 3) : poses d'impact en capture, contact au sol mesuré (hauteur du
+buste corrigée par clé), effets à x0,1 dans l'atelier, combat réel stage 1-1 (chaque héros seul) :
+les six ultimes partent. Les effets posés au sol utilisent les pieds du héros (`HauteurPieds`, sinon
+bas des jambes) : le bas de la boîte passait sous le sol quand l'arme ou le luth descend plus bas.
+Écarts au brief : #08 balance la lanterne tenue en main gauche (elle n'est pas au bout du bâton) ;
+#12 ne se déplace pas entre deux ennemis (la position est fixée par le serveur) : la glissade est
+une fente très basse.
 
 Peu communs vérifiés le 23/10/2026 (test 3) : poses clés en Edit (éventail de #03 vu de dessus, sol
 contrôlé par mesure : rien sous le sol sauf la masse de #05 qui mord de 0,1 stud), effets à x0,1
