@@ -45,10 +45,11 @@ En cas d'hésitation entre plusieurs directions visuelles, choisir celle qui sui
 2. Remplir la grille de `VISUAL_QA.md` en ne jugeant **que ce qui est visible**.
 3. **FIX** : lister les défauts visibles avec leur correction concrète, corriger, **recapturer**, puis repasser la grille entière.
 4. **PASS** : réinitialiser la caméra (Outils § A), archiver les variantes non retenues dans `ServerStorage.Archive_<Famille>`, puis nommer le modèle (`PascalCase`) et poser l'attribut `MonstreId` (`snake_case`).
+5. **Propriété des assets** (`docs/ASSET_OWNERSHIP.md`) : `tools/studio-check-asset-ownership.luau` avec `ROOTS` = le modèle. Tout mesh, texture ou `SurfaceAppearance` qui n'appartient pas au propriétaire de l'expérience donne **FIX** : préparer les sources, l'inventaire et les instructions de republication pour l'utilisateur, sans jamais demander d'identifiants.
 
 ## 6. Rendre compte
 
-Donner le verdict PASS, l'emplacement (socle, chemin Workspace), la taille, l'idée visuelle, ce qui a été corrigé, les limites restantes et les variantes archivées. Si deux variantes sont valables, les montrer et laisser l'utilisateur choisir.
+Donner le verdict PASS, l'emplacement (socle, chemin Workspace), la taille, l'idée visuelle, ce qui a été corrigé, les limites restantes, les variantes archivées et le résultat du contrôle de propriété (inventaire si un asset est à republier). Si deux variantes sont valables, les montrer et laisser l'utilisateur choisir.
 
 ## Interdits
 
@@ -56,4 +57,5 @@ Donner le verdict PASS, l'emplacement (socle, chemin Workspace), la taille, l'id
 - S'inspirer de `Heros_Base`, des mannequins ou du gobelin chibi.
 - Déclarer terminé sans capture, ou juger une pièce grise « bonne » sans vérifier le chargement.
 - Laisser la caméra de Studio en mode `Scriptable`.
+- Déclarer définitif un modèle dont un asset appartient au compte d'un collaborateur.
 - Écrire du code dans Studio : tout code passe par Git et Rojo.

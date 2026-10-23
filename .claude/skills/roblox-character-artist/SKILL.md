@@ -40,10 +40,11 @@ description: Première version du workflow de création d'un personnage jouable 
 1. Captures de `VISUAL_QA.md` § 1, **plus une capture côte à côte avec `KingTreant` et `RoiOrc`** (test de `CHARACTER_ART_DIRECTION.md` § 14).
 2. Grille `VISUAL_QA.md` : PASS ou FIX. En cas de FIX, corriger, recapturer, puis repasser la grille.
 3. Réinitialiser la caméra après les captures.
+4. Propriété des assets (`docs/ASSET_OWNERSHIP.md`) : `tools/studio-check-asset-ownership.luau` avec `ROOTS` = le héros. Tout asset hors propriétaire de l'expérience donne **FIX** (sources, inventaire et instructions de republication pour l'utilisateur).
 
 ## 6. Rendre compte
 
-Verdict, emplacement, taille, idée visuelle, comparaison avec les références, limites restantes. Présenter les deux variantes si elles sont toutes deux valables.
+Verdict, emplacement, taille, idée visuelle, comparaison avec les références, limites restantes, résultat du contrôle de propriété. Présenter les deux variantes si elles sont toutes deux valables.
 
 ## Interdits
 
@@ -51,3 +52,4 @@ Verdict, emplacement, taille, idée visuelle, comparaison avec les références,
 - Proportions réalistes, style avatar Roblox, pièces en couleurs unies, métal chromé.
 - Sourire marqué, joues roses, style chibi.
 - Terminer sans capture ni PASS.
+- Déclarer définitif un héros dont un asset appartient au compte d'un collaborateur.

@@ -150,9 +150,9 @@ Nommage du fichier source : `<item_id>.png` (ex. `item_037.png`), versionné dan
 de l'objet (fond transparent, cadrage à 80 %, contour `Ink` cuit) et dessine la planche de contrôle
 à 128 et 32 px (`sheet`) ; l'objet 3D se construit dans `Workspace.AtelierIcones`, vidé après le lot.
 
-Les images publiées n'apparaissent que dans les expériences autorisées par leur propriétaire : les
-58 icônes du partenaire (compte `nxtoma`) restent vides dans une place d'un autre compte tant
-qu'il ne les a pas partagées avec cette expérience (Creator Hub → l'asset → Permissions).
+Les images publiées n'apparaissent que dans les expériences autorisées par leur propriétaire. Toute
+icône définitive est publiée sous le propriétaire de l'expérience (compte `nxtoma`) : règle et
+contrôle dans `docs/ASSET_OWNERSHIP.md`.
 
 ## 5. Contrôle avant de livrer un item
 

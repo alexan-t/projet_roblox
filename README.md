@@ -209,3 +209,7 @@ Les animations de la DEV jouent en Studio ; aucune n'a encore d'`AssetId` publi�
 - Commits au format `type(scope): message` (`feat`, `fix`, `chore`, `docs`...).
 - PR vers `develop`, jamais de push direct sur `develop` ni sur `main`.
 - `main` ne reçoit que des versions validées depuis `develop`.
+- Toute PR qui ajoute ou modifie un AssetId (image, mesh, texture, animation, son, modèle) remplit la
+  case « Propriété des assets » du modèle de PR (`.github/pull_request_template.md`) : assets sous le
+  propriétaire de l'expérience, chargés dans la place DEV, inventaire joint. Sinon, blocage avant le
+  merge (`docs/ASSET_OWNERSHIP.md`).
