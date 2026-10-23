@@ -29,8 +29,10 @@ publiés par `cypher1359`. Propriétaire cible : `nxtoma` (User `11714751172`). 
 **Voie A — depuis Studio, sans fichier (à essayer sur un seul asset d'abord).** Dans la session
 Studio de `nxtoma`, lire le mesh ou la texture (`CreateEditableMeshAsync` / `CreateEditableImageAsync`)
 puis le publier avec `AssetService:CreateAssetAsync` (Mesh / Image) : l'asset créé appartient à la
-session. Non testé : la doc du projet notait cet appel indisponible via MCP ; un essai sur la texture
-n°44 (`107504521703864`, corps du slime) tranche. Si l'appel échoue, voie B.
+session. **Essayée le 23/10/2026 sur la texture n°44 (`107504521703864`) : échec.** La lecture
+réussit (image 1024 × 1024), mais `CreateAssetAsync` répond « CreateAssetAsync and
+CreateAssetVersionAsync are not available yet ». Rien n'a été publié. Voie A fermée tant que Roblox
+n'ouvre pas cette API : passer par la voie B.
 
 **Voie B — export puis import, par l'utilisateur (`nxtoma`).**
 1. Studio, session `nxtoma`. Pour chaque pièce du tableau : la sélectionner dans
