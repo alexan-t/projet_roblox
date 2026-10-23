@@ -82,12 +82,9 @@ remplacement d'identifiants) et une session Studio de `nxtoma`.
    d'abord à `cypher1359` de **transférer** ses créations (pas de transfert d'asset entre comptes
    sur Roblox à ce jour : republication obligatoire) ; ou passer l'expérience et les assets dans un
    **groupe** commun (le propriétaire cible devient alors le groupe, à republier aussi).
-2. **Lot pilote** (une fois d'accord) : `ReplicatedStorage.Assets.Combat` (62 identifiants :
-   Écuyer du Rempart, Gobelin, Roi Orc, Slime). Pour chaque `MeshPart` : exporter le mesh et la
-   texture (Studio → Exporter la sélection, ou fichiers sources de `generate_mesh`), les importer
-   depuis la session de `nxtoma` (3D Importer / Asset Manager), remplacer `MeshId` / `TextureID`
-   par les nouveaux identifiants avec une étape `ChangeHistoryService`, vérifier le rendu en combat
-   (capture, `VISUAL_QA.md`) puis relancer le contrôle avec `ROOTS` = le modèle (0 FIX).
+2. **Lot pilote** (accordé le 23/10, **préparé**) : `ReplicatedStorage.Assets.Combat` (62
+   identifiants : Écuyer du Rempart, Gobelin, Roi Orc, Slime). Inventaire et procédure :
+   `REPUBLICATION_LOT_PILOTE.md` ; remplacement : `tools/studio-replace-asset-ids.luau`.
 3. **Héros** : même procédure pour les 60 modèles de `ServerStorage.Assets.Heros` (1 060
    identifiants avec l'Écuyer), par lots de 5 à 10 héros, en recopiant les nouveaux identifiants dans la copie
    `Workspace.Bestiaire.Heros` si elle doit rester alignée.

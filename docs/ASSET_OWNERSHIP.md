@@ -90,7 +90,7 @@ chargement). Le dernier audit complet est dans `ASSET_OWNERSHIP_AUDIT.md`.
 2. Pour chaque asset : republier depuis la source (PNG du dépôt, `.rbxm`, Animation Editor) sous
    le propriétaire cible ; noter l'ancien et le nouvel AssetId dans l'inventaire.
 3. Remplacer les références : configs dans une branche `feature/*` (PR vers `develop`), instances
-   Studio avec une étape `ChangeHistoryService` ; rechercher l'ancien identifiant dans tout le
+   Studio avec `tools/studio-replace-asset-ids.luau` (essai `DRY_RUN`, puis une étape Ctrl+Z) ; rechercher l'ancien identifiant dans tout le
    dépôt (`git grep <ancien>`) et dans Studio avant de conclure.
 4. Relancer `tools/studio-check-asset-ownership.luau` : zéro `FIX` sur le périmètre.
 5. Ne rien supprimer côté Roblox (les anciens assets restent en place jusqu'au merge).
