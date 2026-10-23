@@ -307,7 +307,8 @@ return function(Inventory: any, Loot: any, ItemConfig: any, ResourceConfig: any,
 		for _, l in { one, two, three, four } do
 			assert(l.HeroRows == 1 and l.HeroesHeight == R.HeroHeading + R.HeroChip.Y, `{l.HeroRows} rows`)
 		end
-		assert(one.Width == R.Width and two.Width == R.Width, "two heroes fit the base width")
+		assert(one.Width == R.Width, "one hero fits the base width")
+		assert(two.Width == math.max(R.Width, 2 * R.HeroChip.X + R.HeroGap + 2 * R.SideMargin), `{two.Width}`)
 		assert(three.Width == 3 * R.HeroChip.X + 2 * R.HeroGap + 2 * R.SideMargin, `{three.Width}`)
 		assert(four.Width == 4 * R.HeroChip.X + 3 * R.HeroGap + 2 * R.SideMargin, `{four.Width}`)
 		assert(four.ButtonY == two.ButtonY and four.Height == two.Height, "no extra row")
@@ -362,6 +363,87 @@ return function(Inventory: any, Loot: any, ItemConfig: any, ResourceConfig: any,
 		assert(worst <= R.CaptionHeight and worst <= R.NoteHeight and Loot.textSize(R.ChipAmountSize, R.MinScale, R) <= R.ChipSize.Y)
 		-- sous MinScale (repli Overlap) la compensation s'arrête : les boîtes ne débordent jamais
 		assert(Loot.textSize(R.CaptionSize, R.FloorScale, R) == worst)
+	end)
+
+	------------------------------------------------------------------ PC / tablette : tous les textes >= 14 px réels
+
+	-- tous les textes de la disposition PC hors titre (px du design), compensés par textSize à l'affichage
+	local WIDE_TEXTS = { "BadgeTextSize", "CardNameSize", "CardAmountSize", "HeroNameSize", "HeroLevelSize", "HeroNoteSize",
+		"ButtonTextSize", "BandHeadSize", "BandNameSize", "BandLineSize", "BandMoreSize", "ChipAmountSize", "ChipMoreSize",
+		"CaptionSize", "NoteSize" }
+	local worstText = Loot.textSize(1, R.MinScale, R) -- tout texte de base <= 28 px fait 28 px du design à MinScale
+
+	test("wide: Studio 1651x633 recipe (4 heroes, full loot): above the hotbar, every text >= 14 real px", function()
+		for _, heroes in { 1, 2, 3, 4 } do
+			local l = layout({ Cards = 3, Heroes = heroes, Band = true, Chips = 6, Caption = true, Note = true })
+			local placed = Loot.place(v2(1651, 633), v2(l.Width, l.Height), R, 40, 527)
+			assert(placed.Overlap == false and placed.Scale >= R.MinScale, `{heroes} heroes: scale {placed.Scale}, overlap {placed.Overlap}`)
+			for _, key in WIDE_TEXTS do
+				assert(Loot.textSize(R[key], placed.Scale, R) * placed.Scale >= R.MinText - 1e-6, `{heroes} heroes: {key} below 14 real px`)
+			end
+			if heroes == 4 then
+				print(`INFO 1651x633 PC layout: {l.Width}x{l.Height} px at scale {placed.Scale}`)
+			end
+		end
+		-- jusqu'à MinScale, quelle que soit l'échelle ; sous MinScale (repli Overlap) la compensation s'arrête
+		for _, scale in { 0.5, 0.506, 0.6, 0.75, 1 } do
+			for _, key in WIDE_TEXTS do
+				assert(Loot.textSize(R[key], scale, R) * scale >= R.MinText - 1e-6, `{key} at {scale}`)
+			end
+		end
+		assert(worstText == math.ceil(R.MinText / R.MinScale))
+		for _, key in WIDE_TEXTS do
+			assert(R[key] <= worstText and Loot.textSize(R[key], R.FloorScale, R) == worstText, `{key}: box sized for {worstText}`)
+		end
+	end)
+
+	test("wide: currency cards and hero chips hold the enlarged texts on separate lines", function()
+		local S_, XS = 8, 4 -- Spacing.S, Spacing.XS (RewardScreenController)
+		-- carte de monnaie : illustration 60 %, puis nom, puis quantité, sans chevauchement
+		assert(R.CardLine >= worstText, "currency card line")
+		local artBottom = S_ + 0.6 * R.CardSize.Y
+		local nameTop = R.CardSize.Y - XS - 2 * R.CardLine
+		assert(artBottom <= nameTop + 1e-6, `card art {artBottom} over the name {nameTop}`)
+		-- le cadre des cartes (CardsPad compris) s'arrête avant le bloc suivant
+		assert(R.CardSize.Y + 2 * R.CardsPad <= R.CardSize.Y + R.AfterCards, "cards frame over the loot")
+		-- puce de héros : nom ; Nv. | +XP ; barre ; x / y XP
+		assert(R.HeroLine >= worstText, "hero line")
+		local used = S_ + R.HeroLine + 1 + R.HeroLine + 3 + R.HeroBar + 3 + R.HeroLine
+		assert(used <= R.HeroChip.Y - XS, `hero chip rows: {used} > {R.HeroChip.Y}`)
+		local column = R.HeroChip.X - R.HeroChip.Y - XS - S_
+		-- « Nv.20 » | « +35 XP » : 6 caractères Fredoka (~0,6 em) par demi-colonne au pire
+		assert((column - S_) / 2 >= 6 * worstText * 0.6, `Nv. / +XP half column too narrow: {column}`)
+		-- nom : « Cartomancienne d'Ambre » mesuré dans Studio à 290 px du design (28 px) ; au-delà (~23 caractères), les
+		-- plus longs noms légendaires sont tronqués « … » près de MinScale seulement
+		assert(column >= 290 + 2 * 4, `hero name column too narrow: {column}`)
+		-- « +12 équipements » à droite du bandeau du meilleur objet
+		assert(R.BandMoreWidth >= 15 * worstText * 0.46, `BandMoreWidth {R.BandMoreWidth}`)
+	end)
+
+	test("wide: badges grow with their text and never cover a name or the title", function()
+		local badgeH = worstText + R.BadgePad
+		-- « NIVEAU SUPÉRIEUR ! » : au-dessus de la puce, dans la bande de l'intitulé (masqué dans ce cas), au-dessus du nom
+		assert(R.BadgeLift - badgeH >= -R.HeroHeading, `level-up badge leaves the heading band: {badgeH}`)
+		assert(R.BadgeLift < 8, "level-up badge over the hero name")
+		-- intitulé « Héros » : le texte grossi tient dans sa bande
+		assert(worstText <= R.HeroHeading, "heading")
+		-- « Première victoire » : sous le titre, au-dessus du badge « Nouveau » de la carte (centré sur son bord haut)
+		local firstTop = R.FirstClearOffset.Y - math.max(R.FirstClearSize.Y, badgeH) / 2
+		local firstBottom = R.FirstClearOffset.Y + math.max(R.FirstClearSize.Y, badgeH) / 2
+		local newTop = R.BelowTitle + R.CardsPad - math.max(R.NewBadge.Y, badgeH) / 2
+		assert(firstTop >= R.TitleSize / 2, `first clear badge over the title: {firstTop}`)
+		assert(firstBottom <= newTop, `first clear badge over the "Nouveau" badge: {firstBottom} > {newTop}`)
+		-- « Nouveau » centré sur le bord haut de la carte : sa moitié basse reste dans l'illustration, loin du nom
+		assert(badgeH / 2 <= 0.6 * R.CardSize.Y, "new badge over the card name")
+		-- bouton « Continuer » : texte grossi dans la face
+		assert(worstText <= R.ButtonSize.Y - 2 * 4, "button text")
+	end)
+
+	test("wide: phone layout keeps its own sizes (overrides unchanged by the PC fix)", function()
+		local phone = Loot.pack(v2(844, 390), R)
+		assert(phone.CardSize.X == 136 and phone.CardSize.Y == 48 and phone.CardNameSize == 14 and phone.CardAmountSize == 18)
+		assert(phone.HeroChip.X == 178 and phone.HeroChip.Y == 58 and phone.HeroBar == 8 and phone.HeroNameSize == 14 and phone.HeroLevelSize == 16)
+		assert(phone.NewBadge.Y == 20 and phone.BadgeLift == 6 and phone.BadgeTextSize == 14 and phone.MinScale == 0.8)
 	end)
 
 	test("fit: shrinks on the WIDTH axis on a narrow portrait screen", function()

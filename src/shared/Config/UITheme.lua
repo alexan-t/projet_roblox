@@ -363,14 +363,21 @@ local Pack = {
 		TitleSize = Typography.Size.Hero, TitleBox = Vector2.new(560, 80),
 		RayLength = 230, Sparks = Vector2.new(230, 150), -- étincelles : ±X autour du titre, Y de 20 à Sparks.Y
 		FirstClearSize = Vector2.new(170, 30), FirstClearOffset = Vector2.new(0, 58), -- depuis le centre du titre
-		NewBadge = Vector2.new(84, 24),
-		CardSize = Vector2.new(132, 164), CardGap = Spacing.XL, CardsPad = 10, AfterCards = 30,
+		-- badges : taille minimale ; le texte grossi (textSize) les élargit, hauteur = texte + BadgePad
+		NewBadge = Vector2.new(84, 24), BadgeTextSize = Typography.Size.Caption, BadgePad = 8,
+		BadgeLift = 6, -- « NIVEAU SUPÉRIEUR ! » posé au-dessus de la puce (bas du badge à 6 px sous le bord), jamais sur le nom
+		-- cartes de monnaie : illustration 60 %, puis nom et quantité sur deux lignes de CardLine px (texte au pire)
+		CardSize = Vector2.new(132, 176), CardGap = Spacing.XL, CardsPad = 9, AfterCards = 18,
+		CardNameSize = Typography.Size.Label, CardAmountSize = Typography.Size.Heading, CardLine = 28,
 		LootGap = 10, AfterLoot = 20,
-		BandSize = Vector2.new(740, 112), BandArt = 92, BandHeadSize = 16, BandNameSize = 24, BandLineSize = 18, BandMoreSize = 18,
+		BandSize = Vector2.new(740, 112), BandArt = 92, BandHeadSize = 16, BandNameSize = 24, BandLineSize = 18, BandMoreSize = 18, BandMoreWidth = 200,
 		ChipSize = Vector2.new(128, 48), ChipIcon = 36, ChipGap = 8, ChipRowWidth = 740, ChipAmountSize = 18, ChipMoreSize = 16,
 		CaptionSize = 16, CaptionHeight = 32, NoteSize = 15, NoteHeight = 32,
 		-- héros sur UNE ligne (jusqu'à ArenaConfig.MaxHeroes) : l'écran s'élargit au lieu de passer à la ligne
-		HeroChip = Vector2.new(300, 120), HeroHeading = 30, HeroGap = 12,
+		-- puce de héros : nom, « Nv. » et « +XP », barre, « x / y XP » ; lignes de HeroLine px (texte au pire)
+		HeroChip = Vector2.new(440, 120), HeroHeading = 30, HeroGap = 12,
+		HeroNameSize = Typography.Size.Label, HeroLevelSize = Typography.Size.Heading, HeroNoteSize = Typography.Size.Caption,
+		HeroLine = 28, HeroBar = 14,
 		ButtonSize = Vector2.new(220, 56), ButtonLip = Shadow.ButtonLip, ButtonTextSize = Typography.Size.Button,
 		ButtonGap = 20, BottomPad = 80, MinHeight = 520,
 		-- échelle : contenu tenu entre le bas des monnaies et le haut de la hotbar (Margin de chaque côté)
@@ -378,7 +385,9 @@ local Pack = {
 		-- zone trop étroite (téléphone en paysage) : tout l'écran, échelle jusqu'à FloorScale, hotbar masquée
 		-- par un voile opaque (transparence OverlapMask) au lieu d'être recouverte en silence
 		FloorScale = 0.3, OverlapMask = 0.12,
-		MinText = 14, -- px réels minimum des petits textes du butin, quelle que soit l'échelle (design system § 4)
+		-- px réels minimum de TOUS les petits textes (butin, badges, cartes, héros, bouton), jusqu'à MinScale
+		-- (design system § 4) : à MinScale un texte fait MinText / MinScale = 28 px du design, les boîtes en tiennent compte
+		MinText = 14,
 		-- Téléphone en paysage (écran de référence 844 x 390, px réels à l'échelle 1). Deux colonnes : à gauche
 		-- les monnaies (cartes horizontales compactes) puis le butin ; à droite les héros (deux par ligne) puis
 		-- « Continuer », aligné sur le bas du contenu. La zone entre les monnaies et la hotbar (~200 px) ne
@@ -393,7 +402,7 @@ local Pack = {
 			CardSize = Vector2.new(136, 48), CardGap = 8, CardsPad = 0, AfterCards = 8, Compact = true,
 			CardNameSize = 14, CardAmountSize = 18,
 			LootGap = 6, AfterLoot = 0,
-			BandSize = Vector2.new(440, 68), BandArt = 52, BandNameSize = 16, BandLineSize = 14, BandMoreSize = 16,
+			BandSize = Vector2.new(440, 68), BandArt = 52, BandNameSize = 16, BandLineSize = 14, BandMoreSize = 16, BandMoreWidth = 150,
 			ChipSize = Vector2.new(82, 44), ChipIcon = 30, ChipGap = 7, ChipRowWidth = 440, ChipAmountSize = 16, ChipMoreSize = 14,
 			CaptionSize = 14, CaptionHeight = 18, NoteSize = 14, NoteHeight = 18,
 			HeroChip = Vector2.new(178, 58), HeroHeading = 0, HeroGap = 14, HeroPerRow = 2, -- sans intitulé « Héros » (place des badges de niveau)
