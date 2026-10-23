@@ -1117,6 +1117,643 @@ Kit.Attacks = {
 			{ Time = 1.4, Easing = "InOut", Poses = {} },
 		},
 	},
+	-- Attaques de base des héros par famille d'arme (docs/ANIMATION_TOOLS.md § Attaques des héros).
+	-- Une séquence par style, rangée dans le jeu partagé Attaque_<Style> : elle vaut pour tout héros du
+	-- squelette commun dont l'arme est orientée au repos comme le dit ANIMATION_TOOLS.md § Prise.
+	-- Angles d'arme mesurés sur l'atelier (racine : -Z = avant) : +rx du bras avance la main mais
+	-- penche vers l'arrière une arme tenue debout ; +rx de l'arme (weaponRight) la penche aussi vers
+	-- l'arrière, et fait passer vers l'avant une arme tenue tête en bas. Inclinaison finale d'une arme
+	-- debout ≈ rx bras + rx arme (négatif = vers l'avant).
+	-- Masse / marteau à une main (tête en bas au repos) : levé derrière la tête, abattu devant (#44).
+	Masse = {
+		Length = 0.65, Impact = 0.25,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.15, Easing = "In", Poses = {
+				torso = { 10, -20, 0, 0.05 },
+				rightArm = { 80, 0, 20 }, weaponRight = { 95, 0, 0 },
+				leftArm = { 20, 0, -15 },
+				rightLeg = { -4, 20, 0 }, leftLeg = { 8, 20, 0 },
+				head = { -6, 15, 0 },
+			} },
+			{ Time = 0.25, Easing = "Out", Poses = {
+				torso = { -16, 25, 0, -0.15 },
+				rightArm = { 30, 0, -15 }, weaponRight = { 15, 0, 0 },
+				leftArm = { -10, 0, -20 },
+				rightLeg = { -6, -25, 0 }, leftLeg = { 28, -25, 0 },
+				head = { 8, -20, 0 },
+			} },
+			{ Time = 0.35, Easing = "InOut", Poses = {
+				torso = { -14, 22, 0, -0.13 },
+				rightArm = { 28, 0, -15 }, weaponRight = { 12, 0, 0 },
+				leftArm = { -8, 0, -18 },
+				rightLeg = { -6, -22, 0 }, leftLeg = { 26, -22, 0 },
+				head = { 7, -18, 0 },
+			} },
+			{ Time = 0.65, Easing = "InOut", Poses = {} },
+		},
+	},
+	-- Arme d'hast tenue debout (lance, hallebarde, trident) : abaissée pointe devant en reculant la
+	-- main, puis estoc bras tendu (#18).
+	Estoc = {
+		Length = 0.6, Impact = 0.25,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.15, Easing = "In", Poses = {
+				torso = { 6, -20, 0, 0.05 },
+				rightArm = { 15, 0, 10 }, weaponRight = { -105, 0, 0 },
+				leftArm = { 35, 0, -10 },
+				rightLeg = { -4, 20, 0 }, leftLeg = { 8, 20, 0 },
+				head = { -2, 15, 0 },
+			} },
+			{ Time = 0.25, Easing = "Out", Poses = {
+				torso = { -10, 25, 0, -0.1 },
+				rightArm = { 55, 0, -5 }, weaponRight = { -140, 0, 0 },
+				leftArm = { 30, 0, -10 },
+				rightLeg = { -6, -25, 0 }, leftLeg = { 25, -25, 0 },
+				head = { 6, -20, 0 },
+			} },
+			{ Time = 0.35, Easing = "InOut", Poses = {
+				torso = { -8, 22, 0, -0.08 },
+				rightArm = { 50, 0, -5 }, weaponRight = { -136, 0, 0 },
+				leftArm = { 30, 0, -10 },
+				rightLeg = { -6, -22, 0 }, leftLeg = { 22, -22, 0 },
+				head = { 5, -18, 0 },
+			} },
+			{ Time = 0.6, Easing = "InOut", Poses = {} },
+		},
+	},
+	-- Bâton de mage tenu debout : ramené contre l'épaule, puis tête du bâton pointée vers la cible,
+	-- main libre poussée en avant (#16).
+	Sort = {
+		Length = 0.7, Impact = 0.3,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.15, Easing = "In", Poses = {
+				torso = { 8, -15, 0, 0.05 },
+				rightArm = { 40, 0, 15 }, weaponRight = { -20, 0, 0 },
+				leftArm = { 35, 0, -25 },
+				rightLeg = { -4, 15, 0 }, leftLeg = { 6, 15, 0 },
+				head = { -4, 10, 0 },
+			} },
+			{ Time = 0.3, Easing = "Out", Poses = {
+				torso = { -10, 15, 0, -0.05 },
+				rightArm = { 65, 0, -5 }, weaponRight = { -105, 0, 0 },
+				leftArm = { 70, 0, -10 },
+				rightLeg = { -4, -15, 0 }, leftLeg = { 18, -15, 0 },
+				head = { 6, -12, 0 },
+			} },
+			{ Time = 0.42, Easing = "InOut", Poses = {
+				torso = { -9, 14, 0, -0.05 },
+				rightArm = { 62, 0, -5 }, weaponRight = { -102, 0, 0 },
+				leftArm = { 66, 0, -10 },
+				rightLeg = { -4, -14, 0 }, leftLeg = { 16, -14, 0 },
+				head = { 5, -11, 0 },
+			} },
+			{ Time = 0.7, Easing = "InOut", Poses = {} },
+		},
+	},
+	-- Arc tenu debout dans la main droite : bras d'arc tendu vers la cible, main gauche qui tire la
+	-- corde jusqu'à l'épaule, lâcher à l'impact (#14). Le buste tourne vers la gauche ; rz du bras
+	-- d'arc le ramène face à la cible.
+	Tir = {
+		Length = 0.8, Impact = 0.45,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.25, Easing = "InOut", Poses = {
+				torso = { 0, 33, 0, 0 },
+				rightArm = { 85, 0, 23 }, weaponRight = { -85, 0, 0 },
+				leftArm = { 70, 0, 70 },
+				rightLeg = { 0, -33, 0 }, leftLeg = { 10, -33, 0 },
+				head = { 0, -28, 0 },
+			} },
+			{ Time = 0.4, Easing = "In", Poses = {
+				torso = { 0, 35, 0, 0 },
+				rightArm = { 85, 0, 25 }, weaponRight = { -85, 0, 0 },
+				leftArm = { 70, 0, 75 },
+				rightLeg = { 0, -35, 0 }, leftLeg = { 10, -35, 0 },
+				head = { 0, -30, 0 },
+			} },
+			{ Time = 0.45, Easing = "Out", Poses = {
+				torso = { -3, 35, 0, 0 },
+				rightArm = { 84, 0, 25 }, weaponRight = { -84, 0, 0 },
+				leftArm = { 60, 0, 20 },
+				rightLeg = { 0, -35, 0 }, leftLeg = { 10, -35, 0 },
+				head = { 0, -30, 0 },
+			} },
+			{ Time = 0.55, Easing = "InOut", Poses = {
+				torso = { -2, 32, 0, 0 },
+				rightArm = { 80, 0, 22 }, weaponRight = { -80, 0, 0 },
+				leftArm = { 55, 0, 15 },
+				rightLeg = { 0, -32, 0 }, leftLeg = { 9, -32, 0 },
+				head = { 0, -27, 0 },
+			} },
+			{ Time = 0.8, Easing = "InOut", Poses = {} },
+		},
+	},
+	-- Mains nues (#20, moine) : ses bras sont modelés levés, poings en garde ; c'est le buste qui
+	-- porte le coup (fente avant, poings projetés devant lui). Un bras tourné de +rx enverrait le
+	-- poing vers l'arrière.
+	Poing = {
+		Length = 0.5, Impact = 0.2,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.1, Easing = "In", Poses = {
+				torso = { 10, -25, 0, -0.05 },
+				rightArm = { 25, 0, 10 }, leftArm = { -10, 0, -5 },
+				rightLeg = { -10, 25, 0 }, leftLeg = { 6, 25, 0 },
+				head = { -8, 20, 0 },
+			} },
+			{ Time = 0.2, Easing = "Out", Poses = {
+				torso = { -28, 35, 0, -0.3 },
+				rightArm = { -20, 0, -5 }, leftArm = { 15, 0, 5 },
+				rightLeg = { -6, -35, 0 }, leftLeg = { 34, -35, 0 },
+				head = { 18, -30, 0 },
+			} },
+			{ Time = 0.3, Easing = "InOut", Poses = {
+				torso = { -24, 32, 0, -0.26 },
+				rightArm = { -16, 0, -5 }, leftArm = { 12, 0, 5 },
+				rightLeg = { -6, -32, 0 }, leftLeg = { 30, -32, 0 },
+				head = { 15, -27, 0 },
+			} },
+			{ Time = 0.5, Easing = "InOut", Poses = {} },
+		},
+	},
+	-- Ultimes des Communs (docs/ultimes/ULTIMES.md, 23/10/2026). Effet visuel : attribut EffetUltime du
+	-- modèle de combat, joué par UltimateEffectController à l'Impact de la séquence.
+	-- 01 Écuyer « Rempart Fermé » : ramassé derrière le bouclier, pas en avant, bouclier planté à la
+	-- verticale devant lui, épée ramenée en arrière ; le choc en forme d'écu part à l'impact.
+	RempartFerme = {
+		Length = 0.7, Impact = 0.3,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.12, Easing = "In", Poses = {
+				torso = { 6, 0, 0, -0.15 },
+				leftArm = { 55, 0, 10 }, weaponLeft = { -10, 0, 0 },
+				rightArm = { -15, 0, 20 },
+				leftLeg = { -6, 0, 0 }, rightLeg = { 6, 0, 0 },
+				head = { -4, 0, 0 },
+			} },
+			{ Time = 0.3, Easing = "Out", Poses = {
+				torso = { -14, 0, 0, -0.35 },
+				leftArm = { 38, 0, 5 }, weaponLeft = { -20, 0, 0 },
+				rightArm = { -25, 0, 25 },
+				leftLeg = { 38, 0, 0 }, rightLeg = { -12, 0, 0 },
+				head = { 10, 0, 0 },
+			} },
+			{ Time = 0.45, Easing = "InOut", Poses = {
+				torso = { -12, 0, 0, -0.32 },
+				leftArm = { 36, 0, 5 }, weaponLeft = { -18, 0, 0 },
+				rightArm = { -22, 0, 22 },
+				leftLeg = { 36, 0, 0 }, rightLeg = { -11, 0, 0 },
+				head = { 9, 0, 0 },
+			} },
+			{ Time = 0.7, Easing = "InOut", Poses = {} },
+		},
+	},
+	-- 02 Tireuse « Le Dernier Carreau » : position de tir basse (jambes d'une pièce : pas de vrai genou
+	-- à terre ; buste descendu, jambe avant levée, jambe arrière tirée en arrière, rien sous le sol),
+	-- arbalète épaulée, recul au tir. Arme visée par Kit.aimedAttack (Kit.AttackAims.DernierCarreau).
+	DernierCarreau = {
+		Length = 0.8, Impact = 0.45,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.2, Easing = "InOut", Poses = {
+				torso = { 0, 28, 0, -0.55 },
+				rightArm = { 82, 0, 14 }, leftArm = { 75, 0, 22 },
+				leftLeg = { 66, -28, 0 }, rightLeg = { -56, -28, 0 },
+				head = { 0, -23, 0 },
+			} },
+			{ Time = 0.4, Easing = "In", Poses = {
+				torso = { 0, 30, 0, -0.6 },
+				rightArm = { 85, 0, 15 }, leftArm = { 80, 0, 28 },
+				leftLeg = { 70, -30, 0 }, rightLeg = { -60, -30, 0 },
+				head = { 0, -25, 0 },
+			} },
+			{ Time = 0.45, Easing = "Out", Poses = {
+				torso = { -6, 30, 0, -0.6 },
+				rightArm = { 92, 0, 15 }, leftArm = { 86, 0, 25 },
+				leftLeg = { 70, -30, 0 }, rightLeg = { -60, -30, 0 },
+				head = { -3, -25, 0 },
+			} },
+			{ Time = 0.6, Easing = "InOut", Poses = {
+				torso = { -2, 29, 0, -0.58 },
+				rightArm = { 86, 0, 15 }, leftArm = { 80, 0, 25 },
+				leftLeg = { 68, -29, 0 }, rightLeg = { -58, -29, 0 },
+				head = { 0, -24, 0 },
+			} },
+			{ Time = 0.8, Easing = "InOut", Poses = {} },
+		},
+	},
+	-- Ultimes des Peu communs (23/10/2026). Armes visées par Kit.aimedAttack (Kit.AttackAims).
+	-- 03 Lancier « Haie de Lances » : lance pivotée à l'horizontale, puis trois estocs en éventail
+	-- (gauche, centre, droite ; 0,3 / 0,45 / 0,6 s), le buste suit chaque estoc.
+	HaieDeLances = {
+		Length = 0.85, Impact = 0.3,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.14, Easing = "In", Poses = {
+				torso = { 4, -15, 0, -0.1 },
+				rightArm = { 30, 0, 15 },
+				leftArm = { 35, 0, -10 },
+				rightLeg = { -4, 15, 0 },
+				leftLeg = { 8, 15, 0 },
+				head = { 0, 12, 0 },
+			} },
+			{ Time = 0.3, Easing = "Out", Poses = {
+				torso = { -10, 40, 0, -0.12 },
+				rightArm = { 60, 0, -5 },
+				leftArm = { 30, 0, -10 },
+				rightLeg = { -6, -40, 0 },
+				leftLeg = { 25, -40, 0 },
+				head = { 6, -32, 0 },
+			} },
+			{ Time = 0.38, Easing = "InOut", Poses = {
+				torso = { -4, 30, 0, -0.1 },
+				rightArm = { 30, 0, 5 },
+				leftArm = { 30, 0, -10 },
+				rightLeg = { -6, -30, 0 },
+				leftLeg = { 20, -30, 0 },
+				head = { 4, -25, 0 },
+			} },
+			{ Time = 0.45, Easing = "Out", Poses = {
+				torso = { -10, 25, 0, -0.12 },
+				rightArm = { 60, 0, -5 },
+				leftArm = { 30, 0, -10 },
+				rightLeg = { -6, -25, 0 },
+				leftLeg = { 25, -25, 0 },
+				head = { 6, -20, 0 },
+			} },
+			{ Time = 0.53, Easing = "InOut", Poses = {
+				torso = { -4, 15, 0, -0.1 },
+				rightArm = { 30, 0, 5 },
+				leftArm = { 30, 0, -10 },
+				rightLeg = { -6, -15, 0 },
+				leftLeg = { 20, -15, 0 },
+				head = { 4, -12, 0 },
+			} },
+			{ Time = 0.6, Easing = "Out", Poses = {
+				torso = { -10, 8, 0, -0.12 },
+				rightArm = { 60, 0, -5 },
+				leftArm = { 30, 0, -10 },
+				rightLeg = { -6, -8, 0 },
+				leftLeg = { 25, -8, 0 },
+				head = { 6, -5, 0 },
+			} },
+			{ Time = 0.85, Easing = "InOut", Poses = {} },
+		},
+	},
+	-- 04 Pyromancien « Braise Indocile » : gemme levée (elle tousse trois braises), bâton ramené en
+	-- arrière, puis propulsé vers la cible (la braise rebondit sur une seconde cible).
+	BraiseIndocile = {
+		Length = 0.85, Impact = 0.45,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.15, Easing = "InOut", Poses = {
+				torso = { 6, -10, 0, -0.14 },
+				rightArm = { 45, 0, 5 },
+				leftArm = { 20, 0, -15 },
+				rightLeg = { -3, 10, 0 },
+				leftLeg = { 4, 10, 0 },
+				head = { -8, 8, 0 },
+			} },
+			{ Time = 0.3, Easing = "In", Poses = {
+				torso = { 10, -25, 0, -0.17 },
+				rightArm = { 25, 0, 20 },
+				leftArm = { 35, 0, -20 },
+				rightLeg = { -6, 25, 0 },
+				leftLeg = { 8, 25, 0 },
+				head = { -6, 20, 0 },
+			} },
+			{ Time = 0.45, Easing = "Out", Poses = {
+				torso = { -12, 20, 0, -0.08 },
+				rightArm = { 70, 0, -5 },
+				leftArm = { 50, 0, -15 },
+				rightLeg = { -6, -20, 0 },
+				leftLeg = { 22, -20, 0 },
+				head = { 8, -16, 0 },
+			} },
+			{ Time = 0.6, Easing = "InOut", Poses = {
+				torso = { -10, 18, 0, -0.07 },
+				rightArm = { 66, 0, -5 },
+				leftArm = { 46, 0, -15 },
+				rightLeg = { -6, -18, 0 },
+				leftLeg = { 20, -18, 0 },
+				head = { 7, -14, 0 },
+			} },
+			{ Time = 0.85, Easing = "InOut", Poses = {} },
+		},
+	},
+	-- 05 Brise-Pierre « Fendaille de Carrière » : masse ramenée derrière la tête à deux mains, tenue,
+	-- puis coup massif : la tête de la masse mord le sol (0,1 stud), d'où part la fissure.
+	FendailleDeCarriere = {
+		Length = 0.9, Impact = 0.42,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.25, Easing = "Out", Poses = {
+				torso = { 14, -12, 0, -0.3 },
+				rightArm = { 80, 0, 15 },
+				leftArm = { 70, 0, -10 },
+				rightLeg = { -14, 12, 0 },
+				leftLeg = { 2, 12, 0 },
+				head = { -10, 10, 0 },
+			} },
+			{ Time = 0.32, Easing = "In", Poses = {
+				torso = { 16, -14, 0, -0.33 },
+				rightArm = { 82, 0, 16 },
+				leftArm = { 72, 0, -10 },
+				rightLeg = { -15, 14, 0 },
+				leftLeg = { 2, 14, 0 },
+				head = { -11, 11, 0 },
+			} },
+			{ Time = 0.42, Easing = "Out", Poses = {
+				torso = { -26, 12, 0, -0.35 },
+				rightArm = { 65, 0, -12 },
+				leftArm = { 60, 0, -8 },
+				rightLeg = { -8, -12, 0 },
+				leftLeg = { 34, -12, 0 },
+				head = { 12, -10, 0 },
+			} },
+			{ Time = 0.58, Easing = "InOut", Poses = {
+				torso = { -24, 10, 0, -0.33 },
+				rightArm = { 63, 0, -12 },
+				leftArm = { 58, 0, -8 },
+				rightLeg = { -8, -10, 0 },
+				leftLeg = { 32, -10, 0 },
+				head = { 11, -9, 0 },
+			} },
+			{ Time = 0.9, Easing = "InOut", Poses = {} },
+		},
+	},
+	-- 06 Guetteuse « Cor des Cimes » : la main libre monte à la bouche (le modèle n'a pas de cor :
+	-- l'appel est dit par l'effet), tête levée, puis le tir de Tir ; flèche lâchée à 0,62 s.
+	CorDesCimes = {
+		Length = 0.95, Impact = 0.62,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.15, Easing = "InOut", Poses = {
+				torso = { -6, 0, 0, 0.05 },
+				leftArm = { 120, 0, 40 },
+				rightArm = { 10, 0, 10 },
+				head = { -14, 0, 0 },
+			} },
+			{ Time = 0.3, Easing = "InOut", Poses = {
+				torso = { -8, 0, 0, 0.05 },
+				leftArm = { 122, 0, 42 },
+				rightArm = { 10, 0, 10 },
+				head = { -16, 0, 0 },
+			} },
+			{ Time = 0.45, Easing = "InOut", Poses = {
+				torso = { 0, 33, 0, 0 },
+				rightArm = { 85, 0, 23 },
+				leftArm = { 70, 0, 70 },
+				rightLeg = { 0, -33, 0 },
+				leftLeg = { 10, -33, 0 },
+				head = { 0, -28, 0 },
+			} },
+			{ Time = 0.58, Easing = "In", Poses = {
+				torso = { 0, 35, 0, 0 },
+				rightArm = { 85, 0, 25 },
+				leftArm = { 70, 0, 75 },
+				rightLeg = { 0, -35, 0 },
+				leftLeg = { 10, -35, 0 },
+				head = { 0, -30, 0 },
+			} },
+			{ Time = 0.62, Easing = "Out", Poses = {
+				torso = { -3, 35, 0, 0 },
+				rightArm = { 84, 0, 25 },
+				leftArm = { 60, 0, 20 },
+				rightLeg = { 0, -35, 0 },
+				leftLeg = { 10, -35, 0 },
+				head = { 0, -30, 0 },
+			} },
+			{ Time = 0.72, Easing = "InOut", Poses = {
+				torso = { -2, 32, 0, 0 },
+				rightArm = { 80, 0, 22 },
+				leftArm = { 55, 0, 15 },
+				rightLeg = { 0, -32, 0 },
+				leftLeg = { 9, -32, 0 },
+				head = { 0, -27, 0 },
+			} },
+			{ Time = 0.95, Easing = "InOut", Poses = {} },
+		},
+	},
+	-- Ultimes des Rares (23/10/2026). Hauteur du buste réglée pour qu'aucune pose ne passe sous le sol.
+	-- 07 Chevalier du Lierre « Muraille de Lierre » : bouclier levé puis frappé au sol devant lui (son
+	-- bas touche le sol), épée dressée ; trois tiges de lierre jaillissent devant (effet).
+	MurailleDeLierre = {
+		Length = 1.0, Impact = 0.38,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.2, Easing = "In", Poses = {
+				torso = { 8, 0, 0, 0.05 },
+				leftArm = { 75, 0, 10 },
+				rightArm = { 30, 0, 25 },
+				leftLeg = { -4, 0, 0 },
+				rightLeg = { 6, 0, 0 },
+				head = { -6, 0, 0 },
+			} },
+			{ Time = 0.38, Easing = "Out", Poses = {
+				torso = { -16, 0, 0, -0.09 },
+				leftArm = { 35, 0, 5 },
+				weaponLeft = { -20, 0, 0 },
+				rightArm = { 20, 0, 30 },
+				leftLeg = { 36, 0, 0 },
+				rightLeg = { -14, 0, 0 },
+				head = { 10, 0, 0 },
+			} },
+			{ Time = 0.62, Easing = "InOut", Poses = {
+				torso = { -14, 0, 0, -0.08 },
+				leftArm = { 34, 0, 5 },
+				weaponLeft = { -18, 0, 0 },
+				rightArm = { 18, 0, 28 },
+				leftLeg = { 34, 0, 0 },
+				rightLeg = { -13, 0, 0 },
+				head = { 9, 0, 0 },
+			} },
+			{ Time = 1.0, Easing = "InOut", Poses = {} },
+		},
+	},
+	-- 08 Mage des Lanternes « La Veillée » : lanterne (main gauche) ramenée en arrière puis balancée
+	-- devant, bâton levé ; le ruban ambré part de la lanterne vers deux alliés (effet).
+	LaVeillee = {
+		Length = 1.0, Impact = 0.45,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.22, Easing = "InOut", Poses = {
+				torso = { 4, -15, 0, 0 },
+				leftArm = { -25, 0, -10 },
+				rightArm = { 40, 0, 10 },
+				leftLeg = { 4, 15, 0 },
+				rightLeg = { -3, 15, 0 },
+				head = { -4, 10, 0 },
+			} },
+			{ Time = 0.45, Easing = "Out", Poses = {
+				torso = { -8, 18, 0, 0 },
+				leftArm = { 85, 0, -15 },
+				rightArm = { 55, 0, 5 },
+				leftLeg = { 18, -18, 0 },
+				rightLeg = { -5, -18, 0 },
+				head = { 4, -14, 0 },
+			} },
+			{ Time = 0.7, Easing = "InOut", Poses = {
+				torso = { -6, 15, 0, 0 },
+				leftArm = { 78, 0, -15 },
+				rightArm = { 52, 0, 5 },
+				leftLeg = { 15, -15, 0 },
+				rightLeg = { -4, -15, 0 },
+				head = { 3, -12, 0 },
+			} },
+			{ Time = 1.0, Easing = "InOut", Poses = {} },
+		},
+	},
+	-- 09 Fauconnier Gris « Piqué du Fauconnier » : bras du faucon armé puis lancé vers le ciel, tête qui
+	-- suit le vol ; le faucon (copie, le vrai est masqué) monte en spirale, pique, revient (effet).
+	PiqueDuFauconnier = {
+		Length = 1.0, Impact = 0.35,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.18, Easing = "In", Poses = {
+				torso = { 6, -20, 0, -0.01 },
+				rightArm = { 30, 0, 30 },
+				leftArm = { 20, 0, -15 },
+				rightLeg = { -4, 20, 0 },
+				leftLeg = { 6, 20, 0 },
+				head = { -6, 15, 0 },
+			} },
+			{ Time = 0.35, Easing = "Out", Poses = {
+				torso = { -8, 20, 0, 0.05 },
+				rightArm = { 110, 0, -5 },
+				leftArm = { 15, 0, -15 },
+				rightLeg = { -4, -20, 0 },
+				leftLeg = { 14, -20, 0 },
+				head = { -12, -15, 0 },
+			} },
+			{ Time = 0.7, Easing = "InOut", Poses = {
+				torso = { -4, 12, 0, 0.03 },
+				rightArm = { 95, 0, 0 },
+				leftArm = { 15, 0, -15 },
+				rightLeg = { -3, -12, 0 },
+				leftLeg = { 10, -12, 0 },
+				head = { -14, -10, 0 },
+			} },
+			{ Time = 1.0, Easing = "InOut", Poses = {} },
+		},
+	},
+	-- 10 Lancière des Sources « Serment de la Source » : lance armée à droite puis balayée en
+	-- demi-cercle vers la gauche ; un ruban d'eau suit la pointe et éclate en gouttes (effet).
+	SermentDeLaSource = {
+		Length = 1.0, Impact = 0.42,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.2, Easing = "In", Poses = {
+				torso = { 4, -35, 0, -0.1 },
+				rightArm = { 55, 0, 15 },
+				leftArm = { 35, 0, -10 },
+				rightLeg = { -4, 35, 0 },
+				leftLeg = { 8, 35, 0 },
+				head = { 0, 28, 0 },
+			} },
+			{ Time = 0.42, Easing = "Out", Poses = {
+				torso = { -10, 35, 0, -0.12 },
+				rightArm = { 60, 0, -10 },
+				leftArm = { 30, 0, -10 },
+				rightLeg = { -6, -35, 0 },
+				leftLeg = { 25, -35, 0 },
+				head = { 6, -28, 0 },
+			} },
+			{ Time = 0.65, Easing = "InOut", Poses = {
+				torso = { -8, 32, 0, -0.1 },
+				rightArm = { 56, 0, -10 },
+				leftArm = { 30, 0, -10 },
+				rightLeg = { -6, -32, 0 },
+				leftLeg = { 22, -32, 0 },
+				head = { 5, -25, 0 },
+			} },
+			{ Time = 1.0, Easing = "InOut", Poses = {} },
+		},
+	},
+	-- 11 Barde de Fer « Accord de Fer » : main droite au luth (porté au flanc droit), puis la cloche-masse
+	-- (main gauche) levée et abattue devant ; deux ondes d'acier partent au sol (effet).
+	AccordDeFer = {
+		Length = 1.05, Impact = 0.55,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.2, Easing = "InOut", Poses = {
+				torso = { 4, 15, 0, 0 },
+				rightArm = { 25, 0, -25 },
+				leftArm = { 20, 0, -10 },
+				head = { 8, -10, 0 },
+			} },
+			{ Time = 0.4, Easing = "In", Poses = {
+				torso = { 10, 20, 0, 0.05 },
+				rightArm = { 20, 0, -20 },
+				leftArm = { 80, 0, -15 },
+				rightLeg = { 4, -20, 0 },
+				leftLeg = { -10, -20, 0 },
+				head = { -6, -15, 0 },
+			} },
+			{ Time = 0.55, Easing = "Out", Poses = {
+				torso = { -18, -15, 0, -0.05 },
+				rightArm = { 15, 0, -15 },
+				leftArm = { 30, 0, 15 },
+				rightLeg = { 26, 15, 0 },
+				leftLeg = { -6, 15, 0 },
+				head = { 10, 12, 0 },
+			} },
+			{ Time = 0.75, Easing = "InOut", Poses = {
+				torso = { -15, -12, 0, -0.04 },
+				rightArm = { 15, 0, -15 },
+				leftArm = { 28, 0, 15 },
+				rightLeg = { 23, 12, 0 },
+				leftLeg = { -5, 12, 0 },
+				head = { 9, 10, 0 },
+			} },
+			{ Time = 1.05, Easing = "InOut", Poses = {} },
+		},
+	},
+	-- 12 Moine du Vent Bas « Trois Pas Rasants » : ramassé très bas, deux fentes (paume droite, paume
+	-- gauche) avec rotation du buste, puis poussée des deux bras ; souffles et onde (effet).
+	-- Sans visée : mains nues, bras modelés levés (comme Poing).
+	TroisPasRasants = {
+		Length = 1.0, Impact = 0.3,
+		Keys = {
+			{ Time = 0, Easing = "Out", Poses = {} },
+			{ Time = 0.15, Easing = "In", Poses = {
+				torso = { 20, -10, 0, 0.02 },
+				rightArm = { 0, 0, 10 },
+				leftArm = { 0, 0, -10 },
+				rightLeg = { -30, 10, 0 },
+				leftLeg = { 45, 10, 0 },
+				head = { -15, 8, 0 },
+			} },
+			{ Time = 0.3, Easing = "Out", Poses = {
+				torso = { -25, 35, 0, -0.09 },
+				rightArm = { -20, 0, -5 },
+				leftArm = { 15, 0, 5 },
+				rightLeg = { -10, -35, 0 },
+				leftLeg = { 40, -35, 0 },
+				head = { 18, -28, 0 },
+			} },
+			{ Time = 0.45, Easing = "Out", Poses = {
+				torso = { -25, -35, 0, -0.06 },
+				rightArm = { 15, 0, -5 },
+				leftArm = { -20, 0, 5 },
+				rightLeg = { 40, 35, 0 },
+				leftLeg = { -10, 35, 0 },
+				head = { 18, 28, 0 },
+			} },
+			{ Time = 0.62, Easing = "Out", Poses = {
+				torso = { -20, 0, 0, -0.22 },
+				rightArm = { -30, 0, 20 },
+				leftArm = { -30, 0, -20 },
+				rightLeg = { -8, 0, 0 },
+				leftLeg = { 30, 0, 0 },
+				head = { 14, 0, 0 },
+			} },
+			{ Time = 1.0, Easing = "InOut", Poses = {} },
+		},
+	},
 	-- Variante : les deux bras levés puis abattus au sol, buste plié, rebond lourd.
 	Ecrasement = {
 		Length = 1.0, Impact = 0.32,
@@ -1190,8 +1827,132 @@ function Kit.keyed(model: Model, name: string, style: any): KeyframeSequence
 	return sequence
 end
 
+-- Arbalète (#02) : mêmes poses que Tir ; seule la visée de l'arme change (Kit.AttackAims).
+Kit.Attacks.Arbalete = Kit.Attacks.Tir
+
+-- Direction visée par le manche de l'arme (vers sa tête) aux clés des styles de héros, dans le repère
+-- de la racine (-Z = avant, +Y = haut, +X = droite du héros). « rest » : garder l'orientation du repos
+-- par rapport à la racine (arc tenu debout). Kit.aimedAttack recalcule weaponRight (weaponLeft) pour
+-- chaque héros : les armes ne sont pas tenues pareil au repos (debout, tête en bas, en travers), un
+-- angle d'arme commun les envoyait dans toutes les directions.
+Kit.AttackAims = {
+	Epee = { [0.12] = Vector3.new(0.45, 0.7, 0.55), [0.2] = Vector3.new(-0.55, -0.35, -0.75), [0.3] = Vector3.new(-0.6, -0.65, -0.45) },
+	Masse = { [0.15] = Vector3.new(0.15, 0.7, 0.7), [0.25] = Vector3.new(0, -0.45, -0.9), [0.35] = Vector3.new(0, -0.55, -0.85) },
+	Estoc = { [0.15] = Vector3.new(0, -0.15, -1), [0.25] = Vector3.new(0, 0.02, -1), [0.35] = Vector3.new(0, 0, -1) },
+	Sort = { [0.15] = Vector3.new(0.1, 0.95, 0.3), [0.3] = Vector3.new(0, 0.55, -0.85), [0.42] = Vector3.new(0, 0.6, -0.8) },
+	Tir = { [0.25] = "rest", [0.4] = "rest", [0.45] = "rest", [0.55] = "rest" },
+	Arbalete = { [0.25] = Vector3.new(0, 0, -1), [0.4] = Vector3.new(0, 0, -1), [0.45] = Vector3.new(0, 0.15, -1), [0.55] = Vector3.new(0, 0.05, -1) },
+	DernierCarreau = { [0.2] = Vector3.new(0, 0, -1), [0.4] = Vector3.new(0, 0.02, -1), [0.45] = Vector3.new(0, 0.2, -1), [0.6] = Vector3.new(0, 0.06, -1) },
+	HaieDeLances = { [0.14] = Vector3.new(-0.2, 0, -1), [0.3] = Vector3.new(-0.4, 0.02, -1), [0.38] = Vector3.new(-0.25, 0, -1), [0.45] = Vector3.new(0, 0.02, -1), [0.53] = Vector3.new(0.15, 0, -1), [0.6] = Vector3.new(0.4, 0.02, -1) },
+	BraiseIndocile = { [0.15] = Vector3.new(0, 1, -0.35), [0.3] = Vector3.new(0.25, 0.8, 0.55), [0.45] = Vector3.new(0, 0.3, -1), [0.6] = Vector3.new(0, 0.35, -1) },
+	FendailleDeCarriere = { [0.25] = Vector3.new(0.1, 0.6, 0.8), [0.32] = Vector3.new(0.1, 0.55, 0.85), [0.42] = Vector3.new(0, -0.6, -1), [0.58] = Vector3.new(0, -0.62, -1) },
+	CorDesCimes = { [0.45] = "rest", [0.58] = "rest", [0.62] = "rest", [0.72] = "rest" },
+	MurailleDeLierre = { [0.2] = Vector3.new(0.2, 1, 0.1), [0.38] = Vector3.new(0.3, 1, -0.3), [0.62] = Vector3.new(0.3, 1, -0.3) },
+	LaVeillee = { [0.22] = Vector3.new(0, 1, 0.1), [0.45] = Vector3.new(0.1, 1, -0.35), [0.7] = Vector3.new(0.1, 1, -0.3) },
+	SermentDeLaSource = { [0.2] = Vector3.new(1, 0.05, -0.4), [0.42] = Vector3.new(-0.75, 0.02, -0.65), [0.65] = Vector3.new(-0.7, 0, -0.7) },
+	-- Barde : le style est déjà écrit pour la main gauche (cloche-masse), pas en miroir. Kit.aimedAttack
+	-- ne vise la main gauche que pour un style « _G » (miroir) : ces directions ont été appliquées à
+	-- l'os ArmeGauche à la main dans Studio (23/10/2026) ; à reprendre si la séquence est régénérée.
+	AccordDeFer = { [0.4] = Vector3.new(-0.1, 0.7, 0.7), [0.55] = Vector3.new(0, -0.5, -0.9), [0.75] = Vector3.new(0, -0.55, -0.85) },
+}
+
+local AIM_JOINTS = { torso = "Racine", head = "Cou", leftArm = "EpauleGauche", rightArm = "EpauleDroite",
+	leftLeg = "HancheGauche", rightLeg = "HancheDroite" }
+
+-- Style d'attaque d'un héros riggé, arme visée : poses du style (Kit.Attacks.<style>, suffixe _G =
+-- main gauche, Kit.mirror), plus la rotation de l'os d'arme qui amène le manche de sa Prise sur la
+-- direction de Kit.AttackAims à chaque clé. options.Flip : la Prise du modèle pointe vers le talon de
+-- l'arme (#55, champignon) ; options.Free : accepter une Prise libre (bâton tenu par l'anse, #41, #51,
+-- #65). Le modèle est remis au repos après la mesure.
+function Kit.aimedAttack(model: Model, styleName: string, options: { Flip: boolean?, Free: boolean? }?): any
+	local opts = options or {}
+	local left = string.sub(styleName, -2) == "_G"
+	local base = if left then string.sub(styleName, 1, -3) else styleName
+	assert(Kit.Attacks[base], `style inconnu : {styleName}`)
+	local style = if left then Kit.mirror(Kit.Attacks[base]) else Kit.Attacks[base]
+	local aims = Kit.AttackAims[base]
+	local hand = model:FindFirstChild(if left then "MainGauche" else "MainDroite", true) :: Motor6D?
+	if not (aims and hand) then
+		return style
+	end
+	local prise: Attachment? = nil
+	for _, joint in model:GetDescendants() do
+		if joint:IsA("Motor6D") and joint.Part0 == hand.Part1 and joint.Part1 then
+			local found = (joint.Part1 :: BasePart):FindFirstChild(GRIP.Weapon)
+			if found and found:IsA("Attachment") and (opts.Free or found:GetAttribute(GRIP.Free) ~= true) then
+				prise = found
+			end
+		end
+	end
+	if not prise then
+		return style
+	end
+	local root = (model.PrimaryPart :: BasePart).CFrame
+	local function handFrame(): CFrame
+		return (hand.Part0 :: BasePart).CFrame * hand.C0
+	end
+	local axis = prise.WorldAxis * (if opts.Flip then -1 else 1)
+	local restInRoot = root:VectorToObjectSpace(axis)
+	local inHand = handFrame():VectorToObjectSpace(axis)
+	local role = if left then "weaponLeft" else "weaponRight"
+	local keys = {}
+	for _, key in style.Keys do
+		local poses = table.clone(key.Poses)
+		local target: any = nil
+		for time, direction in aims do
+			if math.abs(time - key.Time) < 1e-6 then
+				target = direction
+			end
+		end
+		if target then
+			-- pose de la clé sans l'arme, mesure du repère de la main, rotation de l'arme
+			local saved: { [Motor6D]: CFrame } = {}
+			for poseRole, v in poses do
+				local motor = AIM_JOINTS[poseRole] and model:FindFirstChild(AIM_JOINTS[poseRole], true) :: Motor6D?
+				if motor then
+					saved[motor] = motor.C0
+					motor.C0 = motor.C0 * CFrame.new(0, v[4] or 0, 0) * CFrame.Angles(math.rad(v[1]), math.rad(v[2]), math.rad(v[3]))
+				end
+			end
+			local want = if target == "rest" then restInRoot else ((if left then target * Vector3.new(-1, 1, 1) else target) :: Vector3).Unit
+			local goal = handFrame():VectorToObjectSpace(root:VectorToWorldSpace(want))
+			for motor, c0 in saved do
+				motor.C0 = c0
+			end
+			local cross = inHand:Cross(goal)
+			local angle = math.acos(math.clamp(inHand:Dot(goal), -1, 1))
+			local rotation = if cross.Magnitude < 1e-5 then CFrame.identity else CFrame.fromAxisAngle(cross.Unit, angle)
+			local rx, ry, rz = rotation:ToEulerAnglesXYZ()
+			poses[role] = { math.deg(rx), math.deg(ry), math.deg(rz) }
+		end
+		table.insert(keys, { Time = key.Time, Easing = key.Easing, Poses = poses })
+	end
+	return { Length = style.Length, Impact = style.Impact, Keys = keys }
+end
+
+-- Style en miroir gauche / droite (héros qui tient son arme de la main gauche) : bras, jambes et
+-- armes échangés, ry et rz opposés. Kit.Attacks.<Style>_G est créé à la demande.
+function Kit.mirror(style: any): any
+	local swap = { leftArm = "rightArm", rightArm = "leftArm", leftLeg = "rightLeg", rightLeg = "leftLeg",
+		weaponLeft = "weaponRight", weaponRight = "weaponLeft" }
+	local keys = {}
+	for _, key in style.Keys do
+		local poses = {}
+		for role, v in key.Poses do
+			poses[swap[role] or role] = { v[1], -v[2], -v[3], v[4] }
+		end
+		table.insert(keys, { Time = key.Time, Easing = key.Easing, Poses = poses })
+	end
+	return { Length = style.Length, Impact = style.Impact, Keys = keys }
+end
+
 -- Attaque de base « Attaque » d'un modèle riggé.
 function Kit.attack(model: Model, style: any): KeyframeSequence
+	if typeof(style) == "string" and not Kit.Attacks[style] and string.sub(style, -2) == "_G" then
+		local base = Kit.Attacks[string.sub(style, 1, -3)]
+		assert(base, `style inconnu : {style}`)
+		Kit.Attacks[style] = Kit.mirror(base)
+	end
 	return Kit.keyed(model, "Attaque", style)
 end
 
