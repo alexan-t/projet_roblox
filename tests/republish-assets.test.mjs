@@ -52,7 +52,7 @@ function fakeRoblox({ files, failFirst = {} }) {
 			return json({ path: `operations/op-${id}`, done: false });
 		}
 		m = /^\/assets\/v1\/operations\/op-(\d+)$/.exec(u.pathname);
-		if (m) return json({ done: true, response: { assetId: m[1], moderationResult: { moderationState: "MODERATION_STATE_APPROVED" } } });
+		if (m) return json({ done: true, response: { assetId: m[1], moderationResult: { moderationState: "Approved" } } });
 		m = /^\/assets\/v1\/assets\/(\d+)$/.exec(u.pathname);
 		if (m) return json({ assetId: m[1], creationContext: { creator: { userId: "11714751172" } } });
 		return new Response("inconnu", { status: 500 });

@@ -150,6 +150,9 @@ export function createClient({ key, fetchImpl = fetch, sleep = (ms) => new Promi
 	return { download, publish, readAsset, redact };
 }
 
+// L'API renvoie « Approved » (constaté le 24/10/2026) ; la doc annonce « MODERATION_STATE_APPROVED ».
+export const isApproved = (state) => state === "Approved" || state === "MODERATION_STATE_APPROVED";
+
 // --- Lot, état et journal ---
 
 export function loadLot(file) {
@@ -271,7 +274,7 @@ export function buildMapping(lot, work) {
 	const pending = [];
 	for (const asset of lot.assets) {
 		const publish = work.state[asset.oldId]?.publish;
-		if (publish?.newId && publish.ownerOk && publish.moderation === "MODERATION_STATE_APPROVED") ready.push([asset.oldId, publish.newId]);
+		if (publish?.newId && publish.ownerOk && isApproved(publish.moderation)) ready.push([asset.oldId, publish.newId]);
 		else pending.push(asset.oldId);
 	}
 	const luau = `local MAPPING: { [string]: string } = {\n${ready.map(([o, n]) => `\t["${o}"] = "${n}",`).join("\n")}\n}\n`;
@@ -331,7 +334,7 @@ async function main() {
 	const work = openWorkspace(lot.lot);
 	if (command === "status") {
 		const count = (test) => lot.assets.filter((a) => test(work.state[a.oldId] ?? {})).length;
-		console.log(`${lot.assets.length} assets : ${count((e) => e.download?.ok)} téléchargés, ${count((e) => e.download && !e.download.ok)} en échec, ${count((e) => e.publish?.newId)} publiés, ${count((e) => e.publish?.moderation === "MODERATION_STATE_APPROVED")} approuvés`);
+		console.log(`${lot.assets.length} assets : ${count((e) => e.download?.ok)} téléchargés, ${count((e) => e.download && !e.download.ok)} en échec, ${count((e) => e.publish?.newId)} publiés, ${count((e) => isApproved(e.publish?.moderation))} approuvés`);
 		return;
 	}
 	if (command === "mapping") {

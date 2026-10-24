@@ -5,7 +5,7 @@ Périmètre : les 4 modèles de combat à la DA du jeu, **62 AssetIds** (31 mesh
 publiés par `cypher1359`. Propriétaire cible : `nxtoma` (User `11714751172`). Les mannequins R15 de
 `Assets.Combat` sont hors lot (provisoires, à remplacer plutôt qu'à republier).
 
-État : **préparé, rien de publié ni de remplacé.** Voie retenue : C (Open Cloud) ; lecture des 62 réussie le 24/10, aucune publication.
+État : voie C (Open Cloud). Lecture des 62 réussie ; **1 publié** (n°44, pilote, 24/10) ; **rien remplacé dans Studio**.
 
 ## Ce qui a été vérifié dans la place DEV (session de `nxtoma`)
 
@@ -95,6 +95,14 @@ de la clé a changé après l'ajout des autorisations.
   fichiers gardés tels quels.
 - Aucun doublon de contenu (62 empreintes SHA-256 distinctes), 39,4 Mo au total, rien au-dessus
   de la limite de 20 Mo ; la clé n'apparaît ni dans le journal ni dans `state.json`.
+
+**Exemplaire pilote publié (24/10/2026), avec l'accord de l'utilisateur : n°44 seul.**
+`107504521703864` → **`119239276286265`**, nom `lot-pilote-combat_44_body_body_geom`. Opération
+terminée en une lecture ; l'Assets API relit le propriétaire `11714751172` (`nxtoma`) et
+`GetProductInfo` dans Studio le confirme (User `nxtoma`, type Image). Modération : `Approved` —
+l'API renvoie cette valeur et non `MODERATION_STATE_APPROVED` comme l'indique sa doc ; l'outil
+accepte les deux. Contenu : dans Studio, les deux images lues par `EditableImage` sont
+**identiques au pixel près** (0 octet différent sur 4 194 304). Rien n'a été remplacé dans la place.
 
 La voie est prévue par Roblox : l'Assets API accepte un mesh « uniquement s'il a été téléchargé par
 l'Asset Delivery API » et renvoie vers l'Importer « si vous n'essayez pas de télécharger puis
@@ -236,7 +244,7 @@ construit le lot à partir de la sortie de `tools/studio-check-asset-ownership.l
 | 41 | `Ennemi_Slime.leaves.leaf_* (×5)` | Mesh | `113765157023718` | — | cypher1359 | 373 | FIX-PROPRIETAIRE |
 | 42 | `Ennemi_Slime.leaves.leaf_* (×5)` | Image (texture) | `133088852825329` | — | cypher1359 | 193 | FIX-PROPRIETAIRE |
 | 43 | `Ennemi_Slime.body.body_geom` | Mesh | `98155401096105` | — | cypher1359 | 9 | FIX-PROPRIETAIRE |
-| 44 | `Ennemi_Slime.body.body_geom` | Image (texture) | `107504521703864` | — | cypher1359 | 2 | FIX-PROPRIETAIRE |
+| 44 | `Ennemi_Slime.body.body_geom` | Image (texture) | `107504521703864` | `119239276286265` | nxtoma (publié le 24/10) | 2 | Publié, Approved, pixels identiques ; pas encore remplacé dans Studio |
 | 45 | `Heros_EcuyerDuRempart.right_leg.right_leg_geom` | Mesh | `97234781530135` | — | cypher1359 | 5 | FIX-PROPRIETAIRE |
 | 46 | `Heros_EcuyerDuRempart.right_leg.right_leg_geom` | Image (texture) | `93433962987135` | — | cypher1359 | 5 | FIX-PROPRIETAIRE |
 | 47 | `Heros_EcuyerDuRempart.torso.torso_geom` | Mesh | `129637362589534` | — | cypher1359 | 5 | FIX-PROPRIETAIRE |
