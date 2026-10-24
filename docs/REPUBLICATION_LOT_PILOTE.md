@@ -5,7 +5,7 @@ Périmètre : les 4 modèles de combat à la DA du jeu, **62 AssetIds** (31 mesh
 publiés par `cypher1359`. Propriétaire cible : `nxtoma` (User `11714751172`). Les mannequins R15 de
 `Assets.Combat` sont hors lot (provisoires, à remplacer plutôt qu'à republier).
 
-État : voie C (Open Cloud). Lecture des 62 réussie ; **1 publié** (n°44, pilote, 24/10) ; **rien remplacé dans Studio**.
+État : voie C (Open Cloud). Lecture des 62 réussie ; **2 publiés** (pilotes n°44 image et n°43 mesh, 24/10) ; **rien remplacé dans Studio**.
 
 ## Ce qui a été vérifié dans la place DEV (session de `nxtoma`)
 
@@ -103,6 +103,13 @@ terminée en une lecture ; l'Assets API relit le propriétaire `11714751172` (`n
 l'API renvoie cette valeur et non `MODERATION_STATE_APPROVED` comme l'indique sa doc ; l'outil
 accepte les deux. Contenu : dans Studio, les deux images lues par `EditableImage` sont
 **identiques au pixel près** (0 octet différent sur 4 194 304). Rien n'a été remplacé dans la place.
+
+**Mesh pilote publié (24/10/2026), avec l'accord de l'utilisateur : n°43 seul.**
+`98155401096105` → **`74639917575152`** : l'Assets API accepte bien le mesh `version 2.00` issu
+d'Asset Delivery (`model/x-file-mesh-data`). Propriétaire `nxtoma` (API et `GetProductInfo`, type
+Mesh), modération `Approved`. Géométrie comparée dans Studio par `EditableMesh` : 3 146 sommets et
+5 398 faces des deux côtés, **écart nul** sur les positions et les UV, même `MeshSize`. Rien n'a été
+remplacé dans la place. Les deux types du lot (Image, Mesh) sont donc validés de bout en bout.
 
 La voie est prévue par Roblox : l'Assets API accepte un mesh « uniquement s'il a été téléchargé par
 l'Asset Delivery API » et renvoie vers l'Importer « si vous n'essayez pas de télécharger puis
@@ -243,7 +250,7 @@ construit le lot à partir de la sortie de `tools/studio-check-asset-ownership.l
 | 40 | `Ennemi_Slime.eyes.eyes_geom` | Image (texture) | `94292621457911` | — | cypher1359 | 9 | FIX-PROPRIETAIRE |
 | 41 | `Ennemi_Slime.leaves.leaf_* (×5)` | Mesh | `113765157023718` | — | cypher1359 | 373 | FIX-PROPRIETAIRE |
 | 42 | `Ennemi_Slime.leaves.leaf_* (×5)` | Image (texture) | `133088852825329` | — | cypher1359 | 193 | FIX-PROPRIETAIRE |
-| 43 | `Ennemi_Slime.body.body_geom` | Mesh | `98155401096105` | — | cypher1359 | 9 | FIX-PROPRIETAIRE |
+| 43 | `Ennemi_Slime.body.body_geom` | Mesh | `98155401096105` | `74639917575152` | nxtoma (publié le 24/10) | 9 | Publié, Approved, géométrie identique ; pas encore remplacé dans Studio |
 | 44 | `Ennemi_Slime.body.body_geom` | Image (texture) | `107504521703864` | `119239276286265` | nxtoma (publié le 24/10) | 2 | Publié, Approved, pixels identiques ; pas encore remplacé dans Studio |
 | 45 | `Heros_EcuyerDuRempart.right_leg.right_leg_geom` | Mesh | `97234781530135` | — | cypher1359 | 5 | FIX-PROPRIETAIRE |
 | 46 | `Heros_EcuyerDuRempart.right_leg.right_leg_geom` | Image (texture) | `93433962987135` | — | cypher1359 | 5 | FIX-PROPRIETAIRE |
