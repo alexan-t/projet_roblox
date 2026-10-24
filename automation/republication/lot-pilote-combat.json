@@ -1,0 +1,445 @@
+{
+  "lot": "lot-pilote-combat",
+  "scope": "ReplicatedStorage.Assets.Combat",
+  "targetOwner": {
+    "userId": "11714751172",
+    "name": "nxtoma"
+  },
+  "doc": "docs/REPUBLICATION_LOT_PILOTE.md",
+  "assets": [
+    {
+      "n": 1,
+      "piece": "Ennemi_Gobelin.right_arm.right_arm_geom",
+      "type": "Mesh",
+      "oldId": "101545816385322",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 2,
+      "piece": "Ennemi_Gobelin.right_arm.right_arm_geom",
+      "type": "Image",
+      "oldId": "94160075609716",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 3,
+      "piece": "Ennemi_Gobelin.torso.torso_geom",
+      "type": "Mesh",
+      "oldId": "126354225080629",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 4,
+      "piece": "Ennemi_Gobelin.torso.torso_geom",
+      "type": "Image",
+      "oldId": "133350402446247",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 5,
+      "piece": "Ennemi_Gobelin.spear.spear_geom",
+      "type": "Mesh",
+      "oldId": "96195836243902",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 6,
+      "piece": "Ennemi_Gobelin.spear.spear_geom",
+      "type": "Image",
+      "oldId": "132575861009692",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 7,
+      "piece": "Ennemi_Gobelin.left_arm.left_arm_geom",
+      "type": "Mesh",
+      "oldId": "113521611304500",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 8,
+      "piece": "Ennemi_Gobelin.left_arm.left_arm_geom",
+      "type": "Image",
+      "oldId": "137672384215371",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 9,
+      "piece": "Ennemi_Gobelin.left_leg.left_leg_geom",
+      "type": "Mesh",
+      "oldId": "110303809370235",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 10,
+      "piece": "Ennemi_Gobelin.left_leg.left_leg_geom",
+      "type": "Image",
+      "oldId": "127187795674374",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 11,
+      "piece": "Ennemi_Gobelin.right_leg.right_leg_geom",
+      "type": "Mesh",
+      "oldId": "93120410964817",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 12,
+      "piece": "Ennemi_Gobelin.right_leg.right_leg_geom",
+      "type": "Image",
+      "oldId": "91750919684836",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 13,
+      "piece": "Ennemi_Gobelin.shield.shield_geom",
+      "type": "Mesh",
+      "oldId": "76677295940265",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 14,
+      "piece": "Ennemi_Gobelin.shield.shield_geom",
+      "type": "Image",
+      "oldId": "103378694748388",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 15,
+      "piece": "Ennemi_Gobelin.head.head_geom",
+      "type": "Mesh",
+      "oldId": "78939162400478",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 16,
+      "piece": "Ennemi_Gobelin.head.head_geom",
+      "type": "Image",
+      "oldId": "86492434726784",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 17,
+      "piece": "Ennemi_RoiOrc.torso.torso_geom",
+      "type": "Mesh",
+      "oldId": "103169819371473",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 18,
+      "piece": "Ennemi_RoiOrc.torso.torso_geom",
+      "type": "Image",
+      "oldId": "89047233881409",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 19,
+      "piece": "Ennemi_RoiOrc.left_arm.left_arm_geom",
+      "type": "Mesh",
+      "oldId": "112642946362491",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 20,
+      "piece": "Ennemi_RoiOrc.left_arm.left_arm_geom",
+      "type": "Image",
+      "oldId": "71021063966201",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 21,
+      "piece": "Ennemi_RoiOrc.right_leg.right_leg_geom",
+      "type": "Mesh",
+      "oldId": "120345676747662",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 22,
+      "piece": "Ennemi_RoiOrc.right_leg.right_leg_geom",
+      "type": "Image",
+      "oldId": "104127734950939",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 23,
+      "piece": "Ennemi_RoiOrc.equipement.PicEpaule (×6)",
+      "type": "Mesh",
+      "oldId": "76920860898675",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 24,
+      "piece": "Ennemi_RoiOrc.equipement.PicEpaule (×6)",
+      "type": "Image",
+      "oldId": "106173864750963",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 25,
+      "piece": "Ennemi_RoiOrc.equipement.Banniere",
+      "type": "Mesh",
+      "oldId": "77672111260396",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 26,
+      "piece": "Ennemi_RoiOrc.equipement.Banniere",
+      "type": "Image",
+      "oldId": "127067342414177",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 27,
+      "piece": "Ennemi_RoiOrc.equipement.Crane_* (×6)",
+      "type": "Mesh",
+      "oldId": "128823418999050",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 28,
+      "piece": "Ennemi_RoiOrc.equipement.Crane_* (×6)",
+      "type": "Image",
+      "oldId": "137802160115556",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 29,
+      "piece": "Ennemi_RoiOrc.equipement.Bouclier",
+      "type": "Mesh",
+      "oldId": "103134695447206",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 30,
+      "piece": "Ennemi_RoiOrc.equipement.Bouclier",
+      "type": "Image",
+      "oldId": "109779900654607",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 31,
+      "piece": "Ennemi_RoiOrc.equipement.LanceHache",
+      "type": "Mesh",
+      "oldId": "92918638208135",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 32,
+      "piece": "Ennemi_RoiOrc.equipement.LanceHache",
+      "type": "Image",
+      "oldId": "110216625447839",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 33,
+      "piece": "Ennemi_RoiOrc.right_arm.right_arm_geom",
+      "type": "Mesh",
+      "oldId": "88212818943279",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 34,
+      "piece": "Ennemi_RoiOrc.right_arm.right_arm_geom",
+      "type": "Image",
+      "oldId": "132415709293143",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 35,
+      "piece": "Ennemi_RoiOrc.left_leg.left_leg_geom",
+      "type": "Mesh",
+      "oldId": "88564351715228",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 36,
+      "piece": "Ennemi_RoiOrc.left_leg.left_leg_geom",
+      "type": "Image",
+      "oldId": "107838959573949",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 37,
+      "piece": "Ennemi_RoiOrc.head_with_crown.body.body_geom",
+      "type": "Mesh",
+      "oldId": "74928021945535",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 38,
+      "piece": "Ennemi_RoiOrc.head_with_crown.body.body_geom",
+      "type": "Image",
+      "oldId": "90913400970426",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 39,
+      "piece": "Ennemi_Slime.eyes.eyes_geom",
+      "type": "Mesh",
+      "oldId": "129245853106269",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 40,
+      "piece": "Ennemi_Slime.eyes.eyes_geom",
+      "type": "Image",
+      "oldId": "94292621457911",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 41,
+      "piece": "Ennemi_Slime.leaves.leaf_* (×5)",
+      "type": "Mesh",
+      "oldId": "113765157023718",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 42,
+      "piece": "Ennemi_Slime.leaves.leaf_* (×5)",
+      "type": "Image",
+      "oldId": "133088852825329",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 43,
+      "piece": "Ennemi_Slime.body.body_geom",
+      "type": "Mesh",
+      "oldId": "98155401096105",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 44,
+      "piece": "Ennemi_Slime.body.body_geom",
+      "type": "Image",
+      "oldId": "107504521703864",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 45,
+      "piece": "Heros_EcuyerDuRempart.right_leg.right_leg_geom",
+      "type": "Mesh",
+      "oldId": "97234781530135",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 46,
+      "piece": "Heros_EcuyerDuRempart.right_leg.right_leg_geom",
+      "type": "Image",
+      "oldId": "93433962987135",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 47,
+      "piece": "Heros_EcuyerDuRempart.torso.torso_geom",
+      "type": "Mesh",
+      "oldId": "129637362589534",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 48,
+      "piece": "Heros_EcuyerDuRempart.torso.torso_geom",
+      "type": "Image",
+      "oldId": "89548083677613",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 49,
+      "piece": "Heros_EcuyerDuRempart.short_sword.short_sword_geom",
+      "type": "Mesh",
+      "oldId": "75240985056567",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 50,
+      "piece": "Heros_EcuyerDuRempart.short_sword.short_sword_geom",
+      "type": "Image",
+      "oldId": "120503126450909",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 51,
+      "piece": "Heros_EcuyerDuRempart.equipement.cor_geom",
+      "type": "Mesh",
+      "oldId": "95365998598761",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 52,
+      "piece": "Heros_EcuyerDuRempart.equipement.cor_geom",
+      "type": "Image",
+      "oldId": "71818071718386",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 53,
+      "piece": "Heros_EcuyerDuRempart.left_arm.left_arm_geom",
+      "type": "Mesh",
+      "oldId": "81109617321251",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 54,
+      "piece": "Heros_EcuyerDuRempart.left_arm.left_arm_geom",
+      "type": "Image",
+      "oldId": "139280197908279",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 55,
+      "piece": "Heros_EcuyerDuRempart.head.head_geom",
+      "type": "Mesh",
+      "oldId": "122530650491358",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 56,
+      "piece": "Heros_EcuyerDuRempart.head.head_geom",
+      "type": "Image",
+      "oldId": "126970221416552",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 57,
+      "piece": "Heros_EcuyerDuRempart.shield.shield_geom",
+      "type": "Mesh",
+      "oldId": "97369384895028",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 58,
+      "piece": "Heros_EcuyerDuRempart.shield.shield_geom",
+      "type": "Image",
+      "oldId": "98599059173902",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 59,
+      "piece": "Heros_EcuyerDuRempart.right_arm.right_arm_geom",
+      "type": "Mesh",
+      "oldId": "70497795151957",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 60,
+      "piece": "Heros_EcuyerDuRempart.right_arm.right_arm_geom",
+      "type": "Image",
+      "oldId": "104195334166006",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 61,
+      "piece": "Heros_EcuyerDuRempart.left_leg.left_leg_geom",
+      "type": "Mesh",
+      "oldId": "92317308860182",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 62,
+      "piece": "Heros_EcuyerDuRempart.left_leg.left_leg_geom",
+      "type": "Image",
+      "oldId": "75603117733240",
+      "oldOwner": "cypher1359"
+    }
+  ]
+}
