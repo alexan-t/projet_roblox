@@ -12,6 +12,8 @@
 //     Publie les fichiers contrôlés sous creationContext.creator.userId = targetOwner.userId du lot
 //     (Assets API, scopes asset:read + asset:write), attend l'opération, puis relit l'asset pour
 //     vérifier le propriétaire. Sans --limit, un seul asset par lancement.
+//   node tools/republish-assets.mjs refresh <lot.json>
+//     Relit propriétaire et modération des assets publiés non encore approuvés (« Reviewing »).
 //   node tools/republish-assets.mjs status <lot.json>
 //   node tools/republish-assets.mjs mapping <lot.json>
 //     Écrit build/republication/<lot>/mapping.luau (bloc MAPPING de tools/studio-replace-asset-ids.luau)
@@ -144,7 +146,8 @@ export function createClient({ key, fetchImpl = fetch, sleep = (ms) => new Promi
 	}
 
 	async function readAsset(assetId) {
-		return (await call("read", `${API}/assets/v1/assets/${assetId}`)).json();
+		// Sans readMask, la réponse ne contient pas moderationResult.
+		return (await call("read", `${API}/assets/v1/assets/${assetId}?readMask=creationContext,moderationResult`)).json();
 	}
 
 	return { download, publish, readAsset, redact };
@@ -269,6 +272,33 @@ export async function runPublish(lot, work, client, options = {}, log = console.
 	return { published, failed, remaining: Math.max(0, todo.length - (options.limit ?? 1)) };
 }
 
+// Relit le propriétaire et la modération des assets publiés mais pas encore approuvés (« Reviewing »).
+export async function runRefresh(lot, work, client, log = console.log) {
+	const userId = String(lot.targetOwner.userId);
+	let approved = 0;
+	let pending = 0;
+	let failed = 0;
+	for (const asset of lot.assets) {
+		const publish = work.state[asset.oldId]?.publish;
+		if (!publish?.newId || (isApproved(publish.moderation) && publish.ownerOk)) continue;
+		try {
+			const meta = await client.readAsset(publish.newId);
+			publish.moderation = meta.moderationResult?.moderationState ?? "INCONNU";
+			publish.owner = String(meta.creationContext?.creator?.userId ?? meta.creationContext?.creator?.groupId ?? "");
+			publish.ownerOk = publish.owner === userId;
+			work.journal({ step: "refresh", oldId: asset.oldId, newId: publish.newId, moderation: publish.moderation, owner: publish.owner });
+			log(`${isApproved(publish.moderation) ? "APPROUVÉ" : publish.moderation} #${asset.n} ${publish.newId}`);
+			if (isApproved(publish.moderation)) approved++;
+			else pending++;
+		} catch (error) {
+			log(`KO   #${asset.n} ${publish.newId} : ${client.redact(error.message)}`);
+			failed++;
+		}
+		work.save();
+	}
+	return { approved, pending, failed };
+}
+
 export function buildMapping(lot, work) {
 	const ready = [];
 	const pending = [];
@@ -327,7 +357,7 @@ async function main() {
 	}
 	const { command, lotFile, options } = parseArgs(process.argv.slice(2));
 	if (!command || !lotFile) {
-		console.log("Usage : node tools/republish-assets.mjs <download|publish|status|mapping> <lot.json> [--only id,id] [--limit N] [--confirm]");
+		console.log("Usage : node tools/republish-assets.mjs <lot|download|publish|refresh|status|mapping> <lot.json> [--only id,id] [--limit N] [--confirm]");
 		process.exit(2);
 	}
 	const lot = loadLot(lotFile);
@@ -345,7 +375,7 @@ async function main() {
 		return;
 	}
 	const client = createClient({ key: loadKey(), log: console.log });
-	const result = command === "download" ? await runDownload(lot, work, client, options) : command === "publish" ? await runPublish(lot, work, client, options) : null;
+	const result = command === "download" ? await runDownload(lot, work, client, options) : command === "publish" ? await runPublish(lot, work, client, options) : command === "refresh" ? await runRefresh(lot, work, client) : null;
 	if (!result) throw new Error(`commande inconnue : ${command}`);
 	console.log(JSON.stringify(result));
 	if (result.failed) process.exitCode = 1;

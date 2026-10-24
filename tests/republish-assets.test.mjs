@@ -6,7 +6,7 @@ import path from "node:path";
 import test from "node:test";
 import zlib from "node:zlib";
 
-import { buildMapping, createClient, inspectFile, loadKey, lotFromCheckOutput, openWorkspace, runDownload, runPublish } from "../tools/republish-assets.mjs";
+import { buildMapping, createClient, inspectFile, loadKey, lotFromCheckOutput, openWorkspace, runDownload, runPublish, runRefresh } from "../tools/republish-assets.mjs";
 
 const KEY = "cle-secrete-de-test-123";
 const png = (w, h) => {
@@ -54,7 +54,7 @@ function fakeRoblox({ files, failFirst = {} }) {
 		m = /^\/assets\/v1\/operations\/op-(\d+)$/.exec(u.pathname);
 		if (m) return json({ done: true, response: { assetId: m[1], moderationResult: { moderationState: "Approved" } } });
 		m = /^\/assets\/v1\/assets\/(\d+)$/.exec(u.pathname);
-		if (m) return json({ assetId: m[1], creationContext: { creator: { userId: "11714751172" } } });
+		if (m) return json({ assetId: m[1], creationContext: { creator: { userId: "11714751172" } }, moderationResult: { moderationState: "Approved" } });
 		return new Response("inconnu", { status: 500 });
 	};
 	return { calls, fetchImpl };
@@ -129,4 +129,18 @@ test("publish : exige --confirm, un asset par défaut, détecte les doublons, pu
 	assert.equal(ready.length, 3);
 	assert.equal(pending.length, 0);
 	assert.match(luau, /\["98155401096105"\] = "\d+",/);
+});
+
+test("refresh : un asset « Reviewing » n'entre dans le mapping qu'une fois approuvé", async () => {
+	const files = { "107504521703864": png(64, 64), "98155401096105": mesh, "111": png(32, 32) };
+	const roblox = fakeRoblox({ files });
+	const client = createClient({ key: KEY, fetchImpl: roblox.fetchImpl, sleep: async () => {} });
+	const work = tmpWork();
+	await runDownload(lot, work, client, {}, quiet);
+	await runPublish(lot, work, client, { confirm: true, limit: 5 }, quiet);
+	work.state["98155401096105"].publish.moderation = "Reviewing";
+	assert.equal(buildMapping(lot, work).pending.length, 1);
+	assert.deepEqual(await runRefresh(lot, work, client, quiet), { approved: 1, pending: 0, failed: 0 });
+	assert.ok(roblox.calls.some((c) => c.url.includes("readMask=creationContext,moderationResult")));
+	assert.equal(buildMapping(lot, work).ready.length, 3);
 });
