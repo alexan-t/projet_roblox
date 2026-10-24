@@ -5,7 +5,7 @@ Périmètre : les 4 modèles de combat à la DA du jeu, **62 AssetIds** (31 mesh
 publiés par `cypher1359`. Propriétaire cible : `nxtoma` (User `11714751172`). Les mannequins R15 de
 `Assets.Combat` sont hors lot (provisoires, à remplacer plutôt qu'à republier).
 
-État : **préparé, rien de publié ni de remplacé.** Voie retenue : C (Open Cloud) ; lecture du n°44 réussie le 24/10, aucune publication.
+État : **préparé, rien de publié ni de remplacé.** Voie retenue : C (Open Cloud) ; lecture des 62 réussie le 24/10, aucune publication.
 
 ## Ce qui a été vérifié dans la place DEV (session de `nxtoma`)
 
@@ -85,6 +85,16 @@ PNG complète ; c'est bien la texture bleue du corps du slime (même taille que 
 publication. Points appris : une clé sans autorisations répond 403 « Scope not authorized »
 (Asset Delivery) et « User not authenticated » (Assets) ; vérifier que la colonne « Mis à jour »
 de la clé a changé après l'ajout des autorisations.
+
+**Lecture des 62 (24/10/2026) : 62/62 téléchargés, aucun refus d'accès, aucune publication.**
+- 31 meshes : format Roblox binaire `version 2.00` (celui qu'accepte l'Assets API pour un mesh
+  issu d'Asset Delivery), taille de chaque fichier cohérente avec son en-tête (sommets et faces),
+  69 937 triangles au total, de 18 à 319 Ko.
+- 31 textures : PNG 1024 × 1024, de 0,8 à 1,6 Mo, structure complète (IHDR, IDAT, IEND). Douze
+  d'entre elles portent 1 à 3 espaces après la fin de l'image (`IEND`), sans effet sur l'image :
+  fichiers gardés tels quels.
+- Aucun doublon de contenu (62 empreintes SHA-256 distinctes), 39,4 Mo au total, rien au-dessus
+  de la limite de 20 Mo ; la clé n'apparaît ni dans le journal ni dans `state.json`.
 
 La voie est prévue par Roblox : l'Assets API accepte un mesh « uniquement s'il a été téléchargé par
 l'Asset Delivery API » et renvoie vers l'Importer « si vous n'essayez pas de télécharger puis
