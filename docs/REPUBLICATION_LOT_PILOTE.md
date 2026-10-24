@@ -5,7 +5,7 @@ Périmètre : les 4 modèles de combat à la DA du jeu, **62 AssetIds** (31 mesh
 publiés par `cypher1359`. Propriétaire cible : `nxtoma` (User `11714751172`). Les mannequins R15 de
 `Assets.Combat` sont hors lot (provisoires, à remplacer plutôt qu'à republier).
 
-État : **préparé, rien de publié ni de remplacé.** Voie retenue : C (Open Cloud), en attente de la clé de `nxtoma` pour le test du n°44.
+État : **préparé, rien de publié ni de remplacé.** Voie retenue : C (Open Cloud) ; lecture du n°44 réussie le 24/10, aucune publication.
 
 ## Ce qui a été vérifié dans la place DEV (session de `nxtoma`)
 
@@ -76,7 +76,15 @@ restent en place sur Roblox : rien n'est supprimé.
 
 ## Voie C — Open Cloud (étude du 23/10/2026)
 
-### Verdict : faisable, sous réserve d'un test réel sur le n°44
+### Verdict : faisable — lecture du n°44 réussie le 24/10/2026
+
+Avec la clé `RepublicationAssets` de `nxtoma` (Assets lecture + écriture, Legacy Assets
+`legacy-asset:manage`), `download --only 107504521703864` récupère l'original de l'asset de
+`cypher1359` : PNG 1024 × 1024, RGBA 8 bits, 868 756 octets, SHA-256 `16dfb87f…ddc5f`, structure
+PNG complète ; c'est bien la texture bleue du corps du slime (même taille que dans Studio). Aucune
+publication. Points appris : une clé sans autorisations répond 403 « Scope not authorized »
+(Asset Delivery) et « User not authenticated » (Assets) ; vérifier que la colonne « Mis à jour »
+de la clé a changé après l'ajout des autorisations.
 
 La voie est prévue par Roblox : l'Assets API accepte un mesh « uniquement s'il a été téléchargé par
 l'Asset Delivery API » et renvoie vers l'Importer « si vous n'essayez pas de télécharger puis
