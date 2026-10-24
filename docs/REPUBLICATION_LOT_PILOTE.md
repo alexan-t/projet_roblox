@@ -122,6 +122,14 @@ identifiants tous distincts) ; le bloc `MAPPING` prêt à coller est produit par
 `node tools/republish-assets.mjs mapping …` dans `build/republication/lot-pilote-combat/mapping.luau`.
 **Rien n'a été remplacé dans la place.** Prochaine étape : § 3 de la procédure (`DRY_RUN` d'abord).
 
+**Essai à blanc (`DRY_RUN`, 24/10/2026) : rien écrit.** Avec les 62 paires, sur Workspace,
+ReplicatedStorage et ServerStorage : **1 067 propriétés** à remplacer (627 `MeshId`, 440
+`TextureID`), **0 ancien identifiant introuvable**. Dont 90 dans `ReplicatedStorage.Assets.Combat`
+et 18 dans `ServerStorage.Assets` (Écuyer du Rempart). Le reste : copies et archives
+(`Archive_Bestiaire_DEV` 353, `Workspace.Treant_Arbre` 249 — feuilles du slime —,
+`AtelierAnimation` 120, `AnimationKitArchive` 60, `Workspace.RoiOrc` 42, `Archive_Gobelin` 30,
+slimes du Workspace 46, `Archive_RoiOrc` 20, Bestiaire 18, `Workspace.Gobelin` 16, `Archive_Slime` 5).
+
 La voie est prévue par Roblox : l'Assets API accepte un mesh « uniquement s'il a été téléchargé par
 l'Asset Delivery API » et renvoie vers l'Importer « si vous n'essayez pas de télécharger puis
 republier des meshes ». Les images se republient directement (PNG/JPEG). L'outil
