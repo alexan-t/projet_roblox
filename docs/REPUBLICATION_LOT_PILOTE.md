@@ -66,7 +66,7 @@ et appartient à `nxtoma`.
 
 1. `tools/studio-check-asset-ownership.luau` avec `ROOTS = { game.ReplicatedStorage.Assets.Combat }` :
    les 62 lignes doivent passer à `OK` (seuls les mannequins R15 restent en tiers).
-2. Play dans la place DEV : un combat avec l'Écuyer contre Gobelin, Slime et le Roi Orc (stages 1-1
+2. Play dans la place DEV, **avec un store de recette** (attribut `StoreRecette` sur ServerStorage, `SECURITY.md` § Recettes Studio) : un combat avec l'Écuyer contre Gobelin, Slime et le Roi Orc (stages 1-1
    et 1-5) ; console sans « not authorized » ni « not approved » ; captures, `VISUAL_QA.md` : PASS.
 3. Réinitialiser la caméra après les captures (`MONSTER_PRODUCTION.md`, Outils § A).
 4. Reporter les nouveaux identifiants et le contrôle dans le tableau ci-dessous, puis enregistrer.

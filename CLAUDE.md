@@ -24,6 +24,7 @@ Règles permanentes pour tous les agents. Le détail est dans `docs/`.
 
 - Capture d'écran réelle, puis contrôle avec `docs/VISUAL_QA.md`. Seuls résultats possibles : **PASS** ou **FIX**. Pas de PASS sans capture.
 - Propriété des assets contrôlée (`docs/ASSET_OWNERSHIP.md`) : un asset hors propriétaire de l'expérience donne **FIX**, même si le rendu est bon.
+- Recette Studio qui joue (combat, invocation, récompense…) : store de recette séparé, attribut `StoreRecette` sur ServerStorage, jamais le profil de travail `PlayerData_Studio` (`docs/SECURITY.md` § Recettes Studio).
 - Après des captures avec `screen_capture`, réinitialiser la caméra de Studio (procédure dans `docs/MONSTER_PRODUCTION.md`, § Outils), sinon l'utilisateur perd le clic droit et le clic molette.
 
 ## Propriété des assets (obligatoire)

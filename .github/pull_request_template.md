@@ -6,6 +6,7 @@
 
 - [ ] Suites Luau concernées (`tools/test-*.ps1`) et `node --test tests/`
 - [ ] Studio : rendu contrôlé sur capture réelle (`docs/VISUAL_QA.md`, PASS ou FIX), ou « non testé Studio »
+- [ ] Recette Studio jouée sur un store de recette (`StoreRecette`), jamais sur `PlayerData_Studio` (`docs/SECURITY.md`)
 
 ## Propriété des assets (`docs/ASSET_OWNERSHIP.md`)
 

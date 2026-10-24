@@ -18,14 +18,16 @@ local PlayerDataTypes = require(ReplicatedStorage.Shared.Types.PlayerDataTypes)
 local ProfileStore = require(script.Parent.Parent.Vendor.ProfileStore)
 local DefaultPlayerData = require(script.Parent.Parent.Data.DefaultPlayerData)
 local Migrations = require(script.Parent.Parent.Data.Migrations)
+local StoreName = require(script.Parent.Parent.Data.StoreName)
 
 type PlayerData = PlayerDataTypes.PlayerData
 type Profile = ProfileStore.Profile<PlayerData>
 type ReadyCallback = (player: Player, data: PlayerData) -> ()
 
 local SCOPE = "DataService"
--- Store séparé en Studio : les tests ne touchent jamais aux données des vrais joueurs.
-local STORE_NAME = if RunService:IsStudio() then "PlayerData_Studio" else "PlayerData"
+-- Store séparé en Studio : les tests ne touchent jamais aux données des vrais joueurs. Recette : attribut
+-- StoreRecette de ServerStorage → store dédié, le profil de travail reste intact (docs/SECURITY.md).
+local STORE_NAME = StoreName(RunService:IsStudio(), game:GetService("ServerStorage"):GetAttribute("StoreRecette"))
 
 local KICK_LOAD_FAILED = "Impossible de charger tes données. Réessaie dans quelques instants."
 local KICK_SESSION_ENDED = "Ta session a été ouverte sur un autre serveur. Reconnecte-toi."
