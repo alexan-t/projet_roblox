@@ -51,8 +51,8 @@ alphabétique). Liste détaillée, identifiant par identifiant : relancer
 | Conteneur (Studio) | Assets | Ancien propriétaire | Nouvel AssetId | Contrôle |
 |---|---|---|---|---|
 | `ServerStorage.Assets.Heros` (60 héros, hors Écuyer compté ci-dessous) | 1 042 (≈ 9 images + 9 meshes par héros) | cypher1359 | à publier | FIX-PROPRIETAIRE |
-| `ReplicatedStorage.Assets.Combat` : `Heros_EcuyerDuRempart` (même assets que le héros) | 18 | cypher1359 | à publier | FIX-PROPRIETAIRE |
-| `ReplicatedStorage.Assets.Combat` : `Ennemi_Gobelin`, `Ennemi_RoiOrc`, `Ennemi_Slime` | 44 | cypher1359 | à publier | FIX-PROPRIETAIRE |
+| `ReplicatedStorage.Assets.Combat` : `Heros_EcuyerDuRempart` (même assets que le héros) | 18 | cypher1359 | voir `automation/republication/lot-pilote-combat.mapping.json` | **OK** (lot pilote, 24/10) |
+| `ReplicatedStorage.Assets.Combat` : `Ennemi_Gobelin`, `Ennemi_RoiOrc`, `Ennemi_Slime` | 44 | cypher1359 | voir `automation/republication/lot-pilote-combat.mapping.json` | **OK** (lot pilote, 24/10) |
 | `ServerStorage.Assets.RoyaumeEtats` (`Royaume_Etat1`, `Royaume_Etat2`) | 574 meshes | cypher1359 | à publier | FIX-PROPRIETAIRE |
 | `Workspace.VitrineRoyaumes` (meshes qui ne sont pas déjà dans `RoyaumeEtats` ; les niveaux 1-2 et 4-20 n'en ajoutent pas) | 323 meshes | cypher1359 | à publier | FIX-PROPRIETAIRE |
 | `Workspace.Lobby.Plots` | 82 meshes | cypher1359 | à publier | FIX-PROPRIETAIRE |
@@ -82,7 +82,7 @@ remplacement d'identifiants) et une session Studio de `nxtoma`.
    d'abord à `cypher1359` de **transférer** ses créations (pas de transfert d'asset entre comptes
    sur Roblox à ce jour : republication obligatoire) ; ou passer l'expérience et les assets dans un
    **groupe** commun (le propriétaire cible devient alors le groupe, à republier aussi).
-2. **Lot pilote** (accordé le 23/10, **préparé**) : `ReplicatedStorage.Assets.Combat` (62
+2. **Lot pilote** (accordé le 23/10, **fait le 24/10 : PASS**, voie C Open Cloud, `tools/republish-assets.mjs`) : `ReplicatedStorage.Assets.Combat` (62
    identifiants : Écuyer du Rempart, Gobelin, Roi Orc, Slime). Inventaire et procédure :
    `REPUBLICATION_LOT_PILOTE.md` ; remplacement : `tools/studio-replace-asset-ids.luau`.
 3. **Héros** : même procédure pour les 60 modèles de `ServerStorage.Assets.Heros` (1 060

@@ -5,7 +5,7 @@ Périmètre : les 4 modèles de combat à la DA du jeu, **62 AssetIds** (31 mesh
 publiés par `cypher1359`. Propriétaire cible : `nxtoma` (User `11714751172`). Les mannequins R15 de
 `Assets.Combat` sont hors lot (provisoires, à remplacer plutôt qu'à republier).
 
-État : voie C (Open Cloud). Lecture des 62 réussie ; **62/62 publiés sous nxtoma et approuvés** (24/10) ; **rien remplacé dans Studio**.
+État : **terminé — PASS** (24/10/2026). Voie C (Open Cloud) : 62/62 publiés sous `nxtoma`, approuvés, remplacés dans la place DEV (1 067 propriétés, une étape Ctrl+Z), contrôlés en combat. Place **non enregistrée** par l’outil.
 
 ## Ce qui a été vérifié dans la place DEV (session de `nxtoma`)
 
@@ -130,6 +130,25 @@ et 18 dans `ServerStorage.Assets` (Écuyer du Rempart). Le reste : copies et arc
 `AtelierAnimation` 120, `AnimationKitArchive` 60, `Workspace.RoiOrc` 42, `Archive_Gobelin` 30,
 slimes du Workspace 46, `Archive_RoiOrc` 20, Bestiaire 18, `Workspace.Gobelin` 16, `Archive_Slime` 5).
 
+**Remplacement réel (24/10/2026), avec l'accord de l'utilisateur.** `DRY_RUN = false` avec les 62
+paires : **1 067 propriétés remplacées, 0 échec, 0 introuvable**, en une étape d'annulation
+(`TryBeginRecording` refusé dans le contexte MCP, donc repli `SetWaypoint` : un Ctrl+Z annule tout).
+Ensuite : **0 ancien identifiant** restant dans Workspace, ReplicatedStorage et ServerStorage ;
+`Assets.Combat` : **62/62 assets à `nxtoma`** (`GetProductInfo`), aucune `MeshPart` sans texture.
+
+**Contrôle en combat (Play, place DEV).** Deux combats 1-5 (2 Slimes, 1 Gobelin, Roi Orc) avec
+l'Écuyer du Rempart : victoire, aucune erreur « not authorized » ni « not approved » dans la console
+(seule erreur : `203785492`, mauvais type, préexistante et hors lot). Captures : l'Écuyer et le Roi
+Orc en combat ; puis les quatre modèles côte à côte (copies temporaires côté client, disparues à
+l'arrêt du Play) : textures et volumes complets, aucune pièce grise ou noire, rendu identique à
+l'avant. Caméra de Studio réinitialisée. Effet de bord : les deux combats de test ont été
+enregistrés dans les données Studio de `nxtoma` (+200 XP à l'Écuyer, niveau 11, récompenses).
+
+**Verdict propriété du lot : PASS.** Modèles de combat : tous leurs assets au propriétaire de
+l'expérience, chargés dans l'expérience réelle, rendu inchangé. Reste à faire : enregistrer la place
+(ou laisser l'enregistrement automatique de Team Create) ; les anciens assets de `cypher1359`
+restent en ligne et ne sont plus référencés par ces modèles.
+
 La voie est prévue par Roblox : l'Assets API accepte un mesh « uniquement s'il a été téléchargé par
 l'Asset Delivery API » et renvoie vers l'Importer « si vous n'essayez pas de télécharger puis
 republier des meshes ». Les images se republient directement (PNG/JPEG). L'outil
@@ -227,65 +246,65 @@ construit le lot à partir de la sortie de `tools/studio-check-asset-ownership.l
 
 | # | Pièce (`ReplicatedStorage.Assets.Combat.`…) | Type | Ancien AssetId | Nouvel AssetId | Propriétaire | Autres usages | Contrôle |
 |---|---|---|---|---|---|---|---|
-| 1 | `Ennemi_Gobelin.right_arm.right_arm_geom` | Mesh | `101545816385322` | `118019987921845` | nxtoma | 4 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 2 | `Ennemi_Gobelin.right_arm.right_arm_geom` | Image (texture) | `94160075609716` | `122489477929295` | nxtoma | 4 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 3 | `Ennemi_Gobelin.torso.torso_geom` | Mesh | `126354225080629` | `81994296876896` | nxtoma | 4 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 4 | `Ennemi_Gobelin.torso.torso_geom` | Image (texture) | `133350402446247` | `70791096487300` | nxtoma | 4 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 5 | `Ennemi_Gobelin.spear.spear_geom` | Mesh | `96195836243902` | `113541974019585` | nxtoma | 4 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 6 | `Ennemi_Gobelin.spear.spear_geom` | Image (texture) | `132575861009692` | `133486600178508` | nxtoma | 4 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 7 | `Ennemi_Gobelin.left_arm.left_arm_geom` | Mesh | `113521611304500` | `71224312149669` | nxtoma | 4 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 8 | `Ennemi_Gobelin.left_arm.left_arm_geom` | Image (texture) | `137672384215371` | `92096196512119` | nxtoma | 4 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 9 | `Ennemi_Gobelin.left_leg.left_leg_geom` | Mesh | `110303809370235` | `96318158425033` | nxtoma | 4 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 10 | `Ennemi_Gobelin.left_leg.left_leg_geom` | Image (texture) | `127187795674374` | `118602135911120` | nxtoma | 4 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 11 | `Ennemi_Gobelin.right_leg.right_leg_geom` | Mesh | `93120410964817` | `117264937278211` | nxtoma | 4 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 12 | `Ennemi_Gobelin.right_leg.right_leg_geom` | Image (texture) | `91750919684836` | `114204984519881` | nxtoma | 4 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 13 | `Ennemi_Gobelin.shield.shield_geom` | Mesh | `76677295940265` | `87102039570610` | nxtoma | 4 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 14 | `Ennemi_Gobelin.shield.shield_geom` | Image (texture) | `103378694748388` | `117673756346208` | nxtoma | 4 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 15 | `Ennemi_Gobelin.head.head_geom` | Mesh | `78939162400478` | `130358316394140` | nxtoma | 3 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 16 | `Ennemi_Gobelin.head.head_geom` | Image (texture) | `86492434726784` | `74584973741577` | nxtoma | 3 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 17 | `Ennemi_RoiOrc.torso.torso_geom` | Mesh | `103169819371473` | `71478320323406` | nxtoma | 5 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 18 | `Ennemi_RoiOrc.torso.torso_geom` | Image (texture) | `89047233881409` | `131909660448260` | nxtoma | 5 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 19 | `Ennemi_RoiOrc.left_arm.left_arm_geom` | Mesh | `112642946362491` | `83508421781613` | nxtoma | 5 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 20 | `Ennemi_RoiOrc.left_arm.left_arm_geom` | Image (texture) | `71021063966201` | `94933030878190` | nxtoma | 5 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 21 | `Ennemi_RoiOrc.right_leg.right_leg_geom` | Mesh | `120345676747662` | `133999422924472` | nxtoma | 5 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 22 | `Ennemi_RoiOrc.right_leg.right_leg_geom` | Image (texture) | `104127734950939` | `116626633346484` | nxtoma | 5 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 23 | `Ennemi_RoiOrc.equipement.PicEpaule (×6)` | Mesh | `76920860898675` | `87636398611747` | nxtoma | 36 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 24 | `Ennemi_RoiOrc.equipement.PicEpaule (×6)` | Image (texture) | `106173864750963` | `78819040732523` | nxtoma | 36 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 25 | `Ennemi_RoiOrc.equipement.Banniere` | Mesh | `77672111260396` | `103913987872590` | nxtoma | 6 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 26 | `Ennemi_RoiOrc.equipement.Banniere` | Image (texture) | `127067342414177` | `109755086679920` | nxtoma | 6 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 27 | `Ennemi_RoiOrc.equipement.Crane_* (×6)` | Mesh | `128823418999050` | `118111566866008` | nxtoma | 31 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 28 | `Ennemi_RoiOrc.equipement.Crane_* (×6)` | Image (texture) | `137802160115556` | `137188753864806` | nxtoma | 31 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 29 | `Ennemi_RoiOrc.equipement.Bouclier` | Mesh | `103134695447206` | `128142825890732` | nxtoma | 6 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 30 | `Ennemi_RoiOrc.equipement.Bouclier` | Image (texture) | `109779900654607` | `123558863952095` | nxtoma | 6 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 31 | `Ennemi_RoiOrc.equipement.LanceHache` | Mesh | `92918638208135` | `123778557616030` | nxtoma | 6 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 32 | `Ennemi_RoiOrc.equipement.LanceHache` | Image (texture) | `110216625447839` | `106567354262713` | nxtoma | 6 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 33 | `Ennemi_RoiOrc.right_arm.right_arm_geom` | Mesh | `88212818943279` | `80447193740394` | nxtoma | 5 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 34 | `Ennemi_RoiOrc.right_arm.right_arm_geom` | Image (texture) | `132415709293143` | `133298584671003` | nxtoma | 5 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 35 | `Ennemi_RoiOrc.left_leg.left_leg_geom` | Mesh | `88564351715228` | `131351041069598` | nxtoma | 5 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 36 | `Ennemi_RoiOrc.left_leg.left_leg_geom` | Image (texture) | `107838959573949` | `125589359724732` | nxtoma | 5 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 37 | `Ennemi_RoiOrc.head_with_crown.body.body_geom` | Mesh | `74928021945535` | `136904240008351` | nxtoma | 5 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 38 | `Ennemi_RoiOrc.head_with_crown.body.body_geom` | Image (texture) | `90913400970426` | `91464284331965` | nxtoma | 5 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 39 | `Ennemi_Slime.eyes.eyes_geom` | Mesh | `129245853106269` | `103217877680272` | nxtoma | 9 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 40 | `Ennemi_Slime.eyes.eyes_geom` | Image (texture) | `94292621457911` | `75699595067669` | nxtoma | 9 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 41 | `Ennemi_Slime.leaves.leaf_* (×5)` | Mesh | `113765157023718` | `138349162345677` | nxtoma | 373 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 42 | `Ennemi_Slime.leaves.leaf_* (×5)` | Image (texture) | `133088852825329` | `84960667599065` | nxtoma | 193 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 43 | `Ennemi_Slime.body.body_geom` | Mesh | `98155401096105` | `74639917575152` | nxtoma | 9 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 44 | `Ennemi_Slime.body.body_geom` | Image (texture) | `107504521703864` | `119239276286265` | nxtoma | 2 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 45 | `Heros_EcuyerDuRempart.right_leg.right_leg_geom` | Mesh | `97234781530135` | `84910752867276` | nxtoma | 5 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 46 | `Heros_EcuyerDuRempart.right_leg.right_leg_geom` | Image (texture) | `93433962987135` | `131647612147877` | nxtoma | 5 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 47 | `Heros_EcuyerDuRempart.torso.torso_geom` | Mesh | `129637362589534` | `79255303375631` | nxtoma | 5 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 48 | `Heros_EcuyerDuRempart.torso.torso_geom` | Image (texture) | `89548083677613` | `90369966674713` | nxtoma | 5 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 49 | `Heros_EcuyerDuRempart.short_sword.short_sword_geom` | Mesh | `75240985056567` | `131862534557304` | nxtoma | 5 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 50 | `Heros_EcuyerDuRempart.short_sword.short_sword_geom` | Image (texture) | `120503126450909` | `74008864036987` | nxtoma | 5 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 51 | `Heros_EcuyerDuRempart.equipement.cor_geom` | Mesh | `95365998598761` | `115792453299450` | nxtoma | 5 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 52 | `Heros_EcuyerDuRempart.equipement.cor_geom` | Image (texture) | `71818071718386` | `136322679784475` | nxtoma | 5 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 53 | `Heros_EcuyerDuRempart.left_arm.left_arm_geom` | Mesh | `81109617321251` | `81802835707210` | nxtoma | 5 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 54 | `Heros_EcuyerDuRempart.left_arm.left_arm_geom` | Image (texture) | `139280197908279` | `134612434145275` | nxtoma | 5 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 55 | `Heros_EcuyerDuRempart.head.head_geom` | Mesh | `122530650491358` | `100432254535476` | nxtoma | 5 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 56 | `Heros_EcuyerDuRempart.head.head_geom` | Image (texture) | `126970221416552` | `114034593926138` | nxtoma | 5 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 57 | `Heros_EcuyerDuRempart.shield.shield_geom` | Mesh | `97369384895028` | `93325326276843` | nxtoma | 5 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 58 | `Heros_EcuyerDuRempart.shield.shield_geom` | Image (texture) | `98599059173902` | `86689452203531` | nxtoma | 5 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 59 | `Heros_EcuyerDuRempart.right_arm.right_arm_geom` | Mesh | `70497795151957` | `105735082961553` | nxtoma | 5 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 60 | `Heros_EcuyerDuRempart.right_arm.right_arm_geom` | Image (texture) | `104195334166006` | `119996842821543` | nxtoma | 5 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 61 | `Heros_EcuyerDuRempart.left_leg.left_leg_geom` | Mesh | `92317308860182` | `132987319390929` | nxtoma | 5 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
-| 62 | `Heros_EcuyerDuRempart.left_leg.left_leg_geom` | Image (texture) | `75603117733240` | `111101512256717` | nxtoma | 5 | OK : Approved, contenu identique ; pas encore remplacé dans Studio |
+| 1 | `Ennemi_Gobelin.right_arm.right_arm_geom` | Mesh | `101545816385322` | `118019987921845` | nxtoma | 4 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 2 | `Ennemi_Gobelin.right_arm.right_arm_geom` | Image (texture) | `94160075609716` | `122489477929295` | nxtoma | 4 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 3 | `Ennemi_Gobelin.torso.torso_geom` | Mesh | `126354225080629` | `81994296876896` | nxtoma | 4 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 4 | `Ennemi_Gobelin.torso.torso_geom` | Image (texture) | `133350402446247` | `70791096487300` | nxtoma | 4 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 5 | `Ennemi_Gobelin.spear.spear_geom` | Mesh | `96195836243902` | `113541974019585` | nxtoma | 4 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 6 | `Ennemi_Gobelin.spear.spear_geom` | Image (texture) | `132575861009692` | `133486600178508` | nxtoma | 4 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 7 | `Ennemi_Gobelin.left_arm.left_arm_geom` | Mesh | `113521611304500` | `71224312149669` | nxtoma | 4 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 8 | `Ennemi_Gobelin.left_arm.left_arm_geom` | Image (texture) | `137672384215371` | `92096196512119` | nxtoma | 4 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 9 | `Ennemi_Gobelin.left_leg.left_leg_geom` | Mesh | `110303809370235` | `96318158425033` | nxtoma | 4 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 10 | `Ennemi_Gobelin.left_leg.left_leg_geom` | Image (texture) | `127187795674374` | `118602135911120` | nxtoma | 4 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 11 | `Ennemi_Gobelin.right_leg.right_leg_geom` | Mesh | `93120410964817` | `117264937278211` | nxtoma | 4 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 12 | `Ennemi_Gobelin.right_leg.right_leg_geom` | Image (texture) | `91750919684836` | `114204984519881` | nxtoma | 4 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 13 | `Ennemi_Gobelin.shield.shield_geom` | Mesh | `76677295940265` | `87102039570610` | nxtoma | 4 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 14 | `Ennemi_Gobelin.shield.shield_geom` | Image (texture) | `103378694748388` | `117673756346208` | nxtoma | 4 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 15 | `Ennemi_Gobelin.head.head_geom` | Mesh | `78939162400478` | `130358316394140` | nxtoma | 3 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 16 | `Ennemi_Gobelin.head.head_geom` | Image (texture) | `86492434726784` | `74584973741577` | nxtoma | 3 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 17 | `Ennemi_RoiOrc.torso.torso_geom` | Mesh | `103169819371473` | `71478320323406` | nxtoma | 5 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 18 | `Ennemi_RoiOrc.torso.torso_geom` | Image (texture) | `89047233881409` | `131909660448260` | nxtoma | 5 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 19 | `Ennemi_RoiOrc.left_arm.left_arm_geom` | Mesh | `112642946362491` | `83508421781613` | nxtoma | 5 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 20 | `Ennemi_RoiOrc.left_arm.left_arm_geom` | Image (texture) | `71021063966201` | `94933030878190` | nxtoma | 5 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 21 | `Ennemi_RoiOrc.right_leg.right_leg_geom` | Mesh | `120345676747662` | `133999422924472` | nxtoma | 5 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 22 | `Ennemi_RoiOrc.right_leg.right_leg_geom` | Image (texture) | `104127734950939` | `116626633346484` | nxtoma | 5 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 23 | `Ennemi_RoiOrc.equipement.PicEpaule (×6)` | Mesh | `76920860898675` | `87636398611747` | nxtoma | 36 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 24 | `Ennemi_RoiOrc.equipement.PicEpaule (×6)` | Image (texture) | `106173864750963` | `78819040732523` | nxtoma | 36 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 25 | `Ennemi_RoiOrc.equipement.Banniere` | Mesh | `77672111260396` | `103913987872590` | nxtoma | 6 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 26 | `Ennemi_RoiOrc.equipement.Banniere` | Image (texture) | `127067342414177` | `109755086679920` | nxtoma | 6 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 27 | `Ennemi_RoiOrc.equipement.Crane_* (×6)` | Mesh | `128823418999050` | `118111566866008` | nxtoma | 31 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 28 | `Ennemi_RoiOrc.equipement.Crane_* (×6)` | Image (texture) | `137802160115556` | `137188753864806` | nxtoma | 31 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 29 | `Ennemi_RoiOrc.equipement.Bouclier` | Mesh | `103134695447206` | `128142825890732` | nxtoma | 6 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 30 | `Ennemi_RoiOrc.equipement.Bouclier` | Image (texture) | `109779900654607` | `123558863952095` | nxtoma | 6 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 31 | `Ennemi_RoiOrc.equipement.LanceHache` | Mesh | `92918638208135` | `123778557616030` | nxtoma | 6 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 32 | `Ennemi_RoiOrc.equipement.LanceHache` | Image (texture) | `110216625447839` | `106567354262713` | nxtoma | 6 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 33 | `Ennemi_RoiOrc.right_arm.right_arm_geom` | Mesh | `88212818943279` | `80447193740394` | nxtoma | 5 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 34 | `Ennemi_RoiOrc.right_arm.right_arm_geom` | Image (texture) | `132415709293143` | `133298584671003` | nxtoma | 5 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 35 | `Ennemi_RoiOrc.left_leg.left_leg_geom` | Mesh | `88564351715228` | `131351041069598` | nxtoma | 5 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 36 | `Ennemi_RoiOrc.left_leg.left_leg_geom` | Image (texture) | `107838959573949` | `125589359724732` | nxtoma | 5 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 37 | `Ennemi_RoiOrc.head_with_crown.body.body_geom` | Mesh | `74928021945535` | `136904240008351` | nxtoma | 5 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 38 | `Ennemi_RoiOrc.head_with_crown.body.body_geom` | Image (texture) | `90913400970426` | `91464284331965` | nxtoma | 5 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 39 | `Ennemi_Slime.eyes.eyes_geom` | Mesh | `129245853106269` | `103217877680272` | nxtoma | 9 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 40 | `Ennemi_Slime.eyes.eyes_geom` | Image (texture) | `94292621457911` | `75699595067669` | nxtoma | 9 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 41 | `Ennemi_Slime.leaves.leaf_* (×5)` | Mesh | `113765157023718` | `138349162345677` | nxtoma | 373 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 42 | `Ennemi_Slime.leaves.leaf_* (×5)` | Image (texture) | `133088852825329` | `84960667599065` | nxtoma | 193 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 43 | `Ennemi_Slime.body.body_geom` | Mesh | `98155401096105` | `74639917575152` | nxtoma | 9 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 44 | `Ennemi_Slime.body.body_geom` | Image (texture) | `107504521703864` | `119239276286265` | nxtoma | 2 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 45 | `Heros_EcuyerDuRempart.right_leg.right_leg_geom` | Mesh | `97234781530135` | `84910752867276` | nxtoma | 5 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 46 | `Heros_EcuyerDuRempart.right_leg.right_leg_geom` | Image (texture) | `93433962987135` | `131647612147877` | nxtoma | 5 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 47 | `Heros_EcuyerDuRempart.torso.torso_geom` | Mesh | `129637362589534` | `79255303375631` | nxtoma | 5 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 48 | `Heros_EcuyerDuRempart.torso.torso_geom` | Image (texture) | `89548083677613` | `90369966674713` | nxtoma | 5 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 49 | `Heros_EcuyerDuRempart.short_sword.short_sword_geom` | Mesh | `75240985056567` | `131862534557304` | nxtoma | 5 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 50 | `Heros_EcuyerDuRempart.short_sword.short_sword_geom` | Image (texture) | `120503126450909` | `74008864036987` | nxtoma | 5 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 51 | `Heros_EcuyerDuRempart.equipement.cor_geom` | Mesh | `95365998598761` | `115792453299450` | nxtoma | 5 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 52 | `Heros_EcuyerDuRempart.equipement.cor_geom` | Image (texture) | `71818071718386` | `136322679784475` | nxtoma | 5 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 53 | `Heros_EcuyerDuRempart.left_arm.left_arm_geom` | Mesh | `81109617321251` | `81802835707210` | nxtoma | 5 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 54 | `Heros_EcuyerDuRempart.left_arm.left_arm_geom` | Image (texture) | `139280197908279` | `134612434145275` | nxtoma | 5 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 55 | `Heros_EcuyerDuRempart.head.head_geom` | Mesh | `122530650491358` | `100432254535476` | nxtoma | 5 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 56 | `Heros_EcuyerDuRempart.head.head_geom` | Image (texture) | `126970221416552` | `114034593926138` | nxtoma | 5 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 57 | `Heros_EcuyerDuRempart.shield.shield_geom` | Mesh | `97369384895028` | `93325326276843` | nxtoma | 5 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 58 | `Heros_EcuyerDuRempart.shield.shield_geom` | Image (texture) | `98599059173902` | `86689452203531` | nxtoma | 5 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 59 | `Heros_EcuyerDuRempart.right_arm.right_arm_geom` | Mesh | `70497795151957` | `105735082961553` | nxtoma | 5 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 60 | `Heros_EcuyerDuRempart.right_arm.right_arm_geom` | Image (texture) | `104195334166006` | `119996842821543` | nxtoma | 5 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 61 | `Heros_EcuyerDuRempart.left_leg.left_leg_geom` | Mesh | `92317308860182` | `132987319390929` | nxtoma | 5 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
+| 62 | `Heros_EcuyerDuRempart.left_leg.left_leg_geom` | Image (texture) | `75603117733240` | `111101512256717` | nxtoma | 5 | OK : Approved, contenu identique ; remplacé dans Studio le 24/10 |
