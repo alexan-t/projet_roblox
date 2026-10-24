@@ -1,0 +1,1511 @@
+{
+  "lot": "lot-heros-05",
+  "scope": "ServerStorage.Assets.Heros — Mythique",
+  "targetOwner": {
+    "userId": "11714751172",
+    "name": "nxtoma"
+  },
+  "doc": "docs/REPUBLICATION_LOT_PILOTE.md",
+  "heroes": [
+    "navigateur_des_cieux_renverses",
+    "reine_des_cent_lames",
+    "berger_des_astres",
+    "geant_au_coeur_de_verre",
+    "sorciere_des_marees_lunaires",
+    "chevalier_de_l_eclipse_blanche",
+    "maitre_des_portes_oubliees",
+    "gardienne_du_dragon_dormant",
+    "tisseur_de_destins",
+    "empereur_des_cendres_d_or"
+  ],
+  "assets": [
+    {
+      "n": 1,
+      "piece": "ServerStorage.Assets.Heros[HeroId=navigateur_des_cieux_renverses]",
+      "hero": "navigateur_des_cieux_renverses",
+      "type": "Mesh",
+      "oldId": "116160590436833",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 2,
+      "piece": "ServerStorage.Assets.Heros[HeroId=navigateur_des_cieux_renverses]",
+      "hero": "navigateur_des_cieux_renverses",
+      "type": "Image",
+      "oldId": "77166020069680",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 3,
+      "piece": "ServerStorage.Assets.Heros[HeroId=navigateur_des_cieux_renverses]",
+      "hero": "navigateur_des_cieux_renverses",
+      "type": "Mesh",
+      "oldId": "88482527998420",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 4,
+      "piece": "ServerStorage.Assets.Heros[HeroId=navigateur_des_cieux_renverses]",
+      "hero": "navigateur_des_cieux_renverses",
+      "type": "Image",
+      "oldId": "108334702104915",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 5,
+      "piece": "ServerStorage.Assets.Heros[HeroId=navigateur_des_cieux_renverses]",
+      "hero": "navigateur_des_cieux_renverses",
+      "type": "Mesh",
+      "oldId": "128134435556940",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 6,
+      "piece": "ServerStorage.Assets.Heros[HeroId=navigateur_des_cieux_renverses]",
+      "hero": "navigateur_des_cieux_renverses",
+      "type": "Image",
+      "oldId": "111808125136428",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 7,
+      "piece": "ServerStorage.Assets.Heros[HeroId=navigateur_des_cieux_renverses]",
+      "hero": "navigateur_des_cieux_renverses",
+      "type": "Mesh",
+      "oldId": "99323490115842",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 8,
+      "piece": "ServerStorage.Assets.Heros[HeroId=navigateur_des_cieux_renverses]",
+      "hero": "navigateur_des_cieux_renverses",
+      "type": "Image",
+      "oldId": "91929855958696",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 9,
+      "piece": "ServerStorage.Assets.Heros[HeroId=navigateur_des_cieux_renverses]",
+      "hero": "navigateur_des_cieux_renverses",
+      "type": "Mesh",
+      "oldId": "111415330943633",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 10,
+      "piece": "ServerStorage.Assets.Heros[HeroId=navigateur_des_cieux_renverses]",
+      "hero": "navigateur_des_cieux_renverses",
+      "type": "Image",
+      "oldId": "131900503926683",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 11,
+      "piece": "ServerStorage.Assets.Heros[HeroId=navigateur_des_cieux_renverses]",
+      "hero": "navigateur_des_cieux_renverses",
+      "type": "Mesh",
+      "oldId": "119483035138603",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 12,
+      "piece": "ServerStorage.Assets.Heros[HeroId=navigateur_des_cieux_renverses]",
+      "hero": "navigateur_des_cieux_renverses",
+      "type": "Mesh",
+      "oldId": "110973134299920",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 13,
+      "piece": "ServerStorage.Assets.Heros[HeroId=navigateur_des_cieux_renverses]",
+      "hero": "navigateur_des_cieux_renverses",
+      "type": "Image",
+      "oldId": "126951932503360",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 14,
+      "piece": "ServerStorage.Assets.Heros[HeroId=navigateur_des_cieux_renverses]",
+      "hero": "navigateur_des_cieux_renverses",
+      "type": "Mesh",
+      "oldId": "111863982711865",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 15,
+      "piece": "ServerStorage.Assets.Heros[HeroId=navigateur_des_cieux_renverses]",
+      "hero": "navigateur_des_cieux_renverses",
+      "type": "Image",
+      "oldId": "85323990959311",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 16,
+      "piece": "ServerStorage.Assets.Heros[HeroId=navigateur_des_cieux_renverses]",
+      "hero": "navigateur_des_cieux_renverses",
+      "type": "Mesh",
+      "oldId": "126074992580650",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 17,
+      "piece": "ServerStorage.Assets.Heros[HeroId=navigateur_des_cieux_renverses]",
+      "hero": "navigateur_des_cieux_renverses",
+      "type": "Image",
+      "oldId": "131096460085450",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 18,
+      "piece": "ServerStorage.Assets.Heros[HeroId=reine_des_cent_lames]",
+      "hero": "reine_des_cent_lames",
+      "type": "Mesh",
+      "oldId": "96726330497459",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 19,
+      "piece": "ServerStorage.Assets.Heros[HeroId=reine_des_cent_lames]",
+      "hero": "reine_des_cent_lames",
+      "type": "Image",
+      "oldId": "138636399408206",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 20,
+      "piece": "ServerStorage.Assets.Heros[HeroId=reine_des_cent_lames]",
+      "hero": "reine_des_cent_lames",
+      "type": "Mesh",
+      "oldId": "77100801216425",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 21,
+      "piece": "ServerStorage.Assets.Heros[HeroId=reine_des_cent_lames]",
+      "hero": "reine_des_cent_lames",
+      "type": "Image",
+      "oldId": "112668004682619",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 22,
+      "piece": "ServerStorage.Assets.Heros[HeroId=reine_des_cent_lames]",
+      "hero": "reine_des_cent_lames",
+      "type": "Mesh",
+      "oldId": "90526074481696",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 23,
+      "piece": "ServerStorage.Assets.Heros[HeroId=reine_des_cent_lames]",
+      "hero": "reine_des_cent_lames",
+      "type": "Image",
+      "oldId": "118905621518345",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 24,
+      "piece": "ServerStorage.Assets.Heros[HeroId=reine_des_cent_lames]",
+      "hero": "reine_des_cent_lames",
+      "type": "Mesh",
+      "oldId": "83269499278842",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 25,
+      "piece": "ServerStorage.Assets.Heros[HeroId=reine_des_cent_lames]",
+      "hero": "reine_des_cent_lames",
+      "type": "Image",
+      "oldId": "114328344289670",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 26,
+      "piece": "ServerStorage.Assets.Heros[HeroId=reine_des_cent_lames]",
+      "hero": "reine_des_cent_lames",
+      "type": "Mesh",
+      "oldId": "125946181135357",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 27,
+      "piece": "ServerStorage.Assets.Heros[HeroId=reine_des_cent_lames]",
+      "hero": "reine_des_cent_lames",
+      "type": "Image",
+      "oldId": "133794040368842",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 28,
+      "piece": "ServerStorage.Assets.Heros[HeroId=reine_des_cent_lames]",
+      "hero": "reine_des_cent_lames",
+      "type": "Mesh",
+      "oldId": "122861174349572",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 29,
+      "piece": "ServerStorage.Assets.Heros[HeroId=reine_des_cent_lames]",
+      "hero": "reine_des_cent_lames",
+      "type": "Image",
+      "oldId": "71975880498485",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 30,
+      "piece": "ServerStorage.Assets.Heros[HeroId=reine_des_cent_lames]",
+      "hero": "reine_des_cent_lames",
+      "type": "Mesh",
+      "oldId": "135773621803261",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 31,
+      "piece": "ServerStorage.Assets.Heros[HeroId=reine_des_cent_lames]",
+      "hero": "reine_des_cent_lames",
+      "type": "Image",
+      "oldId": "126260114023355",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 32,
+      "piece": "ServerStorage.Assets.Heros[HeroId=reine_des_cent_lames]",
+      "hero": "reine_des_cent_lames",
+      "type": "Mesh",
+      "oldId": "108733425028314",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 33,
+      "piece": "ServerStorage.Assets.Heros[HeroId=reine_des_cent_lames]",
+      "hero": "reine_des_cent_lames",
+      "type": "Image",
+      "oldId": "140654353014171",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 34,
+      "piece": "ServerStorage.Assets.Heros[HeroId=reine_des_cent_lames]",
+      "hero": "reine_des_cent_lames",
+      "type": "Mesh",
+      "oldId": "107834810277878",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 35,
+      "piece": "ServerStorage.Assets.Heros[HeroId=reine_des_cent_lames]",
+      "hero": "reine_des_cent_lames",
+      "type": "Image",
+      "oldId": "99399649579796",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 36,
+      "piece": "ServerStorage.Assets.Heros[HeroId=berger_des_astres]",
+      "hero": "berger_des_astres",
+      "type": "Mesh",
+      "oldId": "79054367567974",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 37,
+      "piece": "ServerStorage.Assets.Heros[HeroId=berger_des_astres]",
+      "hero": "berger_des_astres",
+      "type": "Image",
+      "oldId": "76406694916535",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 38,
+      "piece": "ServerStorage.Assets.Heros[HeroId=berger_des_astres]",
+      "hero": "berger_des_astres",
+      "type": "Mesh",
+      "oldId": "122226261133312",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 39,
+      "piece": "ServerStorage.Assets.Heros[HeroId=berger_des_astres]",
+      "hero": "berger_des_astres",
+      "type": "Image",
+      "oldId": "136711295933189",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 40,
+      "piece": "ServerStorage.Assets.Heros[HeroId=berger_des_astres]",
+      "hero": "berger_des_astres",
+      "type": "Mesh",
+      "oldId": "108662933652998",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 41,
+      "piece": "ServerStorage.Assets.Heros[HeroId=berger_des_astres]",
+      "hero": "berger_des_astres",
+      "type": "Image",
+      "oldId": "136384436977521",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 42,
+      "piece": "ServerStorage.Assets.Heros[HeroId=berger_des_astres]",
+      "hero": "berger_des_astres",
+      "type": "Mesh",
+      "oldId": "118478603571132",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 43,
+      "piece": "ServerStorage.Assets.Heros[HeroId=berger_des_astres]",
+      "hero": "berger_des_astres",
+      "type": "Image",
+      "oldId": "74838945515657",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 44,
+      "piece": "ServerStorage.Assets.Heros[HeroId=berger_des_astres]",
+      "hero": "berger_des_astres",
+      "type": "Mesh",
+      "oldId": "100804853225403",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 45,
+      "piece": "ServerStorage.Assets.Heros[HeroId=berger_des_astres]",
+      "hero": "berger_des_astres",
+      "type": "Image",
+      "oldId": "90563658121650",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 46,
+      "piece": "ServerStorage.Assets.Heros[HeroId=berger_des_astres]",
+      "hero": "berger_des_astres",
+      "type": "Mesh",
+      "oldId": "101370700901454",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 47,
+      "piece": "ServerStorage.Assets.Heros[HeroId=berger_des_astres]",
+      "hero": "berger_des_astres",
+      "type": "Image",
+      "oldId": "113064385587244",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 48,
+      "piece": "ServerStorage.Assets.Heros[HeroId=berger_des_astres]",
+      "hero": "berger_des_astres",
+      "type": "Mesh",
+      "oldId": "73022431841080",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 49,
+      "piece": "ServerStorage.Assets.Heros[HeroId=berger_des_astres]",
+      "hero": "berger_des_astres",
+      "type": "Image",
+      "oldId": "101635327687211",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 50,
+      "piece": "ServerStorage.Assets.Heros[HeroId=berger_des_astres]",
+      "hero": "berger_des_astres",
+      "type": "Mesh",
+      "oldId": "125507973159949",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 51,
+      "piece": "ServerStorage.Assets.Heros[HeroId=berger_des_astres]",
+      "hero": "berger_des_astres",
+      "type": "Mesh",
+      "oldId": "137687777649346",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 52,
+      "piece": "ServerStorage.Assets.Heros[HeroId=berger_des_astres]",
+      "hero": "berger_des_astres",
+      "type": "Image",
+      "oldId": "94396375024221",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 53,
+      "piece": "ServerStorage.Assets.Heros[HeroId=geant_au_coeur_de_verre]",
+      "hero": "geant_au_coeur_de_verre",
+      "type": "Mesh",
+      "oldId": "78745770932291",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 54,
+      "piece": "ServerStorage.Assets.Heros[HeroId=geant_au_coeur_de_verre]",
+      "hero": "geant_au_coeur_de_verre",
+      "type": "Image",
+      "oldId": "119407531979976",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 55,
+      "piece": "ServerStorage.Assets.Heros[HeroId=geant_au_coeur_de_verre]",
+      "hero": "geant_au_coeur_de_verre",
+      "type": "Mesh",
+      "oldId": "123517992346991",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 56,
+      "piece": "ServerStorage.Assets.Heros[HeroId=geant_au_coeur_de_verre]",
+      "hero": "geant_au_coeur_de_verre",
+      "type": "Image",
+      "oldId": "133507754742280",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 57,
+      "piece": "ServerStorage.Assets.Heros[HeroId=geant_au_coeur_de_verre]",
+      "hero": "geant_au_coeur_de_verre",
+      "type": "Mesh",
+      "oldId": "86812832153694",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 58,
+      "piece": "ServerStorage.Assets.Heros[HeroId=geant_au_coeur_de_verre]",
+      "hero": "geant_au_coeur_de_verre",
+      "type": "Image",
+      "oldId": "137967677404637",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 59,
+      "piece": "ServerStorage.Assets.Heros[HeroId=geant_au_coeur_de_verre]",
+      "hero": "geant_au_coeur_de_verre",
+      "type": "Mesh",
+      "oldId": "80818081171712",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 60,
+      "piece": "ServerStorage.Assets.Heros[HeroId=geant_au_coeur_de_verre]",
+      "hero": "geant_au_coeur_de_verre",
+      "type": "Image",
+      "oldId": "79450135265481",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 61,
+      "piece": "ServerStorage.Assets.Heros[HeroId=geant_au_coeur_de_verre]",
+      "hero": "geant_au_coeur_de_verre",
+      "type": "Mesh",
+      "oldId": "90215234939398",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 62,
+      "piece": "ServerStorage.Assets.Heros[HeroId=geant_au_coeur_de_verre]",
+      "hero": "geant_au_coeur_de_verre",
+      "type": "Image",
+      "oldId": "112864294683911",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 63,
+      "piece": "ServerStorage.Assets.Heros[HeroId=geant_au_coeur_de_verre]",
+      "hero": "geant_au_coeur_de_verre",
+      "type": "Mesh",
+      "oldId": "116514908079533",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 64,
+      "piece": "ServerStorage.Assets.Heros[HeroId=geant_au_coeur_de_verre]",
+      "hero": "geant_au_coeur_de_verre",
+      "type": "Image",
+      "oldId": "74351673378262",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 65,
+      "piece": "ServerStorage.Assets.Heros[HeroId=geant_au_coeur_de_verre]",
+      "hero": "geant_au_coeur_de_verre",
+      "type": "Mesh",
+      "oldId": "138661830335377",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 66,
+      "piece": "ServerStorage.Assets.Heros[HeroId=geant_au_coeur_de_verre]",
+      "hero": "geant_au_coeur_de_verre",
+      "type": "Mesh",
+      "oldId": "112777198072306",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 67,
+      "piece": "ServerStorage.Assets.Heros[HeroId=geant_au_coeur_de_verre]",
+      "hero": "geant_au_coeur_de_verre",
+      "type": "Image",
+      "oldId": "132275955008110",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 68,
+      "piece": "ServerStorage.Assets.Heros[HeroId=geant_au_coeur_de_verre]",
+      "hero": "geant_au_coeur_de_verre",
+      "type": "Mesh",
+      "oldId": "134556629836680",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 69,
+      "piece": "ServerStorage.Assets.Heros[HeroId=geant_au_coeur_de_verre]",
+      "hero": "geant_au_coeur_de_verre",
+      "type": "Image",
+      "oldId": "133392723286764",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 70,
+      "piece": "ServerStorage.Assets.Heros[HeroId=geant_au_coeur_de_verre]",
+      "hero": "geant_au_coeur_de_verre",
+      "type": "Mesh",
+      "oldId": "89115383552346",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 71,
+      "piece": "ServerStorage.Assets.Heros[HeroId=geant_au_coeur_de_verre]",
+      "hero": "geant_au_coeur_de_verre",
+      "type": "Image",
+      "oldId": "101931418458256",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 72,
+      "piece": "ServerStorage.Assets.Heros[HeroId=sorciere_des_marees_lunaires]",
+      "hero": "sorciere_des_marees_lunaires",
+      "type": "Mesh",
+      "oldId": "128431926879502",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 73,
+      "piece": "ServerStorage.Assets.Heros[HeroId=sorciere_des_marees_lunaires]",
+      "hero": "sorciere_des_marees_lunaires",
+      "type": "Image",
+      "oldId": "121760035889920",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 74,
+      "piece": "ServerStorage.Assets.Heros[HeroId=sorciere_des_marees_lunaires]",
+      "hero": "sorciere_des_marees_lunaires",
+      "type": "Mesh",
+      "oldId": "76488997849774",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 75,
+      "piece": "ServerStorage.Assets.Heros[HeroId=sorciere_des_marees_lunaires]",
+      "hero": "sorciere_des_marees_lunaires",
+      "type": "Mesh",
+      "oldId": "125828121448328",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 76,
+      "piece": "ServerStorage.Assets.Heros[HeroId=sorciere_des_marees_lunaires]",
+      "hero": "sorciere_des_marees_lunaires",
+      "type": "Image",
+      "oldId": "138524133770824",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 77,
+      "piece": "ServerStorage.Assets.Heros[HeroId=sorciere_des_marees_lunaires]",
+      "hero": "sorciere_des_marees_lunaires",
+      "type": "Mesh",
+      "oldId": "95218346366458",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 78,
+      "piece": "ServerStorage.Assets.Heros[HeroId=sorciere_des_marees_lunaires]",
+      "hero": "sorciere_des_marees_lunaires",
+      "type": "Image",
+      "oldId": "90592552795112",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 79,
+      "piece": "ServerStorage.Assets.Heros[HeroId=sorciere_des_marees_lunaires]",
+      "hero": "sorciere_des_marees_lunaires",
+      "type": "Mesh",
+      "oldId": "136102694875523",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 80,
+      "piece": "ServerStorage.Assets.Heros[HeroId=sorciere_des_marees_lunaires]",
+      "hero": "sorciere_des_marees_lunaires",
+      "type": "Image",
+      "oldId": "132761171798468",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 81,
+      "piece": "ServerStorage.Assets.Heros[HeroId=sorciere_des_marees_lunaires]",
+      "hero": "sorciere_des_marees_lunaires",
+      "type": "Mesh",
+      "oldId": "135709901663489",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 82,
+      "piece": "ServerStorage.Assets.Heros[HeroId=sorciere_des_marees_lunaires]",
+      "hero": "sorciere_des_marees_lunaires",
+      "type": "Image",
+      "oldId": "80484060207614",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 83,
+      "piece": "ServerStorage.Assets.Heros[HeroId=sorciere_des_marees_lunaires]",
+      "hero": "sorciere_des_marees_lunaires",
+      "type": "Mesh",
+      "oldId": "87208314666474",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 84,
+      "piece": "ServerStorage.Assets.Heros[HeroId=sorciere_des_marees_lunaires]",
+      "hero": "sorciere_des_marees_lunaires",
+      "type": "Image",
+      "oldId": "131686565754008",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 85,
+      "piece": "ServerStorage.Assets.Heros[HeroId=sorciere_des_marees_lunaires]",
+      "hero": "sorciere_des_marees_lunaires",
+      "type": "Mesh",
+      "oldId": "87083873842440",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 86,
+      "piece": "ServerStorage.Assets.Heros[HeroId=sorciere_des_marees_lunaires]",
+      "hero": "sorciere_des_marees_lunaires",
+      "type": "Image",
+      "oldId": "95388243031501",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 87,
+      "piece": "ServerStorage.Assets.Heros[HeroId=sorciere_des_marees_lunaires]",
+      "hero": "sorciere_des_marees_lunaires",
+      "type": "Mesh",
+      "oldId": "76579550194886",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 88,
+      "piece": "ServerStorage.Assets.Heros[HeroId=sorciere_des_marees_lunaires]",
+      "hero": "sorciere_des_marees_lunaires",
+      "type": "Image",
+      "oldId": "100774816399677",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 89,
+      "piece": "ServerStorage.Assets.Heros[HeroId=sorciere_des_marees_lunaires]",
+      "hero": "sorciere_des_marees_lunaires",
+      "type": "Mesh",
+      "oldId": "89680445917577",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 90,
+      "piece": "ServerStorage.Assets.Heros[HeroId=sorciere_des_marees_lunaires]",
+      "hero": "sorciere_des_marees_lunaires",
+      "type": "Image",
+      "oldId": "111207075802961",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 91,
+      "piece": "ServerStorage.Assets.Heros[HeroId=sorciere_des_marees_lunaires]",
+      "hero": "sorciere_des_marees_lunaires",
+      "type": "Mesh",
+      "oldId": "82309088826307",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 92,
+      "piece": "ServerStorage.Assets.Heros[HeroId=sorciere_des_marees_lunaires]",
+      "hero": "sorciere_des_marees_lunaires",
+      "type": "Image",
+      "oldId": "110548201998517",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 93,
+      "piece": "ServerStorage.Assets.Heros[HeroId=chevalier_de_l_eclipse_blanche]",
+      "hero": "chevalier_de_l_eclipse_blanche",
+      "type": "Mesh",
+      "oldId": "130359167019598",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 94,
+      "piece": "ServerStorage.Assets.Heros[HeroId=chevalier_de_l_eclipse_blanche]",
+      "hero": "chevalier_de_l_eclipse_blanche",
+      "type": "Image",
+      "oldId": "120697467405426",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 95,
+      "piece": "ServerStorage.Assets.Heros[HeroId=chevalier_de_l_eclipse_blanche]",
+      "hero": "chevalier_de_l_eclipse_blanche",
+      "type": "Mesh",
+      "oldId": "106524484579712",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 96,
+      "piece": "ServerStorage.Assets.Heros[HeroId=chevalier_de_l_eclipse_blanche]",
+      "hero": "chevalier_de_l_eclipse_blanche",
+      "type": "Image",
+      "oldId": "102678798651386",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 97,
+      "piece": "ServerStorage.Assets.Heros[HeroId=chevalier_de_l_eclipse_blanche]",
+      "hero": "chevalier_de_l_eclipse_blanche",
+      "type": "Mesh",
+      "oldId": "90303377488360",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 98,
+      "piece": "ServerStorage.Assets.Heros[HeroId=chevalier_de_l_eclipse_blanche]",
+      "hero": "chevalier_de_l_eclipse_blanche",
+      "type": "Image",
+      "oldId": "110691848540019",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 99,
+      "piece": "ServerStorage.Assets.Heros[HeroId=chevalier_de_l_eclipse_blanche]",
+      "hero": "chevalier_de_l_eclipse_blanche",
+      "type": "Mesh",
+      "oldId": "126240294228060",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 100,
+      "piece": "ServerStorage.Assets.Heros[HeroId=chevalier_de_l_eclipse_blanche]",
+      "hero": "chevalier_de_l_eclipse_blanche",
+      "type": "Image",
+      "oldId": "85507277046712",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 101,
+      "piece": "ServerStorage.Assets.Heros[HeroId=chevalier_de_l_eclipse_blanche]",
+      "hero": "chevalier_de_l_eclipse_blanche",
+      "type": "Mesh",
+      "oldId": "94532373395757",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 102,
+      "piece": "ServerStorage.Assets.Heros[HeroId=chevalier_de_l_eclipse_blanche]",
+      "hero": "chevalier_de_l_eclipse_blanche",
+      "type": "Image",
+      "oldId": "101111448684580",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 103,
+      "piece": "ServerStorage.Assets.Heros[HeroId=chevalier_de_l_eclipse_blanche]",
+      "hero": "chevalier_de_l_eclipse_blanche",
+      "type": "Mesh",
+      "oldId": "82508628402483",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 104,
+      "piece": "ServerStorage.Assets.Heros[HeroId=chevalier_de_l_eclipse_blanche]",
+      "hero": "chevalier_de_l_eclipse_blanche",
+      "type": "Image",
+      "oldId": "101858588106998",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 105,
+      "piece": "ServerStorage.Assets.Heros[HeroId=chevalier_de_l_eclipse_blanche]",
+      "hero": "chevalier_de_l_eclipse_blanche",
+      "type": "Mesh",
+      "oldId": "114942106569374",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 106,
+      "piece": "ServerStorage.Assets.Heros[HeroId=chevalier_de_l_eclipse_blanche]",
+      "hero": "chevalier_de_l_eclipse_blanche",
+      "type": "Image",
+      "oldId": "117546286840412",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 107,
+      "piece": "ServerStorage.Assets.Heros[HeroId=chevalier_de_l_eclipse_blanche]",
+      "hero": "chevalier_de_l_eclipse_blanche",
+      "type": "Mesh",
+      "oldId": "138377543246577",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 108,
+      "piece": "ServerStorage.Assets.Heros[HeroId=chevalier_de_l_eclipse_blanche]",
+      "hero": "chevalier_de_l_eclipse_blanche",
+      "type": "Image",
+      "oldId": "133544011152496",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 109,
+      "piece": "ServerStorage.Assets.Heros[HeroId=chevalier_de_l_eclipse_blanche]",
+      "hero": "chevalier_de_l_eclipse_blanche",
+      "type": "Mesh",
+      "oldId": "77399359836447",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 110,
+      "piece": "ServerStorage.Assets.Heros[HeroId=chevalier_de_l_eclipse_blanche]",
+      "hero": "chevalier_de_l_eclipse_blanche",
+      "type": "Image",
+      "oldId": "83726875712309",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 111,
+      "piece": "ServerStorage.Assets.Heros[HeroId=chevalier_de_l_eclipse_blanche]",
+      "hero": "chevalier_de_l_eclipse_blanche",
+      "type": "Mesh",
+      "oldId": "90854362447960",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 112,
+      "piece": "ServerStorage.Assets.Heros[HeroId=chevalier_de_l_eclipse_blanche]",
+      "hero": "chevalier_de_l_eclipse_blanche",
+      "type": "Image",
+      "oldId": "102985143494018",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 113,
+      "piece": "ServerStorage.Assets.Heros[HeroId=maitre_des_portes_oubliees]",
+      "hero": "maitre_des_portes_oubliees",
+      "type": "Mesh",
+      "oldId": "103374438005934",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 114,
+      "piece": "ServerStorage.Assets.Heros[HeroId=maitre_des_portes_oubliees]",
+      "hero": "maitre_des_portes_oubliees",
+      "type": "Image",
+      "oldId": "101566388135601",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 115,
+      "piece": "ServerStorage.Assets.Heros[HeroId=maitre_des_portes_oubliees]",
+      "hero": "maitre_des_portes_oubliees",
+      "type": "Mesh",
+      "oldId": "127661320401124",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 116,
+      "piece": "ServerStorage.Assets.Heros[HeroId=maitre_des_portes_oubliees]",
+      "hero": "maitre_des_portes_oubliees",
+      "type": "Image",
+      "oldId": "71182312860434",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 117,
+      "piece": "ServerStorage.Assets.Heros[HeroId=maitre_des_portes_oubliees]",
+      "hero": "maitre_des_portes_oubliees",
+      "type": "Mesh",
+      "oldId": "104046050847773",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 118,
+      "piece": "ServerStorage.Assets.Heros[HeroId=maitre_des_portes_oubliees]",
+      "hero": "maitre_des_portes_oubliees",
+      "type": "Image",
+      "oldId": "109489586860137",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 119,
+      "piece": "ServerStorage.Assets.Heros[HeroId=maitre_des_portes_oubliees]",
+      "hero": "maitre_des_portes_oubliees",
+      "type": "Mesh",
+      "oldId": "93524226807725",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 120,
+      "piece": "ServerStorage.Assets.Heros[HeroId=maitre_des_portes_oubliees]",
+      "hero": "maitre_des_portes_oubliees",
+      "type": "Image",
+      "oldId": "95637806350178",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 121,
+      "piece": "ServerStorage.Assets.Heros[HeroId=maitre_des_portes_oubliees]",
+      "hero": "maitre_des_portes_oubliees",
+      "type": "Mesh",
+      "oldId": "134599559591734",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 122,
+      "piece": "ServerStorage.Assets.Heros[HeroId=maitre_des_portes_oubliees]",
+      "hero": "maitre_des_portes_oubliees",
+      "type": "Image",
+      "oldId": "98424510221734",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 123,
+      "piece": "ServerStorage.Assets.Heros[HeroId=maitre_des_portes_oubliees]",
+      "hero": "maitre_des_portes_oubliees",
+      "type": "Mesh",
+      "oldId": "94712770188509",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 124,
+      "piece": "ServerStorage.Assets.Heros[HeroId=maitre_des_portes_oubliees]",
+      "hero": "maitre_des_portes_oubliees",
+      "type": "Image",
+      "oldId": "138450557201975",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 125,
+      "piece": "ServerStorage.Assets.Heros[HeroId=maitre_des_portes_oubliees]",
+      "hero": "maitre_des_portes_oubliees",
+      "type": "Mesh",
+      "oldId": "135210654117553",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 126,
+      "piece": "ServerStorage.Assets.Heros[HeroId=maitre_des_portes_oubliees]",
+      "hero": "maitre_des_portes_oubliees",
+      "type": "Image",
+      "oldId": "129600414340103",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 127,
+      "piece": "ServerStorage.Assets.Heros[HeroId=maitre_des_portes_oubliees]",
+      "hero": "maitre_des_portes_oubliees",
+      "type": "Mesh",
+      "oldId": "121703583604924",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 128,
+      "piece": "ServerStorage.Assets.Heros[HeroId=maitre_des_portes_oubliees]",
+      "hero": "maitre_des_portes_oubliees",
+      "type": "Image",
+      "oldId": "134719836706673",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 129,
+      "piece": "ServerStorage.Assets.Heros[HeroId=maitre_des_portes_oubliees]",
+      "hero": "maitre_des_portes_oubliees",
+      "type": "Mesh",
+      "oldId": "140576363206120",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 130,
+      "piece": "ServerStorage.Assets.Heros[HeroId=maitre_des_portes_oubliees]",
+      "hero": "maitre_des_portes_oubliees",
+      "type": "Image",
+      "oldId": "100523335527169",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 131,
+      "piece": "ServerStorage.Assets.Heros[HeroId=maitre_des_portes_oubliees]",
+      "hero": "maitre_des_portes_oubliees",
+      "type": "Mesh",
+      "oldId": "84898015994501",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 132,
+      "piece": "ServerStorage.Assets.Heros[HeroId=maitre_des_portes_oubliees]",
+      "hero": "maitre_des_portes_oubliees",
+      "type": "Image",
+      "oldId": "124422284428593",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 133,
+      "piece": "ServerStorage.Assets.Heros[HeroId=gardienne_du_dragon_dormant]",
+      "hero": "gardienne_du_dragon_dormant",
+      "type": "Mesh",
+      "oldId": "82821664959129",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 134,
+      "piece": "ServerStorage.Assets.Heros[HeroId=gardienne_du_dragon_dormant]",
+      "hero": "gardienne_du_dragon_dormant",
+      "type": "Image",
+      "oldId": "97337465021122",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 135,
+      "piece": "ServerStorage.Assets.Heros[HeroId=gardienne_du_dragon_dormant]",
+      "hero": "gardienne_du_dragon_dormant",
+      "type": "Mesh",
+      "oldId": "85381539242030",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 136,
+      "piece": "ServerStorage.Assets.Heros[HeroId=gardienne_du_dragon_dormant]",
+      "hero": "gardienne_du_dragon_dormant",
+      "type": "Image",
+      "oldId": "104848437638300",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 137,
+      "piece": "ServerStorage.Assets.Heros[HeroId=gardienne_du_dragon_dormant]",
+      "hero": "gardienne_du_dragon_dormant",
+      "type": "Mesh",
+      "oldId": "122110551099613",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 138,
+      "piece": "ServerStorage.Assets.Heros[HeroId=gardienne_du_dragon_dormant]",
+      "hero": "gardienne_du_dragon_dormant",
+      "type": "Image",
+      "oldId": "113587934291291",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 139,
+      "piece": "ServerStorage.Assets.Heros[HeroId=gardienne_du_dragon_dormant]",
+      "hero": "gardienne_du_dragon_dormant",
+      "type": "Mesh",
+      "oldId": "75830494055897",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 140,
+      "piece": "ServerStorage.Assets.Heros[HeroId=gardienne_du_dragon_dormant]",
+      "hero": "gardienne_du_dragon_dormant",
+      "type": "Image",
+      "oldId": "85045451087520",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 141,
+      "piece": "ServerStorage.Assets.Heros[HeroId=gardienne_du_dragon_dormant]",
+      "hero": "gardienne_du_dragon_dormant",
+      "type": "Mesh",
+      "oldId": "127619312446711",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 142,
+      "piece": "ServerStorage.Assets.Heros[HeroId=gardienne_du_dragon_dormant]",
+      "hero": "gardienne_du_dragon_dormant",
+      "type": "Image",
+      "oldId": "79254088523911",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 143,
+      "piece": "ServerStorage.Assets.Heros[HeroId=gardienne_du_dragon_dormant]",
+      "hero": "gardienne_du_dragon_dormant",
+      "type": "Mesh",
+      "oldId": "134783269122794",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 144,
+      "piece": "ServerStorage.Assets.Heros[HeroId=gardienne_du_dragon_dormant]",
+      "hero": "gardienne_du_dragon_dormant",
+      "type": "Image",
+      "oldId": "82488197545003",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 145,
+      "piece": "ServerStorage.Assets.Heros[HeroId=gardienne_du_dragon_dormant]",
+      "hero": "gardienne_du_dragon_dormant",
+      "type": "Mesh",
+      "oldId": "124716019492472",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 146,
+      "piece": "ServerStorage.Assets.Heros[HeroId=gardienne_du_dragon_dormant]",
+      "hero": "gardienne_du_dragon_dormant",
+      "type": "Image",
+      "oldId": "92388955354824",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 147,
+      "piece": "ServerStorage.Assets.Heros[HeroId=gardienne_du_dragon_dormant]",
+      "hero": "gardienne_du_dragon_dormant",
+      "type": "Mesh",
+      "oldId": "84753498201210",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 148,
+      "piece": "ServerStorage.Assets.Heros[HeroId=gardienne_du_dragon_dormant]",
+      "hero": "gardienne_du_dragon_dormant",
+      "type": "Image",
+      "oldId": "88639691387472",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 149,
+      "piece": "ServerStorage.Assets.Heros[HeroId=gardienne_du_dragon_dormant]",
+      "hero": "gardienne_du_dragon_dormant",
+      "type": "Mesh",
+      "oldId": "87322111027531",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 150,
+      "piece": "ServerStorage.Assets.Heros[HeroId=gardienne_du_dragon_dormant]",
+      "hero": "gardienne_du_dragon_dormant",
+      "type": "Image",
+      "oldId": "136859190914536",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 151,
+      "piece": "ServerStorage.Assets.Heros[HeroId=gardienne_du_dragon_dormant]",
+      "hero": "gardienne_du_dragon_dormant",
+      "type": "Mesh",
+      "oldId": "101362360578504",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 152,
+      "piece": "ServerStorage.Assets.Heros[HeroId=gardienne_du_dragon_dormant]",
+      "hero": "gardienne_du_dragon_dormant",
+      "type": "Image",
+      "oldId": "117360352581772",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 153,
+      "piece": "ServerStorage.Assets.Heros[HeroId=tisseur_de_destins]",
+      "hero": "tisseur_de_destins",
+      "type": "Mesh",
+      "oldId": "73788079908035",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 154,
+      "piece": "ServerStorage.Assets.Heros[HeroId=tisseur_de_destins]",
+      "hero": "tisseur_de_destins",
+      "type": "Image",
+      "oldId": "117914211446132",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 155,
+      "piece": "ServerStorage.Assets.Heros[HeroId=tisseur_de_destins]",
+      "hero": "tisseur_de_destins",
+      "type": "Mesh",
+      "oldId": "105357511153332",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 156,
+      "piece": "ServerStorage.Assets.Heros[HeroId=tisseur_de_destins]",
+      "hero": "tisseur_de_destins",
+      "type": "Image",
+      "oldId": "101037092246200",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 157,
+      "piece": "ServerStorage.Assets.Heros[HeroId=tisseur_de_destins]",
+      "hero": "tisseur_de_destins",
+      "type": "Mesh",
+      "oldId": "118853181867562",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 158,
+      "piece": "ServerStorage.Assets.Heros[HeroId=tisseur_de_destins]",
+      "hero": "tisseur_de_destins",
+      "type": "Image",
+      "oldId": "119237848110701",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 159,
+      "piece": "ServerStorage.Assets.Heros[HeroId=tisseur_de_destins]",
+      "hero": "tisseur_de_destins",
+      "type": "Mesh",
+      "oldId": "84189278517551",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 160,
+      "piece": "ServerStorage.Assets.Heros[HeroId=tisseur_de_destins]",
+      "hero": "tisseur_de_destins",
+      "type": "Image",
+      "oldId": "91492486679597",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 161,
+      "piece": "ServerStorage.Assets.Heros[HeroId=tisseur_de_destins]",
+      "hero": "tisseur_de_destins",
+      "type": "Mesh",
+      "oldId": "79561646165668",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 162,
+      "piece": "ServerStorage.Assets.Heros[HeroId=tisseur_de_destins]",
+      "hero": "tisseur_de_destins",
+      "type": "Image",
+      "oldId": "87167838802283",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 163,
+      "piece": "ServerStorage.Assets.Heros[HeroId=tisseur_de_destins]",
+      "hero": "tisseur_de_destins",
+      "type": "Mesh",
+      "oldId": "134429022317167",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 164,
+      "piece": "ServerStorage.Assets.Heros[HeroId=tisseur_de_destins]",
+      "hero": "tisseur_de_destins",
+      "type": "Image",
+      "oldId": "74930853439996",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 165,
+      "piece": "ServerStorage.Assets.Heros[HeroId=tisseur_de_destins]",
+      "hero": "tisseur_de_destins",
+      "type": "Mesh",
+      "oldId": "88893474293970",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 166,
+      "piece": "ServerStorage.Assets.Heros[HeroId=tisseur_de_destins]",
+      "hero": "tisseur_de_destins",
+      "type": "Image",
+      "oldId": "76514133642210",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 167,
+      "piece": "ServerStorage.Assets.Heros[HeroId=tisseur_de_destins]",
+      "hero": "tisseur_de_destins",
+      "type": "Mesh",
+      "oldId": "98897654878916",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 168,
+      "piece": "ServerStorage.Assets.Heros[HeroId=tisseur_de_destins]",
+      "hero": "tisseur_de_destins",
+      "type": "Image",
+      "oldId": "92343670136556",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 169,
+      "piece": "ServerStorage.Assets.Heros[HeroId=empereur_des_cendres_d_or]",
+      "hero": "empereur_des_cendres_d_or",
+      "type": "Mesh",
+      "oldId": "104252553750375",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 170,
+      "piece": "ServerStorage.Assets.Heros[HeroId=empereur_des_cendres_d_or]",
+      "hero": "empereur_des_cendres_d_or",
+      "type": "Image",
+      "oldId": "130747031225531",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 171,
+      "piece": "ServerStorage.Assets.Heros[HeroId=empereur_des_cendres_d_or]",
+      "hero": "empereur_des_cendres_d_or",
+      "type": "Mesh",
+      "oldId": "137012723816477",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 172,
+      "piece": "ServerStorage.Assets.Heros[HeroId=empereur_des_cendres_d_or]",
+      "hero": "empereur_des_cendres_d_or",
+      "type": "Image",
+      "oldId": "73977967081671",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 173,
+      "piece": "ServerStorage.Assets.Heros[HeroId=empereur_des_cendres_d_or]",
+      "hero": "empereur_des_cendres_d_or",
+      "type": "Mesh",
+      "oldId": "88108026792807",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 174,
+      "piece": "ServerStorage.Assets.Heros[HeroId=empereur_des_cendres_d_or]",
+      "hero": "empereur_des_cendres_d_or",
+      "type": "Image",
+      "oldId": "71148102888185",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 175,
+      "piece": "ServerStorage.Assets.Heros[HeroId=empereur_des_cendres_d_or]",
+      "hero": "empereur_des_cendres_d_or",
+      "type": "Mesh",
+      "oldId": "125545826595724",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 176,
+      "piece": "ServerStorage.Assets.Heros[HeroId=empereur_des_cendres_d_or]",
+      "hero": "empereur_des_cendres_d_or",
+      "type": "Image",
+      "oldId": "96295390464568",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 177,
+      "piece": "ServerStorage.Assets.Heros[HeroId=empereur_des_cendres_d_or]",
+      "hero": "empereur_des_cendres_d_or",
+      "type": "Mesh",
+      "oldId": "86731333685584",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 178,
+      "piece": "ServerStorage.Assets.Heros[HeroId=empereur_des_cendres_d_or]",
+      "hero": "empereur_des_cendres_d_or",
+      "type": "Image",
+      "oldId": "126303990093385",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 179,
+      "piece": "ServerStorage.Assets.Heros[HeroId=empereur_des_cendres_d_or]",
+      "hero": "empereur_des_cendres_d_or",
+      "type": "Mesh",
+      "oldId": "97199380887312",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 180,
+      "piece": "ServerStorage.Assets.Heros[HeroId=empereur_des_cendres_d_or]",
+      "hero": "empereur_des_cendres_d_or",
+      "type": "Image",
+      "oldId": "92723767890021",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 181,
+      "piece": "ServerStorage.Assets.Heros[HeroId=empereur_des_cendres_d_or]",
+      "hero": "empereur_des_cendres_d_or",
+      "type": "Mesh",
+      "oldId": "79104120043330",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 182,
+      "piece": "ServerStorage.Assets.Heros[HeroId=empereur_des_cendres_d_or]",
+      "hero": "empereur_des_cendres_d_or",
+      "type": "Image",
+      "oldId": "82006772499409",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 183,
+      "piece": "ServerStorage.Assets.Heros[HeroId=empereur_des_cendres_d_or]",
+      "hero": "empereur_des_cendres_d_or",
+      "type": "Mesh",
+      "oldId": "87306682310184",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 184,
+      "piece": "ServerStorage.Assets.Heros[HeroId=empereur_des_cendres_d_or]",
+      "hero": "empereur_des_cendres_d_or",
+      "type": "Image",
+      "oldId": "96048599361215",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 185,
+      "piece": "ServerStorage.Assets.Heros[HeroId=empereur_des_cendres_d_or]",
+      "hero": "empereur_des_cendres_d_or",
+      "type": "Mesh",
+      "oldId": "137393639250231",
+      "oldOwner": "cypher1359"
+    },
+    {
+      "n": 186,
+      "piece": "ServerStorage.Assets.Heros[HeroId=empereur_des_cendres_d_or]",
+      "hero": "empereur_des_cendres_d_or",
+      "type": "Image",
+      "oldId": "110315648771180",
+      "oldOwner": "cypher1359"
+    }
+  ]
+}

@@ -149,6 +149,28 @@ l'expérience, chargés dans l'expérience réelle, rendu inchangé. Reste à fa
 (ou laisser l'enregistrement automatique de Team Create) ; les anciens assets de `cypher1359`
 restent en ligne et ne sont plus référencés par ces modèles.
 
+**Vérifications après le lot (25/10/2026).**
+- **Enregistrement Team Create** : versions de la place relues par l'Assets API (lecture seule) :
+  v205 le 23/10 à 20:52 UTC (avant le lot), v206 le 24/10 à 00:24 UTC, **v207 le 24/10 à
+  19:59 UTC**, postérieure au remplacement (enregistrement automatique de Team Create). Aucune
+  action de publication n'a été faite par les outils (ni « Publier sur Roblox », ni API Places) ;
+  l'API ne dit pas quelle version est en ligne pour les joueurs : à vérifier par l'utilisateur dans
+  le Creator Hub si besoin.
+- **Sauvegardes** (hors dépôt) : `C:\Users\Thoma\RobloxBackups\projet-roblox-alpha\`, versions 205,
+  206 et 207 téléchargées par Asset Delivery (`.rbxl` binaires valides, ~18 Mo ; SHA-256
+  `ae81da58c0bbc3fe…`, `dd4e2b180b8b83d8…`, `a85e5ef14220f0cf…`). La v205 permet de revenir à
+  l'état d'avant le lot. Leur contenu n'a pas pu être relu hors ligne : les blocs sont compressés en
+  zstd, absent de Node 20 ; aucun décodeur tiers n'a été téléchargé.
+- **État de la place dans Studio** (session Team Create en cours, pas encore rouverte) : 0 ancien
+  identifiant, 1 068 propriétés sur les nouveaux. La 1 068ᵉ est une `MeshPart` isolée apparue après
+  le remplacement, `Workspace.Lobby.MeshPart` (mesh du bras gauche de l'Écuyer, sans texture, non
+  ancrée, position 330 ; 1,3 ; 267) : origine inconnue, **non supprimée**, à examiner par l'utilisateur.
+- **Clé Open Cloud** : introuvable dans l'arbre de travail (y compris `build/`), dans l'historique Git
+  de toutes les branches, dans le diff poussé, dans les notes de session, les sauvegardes et les
+  scratchpads ; la clé reste dans `C:\Users\Thoma\.roblox\open-cloud-key.txt`, hors dépôt.
+- **Profil Studio** : les combats de contrôle ont tourné sur `PlayerData_Studio` ; corrigé pour la
+  suite par l'attribut `StoreRecette` (`SECURITY.md` § Recettes Studio).
+
 La voie est prévue par Roblox : l'Assets API accepte un mesh « uniquement s'il a été téléchargé par
 l'Asset Delivery API » et renvoie vers l'Importer « si vous n'essayez pas de télécharger puis
 republier des meshes ». Les images se republient directement (PNG/JPEG). L'outil
