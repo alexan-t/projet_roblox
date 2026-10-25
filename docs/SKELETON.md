@@ -249,7 +249,8 @@ copie dans `Workspace.AtelierAnimation` (`Kit.prepare` la crée), jamais sur le 
    Ultime, effets, x1 / x2, mort).
 8. **Production** : publier chaque séquence (une seule fois pour une séquence du jeu commun) par le
    propriétaire de l'expérience, puis mettre son identifiant dans l'attribut `AssetId` de la séquence.
-   Ne jamais inventer d'`AssetId`. Les jeux `Apercu_*` ne se publient pas.
+   Ne jamais inventer d'`AssetId`. Les jeux `Apercu_*` ne se publient pas. Contrôle et inventaire :
+   `docs/ASSET_OWNERSHIP.md` (une animation publiée par un collaborateur ne joue pas dans l'expérience).
 
 Un nouveau monstre qui ressemble à un modèle déjà branché réutilise ses animations : même jeu commun
 (`JeuAnimationsCommun`), et même jeu propre si l'attaque convient (`JeuAnimations`).

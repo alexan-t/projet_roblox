@@ -47,6 +47,31 @@ Validé dans Studio (DataStore Studio réel, 2 joueurs) :
     chargé le joueur qu'après que l'autre session a reçu `OnSessionEnd` (environ 29 s) ;
   - il n'y a jamais deux propriétaires en même temps.
 
+## Recettes Studio : store séparé obligatoire
+
+**Problème constaté.** Le store de Studio (`PlayerData_Studio`) est aussi le profil de travail de
+l'utilisateur. Les recettes qui jouent de vrais combats l'ont modifié durablement :
+- 20/10/2026 (recette de la PR #96) : Élite 1-1 à 1-5 terminés, héros montés de niveau, tickets,
+  un équipement Légendaire et des ressources ajoutés ;
+- 24/10/2026 (contrôle du lot pilote de republication, PR #108) : deux combats 1-5, +200 XP à
+  l'Écuyer du Rempart (niveau 11) et récompenses de stage.
+Une recette suivante avait contourné le problème en modifiant à la main, sans commit, le nom du
+store dans `DataService` (`PlayerData_Recette96`, profil de test encore présent) : procédure fragile.
+
+**Règle.** Toute recette Studio qui joue (combat, invocation, récompense, quête, inventaire) utilise un
+store de recette, jamais `PlayerData_Studio` :
+1. En Edit, sur **ServerStorage**, ajouter l'attribut texte `StoreRecette` = nom court de la
+   recette (lettres, chiffres, `_`, `-`, 32 caractères au plus ; ex. `Lot108`).
+2. Lancer le Play : la console doit afficher `[DataService] Store "PlayerData_Recette_Lot108" prêt`.
+   Sinon, arrêter avant toute action.
+3. À la fin, **supprimer l'attribut** (le profil de travail reprend) et noter le store utilisé
+   dans le rapport de recette.
+
+Règle de nom : `src/server/Data/StoreName.lua` (tests `tools/test-storename.ps1`). L'attribut est
+ignoré hors de Studio : le jeu publié utilise toujours `PlayerData`. Un nom invalide donne le store
+générique `PlayerData_Recette`, jamais le profil de travail. Pas d'outil ni de code de recette qui
+modifie `DataService` à la main.
+
 ## Limite connue
 
 `RequestStartStage` (ancienne entrée directe de ZoneService) reste exposée : un client malveillant

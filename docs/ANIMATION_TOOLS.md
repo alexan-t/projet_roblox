@@ -296,7 +296,8 @@ de design, pas une source de vérité gameplay.
 
 - Les animations sont enregistrées à la volée, **uniquement en Studio**. Pour le jeu publié :
   publier chaque `KeyframeSequence` depuis l'Animation Editor, puis mettre son identifiant dans
-  l'attribut `AssetId` de la séquence (lu par `MonsterAnimationController`).
+  l'attribut `AssetId` de la séquence (lu par `MonsterAnimationController`). Publication sous le
+  propriétaire de l'expérience uniquement : `docs/ASSET_OWNERSHIP.md`.
 - Pas de genoux ni de pieds articulés : les modèles IA ont une seule pièce par jambe.
 - Les capes et tabards sont fixés au buste, sans mouvement secondaire.
 - Marche, attaque de base et ultime (Écuyer) sont générés ; pas encore d'Attente (repos).

@@ -23,7 +23,26 @@ Règles permanentes pour tous les agents. Le détail est dans `docs/`.
 ## Avant de déclarer terminé
 
 - Capture d'écran réelle, puis contrôle avec `docs/VISUAL_QA.md`. Seuls résultats possibles : **PASS** ou **FIX**. Pas de PASS sans capture.
+- Propriété des assets contrôlée (`docs/ASSET_OWNERSHIP.md`) : un asset hors propriétaire de l'expérience donne **FIX**, même si le rendu est bon.
+- Recette Studio qui joue (combat, invocation, récompense…) : store de recette séparé, attribut `StoreRecette` sur ServerStorage, jamais le profil de travail `PlayerData_Studio` (`docs/SECURITY.md` § Recettes Studio).
 - Après des captures avec `screen_capture`, réinitialiser la caméra de Studio (procédure dans `docs/MONSTER_PRODUCTION.md`, § Outils), sinon l'utilisateur perd le clic droit et le clic molette.
+
+## Propriété des assets (obligatoire)
+
+Détail et procédure : `docs/ASSET_OWNERSHIP.md`.
+
+1. Tout asset définitif (image, icône, texture, mesh, `SurfaceAppearance`, animation, son, modèle) appartient au propriétaire de l'expérience : compte `nxtoma`, ou le groupe propriétaire si l'expérience passe dans un groupe (lire `game.CreatorType` / `game.CreatorId`).
+2. Un asset publié sous le compte personnel d'un collaborateur n'est pas intégré au jeu, même s'il s'affiche dans sa session.
+3. Le collaborateur crée et teste sous son compte ; avant la validation finale, l'asset est publié sous le bon propriétaire. Attention : `generate_mesh`, `generate_texture`, `upload_image`… publient sous le compte de la session Studio.
+4. Sans droit de publier sous le propriétaire, préparer les fichiers sources et les instructions pour que l'utilisateur publie depuis sa propre session. Ne jamais demander d'identifiants.
+5. Après republication, remplacer les anciens AssetIds partout : configs, catalogues, modèles, textures, meshes, animations, sons, icônes, références Studio.
+6. Republier un modèle ne change pas le propriétaire de ses meshes et textures : contrôler chaque dépendance interne.
+7. Tester le chargement dans l'expérience propriétaire réelle (place DEV), pas seulement dans la session du collaborateur.
+8. Vérifier les permissions Roblox et le statut de modération.
+9. Tenir l'inventaire : nom, type, ancien AssetId, nouvel AssetId, propriétaire, résultat du contrôle.
+10. Propriété ou permissions incorrectes → blocage signalé (FIX) avant le merge. Contrôle : `tools/studio-check-asset-ownership.luau`.
+
+Sans accord explicite de l'utilisateur : pas de republication en masse, pas de changement de permissions, pas de remplacement d'AssetIds avant confirmation du propriétaire et des accès, pas de publication en production.
 
 ## Projet
 
