@@ -44,6 +44,7 @@ Chaque ligne est notée **OK** ou **KO**. Un seul KO bloquant suffit à donner F
 | Zone | Matières et ambiance de la zone présentes, sans association trop évidente ? | non |
 | Présence | La créature a-t-elle l'air dangereuse ou importante ? Un boss domine-t-il clairement son socle de 18 studs ? | oui pour un boss |
 | Finition | Coutures, taches ou artefacts de texture visibles ? Pièces ancrées, noms propres, variantes archivées ? | non |
+| Propriété des assets | Meshes, textures, `SurfaceAppearance`, images, sons et animations du modèle appartiennent-ils tous au propriétaire de l'expérience, et se chargent-ils dans la place DEV ? (`ASSET_OWNERSHIP.md`, `tools/studio-check-asset-ownership.luau` avec `ROOTS` = le modèle) | oui |
 
 **Arbitrage :** si deux critères ou deux références se contredisent, on tranche selon la logique visuelle de King Tréant, Tréant, Slime King et King Orc.
 
@@ -78,6 +79,7 @@ Après correction : **nouvelles captures**, puis nouveau passage de la grille en
 Créature : <nom> (<Workspace path>)
 Captures : 1..6 (+ comparaison avec <référence>)
 Grille : <critère> OK/KO …
+Propriété : <n> AssetIds, OK <n>, FIX <n> (inventaire si FIX ou republication)
 Verdict : PASS | FIX
 Défauts (si FIX) : …
 Corrections appliquées : …

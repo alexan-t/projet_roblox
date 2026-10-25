@@ -10,8 +10,8 @@ ressources sont réparties, **où le worker pose chaque icône** et comment la p
 | --- | --- |
 | Catalogue défini (60 ressources, `ResourceConfig`, `resources.json`) | **OUI** |
 | Icônes 2D livrées (AssetId publié, vitrine remplie) | **OUI : 60/60** ; chaque ressource a un `Icon` publié et un PNG 512 × 512 validé (bilan : `docs/RESOURCE_ICONS_QA.md`) |
-| Stockage dans `PlayerData` | **NON** |
-| Obtention (récompenses, butin, récolte) | **NON** |
+| Stockage dans `PlayerData` | **OUI (#72, V1 serveur)** : `PlayerData.Inventory.Resources`, une pile par `ResourceId` (entier >= 0) |
+| Obtention (récompenses, butin, récolte) | **OUI pour le butin de victoire de la Zone 1 (#72, V1 serveur)** : `LootConfig` (valeurs **ALPHA 0.0.2 PROVISOIRE**) ; récolte : **NON** |
 | Recettes, crafting | **NON** |
 
 Catalogue défini ≠ asset 2D livré ≠ système de jeu implémenté. Les ressources n'ont **aucune
@@ -23,11 +23,19 @@ rareté**.
   file `automation/tasks.json` : on y copie les tâches par lots, une fois la vitrine en place (§ 3).
 - **Catalogue en jeu** : `src/shared/Config/ResourceConfig.lua` (partagé serveur et client). Mêmes
   identifiants, noms et familles, plus l'icône livrée (`Icon`, `nil` tant qu'elle n'existe pas).
-  C'est ce module que liront l'onglet **Ressources** de la Sacoche et l'écran de récompenses quand le stockage / loot de #72 sera implémenté.
-- **Aucun système de ressources en jeu** pour l'instant : pas de stockage dans `PlayerData`
-  (`src/shared/Types/PlayerDataTypes.lua`), pas d'obtention (`RewardConfig`), pas de recette. Ces
-  choix restent à faire côté gameplay. Les monnaies (or, gemmes, tickets) **ne sont pas** des
-  ressources : elles gardent leurs icônes de monnaie (`UI_DESIGN_SYSTEM.md` § 7).
+  C'est ce module que lisent l'onglet **Ressources** de la Sacoche et l'écran de récompenses (#72).
+- **Stockage et loot (#72, V1 serveur)** : le catalogue existe déjà (60 ressources, 6 familles) et **n'est pas réinventé** : le
+  gameplay référence les `ResourceId` existants sans en créer ni en renommer. Les ressources sont **empilables** par `ResourceId`
+  (`PlayerData.Inventory.Resources[ResourceId] = entier >= 0`, pas d'`InstanceId` par unité, pile bornée à 1 000 000 000 par sûreté
+  technique) et n'ont **aucune rareté**, ni dans les données, ni dans le payload serveur. Règles : `src/server/Inventory/InventoryRules.lua`.
+  Le butin de la Zone 1 vient des familles `slime` (`resource_011` à `resource_019`) et `horde` (`resource_021` à `resource_030`)
+  seulement ; les autres familles restent hors loot tant qu'un contenu correspondant n'est pas activé.
+- **Choix PROVISOIRES et points ouverts** (ALPHA 0.0.2, voir `docs/REWARDS.md` § Loot) : `resource_030` (Corne du Roi Orc) x1 à
+  chaque victoire de 1-5 Normal et 1-5 Élite ; `resource_029` (Défense d'Orc) avec une chance placeholder en 1-5 ;
+  `resource_010` (Bois du King Tréant) et `resource_020` (Couronne Fondue), trophées de boss **absents** de la Zone 1, sont
+  **exclus** du loot de la Zone 1 (jusqu'à ce que ces boss existent). Aucune recette ni utilité n'est promise : pas de crafting, pas de Forge.
+- Les monnaies (or, gemmes, tickets) **ne sont pas** des ressources : elles gardent leurs icônes de monnaie
+  (`UI_DESIGN_SYSTEM.md` § 7) et restent dans `Currencies`.
 - Tests : `node tests/resources.test.mjs` (sans Luau ni Studio : compare `ResourceConfig` au tableau
   du § 2 et à `resources.json`) et `./tools/test-resources.ps1 -LuauPath <chemin-vers-luau.exe>`.
 

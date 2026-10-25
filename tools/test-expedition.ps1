@@ -14,8 +14,14 @@ $runnerSource = (Module 'StagePreview' 'src/server/Arena/StagePreview.lua') +
     (Module 'RewardConfig' 'src/server/Config/RewardConfig.lua') +
     (Module 'EliteConfig' 'src/server/Config/EliteConfig.lua') +
     (Module 'HeroProgressionConfig' 'src/server/Config/HeroProgressionConfig.lua') +
+    (Module 'LootConfig' 'src/server/Config/LootConfig.lua') +
+    (Module 'LootRules' 'src/server/Loot/LootRules.lua') +
+    (Module 'ItemConfig' 'src/shared/Config/ItemConfig.lua') +
+    (Module 'ResourceConfig' 'src/shared/Config/ResourceConfig.lua') +
+    (Module 'RarityConfig' 'src/shared/Config/RarityConfig.lua') +
     "local runTests = (function()`n" + (Source 'src/server/Tests/Expedition.spec.lua') + "`nend)()`n" +
-    "runTests(StagePreview, Model, { Stages = StageConfig, Rewards = RewardConfig, Elite = EliteConfig, Progression = HeroProgressionConfig })`n"
+    "runTests(StagePreview, Model, { Stages = StageConfig, Rewards = RewardConfig, Elite = EliteConfig, Progression = HeroProgressionConfig,
+        Loot = { Config = LootConfig, Rules = LootRules, Catalogs = { Item = ItemConfig, Resource = ResourceConfig, Rarity = RarityConfig } } })`n"
 $runnerPath = Join-Path $testBuild 'expedition-tests.luau'
 [System.IO.File]::WriteAllText($runnerPath, $runnerSource, [System.Text.UTF8Encoding]::new($false))
 & $LuauPath $runnerPath

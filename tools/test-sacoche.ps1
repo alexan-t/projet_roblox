@@ -26,8 +26,17 @@ $runnerSource = $shims +
     (Module 'Model' 'src/shared/Sacoche/SacocheModel.lua') +
     (Module 'HeroConfig' 'src/shared/Config/HeroConfig.lua') +
     (Module 'UITheme' 'src/shared/Config/UITheme.lua') +
+    (Module 'ItemConfig' 'src/shared/Config/ItemConfig.lua') +
+    (Module 'ResourceConfig' 'src/shared/Config/ResourceConfig.lua') +
+    (Module 'RarityConfig' 'src/shared/Config/RarityConfig.lua') +
+    (Module 'InventoryModel' 'src/shared/Sacoche/InventoryModel.lua') +
+    # Ecran de fin (#72) : LootModel requiert ses voisins InventoryModel et SacocheModel (script.Parent.*) ; substitution locale.
+    "local LootModel = (function()`nlocal script = { Parent = { InventoryModel = InventoryModel, SacocheModel = Model } }`nlocal function require(module) return module end`n" +
+        (Source 'src/shared/Sacoche/LootModel.lua') + "`nend)()`n" +
     "local runTests = (function()`n" + (Source 'src/server/Tests/Sacoche.spec.lua') + "`nend)()`n" +
-    "runTests(Model, HeroConfig, UITheme.Pack.Sacoche)`n"
+    "local runInventoryTests = (function()`n" + (Source 'src/server/Tests/SacocheInventory.spec.lua') + "`nend)()`n" +
+    "runTests(Model, HeroConfig, UITheme.Pack.Sacoche)`n" +
+    "runInventoryTests(InventoryModel, LootModel, ItemConfig, ResourceConfig, RarityConfig, UITheme.Pack)`n"
 $runnerPath = Join-Path $testBuild 'sacoche-tests.luau'
 [System.IO.File]::WriteAllText($runnerPath, $runnerSource, [System.Text.UTF8Encoding]::new($false))
 & $LuauPath $runnerPath

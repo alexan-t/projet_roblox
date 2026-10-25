@@ -37,7 +37,9 @@ nettoyés. La pastille « F · Lancer » n'apparaît que dans SON arène, équip
 Repères déjà présents dans chaque plot (aucun asset ajouté) :
 `Arene.Zones.<Zone>.SourcesEnnemis`, parties invisibles avec l'attribut `Mode` et des enfants
 optionnels `Etape1`, `Etape2`... (points de passage). `FrontEnnemi` = zone de formation (grille 3x3,
-la même que `ArenaService`).
+la même que `ArenaService`). Depuis l'agrandissement des plots (`docs/PLOTS.md` § Agrandissement),
+le front, le camp et les repères du côté ennemi sont 20 studs plus loin des dalles ; les repères des
+mares restent en place, les slimes bondissent donc plus loin.
 
 | Style (`SpawnStyles`) | Modes acceptés, par préférence | Zone 1 |
 | --- | --- | --- |

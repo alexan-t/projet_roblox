@@ -97,6 +97,34 @@ return function(StagePreview: any, Model: any, configs: any)
 		assert(d and #d == 2 and d[1].Id == "resource_011" and d[1].Chance == 0.3 and d[1].Max == 2 and d[2].Min == 1)
 	end)
 
+	test("#72 PotentialDrops from the real LootConfig: real resource chances only, Normal and Elite, never an invented line", function()
+		local loot = configs.Loot
+		local function withLoot(stage: number, mode: string): any
+			local s = { Rewards = configs.Rewards, Progression = configs.Progression, Elite = configs.Elite,
+				Drops = loot.Rules.preview(loot.Config, mode, `1-{stage}`) }
+			return StagePreview.build(configs.Stages.Zones[1].Stages[stage], 1, stage, mode, s)
+		end
+		for _, mode in { "Normal", "Elite" } do
+			local table_ = if mode == "Elite" then loot.Config.EliteStages else loot.Config.Stages
+			for stage = 1, 5 do
+				local drops = withLoot(stage, mode).PotentialDrops
+				local source = table_[`1-{stage}`].Resources
+				assert(drops and #drops == #source, `{mode} 1-{stage}`)
+				for i, drop in drops do
+					assert(drop.Kind == "Resource", "no Item line: random equipment is not listed")
+					assert(drop.Id == source[i].ResourceId and drop.Chance == source[i].Chance and drop.Min == source[i].Min and drop.Max == source[i].Max)
+					assert(loot.Catalogs.Resource.Resources[drop.Id], "catalogue resource")
+					assert(drop.Id ~= "resource_010" and drop.Id ~= "resource_020", "trophies of absent bosses are not shown")
+				end
+			end
+		end
+		local boss = withLoot(5, "Normal").PotentialDrops
+		local horn
+		for _, drop in boss do if drop.Id == "resource_030" then horn = drop end end
+		assert(horn and horn.Chance == 1 and horn.Min == 1 and horn.Max == 1, "Corne du Roi Orc at 100% on 1-5")
+		assert(loot.Rules.preview(loot.Config, "Normal", "2-1") == nil, "no table for a future zone: section hidden")
+	end)
+
 	test("copies: editing the preview never changes the configs", function()
 		local p = preview(1)
 		p.FirstClearRewards[1].Amount = 99999
@@ -153,6 +181,11 @@ return function(StagePreview: any, Model: any, configs: any)
 	test("launch: locked stage explains why; no hero -> Pose un héros; ready -> Stage 1-X", function()
 		local list = stages(1)
 		assert(Model.launch(list[4], "Normal", false, 3).Sub == "Termine 1-3")
+		for zone = 2, 6 do
+			local entry = { Zone = zone, Stage = 1, Status = "Locked" }
+			local launch = Model.launch(entry, "Normal", false, 4)
+			assert(not launch.Enabled and launch.Sub == `Termine la zone {zone - 1}`)
+		end
 		assert(Model.launch(list[2], "Normal", false, 0).Enabled == false and Model.launch(list[2], "Normal", false, 0).Sub == "Pose un héros")
 		local ok = Model.launch(list[2], "Normal", false, 1)
 		assert(ok.Enabled and ok.Sub == "Stage 1-2")

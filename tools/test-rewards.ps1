@@ -22,16 +22,25 @@ $runner = "local RewardRules = $(Module 'src/server/Rewards/RewardRules.lua')`n"
 	"    QuestGuide = $(Module 'src/shared/Quests/QuestGuide.lua'),`n" +
 	"    EliteConfig = $(Module 'src/server/Config/EliteConfig.lua'),`n" +
 	"    Difficulty = $(Module 'src/server/Combat/Difficulty.lua'),`n" +
+	"    LootConfig = $(Module 'src/server/Config/LootConfig.lua'),`n" +
+	"    ItemConfig = $(Module 'src/shared/Config/ItemConfig.lua'),`n" +
+	"    ResourceConfig = $(Module 'src/shared/Config/ResourceConfig.lua'),`n" +
+	"    RarityConfig = $(Module 'src/shared/Config/RarityConfig.lua'),`n" +
 	"}`n" +
 	"local CombatEngine = $(Module 'src/server/Combat/CombatEngine.lua')`n" +
+	"local lootModules = {`n" +
+	"    LootRules = $(Module 'src/server/Loot/LootRules.lua'), InventoryRules = $(Module 'src/server/Inventory/InventoryRules.lua'),`n" +
+	"    LootConfig = configs.LootConfig, ItemConfig = configs.ItemConfig, ResourceConfig = configs.ResourceConfig, RarityConfig = configs.RarityConfig,`n" +
+	"}`n" +
 	"local factories = {`n" +
 	"    reward = $(Factory 'src/server/Services/RewardService.lua'),`n" +
+	"    inventory = $(Factory 'src/server/Services/InventoryService.lua'),`n" +
 	"    quest = $(Factory 'src/server/Services/QuestService.lua'),`n" +
 	"    zone = $(Factory 'src/server/Services/ZoneService.lua'),`n" +
 	"    combat = $(Factory 'src/server/Services/CombatService.lua'),`n" +
 	"}`n" +
-	"local ok1, err1 = pcall($(Module 'src/server/Tests/RewardService.spec.lua'), function(env) return factories.reward(env, nil) end, RewardRules, configs.RewardConfig)`n" +
-	"local ok2, err2 = pcall($(Module 'src/server/Tests/RewardFlow.spec.lua'), factories, configs, CombatEngine, RewardRules)`n" +
+	"local ok1, err1 = pcall($(Module 'src/server/Tests/RewardService.spec.lua'), function(env) return factories.reward(env, nil) end, RewardRules, configs.RewardConfig, lootModules)`n" +
+	"local ok2, err2 = pcall($(Module 'src/server/Tests/RewardFlow.spec.lua'), factories, configs, CombatEngine, RewardRules, lootModules)`n" +
 	"if not ok1 then error(err1) end`nif not ok2 then error(err2) end`n"
 $runnerPath = Join-Path $testBuild 'reward-tests.luau'
 [System.IO.File]::WriteAllText($runnerPath, $runner, [System.Text.UTF8Encoding]::new($false))

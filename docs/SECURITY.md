@@ -23,6 +23,7 @@ de combat, progression de quête) n'est décidée ni envoyée par le client.
 | Actions sur le plot / portail / arène / héros d'un autre | Le serveur résout toujours le plot du joueur (`PlotService:GetPlot`), son portail (distance serveur) et ses propres exemplaires (`data.Heroes`). | `#12 cross-player` (héros, arène) |
 | Entrées absurdes | Types, NaN, ±inf, tables, Instances, chaînes : refus propre, aucune erreur, aucune mutation. | `#12 HotbarAction fuzz`, `#12 invalid slots / ids`, `#12 stage spam` |
 | Monnaies | `GetCurrencies` renvoie une copie ; aucune remote ne modifie une monnaie. | `#12 read-only` |
+| Loot et inventaire (#72) : créer un item, choisir ItemId / ResourceId / quantité / rareté, forcer un drop de boss, rejouer une completion | **Aucune remote d'écriture** : seules `GetInventory` (vue en lecture seule, arguments ignorés) et `InventoryChanged` existent. Le tirage (RNG, rareté, quantité, ItemId) est fait par RewardService dans la section synchrone de la victoire, avec la même identité de completion que le First Clear ; `LootConfig` est validée à l'Init (invalide = aucun loot) ; une erreur de loot ne bloque jamais le First Clear. Point ouvert : pas de sauvegarde forcée après un loot (`SaveNow`). | `#12 exactly two remotes, both read-only`, `#12 GetInventory ignores every client argument`, `#12 #72 no client input`, tests `#72` de `RewardService.spec` / `RewardFlow.spec` |
 
 ## Save / Load (ProfileStore)
 
@@ -45,6 +46,31 @@ Validé dans Studio (DataStore Studio réel, 2 joueurs) :
   - entre deux serveurs (la fenêtre d'édition de Studio tenant le profil), le serveur de jeu n'a
     chargé le joueur qu'après que l'autre session a reçu `OnSessionEnd` (environ 29 s) ;
   - il n'y a jamais deux propriétaires en même temps.
+
+## Recettes Studio : store séparé obligatoire
+
+**Problème constaté.** Le store de Studio (`PlayerData_Studio`) est aussi le profil de travail de
+l'utilisateur. Les recettes qui jouent de vrais combats l'ont modifié durablement :
+- 20/10/2026 (recette de la PR #96) : Élite 1-1 à 1-5 terminés, héros montés de niveau, tickets,
+  un équipement Légendaire et des ressources ajoutés ;
+- 24/10/2026 (contrôle du lot pilote de republication, PR #108) : deux combats 1-5, +200 XP à
+  l'Écuyer du Rempart (niveau 11) et récompenses de stage.
+Une recette suivante avait contourné le problème en modifiant à la main, sans commit, le nom du
+store dans `DataService` (`PlayerData_Recette96`, profil de test encore présent) : procédure fragile.
+
+**Règle.** Toute recette Studio qui joue (combat, invocation, récompense, quête, inventaire) utilise un
+store de recette, jamais `PlayerData_Studio` :
+1. En Edit, sur **ServerStorage**, ajouter l'attribut texte `StoreRecette` = nom court de la
+   recette (lettres, chiffres, `_`, `-`, 32 caractères au plus ; ex. `Lot108`).
+2. Lancer le Play : la console doit afficher `[DataService] Store "PlayerData_Recette_Lot108" prêt`.
+   Sinon, arrêter avant toute action.
+3. À la fin, **supprimer l'attribut** (le profil de travail reprend) et noter le store utilisé
+   dans le rapport de recette.
+
+Règle de nom : `src/server/Data/StoreName.lua` (tests `tools/test-storename.ps1`). L'attribut est
+ignoré hors de Studio : le jeu publié utilise toujours `PlayerData`. Un nom invalide donne le store
+générique `PlayerData_Recette`, jamais le profil de travail. Pas d'outil ni de code de recette qui
+modifie `DataService` à la main.
 
 ## Limite connue
 

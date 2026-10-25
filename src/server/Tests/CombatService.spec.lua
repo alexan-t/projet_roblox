@@ -108,7 +108,8 @@ return function(createService: any, CombatEngine: any, combatConfig: any, _stage
 			env.stages[p] = { Id = env.nextStageId, Zone = 1, Stage = 1, Config = MECHANICS }
 			return p
 		end
-		-- Géométrie de l'arène : 3x3 héros (z 0..18) et 3x3 ennemis (z -21..-30), comme PlotTravail.
+		-- Géométrie de l'arène : 3x3 héros (z 0..18) et 3x3 ennemis (z -21..-30), comme PlotTravail
+		-- avant son agrandissement (docs/PLOTS.md) : les ennemis y sont désormais 20 studs plus loin.
 		function env.context(): any
 			local heroes, enemies = {}, {}
 			for n = 1, 9 do
@@ -638,6 +639,40 @@ return function(createService: any, CombatEngine: any, combatConfig: any, _stage
 		local lastBatch = e.fired[#e.fired]
 		assert(e.completions[1].sentBefore < #e.fired and lastBatch.events[#lastBatch.events] == ev,
 			"rewards are known (saved) before the end event leaves the server")
+	end)
+
+	test("#72 victory: CombatEnded carries the RewardService Loot in its own field, Rewards stay currencies", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		e.reward.Loot = { Items = { { InstanceId = "I_T1", ItemId = "item_015" } },
+			Resources = { { ResourceId = "resource_011", Amount = 3 } }, Overflow = false }
+		s:StartCombat(p, e.stages[p].Id, TEAM, e.context())
+		assert(e.runUntilEnd(s, p, 300))
+		local ev = e.events(p, "CombatEnded")[1]
+		assert(ev.Loot and #ev.Loot.Items == 1 and ev.Loot.Items[1].InstanceId == "I_T1" and ev.Loot.Items[1].ItemId == "item_015")
+		assert(#ev.Loot.Resources == 1 and ev.Loot.Resources[1].ResourceId == "resource_011" and ev.Loot.Resources[1].Amount == 3 and ev.Loot.Overflow == false)
+		assert(#ev.Rewards == 2 and ev.Rewards[1].Kind == "Gold" and ev.Rewards[2].Kind == "SummonTicket", "loot never mixed into Rewards")
+		assert(ev.Loot.Items[1].Rarity == nil, "the server never sends a rarity")
+	end)
+
+	test("#72 defeat or victory without loot: no Loot field at all", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		e.reward.Loot = { Items = { { InstanceId = "I_T1", ItemId = "item_001" } }, Resources = {}, Overflow = false }
+		s:StartCombat(p, e.stages[p].Id, { [5] = "Magicien" }, e.context())
+		assert(e.runUntilEnd(s, p, 300))
+		local defeat = e.events(p, "CombatEnded")[1]
+		assert(defeat.Result == "Defeat" and defeat.Loot == nil, "a defeat never carries loot, whatever the reward table says")
+		local f = fixture()
+		local s2 = f.start()
+		local q = f.player("B")
+		s2:StartCombat(q, f.stages[q].Id, TEAM, f.context())
+		assert(f.runUntilEnd(s2, q, 300))
+		local victory = f.events(q, "CombatEnded")[1]
+		assert(victory.Result == "Victory" and victory.Loot == nil, "no table / error: field absent, FirstClear and Rewards intact")
+		assert(victory.FirstClear == true and #victory.Rewards == 2)
 	end)
 
 	test("defeat or refused reward: CombatEnded with FirstClear false and empty Rewards", function()

@@ -47,6 +47,20 @@ export type Tutorial = {
 	Seen: { [string]: boolean },
 }
 
+-- Inventaire (#72). Equipment : une entrée par EXEMPLAIRE possédé (clé = ItemInstanceId « I_T… » généré par le
+-- serveur, jamais fusionné) ; ItemId = catalogue ItemConfig, UpgradeLevel stocké dès V1 (aucun effet).
+-- Resources : pile par ResourceId (ResourceConfig), entier >= 0, sans rareté. Clés fixes : ajoutées aux anciens
+-- profils par Reconcile (aucune migration, DataVersion reste 4).
+export type OwnedItem = {
+	ItemId: string,
+	UpgradeLevel: number,
+}
+
+export type Inventory = {
+	Equipment: { [string]: OwnedItem },
+	Resources: { [string]: number },
+}
+
 export type PlayerData = {
 	DataVersion: number,
 	Currencies: Currencies,
@@ -65,6 +79,8 @@ export type PlayerData = {
 	Settings: Settings,
 	-- Ajouté aux anciens profils par Reconcile (aucune migration) : vide = aucun guidage déjà vu.
 	Tutorial: Tutorial,
+	-- Ajouté aux anciens profils par Reconcile (aucune migration) : vide = rien possédé.
+	Inventory: Inventory,
 }
 
 return {}

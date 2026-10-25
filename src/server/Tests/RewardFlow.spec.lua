@@ -5,7 +5,7 @@
 --   → CombatEnded envoyé au client (FirstClear, Rewards).
 -- Seuls DataService, PlotService et les API Roblox sont des doubles.
 
-return function(factories: any, configs: any, CombatEngine: any, RewardRules: any)
+return function(factories: any, configs: any, CombatEngine: any, RewardRules: any, lootModules: any)
 	local passed, failed = 0, 0
 	local function test(name: string, run: () -> ())
 		local ok, err = pcall(run)
@@ -31,7 +31,8 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 	end
 	local function seeded(seed: number): any
 		local s = seed
-		return { NextInteger = function(_self: any, min: number, max: number): number
+		return { NextNumber = function(self: any): number return self:NextInteger(0, 2147483647) / 2147483648 end,
+			NextInteger = function(_self: any, min: number, max: number): number
 			s = (s * 1103515245 + 12345) % 2147483648
 			return min + s % (max - min + 1)
 		end }
@@ -39,7 +40,7 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 
 	-- stageConfig : StageConfig de test (par défaut la vraie). Les défaites utilisent HARD.
 	local function world(stageConfig: any?): any
-		local env: any = { data = {}, plots = {}, fired = {}, instances = {}, warnings = {} }
+		local env: any = { data = {}, plots = {}, fired = {}, instances = {}, warnings = {}, inventoryFired = {}, guid = 0 }
 		local function signal(): any
 			local sig: any = { listeners = {} }
 			function sig:Connect(fn: any) table.insert(self.listeners, fn) end
@@ -52,6 +53,7 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 			Utils = { Log = { debug = function() end, info = function() end,
 				warn = function(_s: string, m: string) table.insert(env.warnings, m) end } },
 			Types = { PlayerDataTypes = {} },
+			Config = { ItemConfig = configs.ItemConfig, ResourceConfig = configs.ResourceConfig, RarityConfig = configs.RarityConfig },
 			Quests = { QuestGuide = configs.QuestGuide }, -- cibles de guidage connues (QuestService)
 		} }
 		function replicated:FindFirstChild(name: string): any
@@ -59,7 +61,8 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 			return nil
 		end
 		env.game = { GetService = function(_self: any, name: string): any
-			return ({ Players = env.players, ReplicatedStorage = replicated, RunService = { Heartbeat = env.heartbeat } })[name]
+			return ({ Players = env.players, ReplicatedStorage = replicated, RunService = { Heartbeat = env.heartbeat },
+				HttpService = { GenerateGUID = function(): string env.guid += 1 return string.format("GUID-%08d", env.guid) end } })[name]
 		end }
 		env.require = function(module: any): any return module end
 		env.Instance = { new = function(class: string): any
@@ -67,6 +70,7 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 			if class == "RemoteEvent" then
 				function i:FireClient(player: any, combatId: any, events: any)
 					-- seuls les lots du combat (CombatEvent) ; QuestChanged envoie une vue de quête, pas un lot
+					if self.Name == "InventoryChanged" then table.insert(env.inventoryFired, { player = player, view = combatId }) end
 					if self.Name ~= "CombatEvent" then return end
 					table.insert(env.fired, { player = player, combatId = combatId, events = events })
 				end
@@ -94,14 +98,16 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 			config = table.clone(configs)
 			config.StageConfig = stageConfig
 		end
-		local tree = { Config = config, Combat = { CombatEngine = CombatEngine, Difficulty = configs.Difficulty }, Rewards = { RewardRules = RewardRules } }
+		local tree = { Config = config, Combat = { CombatEngine = CombatEngine, Difficulty = configs.Difficulty }, Rewards = { RewardRules = RewardRules },
+			Loot = { LootRules = lootModules.LootRules }, Inventory = { InventoryRules = lootModules.InventoryRules } }
 		local function scriptFor(): any return { Parent = setmetatable({ Parent = tree }, { __index = services }) } end
+		services.InventoryService = factories.inventory(env, scriptFor())
 		services.RewardService = factories.reward(env, scriptFor())
 		services.QuestService = factories.quest(env, scriptFor())
 		services.ZoneService = factories.zone(env, scriptFor())
 		services.CombatService = factories.combat(env, scriptFor())
 		-- Même ordre que le bootstrap : tous les Init, puis tous les Start.
-		local loaded: { any } = { services.RewardService, services.QuestService, services.ZoneService, services.CombatService }
+		local loaded: { any } = { services.InventoryService, services.RewardService, services.QuestService, services.ZoneService, services.CombatService }
 		for _, phase in { "Init", "Start" } do
 			for _, s in loaded do
 				local run = s[phase]
@@ -442,6 +448,137 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 		assert(w.services.ZoneService:StartStage(gone, 1, 1) == nil and w.services.RewardService:HandleStageCompleted(gone, 1, 1, 1) == nil)
 	end)
 
+	-- Loot (#72) : chemin réel CombatService → ZoneService → RewardService → InventoryService -------------------
+	-- Les valeurs de LootConfig sont des placeholders : on vérifie le contrat, pas l'équilibrage.
+
+	local function lootOf(ended: any): any return ended.Loot end
+	local function fieldNames(t: any): string
+		local names = {}
+		for k in t do table.insert(names, tostring(k)) end
+		table.sort(names)
+		return table.concat(names, ",")
+	end
+
+	test("#72 victory: CombatEnded.Loot is saved before display, matches the inventory, Rewards stay currencies", function()
+		local w = world()
+		local p = w.player("A")
+		local itemsSeen, units = 0, 0
+		for n = 1, 8 do
+			local before = #w.fired
+			local ended = w.fight(p, STARTER)
+			local e = ended[#ended]
+			assert(e.Result == "Victory" and e.Loot, `fight {n}: Loot present on a victory`)
+			assert(fieldNames(e.Loot) == "Items,Overflow,Resources", fieldNames(e.Loot))
+			assert(e.Loot.Overflow == false)
+			for _, item in e.Loot.Items do
+				itemsSeen += 1
+				assert(fieldNames(item) == "InstanceId,ItemId", "no rarity in the payload: " .. fieldNames(item))
+				local owned = w.data[p].Inventory.Equipment[item.InstanceId]
+				assert(owned and owned.ItemId == item.ItemId and owned.UpgradeLevel == 0, "already saved when the event leaves")
+				assert(string.sub(item.InstanceId, 1, 3) == "I_T")
+			end
+			for _, r in e.Loot.Resources do
+				units += r.Amount
+				assert(fieldNames(r) == "Amount,ResourceId" and r.Amount >= 1)
+			end
+			for _, r in e.Rewards do assert(r.Kind == "Gold" or r.Kind == "Gems" or r.Kind == "SummonTicket") end
+			assert(before < #w.fired)
+		end
+		local total = 0
+		for _, amount in w.data[p].Inventory.Resources do total += amount end
+		local owned = 0
+		for _ in w.data[p].Inventory.Equipment do owned += 1 end
+		assert(total == units and owned == itemsSeen, "inventory == everything announced, nothing more")
+		assert(#w.inventoryFired == 8, "InventoryChanged pushed once per looted victory: " .. #w.inventoryFired)
+		assert(w.inventoryFired[8].view.Count == owned and w.inventoryFired[8].view.Cap == 500)
+	end)
+
+	test("#72 defeat: no Loot field, no inventory, no InventoryChanged", function()
+		local w = world(HARD)
+		local p = w.player("A")
+		local ended = w.fight(p, WEAK)
+		assert(#ended == 1 and ended[1].Result == "Defeat" and ended[1].Loot == nil)
+		assert(w.data[p].Inventory == nil and #w.inventoryFired == 0, "a defeat never loots")
+	end)
+
+	test("#72 GetInventory: read-only view of what was looted, another player sees nothing of it", function()
+		local w = world()
+		local a, b = w.player("A"), w.player("B")
+		for _ = 1, 6 do w.fight(a, STARTER) end
+		w.data[b].Inventory = { Equipment = {}, Resources = {} }
+		local get = remote(w, "GetInventory")
+		local view = get.OnServerInvoke(a, "item_100", 9999)
+		local total = 0
+		for _, amount in w.data[a].Inventory.Resources do total += amount end
+		local seen = 0
+		for _, r in view.Resources do seen += r.Amount end
+		assert(seen == total and view.Count == #view.Equipment and view.Cap == 500)
+		local other = get.OnServerInvoke(b)
+		assert(#other.Equipment == 0 and #other.Resources == 0)
+		for _, i in w.instances do
+			local name = string.lower(i.Name)
+			assert(not ((name:find("grant") or name:find("equip") or name:find("add")) and i.OnServerInvoke), "no write remote: " .. i.Name)
+		end
+	end)
+
+	test("#72 Elite victory loots from the Elite table through the real path; x1 / x2 give the same loot", function()
+		local function run(speed: number): string
+			local w = world()
+			local p = w.player("A")
+			w.data[p].Progression.FirstClears = { ["1-1"] = true, ["1-2"] = true, ["1-3"] = true, ["1-4"] = true, ["1-5"] = true }
+			w.data[p].Settings.CombatSpeed = speed
+			w.data[p].Heroes.E = { HeroId = "ecuyer_du_rempart", Level = 20, XP = 0 }
+			local parts, wins = {}, 0
+			for _ = 1, 3 do
+				local ended = w.fight(p, STRONG, 1, "Elite")
+				local e = ended[#ended]
+				if e.Result == "Victory" then
+					wins += 1
+					assert(e.Loot, "Elite victory carries Loot")
+					for _, item in e.Loot.Items do
+						local rarity = configs.ItemConfig.Items[item.ItemId].Rarity
+						assert(rarity == "Rare" or rarity == "Epique" or rarity == "Legendaire", rarity)
+						table.insert(parts, item.ItemId)
+					end
+					for _, r in e.Loot.Resources do table.insert(parts, `{r.ResourceId}x{r.Amount}`) end
+				end
+			end
+			assert(wins >= 1, "at least one Elite victory really happened")
+			return table.concat(parts, ",")
+		end
+		-- La vitesse ne change ni le tirage ni son résultat (mêmes graines : même butin).
+		assert(run(1) == run(2))
+	end)
+
+	test("#72 victory then disconnect before the screen: the loot is saved, rejoin keeps it and replays stack on top", function()
+		local w = world()
+		local p = w.player("A")
+		for _ = 1, 4 do w.fight(p, STARTER) end
+		local d = w.data[p]
+		local function snap(): string
+			local ids = {}
+			for id, e in d.Inventory.Equipment do table.insert(ids, id .. "=" .. e.ItemId) end
+			table.sort(ids)
+			local res = {}
+			for id, n in d.Inventory.Resources do table.insert(res, id .. "=" .. n) end
+			table.sort(res)
+			return table.concat(ids, ",") .. "|" .. table.concat(res, ",")
+		end
+		local saved = snap()
+		leave(w, p)
+		local back = rejoin(w, p)
+		assert(w.data[back] == d and snap() == saved, "the exact same inventory after the rejoin")
+		local function units(): number
+			local n = 0
+			for _, amount in d.Inventory.Resources do n += amount end
+			for _ in d.Inventory.Equipment do n += 1000 end
+			return n
+		end
+		local before = units()
+		for _ = 1, 3 do w.fight(back, STARTER) end
+		assert(units() >= before, "nothing lost; new loot only stacks on top")
+	end)
+
 	-- Zone 1 complète (#13) : chemin réel 1-1 → 1-5 ---------------------------------------------
 
 	local PAIR = { [2] = "Epeiste", [8] = "Tireur" } -- un exemple d'équipe : Écuyer (Epeiste) + un héros n°2 tiré (ici un Tireur ; aucun n'est garanti)
@@ -464,7 +601,9 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 		local zone = w.services.ZoneService
 		local function statuses(): string
 			local s = {}
-			for _, entry in zone:ListStages(p) do table.insert(s, `{entry.Stage}:{entry.Status}`) end
+			for _, entry in zone:ListStages(p) do
+				if entry.Zone == 1 then table.insert(s, `{entry.Stage}:{entry.Status}`) end
+			end
 			return table.concat(s, " ")
 		end
 		assert(statuses() == "1:Unlocked 2:Locked 3:Locked 4:Locked 5:Locked", statuses())
@@ -488,7 +627,10 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 		for stage = 1, 5 do assert(d.Progression.FirstClears[`1-{stage}`] == true, `FirstClear 1-{stage}`) end
 		assert(d.Currencies.Gold == 100 and d.Currencies.Gems == 10 and d.Currencies.SummonTickets == 1,
 			"only 1-1 gives currencies (1-2..1-5 rewards are empty for now)")
-		assert(#zone:ListStages(p) == 5 and zone:StartStage(p, 1, 6) == nil, "no stage 1-6")
+		assert(zone:StartStage(p, 1, 6) == nil, "no stage 1-6")
+		local after = zone:ListStages(p)
+		assert(after[6].Zone == 2 and after[6].Stage == 1 and after[6].Status == "Unlocked", "1-5 First Clear opens 2-1")
+		assert(after[7].Status == "Locked", "2-2 still locked")
 		-- replays : 1-1 → +20 or, aucun ticket ; 1-5 → pas de second First Clear
 		local r1 = w.fight(p, PAIR, 1)
 		assert(r1[#r1].FirstClear == false and d.Currencies.Gold == 120 and d.Currencies.SummonTickets == 1)
@@ -529,12 +671,14 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 	end)
 
 	test("#13 RewardConfig: a valid entry for every stage of StageConfig (First Clear = unlock)", function()
-		local stages = configs.StageConfig.Zones[1].Stages
-		assert(#stages == 5)
-		for stage = 1, #stages do
-			local entry = configs.RewardConfig.Stages[`1-{stage}`]
-			assert(entry, `RewardConfig 1-{stage}`)
-			assert(#RewardRules.stageProblems(entry) == 0, `valid 1-{stage}`)
+		assert(#configs.StageConfig.Zones == 6)
+		for zone, config in configs.StageConfig.Zones do
+			assert(#config.Stages == 5)
+			for stage = 1, #config.Stages do
+				local entry = configs.RewardConfig.Stages[`{zone}-{stage}`]
+				assert(entry, `RewardConfig {zone}-{stage}`)
+				assert(#RewardRules.stageProblems(entry) == 0, `valid {zone}-{stage}`)
+			end
 		end
 		local first = configs.RewardConfig.Stages["1-1"]
 		assert(#first.FirstClearReward == 3 and first.RepeatReward[1].Kind == "Gold" and first.RepeatReward[1].Amount == 20, "1-1 contract unchanged")

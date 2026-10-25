@@ -48,6 +48,72 @@ Un dossier `Workspace.Plots` ou un repère nommé `Spawn` (ancienne convention) 
   jusqu'au leave ou à la perte de DataLoaded ; aucune réattribution automatique
   ni réparation de la map n'est tentée.
 
+## Agrandissement pour les combats
+
+Les dimensions d'un plot ne sont écrites nulle part dans `src/` : elles viennent des assets. La zone
+de préparation, les positions des héros (dalles `CaseHeros`) et la grille ennemie (`FrontEnnemi`) sont
+relues par `ArenaService` et les contrôleurs client, donc aucun code ne change avec la taille.
+
+`tools/studio-agrandir-plots.luau` (Studio EDIT, barre de commande) agrandit `PlotTravail` et
+`Lobby.Plots.Plot_*`, en une seule étape Ctrl+Z :
+
+| Réglage | Valeur | Effet |
+| --- | --- | --- |
+| `LONGUEUR` | 20 studs | le côté ennemi (front, camp, rempart, bout du sol) recule : 20 studs de plus entre les héros et les ennemis |
+| `ELARGISSEMENT` | 5 studs par côté | le bord s'écarte progressivement au-delà de 30 studs de l'axe ; dalles, porche, pancarte, royaume et portail restent en place |
+
+Mesures de la sandbox v4 (repère de `FrontEnnemi`, identiques sur les 8 plots) :
+
+| | Avant | Après |
+| --- | --- | --- |
+| Sol (`Sol.SoclePierre`) | 122 × 178 studs | 132 × 203 studs |
+| Première rangée de dalles → front ennemi | 23 studs | 43 studs |
+| Écart minimal entre sols voisins | 22,3 studs | 15,8 studs |
+| Pointe extérieure (distance au centre de la place) | 328 studs | 353 studs |
+| Mur invisible `LimiteMap` le plus proche de la pointe | ≈ 41 studs | ≈ 28 studs |
+
+Ces mesures sont recalculées hors Studio par `node tests/plots-agrandissement.test.mjs` : il rejoue la
+géométrie du script sur les 8 plots du snapshot (voisins, murs, forêt, repères immobiles, couloir de
+combat) ; résultats dans `tests/PLOTS_AGRANDISSEMENT_RESULTS.md`. Il ne remplace pas les captures.
+
+Fonctionnement : le sol en « stade » (`BoutArriere`, `Centre`, `BoutAvant` de chaque couche de `Sol`)
+est redimensionné, la pointe côté royaume ne bouge pas. Tout ce qui est côté ennemis recule d'un bloc
+(modèles entiers, jamais découpés). Les blocs simples qui traversent la coupe (eau de la rivière,
+clairière) s'allongent. Les éléments du bord (rempart, bordure, arbres) des 20 studs droits suivant
+la coupe sont recopiés dans la longueur ajoutée (attribut `CopieAgrandissement`). Les arbres de
+`Lobby.Monde.ForetBordure` qui tomberaient dans la nouvelle emprise vont dans
+`ServerStorage.Archive_Plots.ForetBordure_plots_agrandis`, et une copie de `PlotTravail` d'avant
+est gardée dans `ServerStorage.Archive_Plots`. Rien n'est supprimé.
+
+Procédure :
+
+1. Captures **avant** (voir ci-dessous), puis lancer le script avec `APPLIQUER = false` : il affiche
+   les mesures, l'écart entre voisins, les arbres et limites concernés, sans rien modifier. Il
+   refuse d'agir si deux sols voisins passent à moins de 4 studs.
+2. Relancer avec `APPLIQUER = true`. Le script est répétable : un plot qui porte déjà l'attribut
+   `AgrandiCombat` est ignoré.
+3. Test « Serveur et clients » à deux joueurs : placer 4 héros, lancer 1-1 et 1-5 (boss). Les ennemis
+   sortent de leurs repères (`SourcesEnnemis`) et se forment au front reculé. Les héros avancent
+   sans buter sur le décor. Deux combats simultanés restent chacun dans leur plot.
+4. Captures **après** aux mêmes cadrages, puis contrôle PASS/FIX (ci-dessous).
+
+Captures (avant et après, mêmes positions de caméra, relatives au `FrontEnnemi` du `Plot_1`) :
+
+| # | Vue | But |
+| --- | --- | --- |
+| 1 | Plongée haute sur tout le plot | longueur et largeur du sol, bord continu |
+| 2 | Plongée sur deux plots voisins | aucun chevauchement, forêt dégagée |
+| 3 | Derrière les dalles, hauteur d'homme, vers les ennemis | profondeur du champ de bataille |
+| 4 | Côté du rempart, à la jonction des copies | aucun trou, aucune pièce qui flotte |
+| 5 | Pendant un combat 1-5 | héros et ennemis se déplacent sans être gênés |
+
+Grille PASS/FIX (`docs/VISUAL_QA.md` § 3, appliquée au décor) : **Géométrie** (pas de trou dans le
+sol, le rempart, la bordure ni la rivière), **Détails** (rien ne flotte ni ne s'enfonce),
+**Matériaux** (copies identiques aux originaux), **Lisibilité** (le front ennemi se voit depuis les
+dalles), **Chevauchement** (aucun sol, arbre ou mur entre deux plots), **Déplacement** (aucun héros
+ni ennemi bloqué). Toutes ces lignes sont bloquantes. Réinitialiser la caméra après les captures
+(`MONSTER_PRODUCTION.md` Outils § A).
+
 ## Attribution et nettoyage
 
 Après `DataService:OnPlayerReady`, le premier plot libre par ordre de `PlotId`

@@ -30,18 +30,52 @@ local ArenaConfig = {
 	-- Modèles ennemis de ReplicatedStorage.Assets.Combat, copiés des monstres validés du partenaire :
 	-- Gobelin et Roi Orc articulés (JeuAnimations : Marche, Attaque…), slime statique (pas de squelette).
 	-- Les mannequins MannequinSlime / MannequinGobelin / MannequinBoss restent disponibles.
+	-- Zones 2 à 6 : copies de combat des monstres validés du Bestiaire (tools/studio-zones-assets.luau).
 	EnemyTemplates = table.freeze({
 		Slime = "Ennemi_Slime",
 		Gobelin = "Ennemi_Gobelin",
 		Boss = "Ennemi_RoiOrc",
+		SlimePlante = "Ennemi_SlimePlante",
+		SlimeChampignon = "Ennemi_SlimeChampignon",
+		SlimeLave = "Ennemi_SlimeLave",
+		GobelinDague = "Ennemi_GobelinDague",
+		Treant = "Ennemi_Treant",
+		TreantArbre = "Ennemi_TreantArbre",
+		KingSlime = "Ennemi_KingSlime",
+		KingTreant = "Ennemi_KingTreant",
 	}),
+	-- Nom d'une zone (fenêtre Expédition « Zone n · Nom ») quand son décor n'est pas dans l'arène : le décor
+	-- présent garde la priorité (attribut Nom du modèle de zone).
+	ZoneNames = table.freeze({
+		[1] = "La Plaine du Royaume",
+		[2] = "La Mare aux Slimes",
+		[3] = "La Forêt des Tréants",
+		[4] = "Le Camp de la Horde",
+		[5] = "Les Grottes de Lave",
+		[6] = "Le Bois Ancien",
+	} :: { [number]: string }),
 	-- Sous-titre d'une zone dans la fenêtre Expédition (texte seulement, maquette figée).
-	ZoneSubtitles = table.freeze({ [1] = "Prairies, slimes et la horde du Roi Orc" } :: { [number]: string }),
-	-- Noms affichés (pancarte, fenêtre des stages, annonce de combat). Boss = boss de la Zone 1 (X-5).
+	ZoneSubtitles = table.freeze({
+		[1] = "Prairies, slimes et la horde du Roi Orc",
+		[2] = "Mares, ronces, champignons et le Slime King",
+		[3] = "Sous-bois, tréants masqués et le King Tréant",
+		[4] = "Tentes, palissades et le retour du Roi Orc",
+		[5] = "Roche brûlante, lave et le Slime King en fusion",
+		[6] = "Vieux arbres, mousse et le réveil du King Tréant",
+	} :: { [number]: string }),
+	-- Noms affichés (pancarte, fenêtre des stages, annonce de combat). Boss = le Roi Orc (Zones 1 et 4).
 	EnemyNames = table.freeze({
 		Slime = "Slime",
 		Gobelin = "Gobelin",
 		Boss = "Roi Orc",
+		SlimePlante = "Slime des ronces",
+		SlimeChampignon = "Slime champignon",
+		SlimeLave = "Slime de lave",
+		GobelinDague = "Gobelin à dague",
+		Treant = "Tréant",
+		TreantArbre = "Vieux Tréant",
+		KingSlime = "Slime King",
+		KingTreant = "King Tréant",
 	}),
 }
 

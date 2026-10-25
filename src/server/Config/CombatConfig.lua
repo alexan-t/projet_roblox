@@ -23,11 +23,24 @@ local CombatConfig = {
 		Tireur = table.freeze({ MaxHealth = 85, AttackDamage = 20, AttackInterval = 1.5, AttackRange = 28, MoveSpeed = 8, EnergyPerAttack = 20, MaxEnergy = 100, UltimateDamage = 70 }),
 	}),
 
-	-- Ennemis : pas d'énergie ni d'ultime pour l'Alpha.
+	-- Ennemis : pas d'énergie ni d'ultime pour l'Alpha. Stats de base, sans la difficulté de zone
+	-- (StageConfig.Zones[zone].Difficulty) ni l'Élite, qui les multiplient pour la session.
 	Enemies = table.freeze({
 		Slime = table.freeze({ MaxHealth = 60, AttackDamage = 6, AttackInterval = 1.2, AttackRange = 4, MoveSpeed = 6 }),
 		Gobelin = table.freeze({ MaxHealth = 80, AttackDamage = 8, AttackInterval = 1.0, AttackRange = 5, MoveSpeed = 8 }),
 		Boss = table.freeze({ MaxHealth = 450, AttackDamage = 18, AttackInterval = 1.5, AttackRange = 7, MoveSpeed = 6 }),
+		-- Zones 2 à 6 (monstres validés, docs/ZONES.md). Slimes : même gabarit, une nuance par élément.
+		SlimePlante = table.freeze({ MaxHealth = 70, AttackDamage = 6, AttackInterval = 1.2, AttackRange = 4, MoveSpeed = 6 }),
+		SlimeChampignon = table.freeze({ MaxHealth = 55, AttackDamage = 8, AttackInterval = 1.3, AttackRange = 4, MoveSpeed = 5 }),
+		SlimeLave = table.freeze({ MaxHealth = 65, AttackDamage = 9, AttackInterval = 1.2, AttackRange = 4, MoveSpeed = 6 }),
+		-- Gobelin à dague : moins de PV que le gobelin à lance, frappe plus vite.
+		GobelinDague = table.freeze({ MaxHealth = 70, AttackDamage = 9, AttackInterval = 0.8, AttackRange = 4, MoveSpeed = 10 }),
+		-- Tréants : monstres moyens (8 à 10 studs), lents et coriaces.
+		Treant = table.freeze({ MaxHealth = 160, AttackDamage = 12, AttackInterval = 1.6, AttackRange = 6, MoveSpeed = 5 }),
+		TreantArbre = table.freeze({ MaxHealth = 220, AttackDamage = 14, AttackInterval = 1.8, AttackRange = 7, MoveSpeed = 4 }),
+		-- Boss validés des zones 2, 3, 5 et 6 (le Roi Orc garde l'EnemyId "Boss" en Zone 1 et 4).
+		KingSlime = table.freeze({ MaxHealth = 520, AttackDamage = 16, AttackInterval = 1.3, AttackRange = 7, MoveSpeed = 5 }),
+		KingTreant = table.freeze({ MaxHealth = 600, AttackDamage = 20, AttackInterval = 1.7, AttackRange = 8, MoveSpeed = 4 }),
 	}),
 	-- Mise en scène (docs/COMBAT_PRESENTATION.md) : temps pendant lesquels CombatService ne fait PAS
 	-- avancer le moteur, pour laisser le client faire entrer les ennemis. Aucune stat, aucune règle :
@@ -38,7 +51,11 @@ local CombatConfig = {
 		-- Avant une vague suivante ou le mini-boss : courte respiration, puis entrée depuis le décor.
 		WaveBreather = 0.5,
 		-- Durée de l'entrée par ennemi (la plus longue de la vague compte) ; inconnu : Default.
-		Entrance = table.freeze({ Slime = 1.4, Gobelin = 1.8, Boss = 2.6 }),
+		Entrance = table.freeze({
+			Slime = 1.4, Gobelin = 1.8, Boss = 2.6,
+			SlimePlante = 1.4, SlimeChampignon = 1.4, SlimeLave = 1.4, GobelinDague = 1.8,
+			Treant = 2.0, TreantArbre = 2.2, KingSlime = 2.6, KingTreant = 2.6,
+		}),
 		DefaultEntrance = 1.6,
 		-- Fin de combat : les modèles restent ce temps (outro du client : morts, sac, « VICTOIRE ! »),
 		-- puis la préparation est reconstruite. Rien ne disparaît d'un coup.

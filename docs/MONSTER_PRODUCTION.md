@@ -113,6 +113,7 @@ Par mesure, pas seulement à l'œil :
 - Attendre que les textures soient chargées : une pièce grise ou noire à la première capture est souvent un chargement en cours. Relancer la capture avant de conclure.
 - Passer `VISUAL_QA.md`. En cas de FIX : corriger, puis recapturer.
 - **Réinitialiser la caméra** (Outils § A) après la dernière capture.
+- **Propriété des assets** (`ASSET_OWNERSHIP.md`) : `generate_mesh`, `generate_texture` et `upload_image` publient sous le compte de la session Studio. Lancer `tools/studio-check-asset-ownership.luau` avec `ROOTS` = le modèle : chaque mesh, texture et `SurfaceAppearance` doit appartenir au propriétaire de l'expérience. Sinon FIX : préparer les sources et l'inventaire pour la republication par le propriétaire.
 
 ---
 

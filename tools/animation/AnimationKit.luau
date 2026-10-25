@@ -90,11 +90,13 @@ local function lowestPoint(model: Model): number
 	return y
 end
 
--- Pièces visibles du modèle (ni racine, ni os).
+-- Pièces visibles du modèle (ni racine, ni os, ni repères de prise affichés par Kit.showGrips).
 local function modelPieces(model: Model): { BasePart }
 	local list: { BasePart } = {}
+	local markers = model:FindFirstChild("ReperesPrise")
 	for _, part in model:GetDescendants() do
-		if part:IsA("BasePart") and part.Name ~= Skeleton.Root and not isBone(part) then
+		if part:IsA("BasePart") and part.Name ~= Skeleton.Root and not isBone(part)
+			and not (markers and part:IsDescendantOf(markers)) then
 			table.insert(list, part)
 		end
 	end
@@ -132,21 +134,43 @@ local function mapFor(options: { [string]: any }?): { Membres: { [string]: strin
 end
 
 -- Associe chaque pièce à un os (Skeleton.resolve) ; s'arrête si un membre n'a pas de pièce.
-local function resolvePieces(model: Model, options: { [string]: any }?): ({ BasePart }, any)
+-- Sans options.Map, la fiche est celle du nom du modèle (SkeletonConfig.Models[model.Name]).
+-- armsOnly : seuls le buste et les bras sont exigés (prises d'un modèle sans jambes, #68).
+local function resolvePieces(model: Model, options: { [string]: any }?, armsOnly: boolean?): ({ BasePart }, any)
+	local entryName = model:GetAttribute("Modele") or model.Name -- Kit.copy garde le nom de la source
+	if not (options and options.Map) and SkeletonConfig.Models[entryName] then
+		options = table.clone(options or {})
+		;(options :: any).Map = entryName
+	end
 	local list = modelPieces(model)
 	local descriptors = {}
 	for _, part in list do
+		-- Groupe : enfant direct du modèle qui contient la pièce (baton_fleur, halo_lames, equipement...).
+		local node: Instance = part
+		while node.Parent and node.Parent ~= model do
+			node = node.Parent
+		end
 		table.insert(descriptors, {
 			Name = part.Name,
 			Os = part:GetAttribute(Skeleton.BoneAttribute),
 			Ancre = part:GetAttribute(Skeleton.AnchorAttribute),
+			Groupe = if node ~= part and node.Parent == model then node.Name else nil,
 		})
 	end
 	local resolution = Skeleton.resolve(descriptors, mapFor(options))
 	for _, message in resolution.warnings do
 		warn(`[AnimationKit] {model.Name} : {message}`)
 	end
-	assert(#resolution.missing == 0, `{model.Name} : aucune pièce pour {table.concat(resolution.missing, ", ")} ; `
+	local missing = resolution.missing
+	if armsOnly then
+		missing = {}
+		for _, bone in resolution.missing do
+			if bone == "Buste" or bone == "BrasGauche" or bone == "BrasDroit" then
+				table.insert(missing, bone)
+			end
+		end
+	end
+	assert(#missing == 0, `{model.Name} : aucune pièce pour {table.concat(missing, ", ")} ; `
 		.. "la désigner dans SkeletonConfig (Membres) ou par Parts, voir docs/SKELETON.md")
 	return list, resolution
 end
@@ -166,6 +190,417 @@ function Kit.inspect(model: Model, options: { [string]: any }?): string
 	return table.concat(lines, "\n")
 end
 
+-- ── Prise des objets tenus (docs/SKELETON.md § Prise) ──────────────────────────────────────────────
+-- Attachment Poing sur le bras (centre du poing) et Prise sur l'objet tenu (point du manche serré),
+-- mêmes axes : X = manche vers la tête de l'arme, Y = côté du tranchant. Les mesures se font par
+-- rayons : le modèle doit être dans le Workspace.
+local GRIP = Skeleton.Grip
+local HAND_ARM = { ArmeGauche = "BrasGauche", ArmeDroite = "BrasDroit" }
+-- Kit.grip recentre seul un manche jusqu'à cette distance du poing mesuré (studs).
+local AUTO_RECENTER = 0.9
+
+local function only(parts: { BasePart }): RaycastParams
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = parts
+	return params
+end
+
+-- Points de surface d'une pièce : rayons tirés d'une sphère autour d'elle vers son centre.
+local function surfacePoints(part: BasePart, count: number?): { Vector3 }
+	local n = count or 400
+	local params = only({ part })
+	local center, radius = part.Position, part.Size.Magnitude
+	local points: { Vector3 } = {}
+	for i = 1, n do
+		local y = 1 - (i - 0.5) * 2 / n
+		local ring = math.sqrt(1 - y * y)
+		local angle = i * 2.399963
+		local direction = Vector3.new(math.cos(angle) * ring, y, math.sin(angle) * ring)
+		local hit = workspace:Raycast(center + direction * radius, -direction * radius * 2, params)
+		if hit then
+			table.insert(points, hit.Position)
+		end
+	end
+	return points
+end
+
+-- Centre du poing mesuré sur la pièce du bras : bout du bras le plus loin de l'épaule (point de la
+-- surface le plus proche du buste), puis centre du volume du bras dans une boule de 0,5 stud autour
+-- de ce bout, recentrée quatre fois (sondes GetPartsInPart). Le centre des seuls points de surface
+-- tombait dans le poignet (#05 Brise-Pierre).
+local function fistCenter(arm: BasePart, torso: BasePart): Vector3
+	local points = surfacePoints(arm)
+	assert(#points > 0, `{arm.Name} : aucun point de surface (pièce hors du Workspace ?)`)
+	-- Épaule : point du bras le plus proche du haut du buste (le centre du buste prenait le coude
+	-- d'un bras plié, #28).
+	local mn, mx = bounds(torso, CFrame.identity)
+	local shoulderLevel = Vector3.new((mn.X + mx.X) / 2, mn.Y + (mx.Y - mn.Y) * 0.85, (mn.Z + mx.Z) / 2)
+	local shoulder, best = points[1], math.huge
+	for _, point in points do
+		local distance = (point - shoulderLevel).Magnitude
+		if distance < best then
+			shoulder, best = point, distance
+		end
+	end
+	local tip, far = points[1], -1
+	for _, point in points do
+		local distance = (point - shoulder).Magnitude
+		if distance > far then
+			tip, far = point, distance
+		end
+	end
+	local probe = Instance.new("Part")
+	probe.Shape = Enum.PartType.Ball
+	probe.Size = Vector3.one * 0.06
+	probe.Anchored, probe.CanCollide, probe.Transparency = true, false, 1
+	probe.Parent = workspace
+	local overlap = OverlapParams.new()
+	overlap.FilterType = Enum.RaycastFilterType.Include
+	overlap.FilterDescendantsInstances = { arm }
+	local center = tip
+	for _ = 1, 4 do
+		local sum, count = Vector3.zero, 0
+		for x = -0.5, 0.5, 0.06 do
+			for y = -0.5, 0.5, 0.06 do
+				for z = -0.5, 0.5, 0.06 do
+					local offset = Vector3.new(x, y, z)
+					if offset.Magnitude <= 0.5 then
+						probe.Position = center + offset
+						if #workspace:GetPartsInPart(probe, overlap) > 0 then
+							sum += probe.Position
+							count += 1
+						end
+					end
+				end
+			end
+		end
+		if count == 0 then
+			break
+		end
+		center = sum / count
+	end
+	probe:Destroy()
+	return center
+end
+
+-- Axes d'une pièce rangés du plus long au plus court (vecteurs du monde, demi-longueurs).
+local function axesOf(part: BasePart): { { axis: Vector3, half: number } }
+	local cf = part.CFrame
+	local axes = {
+		{ axis = cf.RightVector, half = part.Size.X / 2 },
+		{ axis = cf.UpVector, half = part.Size.Y / 2 },
+		{ axis = cf.LookVector, half = part.Size.Z / 2 },
+	}
+	table.sort(axes, function(a, b)
+		return a.half > b.half
+	end)
+	return axes
+end
+
+-- Axe principal d'une pièce, mesuré sur sa surface (analyse en composantes principales) : suit la
+-- lame ou le manche même quand la boîte de la pièce est penchée (anneau de l'épée-clé #57).
+-- Renvoie le centre des points, l'axe, et les bornes des points le long de l'axe.
+local function principalAxis(part: BasePart): (Vector3, Vector3, number, number)
+	local points = surfacePoints(part, 600)
+	if #points < 10 then
+		local axes = axesOf(part)
+		return part.Position, axes[1].axis, -axes[1].half, axes[1].half
+	end
+	local mean = Vector3.zero
+	for _, point in points do
+		mean += point
+	end
+	mean /= #points
+	local xx, xy, xz, yy, yz, zz = 0, 0, 0, 0, 0, 0
+	for _, point in points do
+		local d = point - mean
+		xx += d.X * d.X
+		xy += d.X * d.Y
+		xz += d.X * d.Z
+		yy += d.Y * d.Y
+		yz += d.Y * d.Z
+		zz += d.Z * d.Z
+	end
+	local axis = axesOf(part)[1].axis
+	for _ = 1, 50 do
+		local v = Vector3.new(xx * axis.X + xy * axis.Y + xz * axis.Z, xy * axis.X + yy * axis.Y + yz * axis.Z, xz * axis.X + yz * axis.Y + zz * axis.Z)
+		if v.Magnitude < 1e-9 then
+			break
+		end
+		axis = v.Unit
+	end
+	local low, high = math.huge, -math.huge
+	for _, point in points do
+		local t = (point - mean):Dot(axis)
+		low, high = math.min(low, t), math.max(high, t)
+	end
+	return mean, axis, low, high
+end
+
+-- Centre de la section des pièces `parts` dans le plan perpendiculaire à `axis` passant par `point`
+-- (rayons tirés vers le point, rayon max 0,7 stud). nil si rien n'est coupé.
+local function sectionCenter(parts: { BasePart }, point: Vector3, axis: Vector3): Vector3?
+	local params = only(parts)
+	local u = axis:Cross(if math.abs(axis.Y) < 0.9 then Vector3.yAxis else Vector3.xAxis).Unit
+	local v = axis:Cross(u).Unit
+	local sum, count = Vector3.zero, 0
+	for step = 0, 15 do
+		local angle = step * math.pi / 8
+		local direction = u * math.cos(angle) + v * math.sin(angle)
+		local hit = workspace:Raycast(point + direction * 1.5, -direction * 1.5, params)
+		if hit and (hit.Position - point).Magnitude < 0.7 then
+			sum += hit.Position
+			count += 1
+		end
+	end
+	return if count > 0 then sum / count else nil
+end
+
+local function attachmentIn(parts: { BasePart }, name: string): Attachment?
+	for _, part in parts do
+		local found = part:FindFirstChild(name)
+		if found and found:IsA("Attachment") then
+			return found
+		end
+	end
+	return nil
+end
+
+export type HandGrip = {
+	hand: string, -- ArmeGauche / ArmeDroite
+	arm: BasePart, -- pièce qui donne la forme du bras
+	armParts: { BasePart }, -- toutes les pièces portées par ce bras (poing séparé compris)
+	held: { BasePart }, -- objets tenus par cette main
+	fist: Vector3, -- centre du poing mesuré
+	poing: Attachment?,
+	prise: Attachment?,
+}
+
+-- Objets tenus regroupés par main. MainProche : la main dont le poing mesuré est le plus proche.
+local function handGrips(model: Model, options: { [string]: any }?): { HandGrip }
+	local list, resolution = resolvePieces(model, options, true)
+	local torso = list[resolution.anchors.Buste]
+	local grips: { [string]: HandGrip } = {}
+	for hand, armBone in HAND_ARM do
+		local index = resolution.anchors[armBone]
+		if index then
+			local armParts: { BasePart } = {}
+			for i, part in list do
+				if resolution.targets[i] == armBone then
+					table.insert(armParts, part)
+				end
+			end
+			grips[hand] = { hand = hand, arm = list[index], armParts = armParts, held = {}, fist = fistCenter(list[index], torso) }
+		end
+	end
+	for index, part in list do
+		local target = resolution.targets[index]
+		if target == Skeleton.NearestHand then
+			local best = math.huge
+			for hand, grip in grips do
+				local distance = (part.Position - grip.fist).Magnitude
+				if distance < best then
+					target, best = hand, distance
+				end
+			end
+		end
+		local grip = grips[target]
+		if grip then
+			table.insert(grip.held, part)
+		end
+	end
+	local result: { HandGrip } = {}
+	for _, hand in { "ArmeDroite", "ArmeGauche" } do
+		local grip = grips[hand]
+		if grip and #grip.held > 0 then
+			grip.poing = attachmentIn(grip.armParts, GRIP.Hand)
+			grip.prise = attachmentIn(grip.held, GRIP.Weapon)
+			table.insert(result, grip)
+		end
+	end
+	return result
+end
+
+-- Superpose la Prise au Poing : tous les objets de la main bougent ensemble (décors d'arme compris).
+local function snapGrip(grip: HandGrip): number
+	if not (grip.poing and grip.prise) then
+		return 0
+	end
+	local delta = grip.poing.WorldCFrame * grip.prise.WorldCFrame:Inverse()
+	for _, part in grip.held do
+		part.CFrame = delta * part.CFrame
+	end
+	return delta.Position.Magnitude
+end
+
+-- Pose Prise et Poing d'après la prise actuelle (à faire une fois, sur un modèle dont les armes
+-- ont été contrôlées en capture). Pièce principale : celle dont l'axe long passe le plus près du
+-- poing ; Prise = centre de son manche au droit du poing ; Poing = même repère, sur le bras.
+-- Une main qui a déjà Prise et Poing est seulement recollée (Prise ramenée sur le Poing).
+-- options : comme Kit.rig (Map, Held...). Renvoie une ligne de compte rendu par main.
+function Kit.grip(model: Model, options: { [string]: any }?): { string }
+	local report: { string } = {}
+	for _, grip in handGrips(model, options) do
+		if not grip.prise then
+			local main, mainAxis, mainCenter, bestDistance, bestT = grip.held[1], Vector3.xAxis, Vector3.zero, math.huge, 0
+			local mainLow, mainHigh = 0, 0
+			for _, part in grip.held do
+				local center, axis, low, high = principalAxis(part)
+				local t = math.clamp((grip.fist - center):Dot(axis), low, high)
+				local distance = (center + axis * t - grip.fist).Magnitude
+				if distance < bestDistance then
+					main, mainAxis, mainCenter, bestDistance, bestT = part, axis, center, distance, t
+					mainLow, mainHigh = low, high
+				end
+			end
+			local axes = axesOf(main)
+			-- Objet sans manche (Skeleton.Grip.FreeWords) ou plat : la Prise est le centre du poing
+			-- mesuré (l'objet ne bouge pas), sans test « traverse » (PriseLibre).
+			local lower = string.lower(main.Name .. " " .. ((main.Parent :: Instance).Name))
+			-- Plat = mince ET presque aussi large que long (écu) ; une lame est mince mais allongée.
+			local flat = axes[3].half < axes[2].half * 0.35 and axes[2].half > axes[1].half * 0.5
+			for _, word in GRIP.FreeWords do
+				if string.find(lower, word, 1, true) then
+					flat = true
+				end
+			end
+			local point = if flat then grip.fist else mainCenter + mainAxis * bestT
+			if not flat then
+				point = sectionCenter({ main }, point, mainAxis) or point
+			end
+			-- Vers la tête de l'arme : le bout le plus éloigné du poing.
+			local axis = if bestT - mainLow > mainHigh - bestT then -mainAxis else mainAxis
+			local secondary = axes[2].axis - axis * axes[2].axis:Dot(axis)
+			if secondary.Magnitude < 0.3 then
+				secondary = axes[3].axis - axis * axes[3].axis:Dot(axis)
+			end
+			secondary = secondary.Unit
+			local frame = CFrame.fromMatrix(point, axis, secondary)
+			local prise = Instance.new("Attachment")
+			prise.Name = GRIP.Weapon
+			prise.CFrame = main.CFrame:ToObjectSpace(frame)
+			if flat then
+				prise:SetAttribute(GRIP.Free, true)
+			end
+			prise.Parent = main
+			grip.prise = prise
+		end
+		local prise = grip.prise :: Attachment
+		if not grip.poing then
+			-- Poing au centre du poing mesuré, axes de la Prise : le manche est recollé au centre.
+			-- Au-delà de AUTO_RECENTER, la mesure est douteuse (bras levé, gantelet) : rien ne bouge,
+			-- le Poing reste sur la Prise et Kit.checkGrips signale l'écart (vérifier en capture).
+			local gap = (grip.fist - prise.WorldPosition).Magnitude
+			local center = if gap <= AUTO_RECENTER then grip.fist else prise.WorldPosition
+			local poing = Instance.new("Attachment")
+			poing.Name = GRIP.Hand
+			poing.CFrame = grip.arm.CFrame:ToObjectSpace(prise.WorldCFrame - prise.WorldPosition + center)
+			poing.Parent = grip.arm
+			grip.poing = poing
+			local moved = snapGrip(grip)
+			table.insert(report, if gap <= AUTO_RECENTER
+				then string.format("%s : Prise sur %s, recentrée de %.2f stud dans le poing", grip.hand, (prise.Parent :: Instance).Name, moved)
+				else string.format("%s : Prise sur %s laissée en place, poing mesuré à %.2f stud (À VÉRIFIER EN CAPTURE)", grip.hand, (prise.Parent :: Instance).Name, gap))
+		else
+			table.insert(report, string.format("%s : %s recollé au Poing (déplacé de %.2f stud)", grip.hand,
+				(prise.Parent :: Instance).Name, snapGrip(grip)))
+		end
+	end
+	for _, line in report do
+		print(`[AnimationKit] {model.Name} : {line}`)
+	end
+	return report
+end
+
+-- Mesure les prises d'un modèle (Skeleton.GripMeasure) et renvoie les défauts (liste vide = PASS).
+function Kit.checkGrips(model: Model, options: { [string]: any }?): { string }
+	local problems: { string } = {}
+	for _, grip in handGrips(model, options) do
+		local measure: any = { Piece = grip.held[1].Name, HasPrise = grip.prise ~= nil, HasPoing = grip.poing ~= nil }
+		if grip.prise and grip.poing then
+			local prise, poing = grip.prise :: Attachment, grip.poing :: Attachment
+			measure.Piece = (prise.Parent :: Instance).Name
+			measure.Gap = (prise.WorldPosition - poing.WorldPosition).Magnitude
+			measure.Angle = math.deg(math.acos(math.clamp(prise.WorldAxis:Dot(poing.WorldAxis), -1, 1)))
+			measure.Offset = (poing.WorldPosition - grip.fist).Magnitude
+			measure.Free = prise:GetAttribute(GRIP.Free) == true
+			measure.Checked = prise:GetAttribute(GRIP.Checked) == true
+			local axis = prise.WorldAxis
+			measure.Before = sectionCenter(grip.held, prise.WorldPosition - axis * GRIP.Through, axis) ~= nil
+			measure.After = sectionCenter(grip.held, prise.WorldPosition + axis * GRIP.Through, axis) ~= nil
+		end
+		for _, problem in Skeleton.gripProblems(measure) do
+			table.insert(problems, `{grip.hand} {problem}`)
+		end
+	end
+	return problems
+end
+
+local function gripOfHand(model: Model, hand: string, options: { [string]: any }?): HandGrip
+	for _, grip in handGrips(model, options) do
+		if grip.hand == hand then
+			assert(grip.prise and grip.poing, `{model.Name} {hand} : lancer Kit.grip d'abord`)
+			return grip
+		end
+	end
+	error(`{model.Name} : aucun objet tenu par {hand}`)
+end
+
+-- Réoriente l'objet tenu par `hand` : le manche passe par le Poing dans la direction `direction`
+-- (vecteur du monde, vers la tête de l'arme), roulis = `secondary` si donné. Le Poing prend le même
+-- axe : c'est la direction du trou du poing, vérifiée en capture. Option `slide` : fait glisser
+-- la Prise le long du manche (studs, + vers la tête) avant de recoller.
+function Kit.aim(model: Model, hand: string, direction: Vector3, secondary: Vector3?, slide: number?, options: { [string]: any }?): ()
+	local grip = gripOfHand(model, hand, options)
+	local prise, poing = grip.prise :: Attachment, grip.poing :: Attachment
+	if slide and slide ~= 0 then
+		prise.CFrame = prise.CFrame * CFrame.new(slide, 0, 0)
+	end
+	local axis = direction.Unit
+	local side = secondary or prise.WorldSecondaryAxis
+	side = (side - axis * side:Dot(axis))
+	if side.Magnitude < 1e-3 then
+		side = axis:Cross(Vector3.yAxis)
+	end
+	local target = CFrame.fromMatrix(poing.WorldPosition, axis, side.Unit)
+	poing.WorldCFrame = target
+	snapGrip(grip)
+end
+
+-- Repère visible du Poing (et de la Prise) pour le contrôle en capture : tige verte le long de l'axe
+-- (vers la tête de l'arme), boule rouge au centre. Dossier « ReperesPrise » du modèle, à retirer
+-- après la capture (Kit.hideGrips).
+function Kit.showGrips(model: Model, options: { [string]: any }?): ()
+	Kit.hideGrips(model)
+	local folder = Instance.new("Folder")
+	folder.Name = "ReperesPrise"
+	folder.Parent = model
+	local function piece(name: string, size: Vector3, frame: CFrame, color: Color3, shape: Enum.PartType)
+		local part = Instance.new("Part")
+		part.Name, part.Size, part.CFrame, part.Color, part.Shape = name, size, frame, color, shape
+		part.Material = Enum.Material.Neon
+		part.Anchored, part.CanCollide, part.CanQuery, part.CanTouch, part.CastShadow = true, false, false, false, false
+		part.Parent = folder
+	end
+	for _, grip in handGrips(model, options) do
+		if grip.poing then
+			local frame = (grip.poing :: Attachment).WorldCFrame
+			piece("Axe_" .. grip.hand, Vector3.new(1.6, 0.06, 0.06), frame * CFrame.new(0.8, 0, 0), Color3.fromRGB(40, 220, 60), Enum.PartType.Block)
+			piece("Centre_" .. grip.hand, Vector3.one * 0.16, frame, Color3.fromRGB(230, 40, 40), Enum.PartType.Ball)
+		end
+		-- Centre du poing mesuré (violet) : doit tomber dans le poing ; sinon la mesure est fausse.
+		piece("Mesure_" .. grip.hand, Vector3.one * 0.12, CFrame.new(grip.fist), Color3.fromRGB(220, 40, 220), Enum.PartType.Ball)
+	end
+end
+
+function Kit.hideGrips(model: Model): ()
+	local old = model:FindFirstChild("ReperesPrise")
+	if old then
+		old:Destroy()
+	end
+end
+
 -- Pose le squelette commun (docs/SKELETON.md) sur un modèle de pièces séparées (format IA : <membre>_geom).
 -- Repère racine : X = droite du personnage (du bras gauche vers le bras droit), -Z = avant.
 -- Crée HumanoidRootPart, puis un os invisible par os commun (dossier « Os » : Buste, Tete, BrasGauche,
@@ -179,6 +614,15 @@ end
 --     "nearest" (bras le plus proche), "torso" (Buste), ou directement un nom d'os.
 function Kit.rig(model: Model, options: { [string]: any }?): ()
 	assert(not model:FindFirstChild(Skeleton.Root), `{model.Name} a déjà un squelette (Kit.unrig d'abord)`)
+	-- Prise : chaque objet tenu est recollé à son Poing avant tout, et sa main est celle du Poing.
+	local grips = handGrips(model, options)
+	local handOf: { [BasePart]: string } = {}
+	for _, grip in grips do
+		snapGrip(grip)
+		for _, part in grip.held do
+			handOf[part] = grip.hand
+		end
+	end
 	local list, resolution = resolvePieces(model, options)
 	local parts: { [string]: BasePart } = {}
 	for boneName, index in resolution.anchors do
@@ -247,6 +691,13 @@ function Kit.rig(model: Model, options: { [string]: any }?): ()
 		ArmeGauche = hand(leftArm),
 		ArmeDroite = hand(rightArm),
 	}
+	-- Avec un Poing, l'os de l'arme pivote au centre du poing : une arme tournée par une animation
+	-- (weaponRight, weaponLeft) reste dans la main.
+	for _, grip in grips do
+		if grip.poing then
+			pivots[grip.hand] = basis:PointToObjectSpace((grip.poing :: Attachment).WorldPosition)
+		end
+	end
 	local boneFolder = Instance.new("Folder")
 	boneFolder.Name = Skeleton.Folder
 	boneFolder.Parent = model
@@ -276,7 +727,7 @@ function Kit.rig(model: Model, options: { [string]: any }?): ()
 	for index, part in list do
 		local target = resolution.targets[index]
 		if target == Skeleton.NearestHand then
-			target = nearer(part, "ArmeGauche", "ArmeDroite")
+			target = handOf[part] or nearer(part, "ArmeGauche", "ArmeDroite")
 		elseif target == Skeleton.NearestArm then
 			target = nearer(part, "BrasGauche", "BrasDroit")
 		end
@@ -533,6 +984,9 @@ end
 -- Easing d'une clé = façon d'aller vers la clé suivante (In = accélère vers le coup).
 Kit.Attacks = {
 	-- Écuyer : coup d'épée en diagonale, bouclier gardé devant, petit pas en avant.
+	-- weaponRight à l'impact et après : sans lui, la lame finissait à l'horizontale, dans le
+	-- bouclier. Valeurs mesurées sur l'Écuyer : la diagonale finit vers le bas à gauche, devant lui,
+	-- sans qu'aucun point de la lame n'entre dans le bouclier, le buste ou les jambes.
 	Epee = {
 		Length = 0.6, Impact = 0.2,
 		Keys = {
@@ -545,13 +999,15 @@ Kit.Attacks = {
 			} },
 			{ Time = 0.2, Easing = "Out", Poses = {
 				torso = { -14, 30, 0, -0.18 },
-				rightArm = { 25, 0, -30 }, leftArm = { 25, 0, -6 },
+				rightArm = { 25, 0, -30 }, weaponRight = { 0, -20, 30 },
+				leftArm = { 25, 0, -6 },
 				rightLeg = { -6, -30, 0 }, leftLeg = { 30, -30, 0 },
 				head = { 8, -25, 0 },
 			} },
 			{ Time = 0.3, Easing = "InOut", Poses = {
 				torso = { -16, 36, 0, -0.2 },
-				rightArm = { 12, 0, -36 }, leftArm = { 22, 0, -6 },
+				rightArm = { 12, 0, -36 }, weaponRight = { 0, -40, 0 },
+				leftArm = { 22, 0, -6 },
 				rightLeg = { -6, -36, 0 }, leftLeg = { 32, -36, 0 },
 				head = { 9, -30, 0 },
 			} },
@@ -588,25 +1044,31 @@ Kit.Attacks = {
 	-- Ultime « Charge du Rempart » (Écuyer) : ramassé derrière le bouclier, épée tirée en arrière,
 	-- puis grand estoc en se fendant. L'onde dorée (UltimateEffectController) part à l'impact :
 	-- garder Impact égal à ANIMATION_IMPACT de ce contrôleur.
+	-- weaponRight : sans lui, le bras levé à 80° pointait la lame vers le haut et la gauche à
+	-- l'impact (pointe à 25 % vers l'avant). Valeurs mesurées sur l'Écuyer : pointe à ~98 % vers
+	-- l'avant à l'armé (hanche) et pendant l'estoc.
 	Rempart = {
 		Length = 0.9, Impact = 0.3,
 		Keys = {
 			{ Time = 0, Easing = "Out", Poses = {} },
 			{ Time = 0.15, Easing = "In", Poses = {
 				torso = { 10, -20, 0, -0.25 },
-				rightArm = { -30, 0, 25 }, leftArm = { 50, 0, -5 },
+				rightArm = { -30, 0, 25 }, weaponRight = { 50, -20, 0 },
+				leftArm = { 50, 0, -5 },
 				rightLeg = { -25, 20, 0 }, leftLeg = { 15, 20, 0 },
 				head = { -5, 15, 0 },
 			} },
 			{ Time = 0.3, Easing = "Out", Poses = {
 				torso = { -18, 25, 0, -0.1 },
-				rightArm = { 80, 0, -10 }, leftArm = { -15, 0, -25 },
+				rightArm = { 80, 0, -10 }, weaponRight = { -30, -60, 10 },
+				leftArm = { -15, 0, -25 },
 				rightLeg = { -10, -25, 0 }, leftLeg = { 38, -25, 0 },
 				head = { 10, -20, 0 },
 			} },
 			{ Time = 0.5, Easing = "InOut", Poses = {
 				torso = { -20, 28, 0, -0.12 },
-				rightArm = { 78, 0, -12 }, leftArm = { -18, 0, -25 },
+				rightArm = { 78, 0, -12 }, weaponRight = { -30, -60, 10 },
+				leftArm = { -18, 0, -25 },
 				rightLeg = { -10, -28, 0 }, leftLeg = { 40, -28, 0 },
 				head = { 11, -22, 0 },
 			} },
@@ -857,6 +1319,7 @@ function Kit.copy(source: Model, name: string?): Model
 	assert(not atelier:FindFirstChild(copyName), `{ATELIER}.{copyName} existe déjà`)
 	local model = source:Clone()
 	model.Name = copyName
+	model:SetAttribute("Modele", source:GetAttribute("Modele") or source.Name) -- fiche SkeletonConfig de la source
 	for _, tag in CollectionService:GetTags(model) do
 		CollectionService:RemoveTag(model, tag)
 	end

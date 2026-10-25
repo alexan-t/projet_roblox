@@ -235,7 +235,8 @@ Pastilles `Medium` : actif `Gold` opaque, inactif `WoodDeep` à `PanelStrong`. T
 - **Items 2D** (équipements) : même carte, icône dans la zone d'illustration, cadre neutre (pas de
   couleur de rareté tant que #61 n'est pas fusionnée ; règle cible : § 2, « Rendu des raretés »,
   règle 6). Vitrine `Workspace.Bestiaire.Inventaire.Equipement` puis Sacoche : voir
-  `docs/ITEMS.md`.
+  `docs/ITEMS.md`. Toute carte d'équipement du client passe par la fonction unique
+  `src/client/UI/ItemCard.lua` (rareté en texte via `ItemCard.rarity`, point de bascule pour #61 / #75).
 - **Ressources 2D** : même carte, icône dans la zone d'illustration, cadre neutre (aucune rareté).
   Catalogue, vitrine `Workspace.Bestiaire.Inventaire.Ressources` et production des icônes : voir
   `docs/RESOURCES.md`.
@@ -265,6 +266,69 @@ droite (« ×3 »). Apparition en cascade (pop décalé de 0,05 s par carte). Re
 « Quêtes HUD ») : voile, rayons dorés, icônes `Glow` qui jaillissent avec le montant coloré,
 « Récompense ! », « Toucher pour continuer » ; puis les monnaies 3D volent vers le HUD et une pastille
 verte résume le gain.
+
+**Écran de fin : butin d'équipements et de ressources (#72).** Extension de l'écran de fin
+existant (`RewardScreenController`, pas de second modal), **arbitrage produit validé par
+l'utilisateur le 2026-10-19**. Sous les cartes de monnaie, avant la section « Héros » :
+
+- **meilleur objet** : un bandeau bois (`ItemCard`, variante `Band`) avec la petite mention
+  « Équipement obtenu » (ou « Meilleur équipement » s'il y en a plusieurs), l'icône, le nom et la
+  rareté **en texte** (« Rare · Arme ») ; « **+N équipements** » à droite s'il y en a d'autres. Le
+  meilleur = rang de rareté le plus haut (`RarityStyle.rank`), puis ordre du catalogue. Cadre neutre,
+  aucune couleur de rareté (règle 6 en attente de #61 / #75 : le seul point de bascule est
+  `ItemCard.rarity`) ;
+- **ressources** : une seule ligne de pastilles compactes (icône + « ×n », 128 × 48, cadre neutre,
+  **aucune rareté**), dans l'ordre du catalogue ; ce qui ne tient pas devient la dernière pastille
+  « **+N autres** » (N = types de ressources masqués) ;
+- légende muted « **Ajoutées à ta Sacoche** » sous le tout ; **un seul son** pour toute la ligne ;
+- `Overflow` (Sacoche pleine) : message muted honnête « Sacoche pleine : équipement non ajouté »
+  (les ressources et les monnaies restent accordées) ;
+- aucun butin (défaite, ou rien de gagné) : le bloc n'existe pas, l'écran garde ses positions d'avant.
+
+Données : `CombatEnded.Loot = { Items = { { InstanceId, ItemId } }, Resources = { { ResourceId, Amount } }, Overflow }`,
+lu **à part** de `Rewards` (monnaies) ; nom, rareté, emplacement, famille et icône viennent de
+`ItemConfig` / `ResourceConfig` (le serveur ne renvoie jamais de rareté) ; une entrée inconnue est
+ignorée. **Mise en page à hauteur calculée** : `Shared.Sacoche.LootModel.layout` (mesures
+`UITheme.Pack.Reward`) donne les positions et la hauteur du contenu ; l'échelle (`LootModel.place`) part de
+la référence 1080 px et se réduit si le contenu ne tient pas sur la hauteur **ou** la largeur de la **zone
+libre** : entre le bas des monnaies et le haut de la hotbar, comme la Sacoche, jamais par-dessus la hotbar
+(plancher `MinScale` ; zone trop étroite : hotbar masquée, contenu jusqu'au bas de l'écran, voir téléphone
+ci-dessous). Les héros engagés restent sur **une seule ligne**
+de puces identiques : l'écran s'élargit au lieu de passer à la ligne. Les petits textes du butin
+(« ×n », « +N », légende, message, « Héros ») sont grossis selon l'échelle pour faire au moins
+`MinText` = 14 px réels (`LootModel.textSize`), leurs boîtes sont dimensionnées pour le pire cas.
+Recette #96 (2026-10-20) : avant correction, bouton « Continuer » sur la hotbar et textes à 8–10 px réels
+dans le viewport Studio 1651 × 633.
+
+**Écran de fin sur téléphone (paysage, référence 844 × 390).** Sur téléphone (hauteur < 520, mêmes
+seuils que la Sacoche et l'Expédition, `LootModel.pack`), les surcharges `UITheme.Pack.Reward.Phone`
+remplacent la disposition PC, qui y tombait à l'échelle 0,40 (textes à 11 px réels et moins) :
+
+- **titre** « Victoire ! » à 34 px sur une ligne de 44 px, rayons courts ; « Première victoire » **à
+  droite** du titre ;
+- **deux colonnes** sous le titre : à gauche les **monnaies** (cartes horizontales 136 × 48, monnaie 3D
+  carrée, nom puis « ×n ») puis le **butin**, inchangé dans ses règles (bandeau `ItemCard` 440 × 68 avec
+  la rareté en texte, une ligne de 5 pastilles neutres 82 × 44 dont « +N autres », légende, message
+  `Overflow`) ; à droite les **héros**, deux par ligne (puces 178 × 58 : portrait, nom, « Nv. » et
+  « +XP », barre ; sans « x / y XP » ni intitulé « Héros »), puis « **Continuer** » (180 × 44) aligné
+  sur le bas du contenu. Sans monnaie ni butin (défaite, héros seuls), la colonne droite est centrée ;
+- badges « Nouveau » et « NIVEAU SUPÉRIEUR ! » **posés au-dessus du coin droit** de leur carte
+  (`BadgeLift`), jamais sur un nom ;
+- mesures en px réels à l'échelle 1 (référence 390 px de haut, `MinScale` 0,8) ; **tous** les textes du
+  téléphone, cartes et héros compris, passent par `LootModel.textSize` : jamais sous 14 px réels.
+
+Placement : la zone libre entre les monnaies et la hotbar (~200 px) ne suffit pas au contenu complet
+(280 px). La hotbar est alors **masquée explicitement** (voile `MasqueHotbar`), le contenu descend jusqu'au
+bas de l'écran en restant **sous les monnaies** (`LootModel.place` : plein écran seulement si même cette
+zone ne suffit pas). Un écran court (butin léger, héros seuls) tient au-dessus de la hotbar sans la masquer.
+Si l'écran change de catégorie pendant l'affichage (rotation, émulateur), l'écran de fin est reconstruit
+sans rejouer le son du résultat.
+Recette téléphone (2026-10-21) : vrai `RewardScreenController` et vrai `UITheme` dans Studio, appareil
+844 × 390 simulé au centre du viewport (l'émulateur d'appareils n'est pas pilotable par MCP) ; 0, 2 et
+4 héros, échelle 1, plus petit texte mesuré 14 px réels ; PC 1651 × 633 identique à la recette #96.
+Tests : `tools/test-sacoche.ps1` (modèles purs), `tests/loot-ui.test.mjs` (règles de rareté, état,
+libellés). Aperçu Studio : `Workspace.ApercuEcranRecompenses = true` fait défiler trois cas
+(ressources seules ; équipement + ressources + XP ; beaucoup de ressources + Sacoche pleine).
 
 ### Quêtes
 Suivi (HUD) = sous-panneau : icône Quête du pack, titre `Label`, barre `Progress`, compteur « 3/5 ».
@@ -487,7 +551,14 @@ aucune règle de jeu) :
   - **une** action principale : **Placer**, ou **Retirer de l'arène** (`Remove`) pour un héros posé ;
   - action raccourci secondaire : les cases pulsent et « Choisis une case / Annuler » s'affiche, ce qui sert d'alternative au drag ;
   - le drag reste possible.
-- **Équipement / Ressources** : #72 et #73 ne sont pas livrés, donc états vides honnêtes (poupée aux 7 emplacements vides, « Aucun équipement », « Tes ressources apparaîtront ici »), sans aucun faux inventaire.
+- **Équipement** (#72, lecture seule ; données : `Inventory.InventoryStore`, remotes `GetInventory` / `InventoryChanged`) :
+  - **une carte par instance** (`ItemInstanceId`), jamais fusionnées, via la fonction unique `UI/ItemCard` (variante `Tile`) : cadre `Ink` neutre, icône du catalogue (repli : deux lettres du nom), nom, **rareté en texte** (`ItemCard.rarity` → `RarityStyle.name`), emplacement ; « +n » seulement si le niveau d'amélioration est > 0 (jamais « +0 ») ;
+  - tri : rareté décroissante, puis ordre du catalogue, puis `InstanceId` ; filtre par emplacement (« Tous » + emplacements possédés, cibles ≥ 44 px) ; compteur `n / Cap` muted ;
+  - badge du haut = état : « Nouveau » (instance apparue pendant la session, jusqu'à la sortie de l'onglet) ; « ! » sur l'onglet et sur le bouton Sac ;
+  - la poupée aux 7 emplacements est **conservée mais reste vide** : rien n'est équipé dans cette version, donc **aucun bouton Équiper** et aucun compteur « équipés » (sous le nom du héros : « Nv. n » seulement) ;
+  - états honnêtes : « Aucun équipement » / « Il peut tomber à la fin d'un combat » ; « Inventaire indisponible » / « Réessaie dans un instant » tant que le serveur n'a pas répondu (jamais présenté comme un inventaire vide).
+- **Ressources** (#72) : tuiles compactes (icône, nom, ×quantité ; hauteur ≥ 44 px) groupées par **famille non vide** (ordre de `ResourceConfig.Families`), cadre neutre, **aucune rareté ni couleur de rareté**. Mention muted en tête : « Pas encore utilisables : garde-les pour la suite ». Vide : « Aucune ressource » / « Gagne des combats pour en obtenir ». Logique pure et testée : `Shared.Sacoche.InventoryModel` (`tools/test-sacoche.ps1`) ; mesures : `Pack.Sacoche.*` (`Item*`, `Res*`, `FilterHeight`).
+- **Maquettes non versionnées (signalé)** : `Sacoche.dc.html` et `Expedition.dc.html` ne sont pas dans le dépôt (seule `docs/references/ui/invocation-v2` l'est). Les ajouts ci-dessus (onglets Équipement / Ressources remplis, filtre d'emplacement, retrait de « 0/7 équipés ») prolongent la vue existante sans maquette de référence : recette Studio obligatoire (`docs/VISUAL_QA.md`) avant tout PASS.
 - **Guidage** : `Bag.FirstHero` (première carte), `Bag.Place` (action principale, ou la première carte tant qu'aucun héros n'est choisi), `Hotbar.Guide`, `Menu.Bag`, drapeau « Bag ».
 
 ### Expédition (maquette figée « Expedition.dc.html »)
@@ -501,6 +572,7 @@ aucune règle de jeu) :
 - **Boutons chunky** : face en dégradé, contour Ink 4 px, lèvre de 5 px, rayon 14.
   - `Préparer` respire quand aucun héros n'est posé.
   - `Lancer` respire et brille quand il est actif. Inactif, il est gris, avec un cadenas et la raison.
+- **Butin possible** (#72) : la colonne ne liste que ce que le serveur annonce (`PotentialDrops`) ; sans entrée, le texte de repli est « Pas de butin pour l'instant » (l'ancien « Butin à venir » et la ligne « Équipements et ressources : bientôt » sont supprimés). Le rendu des drops listés ne change pas.
 - **Logique** : `Shared.Expedition.ExpeditionModel` (pure, testée par `tools/test-expedition.ps1`).
 
 Placement : quête en haut à gauche, monnaies en haut au centre (la liste des joueurs de Roblox

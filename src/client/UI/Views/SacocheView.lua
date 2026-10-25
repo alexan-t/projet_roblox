@@ -9,8 +9,12 @@
 --   ViewportFrame, Nv., touche du raccourci, « Nouveau » / « Posé », carte choisie soulevée avec contour
 --   doré, lueur et pop) ; fiche (portrait, nom, rareté, Nv., états, XP, PV / ATK du serveur, UNE action
 --   principale, l'action raccourci en secondaire) ;
---   Équipement / Ressources : pas encore de données côté serveur (#72, #73) → état vide honnête (poupée
---   aux 7 emplacements vides), aucun faux inventaire.
+--   Équipement (#72) : une carte par INSTANCE (ItemCard, rareté en texte, jamais fusionnées), tri rareté
+--     décroissante / catalogue / InstanceId, filtre par emplacement (cibles >= 44), « Nouveau » tant que
+--     l'onglet n'a pas été vu ; la poupée aux 7 emplacements reste VIDE (pas d'équipement porté, aucun bouton
+--     Équiper) ; « +n » seulement si le niveau d'amélioration est > 0.
+--   Ressources (#72) : tuiles compactes (icône, nom, quantité) groupées par famille NON vide, cadre neutre,
+--     aucune rareté. Inventaire indisponible ou vide : états honnêtes, aucun faux inventaire.
 --   Trois dispositions (UITheme.Pack.Sacoche) : PC, tablette, téléphone (onglets verticaux, fiche compacte).
 -- Ouverture : scale 0,94 → 1,01 → 1 et fondu, au centre (pas de glissement). Position : SacocheModel.frame.
 -- API :
@@ -24,6 +28,7 @@ local TweenService = game:GetService("TweenService")
 
 local ExpeditionVisualConfig = require(ReplicatedStorage.Shared.Config.ExpeditionVisualConfig)
 local HeroConfig = require(ReplicatedStorage.Shared.Config.HeroConfig)
+local InventoryModel = require(ReplicatedStorage.Shared.Sacoche.InventoryModel)
 local ItemConfig = require(ReplicatedStorage.Shared.Config.ItemConfig)
 local MenuIconConfig = require(ReplicatedStorage.Shared.Config.MenuIconConfig)
 local SacocheModel = require(ReplicatedStorage.Shared.Sacoche.SacocheModel)
@@ -31,6 +36,7 @@ local SacocheVisualConfig = require(ReplicatedStorage.Shared.Config.SacocheVisua
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local GuideTargets = require(script.Parent.Parent.GuideTargets)
 local Icons = require(script.Parent.Parent.Icons)
+local ItemCard = require(script.Parent.Parent.ItemCard)
 local RarityStyle = require(script.Parent.Parent.RarityStyle)
 local UIKit = require(script.Parent.Parent.UIKit)
 
@@ -47,10 +53,23 @@ export type Handlers = {
 	OnFilter: (filter: string) -> (),
 	OnQuery: (query: string) -> (),
 	OnSearch: (open: boolean) -> (),
+	OnSlot: (slot: string) -> (),
 	OnPrimary: (action: string) -> (),
 	OnSecondary: (action: string) -> (),
 	OnEquipHero: (step: number) -> (),
 	BindDrag: (frame: GuiObject, id: string) -> (),
+}
+-- Inventaire déjà préparé par le contrôleur (Shared.Sacoche.InventoryModel) : la vue ne trie ni ne filtre.
+export type Inventory = {
+	Loaded: boolean, -- false : pas encore reçu du serveur (jamais présenté comme « vide »)
+	Revision: number,
+	Cards: { InventoryModel.ItemCard }, -- déjà triées et filtrées par emplacement
+	Filters: { InventoryModel.SlotFilter },
+	Slot: string,
+	Groups: { InventoryModel.ResourceGroup },
+	Count: number,
+	Cap: number?,
+	FreshCount: number,
 }
 export type State = {
 	Tab: string, -- "Heroes" | "Equipment" | "Resources"
@@ -59,7 +78,9 @@ export type State = {
 	Filter: string,
 	Query: string,
 	SearchOpen: boolean,
-	HasNew: boolean,
+	HasNew: boolean, -- héros nouveau
+	HasNewEquipment: boolean?, -- équipement nouveau (« ! » de l'onglet Équipement)
+	Inventory: Inventory?,
 	Total: number, -- héros possédés (avant filtre)
 	EquipHero: { HeroId: string, Name: string, Level: number }?,
 	Picking: boolean,
@@ -211,12 +232,12 @@ local function chunky(parent: Instance, height: number, top: Color3, bottom: Col
 end
 
 -- Puce de filtre (Tous / Posés / Raccourcis) : dorée si active.
-local function chip(parent: Instance, content: string, on: boolean, icon: string?, onClick: () -> ()): TextButton
+local function chip(parent: Instance, content: string, on: boolean, icon: string?, onClick: () -> (), height: number?): TextButton
 	local b = Instance.new("TextButton")
 	b.AutoButtonColor = false
 	b.Text = ""
 	b.AutomaticSize = Enum.AutomaticSize.X
-	b.Size = UDim2.fromOffset(0, L.ChipHeight)
+	b.Size = UDim2.fromOffset(0, height or L.ChipHeight)
 	b.BackgroundColor3 = if on then Color3.new(1, 1, 1) else C.WoodDeep
 	b.Parent = parent
 	corner(b, 999)
@@ -408,6 +429,7 @@ local function applyLayout()
 	ui.none.Size = ui.grid.Size
 	-- largeur de la grille connue ici (offsets seulement) : cellules 4/5, colonnes de la disposition
 	local contentWidth = W - 2 * L.Pad.Side - (if wide then 0 else L.TabWidth + 6 + L.Gap)
+	ui.contentWidth = contentWidth -- onglets Équipement / Ressources (cellules des grilles)
 	local gridWidth = contentWidth - L.DetailWidth - L.Gap
 	local cell = math.floor((gridWidth - (L.HeroCols - 1) * L.CardGap) / L.HeroCols)
 	ui.gridLayout.CellSize = UDim2.fromOffset(cell, math.floor(cell * 5 / 4))
@@ -460,7 +482,7 @@ local TABS = {
 }
 
 local function renderTabs(state: State)
-	local key = `{state.Tab}|{state.HasNew}|{device}`
+	local key = `{state.Tab}|{state.HasNew}|{state.HasNewEquipment == true}|{device}`
 	if key == tabKey then
 		return
 	end
@@ -506,7 +528,8 @@ local function renderTabs(state: State)
 		if wide then
 			text(inner, info.Label, if on then L.TabSizeOn else L.TabSize).LayoutOrder = 2
 		end
-		if info.Id == "Heroes" and state.HasNew and not on then
+		local fresh = if info.Id == "Heroes" then state.HasNew elseif info.Id == "Equipment" then state.HasNewEquipment == true else false
+		if fresh and not on then
 			local dot = box(tab, "Nouveau", C.RoyalRed, 0, 999, UITheme.Stroke.Thin)
 			dot.AnchorPoint = Vector2.new(1, 0)
 			dot.Position = UDim2.new(1, 6, 0, -8)
@@ -956,8 +979,152 @@ local SLOT_GRID: { { Id: string, Col: number, Row: number } } = {
 	{ Id = "boots", Col = 2, Row = 4 },
 }
 
+-- Défilement vertical standard des onglets Équipement / Ressources.
+local function scroller(parent: Instance, name: string): ScrollingFrame
+	local scroll = Instance.new("ScrollingFrame")
+	scroll.Name = name
+	scroll.BackgroundTransparency = 1
+	scroll.BorderSizePixel = 0
+	scroll.ScrollBarThickness = UITheme.Stroke.ScrollBar
+	scroll.ScrollBarImageColor3 = C.Cream
+	scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	scroll.CanvasSize = UDim2.new()
+	scroll.ScrollingDirection = Enum.ScrollingDirection.Y
+	scroll.Parent = parent
+	return scroll
+end
+
+-- Tuile de ressource : icône (ou deux lettres), nom, quantité. Cadre neutre : AUCUNE rareté ni couleur de rareté.
+local function resourceTile(parent: Instance, tile: InventoryModel.ResourceTile, order: number)
+	local box_ = box(parent, `Ressource_{tile.ResourceId}`, C.WoodDeep, 0.15, 12, UITheme.Stroke.Regular)
+	box_.LayoutOrder = order
+	local iconX = 8
+	if tile.Icon then
+		local img = image(box_, tile.Icon, L.ResIcon)
+		img.AnchorPoint = Vector2.new(0, 0.5)
+		img.Position = UDim2.new(0, iconX, 0.5, 0)
+	else
+		local fallback = UIKit.text(box_, InventoryModel.initials(tile.Name), 14, { Color = C.TextMuted })
+		fallback.AnchorPoint = Vector2.new(0, 0.5)
+		fallback.Position = UDim2.new(0, iconX, 0.5, 0)
+		fallback.Size = UDim2.fromOffset(L.ResIcon, L.ResIcon)
+	end
+	local amountWidth = 64
+	local left = iconX + L.ResIcon + 6
+	local name = UIKit.text(box_, tile.Name, L.ResNameSize, { Align = Enum.TextXAlignment.Left })
+	name.Name = "Nom"
+	name.Position = UDim2.fromOffset(left, 0)
+	name.Size = UDim2.new(1, -left - amountWidth - 8, 1, 0)
+	name.TextWrapped = true
+	name.TextTruncate = Enum.TextTruncate.AtEnd
+	local amount = UIKit.text(box_, `×{tile.AmountText}`, L.ResAmountSize, { Color = C.GoldLight, Align = Enum.TextXAlignment.Right })
+	amount.Name = "Quantite"
+	amount.AnchorPoint = Vector2.new(1, 0.5)
+	amount.Position = UDim2.new(1, -8, 0.5, 0)
+	amount.Size = UDim2.fromOffset(amountWidth, math.ceil(L.ResAmountSize * 1.3))
+end
+
+-- Onglet Ressources : mention muted, puis un groupe par famille NON vide (tuiles compactes en grille).
+local function renderResources(other: Instance, inv: Inventory)
+	local scroll = scroller(other, "Ressources")
+	scroll.Size = UDim2.fromScale(1, 1)
+	padding(scroll, 4, 8, 8)
+	local column = list(scroll, false, 12, Enum.VerticalAlignment.Top)
+	column.HorizontalAlignment = Enum.HorizontalAlignment.Left
+	local hint = text(scroll, "Pas encore utilisables : garde-les pour la suite", L.ResHintSize, C.TextMuted, false)
+	hint.Name = "Mention"
+	hint.LayoutOrder = 0
+	hint.Size = UDim2.fromOffset(0, L.ResHintHeight)
+	local cols = L.ResCols
+	local usable = (ui.contentWidth or 700) - 16 - UITheme.Stroke.ScrollBar - 6
+	local cell = math.floor((usable - (cols - 1) * L.ResGap) / cols)
+	for order, group in inv.Groups do
+		local holder = Instance.new("Frame")
+		holder.Name = `Famille_{group.Id}`
+		holder.LayoutOrder = order
+		holder.BackgroundTransparency = 1
+		holder.AutomaticSize = Enum.AutomaticSize.Y
+		holder.Size = UDim2.fromOffset(usable, 0)
+		holder.Parent = scroll
+		list(holder, false, 6, Enum.VerticalAlignment.Top)
+		local header = text(holder, group.Name, L.ResHeaderSize, C.TextMuted)
+		header.Name = "Famille"
+		header.LayoutOrder = 1
+		local tiles = Instance.new("Frame")
+		tiles.Name = "Tuiles"
+		tiles.LayoutOrder = 2
+		tiles.BackgroundTransparency = 1
+		tiles.AutomaticSize = Enum.AutomaticSize.Y
+		tiles.Size = UDim2.fromOffset(usable, 0)
+		tiles.Parent = holder
+		local grid = Instance.new("UIGridLayout")
+		grid.SortOrder = Enum.SortOrder.LayoutOrder
+		grid.CellSize = UDim2.fromOffset(cell, L.ResTileH)
+		grid.CellPadding = UDim2.fromOffset(L.ResGap, L.ResGap)
+		grid.Parent = tiles
+		for index, tile in group.Tiles do
+			resourceTile(tiles, tile, index)
+		end
+	end
+end
+
+-- Équipement : « Tous » + emplacements possédés (cibles >= FilterHeight), compteur muted, grille de cartes.
+local function renderEquipmentList(inventory: Instance, inv: Inventory)
+	local h = handlers :: Handlers
+	local bar = Instance.new("Frame")
+	bar.Name = "Filtres"
+	bar.BackgroundTransparency = 1
+	bar.Size = UDim2.new(1, 0, 0, L.FilterHeight)
+	bar.Parent = inventory
+	local count = text(bar, if inv.Cap then `{inv.Count} / {inv.Cap}` else tostring(inv.Count), 14, C.TextMuted, false)
+	count.Name = "Compteur"
+	count.AutomaticSize = Enum.AutomaticSize.None
+	count.AnchorPoint = Vector2.new(1, 0.5)
+	count.Position = UDim2.new(1, 0, 0.5, 0)
+	count.Size = UDim2.fromOffset(L.CountWidth, 20)
+	count.TextXAlignment = Enum.TextXAlignment.Right
+	local chips = Instance.new("ScrollingFrame")
+	chips.Name = "Emplacements"
+	chips.BackgroundTransparency = 1
+	chips.BorderSizePixel = 0
+	chips.ScrollBarThickness = 0
+	chips.AutomaticCanvasSize = Enum.AutomaticSize.X
+	chips.CanvasSize = UDim2.new()
+	chips.ScrollingDirection = Enum.ScrollingDirection.X
+	chips.Size = UDim2.new(1, -L.CountWidth - 6, 1, 0)
+	chips.Parent = bar
+	list(chips, true, 6)
+	for index, filter in inv.Filters do
+		local b = chip(chips, `{filter.Label} {filter.Count}`, inv.Slot == filter.Id, ICON.Slots[filter.Id], function()
+			h.OnSlot(filter.Id)
+		end, L.FilterHeight)
+		b.Name = `Filtre_{filter.Id}`
+		b.LayoutOrder = index
+	end
+	local grid = scroller(inventory, "Cartes")
+	grid.Position = UDim2.fromOffset(0, L.FilterHeight + 6)
+	grid.Size = UDim2.new(1, 0, 1, -(L.FilterHeight + 6))
+	padding(grid, 14, 6, 8) -- place pour le badge « Nouveau » à cheval sur le bord haut
+	local cols = L.ItemCols
+	local width = (ui.contentWidth or 600) - L.DollWidth - L.Gap
+	local cell = math.floor((width - 12 - UITheme.Stroke.ScrollBar - 6 - (cols - 1) * L.ItemGap) / cols)
+	local layout = Instance.new("UIGridLayout")
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.CellSize = UDim2.fromOffset(cell, L.ItemCellH)
+	layout.CellPadding = UDim2.fromOffset(L.ItemGap, L.ItemGap + 6)
+	layout.Parent = grid
+	for index, card in inv.Cards do
+		local frame = ItemCard.create(grid, card, {
+			Variant = "Tile", NameSize = L.ItemNameSize, LineSize = L.ItemLineSize, ArtSize = L.ItemArt,
+		})
+		frame.LayoutOrder = index
+	end
+end
+
 local function renderOther(state: State)
-	local key = `{state.Tab}|{device}|{state.EquipHero and state.EquipHero.HeroId or ""}|{state.EquipHero and state.EquipHero.Level or 0}`
+	local inv = state.Inventory
+	local key = table.concat({ state.Tab, device, state.EquipHero and state.EquipHero.HeroId or "", state.EquipHero and state.EquipHero.Level or 0,
+		if inv then inv.Revision else -1, if inv then inv.Slot else "", if inv then inv.FreshCount else 0 }, "|")
 	if ui.otherKey == key then
 		return
 	end
@@ -966,19 +1133,27 @@ local function renderOther(state: State)
 	local wide = device ~= "phone"
 	local other = ui.other
 	clearChildren(other)
+	local loaded = inv ~= nil and inv.Loaded
 	if state.Tab == "Resources" then
-		-- #72 non livré : aucune réserve côté serveur, donc aucune quantité affichée
-		empty(other, ICON.Tabs.Resources, "Tes ressources apparaîtront ici", "Le butin d'Expédition arrive bientôt")
+		if not inv or not loaded then
+			-- remotes absents ou réponse pas encore reçue : jamais présenté comme un inventaire vide
+			empty(other, ICON.Tabs.Resources, "Inventaire indisponible", "Réessaie dans un instant")
+		elseif #inv.Groups == 0 then
+			empty(other, ICON.Tabs.Resources, "Aucune ressource", "Gagne des combats pour en obtenir")
+		else
+			renderResources(other, inv)
+		end
 		return
 	end
-	-- Équipement : poupée aux 7 emplacements (vides : #73 non livré), inventaire vide (#72 non livré)
+	-- Équipement : poupée aux 7 emplacements (toujours vides : rien n'est équipé dans cette version), liste des
+	-- exemplaires possédés à droite
 	local doll = box(other, "Poupee", C.Ink, 0.45, 14, UITheme.Stroke.Regular)
 	doll.Size = UDim2.new(0, L.DollWidth, 1, 0)
 	local hero = state.EquipHero
 	local top = Instance.new("Frame")
 	top.BackgroundTransparency = 1
 	top.Position = UDim2.fromOffset(10, 10)
-	top.Size = UDim2.new(1, -20, 0, 40)
+	top.Size = UDim2.new(1, -20, 0, UITheme.Spacing.TouchTarget)
 	top.Parent = doll
 	local function arrow(content: string, x: number, step: number)
 		local b = Instance.new("TextButton")
@@ -987,7 +1162,7 @@ local function renderOther(state: State)
 		b.BackgroundColor3 = Color3.new(1, 1, 1)
 		b.AnchorPoint = Vector2.new(x, 0)
 		b.Position = UDim2.fromScale(x, 0)
-		b.Size = UDim2.fromOffset(40, 40)
+		b.Size = UDim2.fromOffset(UITheme.Spacing.TouchTarget, UITheme.Spacing.TouchTarget)
 		b.Parent = top
 		corner(b, 999)
 		UIKit.stroke(b, UITheme.Stroke.Regular)
@@ -1001,8 +1176,8 @@ local function renderOther(state: State)
 	arrow(">", 1, 1)
 	local names = Instance.new("Frame")
 	names.BackgroundTransparency = 1
-	names.Position = UDim2.fromOffset(46, 0)
-	names.Size = UDim2.new(1, -92, 1, 0)
+	names.Position = UDim2.fromOffset(UITheme.Spacing.TouchTarget + 6, 0)
+	names.Size = UDim2.new(1, -2 * (UITheme.Spacing.TouchTarget + 6), 1, 0)
 	names.Parent = top
 	local nl = list(names, false, 0)
 	nl.HorizontalAlignment = Enum.HorizontalAlignment.Center
@@ -1010,7 +1185,8 @@ local function renderOther(state: State)
 	heroName.Size = UDim2.new(1, 0, 0, if wide then 22 else 17)
 	heroName.TextTruncate = Enum.TextTruncate.AtEnd
 	heroName.LayoutOrder = 1
-	local sub = UIKit.text(names, if hero then `Nv. {hero.Level} · 0/7 équipés` else "", 14, { Color = C.TextMuted, Stroke = false })
+	-- niveau seul : rien n'est équipé dans cette version, donc aucun compteur « équipés »
+	local sub = UIKit.text(names, if hero then `Nv. {hero.Level}` else "", 14, { Color = C.TextMuted, Stroke = false })
 	sub.Size = UDim2.new(1, 0, 0, 16)
 	sub.LayoutOrder = 2
 	-- grille 3 x 4 : héros au centre, emplacements autour (positions de la maquette)
@@ -1060,7 +1236,13 @@ local function renderOther(state: State)
 	inventory.Position = UDim2.new(0, L.DollWidth + L.Gap, 0, 0)
 	inventory.Size = UDim2.new(1, -(L.DollWidth + L.Gap), 1, 0)
 	inventory.Parent = other
-	empty(inventory, ICON.Slots.weapon, "Aucun équipement", "Le butin d'Expédition arrive bientôt")
+	if not inv or not loaded then
+		empty(inventory, ICON.Slots.weapon, "Inventaire indisponible", "Réessaie dans un instant")
+	elseif #inv.Filters == 0 or inv.Filters[1].Count == 0 then
+		empty(inventory, ICON.Slots.weapon, "Aucun équipement", "Il peut tomber à la fin d'un combat")
+	else
+		renderEquipmentList(inventory, inv)
+	end
 end
 
 ------------------------------------------------------------------ API

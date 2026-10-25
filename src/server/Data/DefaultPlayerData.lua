@@ -39,6 +39,11 @@ local DefaultPlayerData: PlayerDataTypes.PlayerData = {
 	Settings = {
 		CombatSpeed = 1,
 	},
+	-- Inventaire (#72) : équipements (une entrée par exemplaire, clé = ItemInstanceId) et ressources (piles).
+	Inventory = {
+		Equipment = {},
+		Resources = {},
+	},
 	-- Guidage du tutoriel (TutorialService) : drapeaux « vu une fois » de TutorialConfig.Flags.
 	Tutorial = {
 		Seen = {},

@@ -7,10 +7,11 @@
 -- la même animation joue donc sur tout modèle qui a ce squelette, quels que soient les noms de
 -- ses pièces (torso_geom, body_geom...). Les pièces visibles sont seulement accrochées aux os.
 --
--- « Cette pièce = tel os » se dit de trois façons, de la plus forte à la plus faible :
+-- « Cette pièce = tel os » se dit de quatre façons, de la plus forte à la plus faible :
 --   1. la fiche du modèle dans Config/SkeletonConfig (Git) : Membres et Pieces ;
 --   2. l'attribut texte "Os" posé sur la pièce dans Studio (ex. Os = "ArmeDroite") ;
---   3. la détection par le nom (format des modèles IA : torso_geom, left_arm_geom, weapon_geom...).
+--   3. le nom du groupe (sous-modèle) qui contient la pièce : fiche, puis mot porté / tenu ;
+--   4. la détection par le nom (format des modèles IA : torso_geom, left_arm_geom, weapon_geom...).
 
 local Skeleton = {}
 
@@ -78,28 +79,34 @@ function Skeleton.children(name: string): { string }
 	return list
 end
 
--- Détection par le nom (format des modèles générés par l'IA de Studio : <membre>_geom).
+-- Détection par le nom (format des modèles générés par l'IA de Studio : <membre>_geom). Variantes
+-- relevées au Bestiaire : sans suffixe (héros #14 à #21) et avec une espace (#65, #66).
 Skeleton.MemberNames = table.freeze({
-	Buste = { "torso_geom", "body_geom", "chest_geom" },
-	Tete = { "head_geom", "mask_head_geom", "skull_geom" },
-	BrasGauche = { "left_arm_geom" },
-	BrasDroit = { "right_arm_geom" },
-	JambeGauche = { "left_leg_geom" },
-	JambeDroite = { "right_leg_geom" },
+	Buste = { "torso_geom", "body_geom", "chest_geom", "torso" },
+	Tete = { "head_geom", "mask_head_geom", "skull_geom", "head" },
+	BrasGauche = { "left_arm_geom", "left_arm", "left arm_geom" },
+	BrasDroit = { "right_arm_geom", "right_arm", "right arm_geom" },
+	JambeGauche = { "left_leg_geom", "left_leg", "left leg_geom" },
+	JambeDroite = { "right_leg_geom", "right_leg", "right leg_geom" },
 } :: { [string]: { string } })
 
 -- Une pièce dont le nom contient l'un de ces mots est tenue par la main la plus proche.
+-- Pas « arc » : il prenait pour des armes l'arche de #45 (arche_portes) et les halos ArcDAube, CentreArc.
 -- Noms relevés sur les héros du Bestiaire (weapon_geom, buckler_geom, coutelas_geom, etendard_geom...).
 Skeleton.HeldWords = table.freeze({
 	"weapon", "arme", "sword", "epee", "blade", "lame", "grip", "guard", "pommel", "garde", "pommeau", "poignee",
-	"axe", "hache", "spear", "lance", "staff", "baton", "wand", "bow", "arc", "shield", "bouclier", "buckler",
+	"axe", "hache", "spear", "lance", "staff", "baton", "wand", "bow", "shield", "bouclier", "buckler",
 	"dagger", "dague", "knife", "couteau", "coutelas", "hammer", "marteau", "mace", "masse", "club", "gourdin",
 	"scythe", "faux", "torch", "torche", "lantern", "lanterne", "book", "livre", "banner", "banniere", "etendard",
-	"cloche", "battant",
+	"cloche", "battant", "sceptre", "scepter", "glaive", "harpoon", "harpon", "trident", "maul", "mallet",
+	"quenouille", "houlette", "hallebarde", "halberd", "shaft", "carte", "card", "flail", "fleau",
 })
--- Toujours portées par le buste, même si leur nom contient un mot ci-dessus (shoulder_guard, ceinture...).
+-- Toujours portées par le buste, même si leur nom contient un mot ci-dessus (shoulder_guard, ceinture,
+-- halo_lames : couronne de lames au-dessus de la tête, menhir crown...).
 Skeleton.WornWords = table.freeze({
 	"shoulder", "epaul", "cape", "tabard", "apron", "tablier", "quiver", "carquois", "belt", "ceinture", "helm", "heaume",
+	"halo", "wing", "aile", "crown", "couronne", "hat", "chapeau", "hood", "capuche", "collar", "mantle", "manteau",
+	"robe", "gown", "skirt", "braid", "hair", "tresse",
 })
 
 -- Cibles spéciales de rattachement, tranchées par la géométrie au moment du rig (AnimationKit) :
@@ -133,8 +140,8 @@ function Skeleton.target(value: any): string?
 	return nil
 end
 
--- Rattachement deviné d'après le nom : objet tenu -> main la plus proche, sinon buste.
-function Skeleton.guess(pieceName: string): string
+-- Rattachement lu dans le nom, seulement si un mot le dit : porté (Buste) ou tenu (MainProche), sinon nil.
+function Skeleton.explicit(pieceName: string): string?
 	local name = string.lower(pieceName)
 	for _, word in Skeleton.WornWords do
 		if string.find(name, word, 1, true) then
@@ -146,13 +153,22 @@ function Skeleton.guess(pieceName: string): string
 			return Skeleton.NearestHand
 		end
 	end
-	return "Buste"
+	return nil
+end
+
+-- Rattachement deviné d'après le nom : objet tenu -> main la plus proche, sinon buste.
+function Skeleton.guess(pieceName: string): string
+	return Skeleton.explicit(pieceName) or "Buste"
 end
 
 export type Piece = {
 	Name: string,
 	Os: string?, -- attribut "Os" de la pièce
 	Ancre: boolean?, -- attribut "OsAncre" (posé par un rig précédent)
+	-- Nom du groupe (enfant direct du modèle) qui contient la pièce, s'il y en a un : les décors d'une
+	-- arme (cristal_luciole dans baton_fleur) suivent l'arme, ceux d'un halo (Lame_1 dans halo_lames)
+	-- restent au buste.
+	Groupe: string?,
 }
 
 export type Map = {
@@ -256,11 +272,17 @@ function Skeleton.resolve(pieces: { Piece }, map: Map?): Resolution
 				table.insert(warnings, `attribut Os inconnu « {tostring(piece.Os)} » sur {piece.Name}`)
 			end
 		end
+		if not target and piece.Groupe then
+			target = Skeleton.target(forced[piece.Groupe]) or Skeleton.explicit(piece.Groupe)
+		end
 		targets[index] = target or Skeleton.guess(piece.Name)
 	end
 	local present: { [string]: boolean } = {}
 	for _, piece in pieces do
 		present[piece.Name] = true
+		if piece.Groupe then
+			present[piece.Groupe] = true
+		end
 	end
 	for key in forced do
 		if not present[key] then
@@ -270,6 +292,82 @@ function Skeleton.resolve(pieces: { Piece }, map: Map?): Resolution
 	table.sort(missing)
 	table.sort(warnings)
 	return { anchors = anchors, targets = targets, missing = missing, warnings = warnings }
+end
+
+-- Prise des objets tenus (docs/SKELETON.md § Prise). Deux Attachment, posés une fois par modèle :
+--   Poing (Hand) : sur une pièce du bras, au centre du poing fermé. Axis (X) = sens du manche qui
+--                  traverse le poing, vers la tête de l'arme ; SecondaryAxis (Y) = côté du tranchant.
+--   Prise (Weapon) : sur l'objet tenu, au point du manche que serre le poing, mêmes axes.
+-- Kit.rig superpose Prise à Poing et met le pivot de l'os ArmeGauche / ArmeDroite au Poing : l'arme
+-- est toujours dans la main, au repos comme pendant une animation, et tourne autour du poing.
+Skeleton.Grip = table.freeze({
+	Hand = "Poing",
+	Weapon = "Prise",
+	-- Attribut booléen de Prise : objet tenu sans manche qui traverse le poing (cartes entre les
+	-- doigts, lanterne par l'anse). Seul le test « traverse » est sauté.
+	Free = "PriseLibre",
+	-- Objets tenus sans manche qui traverse le poing : bouclier sanglé, cartes, lanterne par l'anse,
+	-- cloche par sa couronne, livre. Leur Prise est le centre du poing, avec PriseLibre.
+	-- Attribut booléen de Prise : prise validée en capture (date dans docs/HEROES_QA.md). Les deux
+	-- mesures approximatives (centre du poing, « traverse ») sont alors sautées ; l'écart Prise / Poing
+	-- reste contrôlé : déplacer l'arme ou le bras après validation casse toujours le contrôle.
+	Checked = "PriseControlee",
+	FreeWords = table.freeze({ "shield", "bouclier", "buckler", "ecu", "carte", "card", "lantern", "lanterne",
+		"cloche", "book", "livre", "torch", "torche" }),
+	MaxGap = 0.05, -- écart toléré entre Prise et Poing (studs)
+	MaxAngle = 5, -- écart toléré entre leurs axes (degrés)
+	MaxOffset = 0.35, -- écart toléré entre le Poing et le centre du poing mesuré sur le bras (studs)
+	Through = 0.25, -- le manche doit être présent à cette distance de part et d'autre du Poing (studs)
+})
+
+export type GripMeasure = {
+	Piece: string, -- objet tenu
+	HasPrise: boolean,
+	HasPoing: boolean,
+	Gap: number?, -- distance Prise <-> Poing
+	Angle: number?, -- angle entre leurs axes (degrés)
+	Offset: number?, -- distance Poing <-> centre du poing mesuré
+	Before: boolean?, -- manche présent côté talon (Prise - Through)
+	After: boolean?, -- manche présent côté tête (Prise + Through)
+	Free: boolean?, -- attribut PriseLibre
+	Checked: boolean?, -- attribut PriseControlee
+}
+
+-- Défauts d'une prise mesurée dans Studio (liste vide = l'objet est bien en main). Pure.
+function Skeleton.gripProblems(measure: GripMeasure): { string }
+	local grip = Skeleton.Grip
+	local problems: { string } = {}
+	local piece = measure.Piece
+	if not measure.HasPrise then
+		table.insert(problems, `{piece} : pas d'Attachment {grip.Weapon}`)
+	end
+	if not measure.HasPoing then
+		table.insert(problems, `{piece} : pas d'Attachment {grip.Hand} sur le bras qui le tient`)
+	end
+	if #problems > 0 then
+		return problems
+	end
+	if (measure.Gap or math.huge) > grip.MaxGap then
+		table.insert(problems, string.format("%s : %s à %.2f stud du %s (toléré %.2f)", piece, grip.Weapon, measure.Gap or math.huge, grip.Hand, grip.MaxGap))
+	end
+	if (measure.Angle or 180) > grip.MaxAngle then
+		table.insert(problems, string.format("%s : manche tourné de %.0f° par rapport au %s (toléré %d°)", piece, measure.Angle or 180, grip.Hand, grip.MaxAngle))
+	end
+	if measure.Checked then
+		return problems
+	end
+	if measure.Offset and measure.Offset > grip.MaxOffset then
+		table.insert(problems, string.format("%s : %s à %.2f stud du centre du poing (toléré %.2f)", piece, grip.Hand, measure.Offset, grip.MaxOffset))
+	end
+	if not measure.Free then
+		if measure.Before == false then
+			table.insert(problems, `{piece} : le manche s'arrête dans le poing côté talon (il doit le traverser)`)
+		end
+		if measure.After == false then
+			table.insert(problems, `{piece} : rien ne sort du poing côté tête`)
+		end
+	end
+	return problems
 end
 
 -- Attributs d'animation d'un modèle :

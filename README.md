@@ -163,6 +163,10 @@ Clear et ajoute les récompenses de `src/server/Config/RewardConfig.lua` (premie
 +1 ticket d'invocation ; valeurs Alpha provisoires). Le tout est sauvegardé avant l'écran de fin,
 sans action « réclamer ». Voir [la config, le flux et les garanties](docs/REWARDS.md).
 
+Depuis #72, la même victoire tire aussi un butin serveur (ressources et éventuel équipement des catalogues existants
+`ItemConfig` / `ResourceConfig`), rangé dans `PlayerData.Inventory` et lisible en lecture seule (`GetInventory`). Valeurs
+**ALPHA 0.0.2 PROVISOIRE** (`src/server/Config/LootConfig.lua`) ; voir [le loot, ses choix provisoires et la simulation](docs/REWARDS.md#loot-72-v1-serveur).
+
 ## Héros et invocation (HeroService)
 
 Le premier héros est obtenu pendant l'invocation tutorielle (`Remotes.RequestStarterSummon`, gratuite,
@@ -205,3 +209,7 @@ Les animations de la DEV jouent en Studio ; aucune n'a encore d'`AssetId` publi�
 - Commits au format `type(scope): message` (`feat`, `fix`, `chore`, `docs`...).
 - PR vers `develop`, jamais de push direct sur `develop` ni sur `main`.
 - `main` ne reçoit que des versions validées depuis `develop`.
+- Toute PR qui ajoute ou modifie un AssetId (image, mesh, texture, animation, son, modèle) remplit la
+  case « Propriété des assets » du modèle de PR (`.github/pull_request_template.md`) : assets sous le
+  propriétaire de l'expérience, chargés dans la place DEV, inventaire joint. Sinon, blocage avant le
+  merge (`docs/ASSET_OWNERSHIP.md`).
