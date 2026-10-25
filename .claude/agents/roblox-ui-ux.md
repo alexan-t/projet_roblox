@@ -21,6 +21,7 @@ Spécialiste UI/UX : vues, composants, responsive, lisibilité, guidage, animati
 
 ## Studio (MCP)
 - Captures réelles obligatoires avant tout PASS (résultat : PASS ou FIX). Le Play utilise une copie du code prise au démarrage : relancer après un changement Rojo.
+- Play qui joue (combat, invocation, récompense, inventaire) : store de recette séparé, attribut `StoreRecette` sur ServerStorage, vérifié dans la console avant toute action et retiré à la fin ; jamais le profil de travail `PlayerData_Studio` (`docs/SECURITY.md` § Recettes Studio). Store utilisé noté dans le rapport.
 - Après `screen_capture`, réinitialiser la caméra (`docs/MONSTER_PRODUCTION.md`, Outils § A : attendre 2 s, détruire `CurrentCamera`, `Fixed`, restaurer CFrame et Focus).
 - Aucune modification de la place sans délégation ; si besoin, `ChangeHistoryService` et signaler « NON SAUVEGARDÉ ». Jamais d'upload d'assets.
 

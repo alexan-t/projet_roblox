@@ -27,6 +27,7 @@ Publier/republier des assets, importer depuis la Toolbox, générer des meshes/t
 ## Studio
 - Toute mutation : `ChangeHistoryService` (Ctrl+Z), placement relatif aux repères existants, rapport « NON SAUVEGARDÉ » (jamais supposer que c'est enregistré).
 - Captures réelles ; après `screen_capture`, réinitialiser la caméra (`docs/MONSTER_PRODUCTION.md`, Outils § A). Ne jamais déclarer un rendu testé sans capture.
+- Play qui joue (combat, invocation, récompense, inventaire) : store de recette séparé, attribut `StoreRecette` sur ServerStorage, vérifié dans la console avant toute action et retiré à la fin ; jamais le profil de travail `PlayerData_Studio` (`docs/SECURITY.md` § Recettes Studio). Store utilisé noté dans le rapport.
 
 ## Rapport
 Fichiers / IDs touchés, inventaire de propriété (verdict PASS ou FIX), chargement constaté (n/total), captures (et version désaturée si rareté), blocages Studio, actions nécessitant l'utilisateur.
