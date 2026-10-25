@@ -1,11 +1,12 @@
 {
   "lot": "lot-heros-01",
-  "scope": "ServerStorage.Assets.Heros — Commun + PeuCommun",
+  "priority": "P2 jeu courant",
+  "scope": "ServerStorage.Assets.Heros — Héros les plus obtenus (Commun + Peu commun)",
   "targetOwner": {
     "userId": "11714751172",
     "name": "nxtoma"
   },
-  "doc": "docs/REPUBLICATION_LOT_PILOTE.md",
+  "doc": "docs/REPUBLICATION_HEROS.md",
   "heroes": [
     "tireuse_des_faubourgs",
     "lancier_des_champs",
