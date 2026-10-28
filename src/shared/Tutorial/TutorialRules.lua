@@ -160,6 +160,9 @@ function TutorialRules.problems(config: any): { string }
 			if step.Seconds ~= nil and (typeof(step.Seconds) ~= "number" or step.Seconds <= 0) then
 				table.insert(problems, `FirstOpen.{key}[{index}] : Seconds doit être > 0`)
 			end
+			if step.Hold ~= nil and (step.Hold ~= true or step.Seconds ~= nil) then
+				table.insert(problems, `FirstOpen.{key}[{index}] : Hold vaut true, sans Seconds`)
+			end
 		end
 	end
 	for index, nudge in config.Nudges do

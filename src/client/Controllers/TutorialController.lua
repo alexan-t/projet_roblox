@@ -187,7 +187,9 @@ local function update()
 		elseif step and now >= current.started then
 			local elapsed = now - current.started
 			local target = GuideTargets.get(step.Target)
-			if (not target and elapsed > MISSING) or elapsed > (step.Seconds or TutorialConfig.StepSeconds) then
+			-- Hold : pas de durée, l'étape attend le clic du joueur (ou la disparition de sa cible)
+			local limit = if step.Hold then math.huge else (step.Seconds or TutorialConfig.StepSeconds)
+			if (not target and elapsed > MISSING) or elapsed > limit then
 				if not (current.hud and not ScreenState.free()) then
 					nextStep()
 				end

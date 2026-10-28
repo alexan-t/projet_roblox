@@ -48,7 +48,9 @@ Rien pendant un combat, son outro ou l'écran de fin, sauf la découverte d'une 
 Une entrée avec `Screen` guide une partie d'une interface déjà découverte : elle démarre quand `Screen`
 est ouverte et que sa condition est vraie (`TutorialRules.followUp`). Condition fausse (aucun héros, aucun
 objet libre) : rien n'est montré **ni enregistré**, le joueur n'est jamais bloqué. Rien n'est acheté ni
-généré : le guidage ne fait que montrer « Équiper », que le joueur touche lui-même.
+généré : le guidage ne fait que montrer « Équiper », que le joueur touche lui-même. Les étapes où le joueur
+agit (onglet, objet, « Équiper ») sont `Hold` : sans durée, elles attendent son clic (ou la disparition de
+leur cible), sinon une étape écoulée sauterait toute la suite.
 
 Une étape passe à la suivante au clic sur sa cible ou après sa durée (`Seconds`, 4 s par défaut). Une cible
 absente (ex. aucun héros) est sautée. **Le drapeau est enregistré dès le début** : fermer puis rouvrir

@@ -13,6 +13,8 @@
 --       Text    : légende très courte (2 à 4 mots) à côté de la flèche, facultative (sans Text : la
 --                 légende proposée par la vue, ex. l'action possible de l'Expédition) ;
 --       Seconds : durée maximale de l'étape (s) ; un clic sur la cible passe aussi à la suivante.
+--       Hold    : true pour une étape sans durée : elle reste tant que sa cible est affichée et passe au
+--                 clic (ou quand la cible disparaît) ; pour une action que le joueur doit faire lui-même.
 --   Hud : true pour un élément du HUD (pas une fenêtre) : le guidage attend qu'aucun écran ne soit ouvert.
 --   Screen + Condition : guidage d'une partie d'une interface (ex. l'onglet Équipement de la Sacoche),
 --     montré quand l'interface `Screen` est ouverte ET que la condition (voir Nudges) est vraie, après sa
@@ -36,7 +38,7 @@
 --   « Bientôt disponible »), Flag (drapeau dont l'absence met le bouton en « attention », variante « ! »),
 --   Badge (condition facultative de cette attention).
 
-export type Step = { Target: string, Text: string?, Seconds: number? }
+export type Step = { Target: string, Text: string?, Seconds: number?, Hold: boolean? }
 export type FirstOpen = { Steps: { Step }, Hud: boolean?, Screen: string?, Condition: string? }
 export type Nudge = { Id: string, Target: string, Flag: string, Condition: string, Badge: boolean? }
 export type Entry = { Id: string, Label: string, View: string, Soon: string?, Flag: string?, Badge: string? }
@@ -102,10 +104,11 @@ local TutorialConfig = {
 			Screen = "Bag",
 			Condition = "HasEquipment",
 			Steps = {
-				{ Target = "Bag.EquipmentTab", Text = "Ton équipement", Seconds = 6 },
+				-- Hold : le joueur agit lui-même ; une durée écoulée perdrait la suite (cibles absentes ailleurs)
+				{ Target = "Bag.EquipmentTab", Text = "Ton équipement", Hold = true },
 				{ Target = "Bag.EquipHero", Text = "Ton héros", Seconds = 3 },
-				{ Target = "Bag.FirstItem", Text = "Choisis un objet", Seconds = 6 },
-				{ Target = "Bag.EquipAction", Text = "Équipe-le !", Seconds = 6 },
+				{ Target = "Bag.FirstItem", Text = "Choisis un objet", Hold = true },
+				{ Target = "Bag.EquipAction", Text = "Équipe-le !", Hold = true },
 			},
 		},
 		Currencies = {

@@ -141,6 +141,9 @@ return function(Rules: any, config: any, createService: any)
 			assert(words >= 2 and words <= 4, step.Text)
 		end
 		assert(table.concat(targets, ",") == "Bag.EquipmentTab,Bag.EquipHero,Bag.FirstItem,Bag.EquipAction", table.concat(targets, ","))
+		-- les actions du joueur attendent son clic : une durée écoulée sauterait toute la suite
+		local s = entry.Steps
+		assert(s[1].Hold == true and s[3].Hold == true and s[4].Hold == true and s[2].Hold == nil, "tab, item, Équiper: Hold")
 	end)
 
 	test("hasEquipment: an owned hero AND a known item worn by nobody", function()
@@ -193,7 +196,7 @@ return function(Rules: any, config: any, createService: any)
 			FirstOpen = {
 				Bag = { Steps = {} },
 				Part = { Screen = "Nope", Condition = "X", Steps = { { Target = "Bag.Item" } } },
-				Lost = { Condition = "X", Steps = { { Target = "Bag.Item" } } },
+				Lost = { Condition = "X", Steps = { { Target = "Bag.Item", Hold = true, Seconds = 3 } } },
 			},
 			Nudges = {},
 			Menu = { Entries = {} },
@@ -201,6 +204,7 @@ return function(Rules: any, config: any, createService: any)
 		local text = table.concat(Rules.problems(broken), "\n")
 		assert(text:find("FirstOpen.Part : Screen inconnu", 1, true), text)
 		assert(text:find("FirstOpen.Lost : Condition sans Screen", 1, true), text)
+		assert(text:find("FirstOpen.Lost[1] : Hold vaut true, sans Seconds", 1, true), text)
 	end)
 
 	------------------------------------------------------------------ service
