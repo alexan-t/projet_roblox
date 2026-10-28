@@ -122,6 +122,60 @@ return function(Model: any, HeroConfig: any, Pack: any)
 		assert(Model.detail(heroes.A, nil, ctx()).States[1].Label == "Posé dans l'arène")
 	end)
 
+	test("detail (#73): PV / ATK stay the server's FINAL stats; the equipment part comes from EquipmentBonus", function()
+		local equipped = table.clone(heroes.A)
+		equipped.MaxHealth, equipped.AttackDamage = 195, 22
+		equipped.EquipmentBonus = { MaxHealth = 30, AttackDamage = 4 }
+		local d = Model.detail(equipped, HeroConfig.Heroes.ecuyer_du_rempart, ctx())
+		assert(d.MaxHealth == 195 and d.AttackDamage == 22, "final stats shown as sent, never recomputed")
+		assert(d.HealthBonus == 30 and d.AttackBonus == 4)
+		local bare = Model.detail(heroes.A, HeroConfig.Heroes.ecuyer_du_rempart, ctx())
+		assert(bare.HealthBonus == 0 and bare.AttackBonus == 0, "no EquipmentBonus in the view: 0, nothing invented")
+		equipped.EquipmentBonus = { MaxHealth = 0 / 0, AttackDamage = "4" }
+		local junk = Model.detail(equipped, nil, ctx())
+		assert(junk.HealthBonus == 0 and junk.AttackBonus == 0, "invalid bonus values are ignored")
+	end)
+
+	test("equipment (#73): new texts reach 14 real px on PC, tablet and phone 844x390; touch targets >= 44", function()
+		local keys = { "DollStatSize", "DollTagSize", "BadgeSize", "EquipNameSize", "EquipTextSize", "EquipNoteSize", "EquipCtaSize",
+			"ItemNameSize", "ItemLineSize" }
+		-- zones libres réalistes (HUD du haut, hotbar) : mêmes repères que SacocheView.Layout
+		for _, case in { { 1920, 1080, 80, 960 }, { 1366, 768, 70, 660 }, { 1180, 820, 70, 712 }, { 844, 390, 0, 300 } } do
+			local w, h, top, bottom = case[1], case[2], case[3], case[4]
+			local device = Model.device(w, h)
+			local L = table.clone(if device == "phone" then Pack.Phone else Pack.Wide)
+			if device == "tablet" then
+				for key, value in Pack.Tablet do L[key] = value end
+			end
+			local margin = if device == "phone" then Pack.Margin / 2 else Pack.Margin
+			local zoneTop = if device == "phone" then 0 else top - L.TabTop
+			local f = Model.frame(v2(w, h), zoneTop, bottom, L.Window, margin, Pack.MinScale, Pack.MaxScale)
+			for _, key in keys do
+				assert(L[key] >= 14, `{w}x{h}: {key} = {L[key]} px`)
+				if device ~= "pc" then
+					assert(L[key] * f.Scale >= 14 - 1e-6, `{w}x{h}: {key} = {L[key] * f.Scale} real px at scale {f.Scale}`)
+				end
+			end
+			for _, key in { "EquipCtaHeight", "BackWidth", "SlotSize", "FilterHeight" } do
+				assert(L[key] >= 44, `{w}x{h}: {key} = {L[key]} < 44`)
+			end
+		end
+	end)
+
+	test("equipment (#73): item cards hold name x2, rarity, slot and bonus lines; the phone detail fits its panel", function()
+		for name, L in { Wide = Pack.Wide, Phone = Pack.Phone } do
+			local need = 5 + L.ItemArt + 3 + 2 * math.ceil(L.ItemNameSize * 1.15) + 3 * math.ceil(L.ItemLineSize * 1.2)
+			assert(need <= L.ItemCellH, `{name}: card needs {need} px, cell is {L.ItemCellH}`)
+			-- détail (#73) dans le panneau de la poupée : en-tête, 4 lignes (bonus, état, PV, ATK), actions
+			local panel = L.Window.Y - L.Pad.Top - L.Pad.Bottom - (if name == "Wide" then L.TabHeightOn + L.Gap else 0)
+			local area = panel - (10 + 44 + 8) - 10
+			local body = L.EquipIcon + L.EquipGap + 2 + 4 * math.ceil(L.EquipTextSize * 1.2) + 3 * L.EquipGap + L.EquipCtaHeight + 5 + L.EquipGap
+			assert(body <= area, `{name}: detail needs {body} px, panel has {area}`)
+			-- coins de la poupée (PV, ATK, compteur) : deux lignes dans la hauteur d'un emplacement
+			assert(2 * math.ceil(L.DollStatSize * 1.15) <= L.SlotSize, `{name}: corner stats taller than a slot`)
+		end
+	end)
+
 	print(`Sacoche: {passed} passed, {failed} failed`)
 	if failed > 0 then
 		error(`{failed} Sacoche test(s) failed`)

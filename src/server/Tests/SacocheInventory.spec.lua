@@ -4,7 +4,8 @@
 -- Équipement / Ressources) et Shared.Sacoche.LootModel (écran de fin), avec les VRAIS catalogues ItemConfig /
 -- ResourceConfig / RarityConfig et les mesures réelles d'UITheme.Pack : tools/test-sacoche.ps1.
 
-return function(Inventory: any, Loot: any, ItemConfig: any, ResourceConfig: any, RarityConfig: any, Pack: any)
+-- #73 : Shared.Sacoche.EquipmentModel (poupée, états, comparaison, requête) en 7e argument.
+return function(Inventory: any, Loot: any, ItemConfig: any, ResourceConfig: any, RarityConfig: any, Pack: any, Equipment: any?)
 	local passed, failed = 0, 0
 	local function test(name: string, run: () -> ())
 		local ok, err = pcall(run)
@@ -507,6 +508,207 @@ return function(Inventory: any, Loot: any, ItemConfig: any, ResourceConfig: any,
 		end
 		assert(R.ChipSize.Y >= 44, "chips >= 44")
 	end)
+
+	------------------------------------------------------------------ équipement V1 (#73) : Shared.Sacoche.EquipmentModel
+
+	if Equipment then
+		local E = Equipment
+		local slotOrder = {}
+		for _, slotType in ItemConfig.SlotTypes do table.insert(slotOrder, slotType.Id) end
+		local names = { ecuyer_du_rempart = "Écuyer du Rempart", tireuse_des_faubourgs = "Tireuse des Faubourgs" }
+		-- héros A (Écuyer) : arme I_W1 portée ; héros B (Tireuse) : broche I_A1 portée
+		local heroesView = {
+			A = { Id = "A", HeroId = "ecuyer_du_rempart", Level = 3, MaxHealth = 150, AttackDamage = 16,
+				BaseMaxHealth = 150, BaseAttackDamage = 13, EquipmentBonus = { MaxHealth = 0, AttackDamage = 3 }, Equipment = { weapon = "I_W1" } },
+			B = { Id = "B", HeroId = "tireuse_des_faubourgs", Level = 2, MaxHealth = 140, AttackDamage = 15,
+				EquipmentBonus = { MaxHealth = 20, AttackDamage = 2 }, Equipment = { accessory = "I_A1", helmet = "" } },
+		}
+		local raw = {
+			{ InstanceId = "I_W1", ItemId = "item_001", Bonus = { MaxHealth = 0, AttackDamage = 3 }, EquippedBy = "A", EquippedSlot = "weapon" },
+			{ InstanceId = "I_W2", ItemId = "item_015", Bonus = { MaxHealth = 0, AttackDamage = 8 } },
+			{ InstanceId = "I_A1", ItemId = "item_011", Bonus = { MaxHealth = 20, AttackDamage = 2 }, EquippedBy = "B", EquippedSlot = "accessory" },
+			{ InstanceId = "I_H1", ItemId = "item_004", Bonus = { MaxHealth = 40, AttackDamage = 0 } },
+		}
+		local function equipCtx(extra: any?): any
+			local view = Inventory.sanitize({ Equipment = raw })
+			local entries = {}
+			for _, entry in view.Equipment do entries[entry.InstanceId] = entry end
+			local c = { Heroes = heroesView, Names = names, Items = ItemConfig.Items, Entries = entries, SlotOrder = slotOrder,
+				SlotNames = ItemConfig.SlotTypeNames, Current = "A", Available = true }
+			for k, v in extra or {} do c[k] = v end
+			return c
+		end
+
+		test("equip: sanitize keeps the server's Bonus / EquippedBy / EquippedSlot, drops invalid values", function()
+			local view = Inventory.sanitize({ Equipment = {
+				raw[1],
+				{ InstanceId = "I_X", ItemId = "item_001", Bonus = { MaxHealth = 0 / 0, AttackDamage = math.huge }, EquippedBy = "", EquippedSlot = "weapon" },
+				{ InstanceId = "I_Y", ItemId = "item_001", Bonus = "x" },
+			} })
+			local a, x, y = view.Equipment[1], view.Equipment[2], view.Equipment[3]
+			assert(a.Bonus.AttackDamage == 3 and a.EquippedBy == "A" and a.EquippedSlot == "weapon")
+			assert(x.Bonus.MaxHealth == 0 and x.Bonus.AttackDamage == 0, "NaN / inf bonus -> 0")
+			assert(x.EquippedBy == nil and x.EquippedSlot == nil, "empty EquippedBy = not equipped")
+			assert(y.Bonus == nil, "non-table bonus dropped")
+		end)
+
+		test("equip: compatible items of a slot (catalogue SlotType), nothing else", function()
+			local view = Inventory.sanitize({ Equipment = raw })
+			assert(ids(E.compatible(view.Equipment, ItemConfig.Items, "weapon"), "InstanceId") == "I_W1,I_W2")
+			assert(ids(E.compatible(view.Equipment, ItemConfig.Items, "helmet"), "InstanceId") == "I_H1")
+			assert(#E.compatible(view.Equipment, ItemConfig.Items, "boots") == 0)
+			assert(#E.compatible({ { InstanceId = "Z", ItemId = "item_999" } }, ItemConfig.Items, "weapon") == 0, "unknown ItemId ignored")
+		end)
+
+		test("equip: state = Disponible / Équipé : <short hero name>, current hero vs another", function()
+			local c = equipCtx()
+			assert(E.state(c.Entries.I_W2, c).Label == "Disponible" and E.state(c.Entries.I_W2, c).Kind == "Available")
+			local mine = E.state(c.Entries.I_W1, c)
+			assert(mine.Kind == "Current" and mine.Label == "Équipé : Écuyer", mine.Label)
+			local other = E.state(c.Entries.I_A1, c)
+			assert(other.Kind == "Other" and other.Label == "Équipé : Tireuse" and other.Holder == "B", other.Label)
+			local ghost = E.state({ InstanceId = "G", ItemId = "item_001", EquippedBy = "gone" }, c)
+			assert(ghost.Kind == "Other" and ghost.Label == "Équipé", "unknown hero: no invented name")
+		end)
+
+		test("equip: comparison = final - old bonus + new bonus (« ATK : 16 → 21 (+5) », « PV : 150 → 150 (+0) »)", function()
+			local lines = E.compare(heroesView.A, { MaxHealth = 0, AttackDamage = 8 }, { MaxHealth = 0, AttackDamage = 3 })
+			assert(lines[1].Text == "PV : 150 → 150 (+0)", lines[1].Text)
+			assert(lines[2].Text == "ATK : 16 → 21 (+5)", lines[2].Text)
+			assert(lines[2].Before == 16 and lines[2].After == 21 and lines[2].Delta == 5)
+			-- slot vide : simple ajout ; arme plus faible : delta négatif avec le signe moins
+			assert(E.compare(heroesView.A, { AttackDamage = 2 }, nil)[2].Text == "ATK : 16 → 18 (+2)")
+			assert(E.compare(heroesView.A, { AttackDamage = 1 }, { AttackDamage = 3 })[2].Text == "ATK : 16 → 14 (−2)")
+		end)
+
+		test("equip: removing = final - bonus; missing server stats -> no comparison", function()
+			local lines = E.compare(heroesView.B, nil, { MaxHealth = 20, AttackDamage = 2 })
+			assert(lines[1].Text == "PV : 140 → 120 (−20)" and lines[2].Text == "ATK : 15 → 13 (−2)", lines[1].Text .. " / " .. lines[2].Text)
+			assert(#E.compare({ Id = "Q", HeroId = "x" }, { AttackDamage = 5 }, nil) == 0, "no stats in the view: nothing invented")
+			assert(#E.compare(nil, { AttackDamage = 5 }, nil) == 0)
+		end)
+
+		test("equip: rounding — server numbers are shown as integers (half up), NaN / inf ignored", function()
+			assert(E.int(150.4) == 150 and E.int(150.5) == 151 and E.int(-2.5) == -2 and E.int(0 / 0) == nil and E.int(math.huge) == nil and E.int("3") == nil)
+			local lines = E.compare({ Id = "R", HeroId = "x", MaxHealth = 150.4, AttackDamage = 16.6 }, { MaxHealth = 2.5, AttackDamage = 0 }, nil)
+			assert(lines[1].Text == "PV : 150 → 153 (+3)" and lines[2].Text == "ATK : 17 → 17 (+0)", lines[1].Text .. " / " .. lines[2].Text)
+			assert(E.bonus({ MaxHealth = 0 / 0, AttackDamage = "4" }).MaxHealth == 0 and E.bonus(nil).AttackDamage == 0)
+		end)
+
+		test("equip: bonus labels « +4 ATK », « +30 PV », both, none; hero stats « PV 188 (+30) »", function()
+			assert(E.bonusText({ MaxHealth = 0, AttackDamage = 4 }) == "+4 ATK")
+			assert(E.bonusText({ MaxHealth = 30, AttackDamage = 0 }) == "+30 PV")
+			assert(E.bonusText({ MaxHealth = 10, AttackDamage = 1 }) == "+10 PV · +1 ATK")
+			assert(E.bonusText({ MaxHealth = 0, AttackDamage = 0 }) == nil and E.bonusText(nil) == nil, "no « +0 » bonus label")
+			local stats = E.heroStats({ Id = "S", HeroId = "x", MaxHealth = 188, AttackDamage = 21, EquipmentBonus = { MaxHealth = 30, AttackDamage = 4 } })
+			assert(stats[1].Text == "PV 188 (+30)" and stats[2].Text == "ATK 21 (+4)", stats[1].Text .. " / " .. stats[2].Text)
+			assert(stats[1].ValueText == "PV 188" and stats[1].BonusText == "(+30)")
+			local bare = E.heroStats({ Id = "T", HeroId = "x", MaxHealth = 150, AttackDamage = 16 })
+			assert(bare[1].Text == "PV 150" and bare[1].BonusText == nil, "no equipment: no « (+0) »")
+			assert(E.heroStats({ Id = "U", HeroId = "x", Level = 1 }) == nil and E.heroStats(nil) == nil)
+			assert(E.signed(5) == "+5" and E.signed(0) == "+0" and E.signed(-5) == "−5")
+		end)
+
+		test("equip: detail — Équiper on the current hero, with the replaced item and its comparison", function()
+			local d = E.detail(equipCtx().Entries.I_W2, equipCtx())
+			assert(d.State.Label == "Disponible" and d.Action.Kind == "Equip" and d.Action.Label == "Équiper" and d.Action.Enabled)
+			assert(d.Replaces == "Épée du Rempart", tostring(d.Replaces))
+			assert(d.Lines[2].Text == "ATK : 16 → 21 (+5)" and d.Lines[1].Text == "PV : 150 → 150 (+0)")
+			assert(d.BonusText == "+8 ATK")
+			local kind, hero, target, extra = E.request(d.Action)
+			assert(kind == "Equip" and hero == "A" and target == "I_W2" and extra == nil, "exactly (Equip, hero, item)")
+			-- emplacement vide : rien remplacé
+			local helmet = E.detail(equipCtx().Entries.I_H1, equipCtx())
+			assert(helmet.Replaces == nil and helmet.Lines[1].Text == "PV : 150 → 190 (+40)")
+		end)
+
+		test("equip: detail — Retirer when worn (current hero: removal comparison; other hero: note, no comparison)", function()
+			local mine = E.detail(equipCtx().Entries.I_W1, equipCtx())
+			assert(mine.Action.Kind == "Unequip" and mine.Action.Label == "Retirer" and mine.State.Label == "Équipé : Écuyer")
+			assert(mine.Lines[2].Text == "ATK : 16 → 13 (−3)", mine.Lines[2].Text)
+			local kind, hero, target = E.request(mine.Action)
+			assert(kind == "Unequip" and hero == "A" and target == "weapon", "exactly (Unequip, hero, slot)")
+			local other = E.detail(equipCtx().Entries.I_A1, equipCtx())
+			assert(other.Action.Kind == "Unequip" and other.Action.Hero == "B" and other.Action.Target == "accessory")
+			assert(other.State.Label == "Équipé : Tireuse" and other.Note == "Retire-le pour l'équiper sur Écuyer" and #other.Lines == 0)
+		end)
+
+		test("equip: detail — disabled with a reason in combat, without remote, without hero; busy disables", function()
+			local combat = E.detail(equipCtx().Entries.I_W2, equipCtx({ InCombat = true }))
+			assert(combat.Action.Enabled == false and combat.Action.Reason == "Impossible pendant un combat")
+			local noRemote = E.detail(equipCtx().Entries.I_W2, equipCtx({ Available = false }))
+			assert(noRemote.Action.Enabled == false and noRemote.Action.Reason == "Équipement indisponible")
+			local noHero = equipCtx()
+			noHero.Current = nil
+			local nobody = E.detail(noHero.Entries.I_W2, noHero)
+			assert(nobody.Action.Enabled == false and nobody.Action.Reason == "Aucun héros" and #nobody.Lines == 0)
+			assert(E.request(nobody.Action) == nil, "no request without a hero")
+			assert(E.detail(equipCtx().Entries.I_W2, equipCtx({ Busy = true })).Action.Enabled == false)
+		end)
+
+		test("equip: request never carries an ItemId, a rarity or a stat (3 values: action, hero, item or slot)", function()
+			local c = equipCtx()
+			for _, entry in c.Entries do
+				local d = E.detail(entry, c)
+				local values = table.pack(E.request(d.Action))
+				assert(values.n == 3, `{values.n} values`)
+				for i = 1, values.n do
+					local v = values[i]
+					assert(typeof(v) == "string" and v ~= entry.ItemId and not ItemConfig.Items[v] and RarityConfig.Rank[v] == nil, tostring(v))
+				end
+			end
+			assert(E.request({ Kind = "Upgrade", Label = "x", Hero = "A", Target = "I_W2", Enabled = true }) == nil, "only Equip / Unequip")
+		end)
+
+		test("equip: server refusals shown as sent, with a capital first letter (UTF-8 safe)", function()
+			assert(E.reasonText("combat en cours") == "Combat en cours")
+			assert(E.reasonText("équipé par un autre héros") == "Équipé par un autre héros")
+			assert(E.reasonText(nil) == "Action refusée" and E.reasonText("") == "Action refusée" and E.reasonText(5) == "Action refusée")
+			assert(E.reasonText("x") == "X")
+		end)
+
+		test("equip: doll — 7 slots in catalogue order, worn items with icon, « 1/7 équipés », stats", function()
+			local c = equipCtx()
+			local doll = E.doll(heroesView.A, c)
+			assert(#doll.Slots == 7 and doll.Total == 7 and doll.Count == 1 and doll.CountText == "1/7 équipés", doll.CountText)
+			for index, slot in doll.Slots do assert(slot.Slot == slotOrder[index]) end
+			assert(doll.Slots[1].InstanceId == "I_W1" and doll.Slots[1].Icon == ItemConfig.Items.item_001.Icon and doll.Slots[1].Name == "Épée du Rempart")
+			assert(doll.Stats[1].Text == "PV 150" and doll.Stats[2].Text == "ATK 16 (+3)")
+			-- « » = vide ; lien vers un objet absent de l'inventaire : ignoré (jamais inventé)
+			local b = E.doll(heroesView.B, c)
+			assert(b.Count == 1, "empty string slot is empty")
+			local ghost = E.doll({ Id = "Z", HeroId = "x", Equipment = { weapon = "I_NOPE", ring = "I_W2" } }, c)
+			assert(ghost.Count == 0 and ghost.Stats == nil, "unknown item / unknown slot ignored")
+			assert(E.doll(nil, c).Count == 0 and E.doll(nil, c).CountText == "0/7 équipés")
+		end)
+
+		test("equip: cards — bonus text and state badge (never the rarity); Nouveau only while available", function()
+			local c = equipCtx()
+			local cards = Inventory.equipmentCards(Inventory.sanitize({ Equipment = raw }).Equipment, ctx({ New = { I_W2 = true, I_A1 = true } }))
+			E.decorate(cards, c)
+			local by = {}
+			for _, card in cards do by[card.InstanceId] = card end
+			assert(by.I_W1.Badge == "Équipé : Écuyer" and by.I_W1.BadgeKind == "Equipped" and by.I_W1.BonusText == "+3 ATK")
+			assert(by.I_A1.Badge == "Équipé : Tireuse", "worn beats Nouveau")
+			assert(by.I_W2.Badge == "Nouveau" and by.I_W2.BadgeKind == "New")
+			assert(by.I_H1.Badge == nil and by.I_H1.BonusText == "+40 PV", "Disponible: no badge")
+			for _, card in cards do
+				assert(card.Badge == nil or not string.find(card.Badge, card.Rarity, 1, true), "rarity in the state badge")
+				assert(card.LevelText == nil, "no « +0 »")
+			end
+		end)
+
+		test("equip: a doll slot keeps its filter even without any item (count 0, catalogue position)", function()
+			local view = Inventory.sanitize({ Equipment = raw })
+			local filters = Inventory.slotFilters(view.Equipment, ctx(), slotOrder)
+			local pinned = E.pinSlot(filters, "boots", ItemConfig.SlotTypeNames, slotOrder)
+			assert(ids(pinned, "Id") == "all,weapon,helmet,boots,accessory", ids(pinned, "Id"))
+			assert(pinned[4].Count == 0 and pinned[4].Label == ItemConfig.SlotTypeNames.boots)
+			assert(Inventory.activeSlot(pinned, "boots") == "boots" and #Inventory.equipmentCards(view.Equipment, ctx({ Slot = "boots" })) == 0)
+			assert(E.pinSlot(filters, "weapon", ItemConfig.SlotTypeNames, slotOrder) == filters, "already listed: unchanged")
+			assert(E.pinSlot(filters, "all", ItemConfig.SlotTypeNames, slotOrder) == filters and E.pinSlot(filters, "ring", ItemConfig.SlotTypeNames, slotOrder) == filters)
+		end)
+	end
 
 	print(`SacocheInventory: {passed} passed, {failed} failed`)
 	if failed > 0 then

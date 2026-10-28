@@ -21,6 +21,11 @@
 -- HeroBarController.bagChanged, HeroBarController.HasNew(), HeroBarController.newChanged.
 -- Niveaux (#68) : « Nv. n » sur chaque raccourci et chaque carte (par exemplaire) ; XP, PV et ATK de la
 -- fiche reçus du serveur (HeroesChanged), jamais calculés ici.
+-- Équipement V1 (#73) : la poupée montre le héros choisi par les flèches (bag.equip) ; toucher un emplacement
+-- filtre l'onglet Équipement (bag.slot, bag.slotPinned), toucher une carte ouvre son détail (bag.item).
+-- L'action du détail passe par Inventory.EquipmentStore (remote EquipmentAction, 3 arguments, arguments
+-- fournis par Shared.Sacoche.EquipmentModel.request) ; les vues serveur (HeroesChanged, InventoryChanged)
+-- redessinent ensuite la Sacoche.
 
 local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
@@ -30,12 +35,14 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local HeroConfig = require(ReplicatedStorage.Shared.Config.HeroConfig)
+local EquipmentModel = require(ReplicatedStorage.Shared.Sacoche.EquipmentModel)
 local InventoryModel = require(ReplicatedStorage.Shared.Sacoche.InventoryModel)
 local ItemConfig = require(ReplicatedStorage.Shared.Config.ItemConfig)
 local ResourceConfig = require(ReplicatedStorage.Shared.Config.ResourceConfig)
 local SacocheModel = require(ReplicatedStorage.Shared.Sacoche.SacocheModel)
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local ArenaStore = require(script.Parent.Parent.Arena.ArenaStore)
+local EquipmentStore = require(script.Parent.Parent.Inventory.EquipmentStore)
 local InventoryStore = require(script.Parent.Parent.Inventory.InventoryStore)
 local RarityStyle = require(script.Parent.Parent.UI.RarityStyle)
 local ScreenState = require(script.Parent.Parent.UI.ScreenState)
@@ -87,6 +94,8 @@ local bag = {
 	picking = false, -- « Ajouter au raccourci » : choisir une case de la hotbar
 	equip = 1, -- héros montré par la poupée d'équipement
 	slot = "all", -- filtre d'emplacement de l'onglet Équipement ("all" ou un SlotType)
+	slotPinned = false, -- filtre choisi en touchant un emplacement de la poupée : affiché même sans objet (#73)
+	item = nil :: string?, -- objet choisi dans l'onglet Équipement (InstanceId) : panneau de détail (#73)
 }
 -- « Nouveau » : exemplaires apparus après le premier chargement, pas encore vus.
 local known: { [string]: boolean }? = nil
@@ -477,30 +486,93 @@ end
 
 -- Inventaire (#72) préparé pour la vue : le tri, le filtre et les groupes viennent d'InventoryModel (pur, testé).
 -- Le serveur ne renvoie jamais de rareté : elle est lue dans ItemConfig.
+local SLOT_ORDER: { string } = {}
+for _, slotType in ItemConfig.SlotTypes do
+	table.insert(SLOT_ORDER, slotType.Id)
+end
+local HERO_NAMES: { [string]: string } = {}
+for heroId, info in HeroConfig.Heroes do
+	HERO_NAMES[heroId] = info.Name
+end
+
+-- Héros montré par la poupée (flèches) : carte triée et vue serveur, ou nil s'il n'y a aucun héros.
+local function equipHero(): (SacocheModel.Card?, any)
+	local all = sortedHeroes()
+	local card = all[math.clamp(bag.equip, 1, math.max(#all, 1))]
+	return card, if card then ArenaStore.heroes[card.Id] else nil
+end
+
+-- Contexte de Shared.Sacoche.EquipmentModel : uniquement des vues serveur (héros, inventaire) et des catalogues.
+local function equipmentContext(): EquipmentModel.Context
+	local entries = {}
+	local view = InventoryStore.view
+	if view then
+		for _, entry in view.Equipment do
+			entries[entry.InstanceId] = entry
+		end
+	end
+	local card = equipHero()
+	return {
+		Heroes = ArenaStore.heroes :: any, Names = HERO_NAMES, Items = ItemConfig.Items :: any, Entries = entries :: any,
+		SlotOrder = SLOT_ORDER, SlotNames = ItemConfig.SlotTypeNames, Current = if card then card.Id else nil,
+		InCombat = ArenaStore.inCombat(), Busy = EquipmentStore.busy, Available = EquipmentStore.available,
+	}
+end
+
 local function inventoryState(): SacocheView.Inventory
 	local view = InventoryStore.view
 	if not InventoryStore.loaded or not view then
 		return { Loaded = false, Revision = InventoryStore.revision, Cards = {}, Filters = {}, Slot = "all", Groups = {}, Count = 0, Cap = nil, FreshCount = 0 }
 	end
-	local slotOrder = {}
-	for _, slotType in ItemConfig.SlotTypes do
-		table.insert(slotOrder, slotType.Id)
-	end
 	local ctx: InventoryModel.EquipmentContext = {
 		Items = ItemConfig.Items, RankOf = RarityStyle.rank, SlotNames = ItemConfig.SlotTypeNames,
 		Slot = "all", New = InventoryStore.fresh,
 	}
-	local filters = InventoryModel.slotFilters(view.Equipment, ctx, slotOrder)
+	local filters = InventoryModel.slotFilters(view.Equipment, ctx, SLOT_ORDER)
+	if bag.slotPinned then
+		filters = EquipmentModel.pinSlot(filters, bag.slot, ItemConfig.SlotTypeNames, SLOT_ORDER)
+	end
 	local slot = InventoryModel.activeSlot(filters, bag.slot)
 	ctx.Slot = slot
 	local fresh = 0
 	for _ in InventoryStore.fresh do fresh += 1 end
+	local cards = InventoryModel.equipmentCards(view.Equipment, ctx)
+	EquipmentModel.decorate(cards, equipmentContext())
 	return {
 		Loaded = true, Revision = InventoryStore.revision,
-		Cards = InventoryModel.equipmentCards(view.Equipment, ctx),
+		Cards = cards,
 		Filters = filters, Slot = slot,
 		Groups = InventoryModel.resourceGroups(view.Resources, { Resources = ResourceConfig.Resources, Families = ResourceConfig.Families }),
 		Count = view.Count, Cap = view.Cap, FreshCount = fresh,
+	}
+end
+
+-- Poupée et détail de l'objet choisi (#73) : tout vient des vues serveur, mis en forme par EquipmentModel.
+local function equipState(): SacocheView.Equip
+	local ctx = equipmentContext()
+	local hero = if ctx.Current then ArenaStore.heroes[ctx.Current] else nil
+	local entry = if bag.item then ctx.Entries[bag.item] else nil
+	if bag.item and not entry then
+		bag.item = nil -- l'objet n'est plus dans l'inventaire
+	end
+	local card: InventoryModel.ItemCard? = nil
+	if entry then
+		-- en-tête du détail : la même carte que la grille (nom, rareté en texte, emplacement, icône)
+		local one = InventoryModel.equipmentCards({ entry :: any }, {
+			Items = ItemConfig.Items, RankOf = RarityStyle.rank, SlotNames = ItemConfig.SlotTypeNames, Slot = "all",
+		})
+		EquipmentModel.decorate(one, ctx)
+		card = one[1]
+	end
+	return {
+		Hero = ctx.Current,
+		Doll = EquipmentModel.doll(hero :: any, ctx),
+		Selected = if card then bag.item else nil,
+		Card = card,
+		Detail = if entry and card then EquipmentModel.detail(entry :: any, ctx) else nil,
+		Error = EquipmentStore.lastError,
+		Busy = EquipmentStore.busy,
+		Slot = bag.slot,
 	}
 end
 
@@ -515,9 +587,7 @@ local function renderBag()
 	local ctx = context()
 	local hero = if bag.chosen then ArenaStore.heroes[bag.chosen] else nil
 	local detail = if hero then SacocheModel.detail(hero :: any, HeroConfig.Heroes[hero.HeroId] :: any, ctx) else nil
-	local all = sortedHeroes()
-	local equipCard = all[math.clamp(bag.equip, 1, math.max(#all, 1))]
-	local equipHero = equipCard and ArenaStore.heroes[equipCard.Id]
+	local equipCard, equipView = equipHero()
 	local total = 0
 	for _ in ArenaStore.heroes do total += 1 end
 	SacocheView.Render({
@@ -531,7 +601,8 @@ local function renderBag()
 		HasNewEquipment = InventoryStore.hasNew(),
 		Inventory = if bag.tab == "Heroes" then nil else inventoryState(),
 		Total = total,
-		EquipHero = if equipCard and equipHero then { HeroId = equipCard.HeroId, Name = equipCard.Name, Level = equipHero.Level } else nil,
+		EquipHero = if equipCard and equipView then { HeroId = equipCard.HeroId, Name = equipCard.Name, Level = equipView.Level } else nil,
+		Equip = if bag.tab == "Equipment" then equipState() else nil,
 		Picking = bag.picking,
 	})
 end
@@ -587,6 +658,8 @@ local function mountBag()
 		OnTab = function(tab: string)
 			if bag.tab == "Equipment" and tab ~= "Equipment" then
 				InventoryStore.markSeen()
+				bag.item = nil
+				EquipmentStore.clearError()
 			end
 			bag.tab = tab
 			bag.picking = false
@@ -610,7 +683,43 @@ local function mountBag()
 		end,
 		OnSlot = function(slot: string)
 			bag.slot = slot
+			bag.slotPinned = false
 			ArenaStore.notify()
+		end,
+		-- #73 : emplacement de la poupée -> onglet filtré sur cet emplacement (héros courant conservé) ;
+		-- un emplacement occupé ouvre aussi le détail de l'objet porté (Retirer)
+		OnDollSlot = function(slot: string, instanceId: string?)
+			bag.slot = slot
+			bag.slotPinned = true
+			bag.item = instanceId
+			EquipmentStore.clearError()
+			ArenaStore.notify()
+		end,
+		OnItem = function(instanceId: string)
+			bag.item = if bag.item == instanceId then nil else instanceId
+			EquipmentStore.clearError()
+			ArenaStore.notify()
+		end,
+		OnItemBack = function()
+			bag.item = nil
+			EquipmentStore.clearError()
+			ArenaStore.notify()
+		end,
+		-- UNE requête validée par le serveur ; ses vues (HeroesChanged, InventoryChanged) redessinent la Sacoche
+		OnEquipAction = function()
+			if not bag.item or ArenaStore.inCombat() or EquipmentStore.busy then
+				return
+			end
+			local ctx = equipmentContext()
+			local entry = ctx.Entries[bag.item]
+			if not entry then
+				return
+			end
+			local detail = EquipmentModel.detail(entry :: any, ctx)
+			local action, hero, target = EquipmentModel.request(detail.Action)
+			if detail.Action.Enabled and action and hero and target then
+				EquipmentStore.request(action, hero, target)
+			end
 		end,
 		OnQuery = function(query: string)
 			bag.query = query
@@ -627,6 +736,7 @@ local function mountBag()
 			local count = #sortedHeroes()
 			if count > 0 then
 				bag.equip = (bag.equip - 1 + step) % count + 1
+				EquipmentStore.clearError()
 				ArenaStore.notify()
 			end
 		end,
@@ -688,6 +798,9 @@ function HeroBarController:Start()
 		render()
 	end)
 	InventoryStore.start()
+	-- équipement (#73) : « en cours » et dernière erreur ; les vues serveur arrivent par les deux stores ci-dessus
+	EquipmentStore.changed.Event:Connect(render)
+	EquipmentStore.start()
 	-- un écran modal s'ouvre (Quêtes, Expédition, invocation, récompenses...) : la Sacoche se ferme, jamais
 	-- de fenêtre par-dessus elle
 	ScreenState.changed.Event:Connect(function(current: string?)

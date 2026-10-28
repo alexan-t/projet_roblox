@@ -323,7 +323,12 @@ local Pack = {
 			PickBottom = 118, PickSize = 20,
 			-- Équipement / Ressources (#72) : filtres >= 44 px, cartes d'item, tuiles de ressource compactes.
 			FilterHeight = 44, CountWidth = 84,
-			ItemCols = 3, ItemCellH = 176, ItemArt = 84, ItemNameSize = 16, ItemLineSize = 14, ItemGap = 12,
+			-- #73 : une ligne de plus sur la carte (bonus) et lignes à 15 px (>= 14 px réels à l'échelle tablette)
+			ItemCols = 3, ItemCellH = 190, ItemArt = 84, ItemNameSize = 16, ItemLineSize = 15, ItemGap = 12,
+			-- Équipement V1 (#73) : poupée (stats, compteur, étiquettes), panneau de détail d'un objet
+			DollStatSize = 16, DollTagSize = 15, BadgeSize = 15, BadgeHeight = 24,
+			EquipNameSize = 20, EquipTextSize = 16, EquipNoteSize = 15, EquipIcon = 64, EquipGap = 6,
+			EquipCtaHeight = 56, EquipCtaSize = 22, BackWidth = 96,
 			ResCols = 2, ResTileH = 52, ResIcon = 40, ResNameSize = 14, ResAmountSize = 18, ResGap = 10,
 			ResHeaderSize = 16, ResHintSize = 15, ResHintHeight = 24,
 		},
@@ -342,7 +347,11 @@ local Pack = {
 			EmptyIcon = 64, EmptyTitle = 18,
 			PickBottom = 76, PickSize = 17,
 			FilterHeight = 44, CountWidth = 70,
-			ItemCols = 3, ItemCellH = 132, ItemArt = 52, ItemNameSize = 14, ItemLineSize = 14, ItemGap = 8,
+			ItemCols = 3, ItemCellH = 156, ItemArt = 52, ItemNameSize = 15, ItemLineSize = 15, ItemGap = 8,
+			-- #73 : textes à 15 px (fenêtre à ~0,95 sur 844 x 390 : >= 14 px réels), cibles >= 44
+			DollStatSize = 15, DollTagSize = 15, BadgeSize = 15, BadgeHeight = 24,
+			EquipNameSize = 16, EquipTextSize = 15, EquipNoteSize = 15, EquipIcon = 44, EquipGap = 2,
+			EquipCtaHeight = 46, EquipCtaSize = 18, BackWidth = 80,
 			ResCols = 2, ResTileH = 48, ResIcon = 36, ResNameSize = 14, ResAmountSize = 16, ResGap = 8,
 			ResHeaderSize = 15, ResHintSize = 14, ResHintHeight = 20,
 		},

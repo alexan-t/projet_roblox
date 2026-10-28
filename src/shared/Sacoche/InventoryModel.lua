@@ -16,7 +16,9 @@
 
 local InventoryModel = {}
 
-export type EquipmentEntry = { InstanceId: string, ItemId: string, UpgradeLevel: number? }
+-- Bonus / EquippedBy / EquippedSlot (#73) : calculés et envoyés par le serveur, recopiés tels quels (lecture).
+export type EquipmentEntry = { InstanceId: string, ItemId: string, UpgradeLevel: number?,
+	Bonus: { MaxHealth: number, AttackDamage: number }?, EquippedBy: string?, EquippedSlot: string? }
 export type ResourceEntry = { ResourceId: string, Amount: number }
 export type View = { Equipment: { EquipmentEntry }, Resources: { ResourceEntry }, Count: number, Cap: number? }
 export type ItemInfo = { Id: string, Name: string, Rarity: string, SlotType: string, Index: number, Icon: string? }
@@ -24,6 +26,8 @@ export type ResourceInfo = { Id: string, Name: string, Family: string, Index: nu
 export type ItemCard = {
 	InstanceId: string, ItemId: string, Name: string, Rarity: string, Rank: number, SlotType: string, SlotName: string,
 	Icon: string?, Index: number, LevelText: string?, New: boolean,
+	-- ajoutés par Shared.Sacoche.EquipmentModel.decorate (#73) : bonus en texte, état du badge du haut
+	BonusText: string?, Badge: string?, BadgeKind: string?,
 }
 export type EquipmentContext = {
 	Items: { [string]: ItemInfo },
@@ -47,6 +51,10 @@ local function validAmount(value: any): number?
 	return math.floor(value)
 end
 
+local function finite(value: any): number
+	return if typeof(value) == "number" and value == value and math.abs(value) ~= math.huge then value else 0
+end
+
 -- Vue serveur -> vue sûre. Une entrée mal formée est ignorée (jamais corrigée ni inventée).
 function InventoryModel.sanitize(view: any): View?
 	if typeof(view) ~= "table" then
@@ -57,7 +65,16 @@ function InventoryModel.sanitize(view: any): View?
 		for _, entry in view.Equipment do
 			if typeof(entry) == "table" and typeof(entry.InstanceId) == "string" and typeof(entry.ItemId) == "string" then
 				local level = if typeof(entry.UpgradeLevel) == "number" then math.max(math.floor(entry.UpgradeLevel), 0) else 0
-				table.insert(out.Equipment, { InstanceId = entry.InstanceId, ItemId = entry.ItemId, UpgradeLevel = level })
+				local clean: EquipmentEntry = { InstanceId = entry.InstanceId, ItemId = entry.ItemId, UpgradeLevel = level }
+				-- #73 : bonus de l'objet (nombres finis seulement) et héros qui le porte, recopiés du serveur
+				if typeof(entry.Bonus) == "table" then
+					clean.Bonus = { MaxHealth = finite(entry.Bonus.MaxHealth), AttackDamage = finite(entry.Bonus.AttackDamage) }
+				end
+				if typeof(entry.EquippedBy) == "string" and entry.EquippedBy ~= "" then
+					clean.EquippedBy = entry.EquippedBy
+					clean.EquippedSlot = if typeof(entry.EquippedSlot) == "string" then entry.EquippedSlot else nil
+				end
+				table.insert(out.Equipment, clean)
 			end
 		end
 	end

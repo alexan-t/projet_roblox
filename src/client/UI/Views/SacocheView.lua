@@ -11,8 +11,13 @@
 --   principale, l'action raccourci en secondaire) ;
 --   Équipement (#72) : une carte par INSTANCE (ItemCard, rareté en texte, jamais fusionnées), tri rareté
 --     décroissante / catalogue / InstanceId, filtre par emplacement (cibles >= 44), « Nouveau » tant que
---     l'onglet n'a pas été vu ; la poupée aux 7 emplacements reste VIDE (pas d'équipement porté, aucun bouton
---     Équiper) ; « +n » seulement si le niveau d'amélioration est > 0.
+--     l'onglet n'a pas été vu ; « +n » seulement si le niveau d'amélioration est > 0.
+--   Équipement V1 (#73) : poupée du héros courant (flèches) avec les objets portés (icône du catalogue,
+--     repli deux lettres), PV / ATK finales et leur bonus, « x/7 équipés » ; toucher un emplacement filtre la
+--     liste sur cet emplacement. Cartes : bonus en texte, badge du haut = état (« Équipé : X », « Nouveau »).
+--     Toucher une carte remplace la poupée par le détail de l'objet (même panneau, pas de nouvel écran) :
+--     état, comparaison avant / après pour le héros courant, UNE action (Équiper / Retirer), refus du
+--     serveur en clair, raison si l'action est désactivée (combat), « Retour ».
 --   Ressources (#72) : tuiles compactes (icône, nom, quantité) groupées par famille NON vide, cadre neutre,
 --     aucune rareté. Inventaire indisponible ou vide : états honnêtes, aucun faux inventaire.
 --   Trois dispositions (UITheme.Pack.Sacoche) : PC, tablette, téléphone (onglets verticaux, fiche compacte).
@@ -26,6 +31,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
+local EquipmentModel = require(ReplicatedStorage.Shared.Sacoche.EquipmentModel)
 local ExpeditionVisualConfig = require(ReplicatedStorage.Shared.Config.ExpeditionVisualConfig)
 local HeroConfig = require(ReplicatedStorage.Shared.Config.HeroConfig)
 local InventoryModel = require(ReplicatedStorage.Shared.Sacoche.InventoryModel)
@@ -57,7 +63,22 @@ export type Handlers = {
 	OnPrimary: (action: string) -> (),
 	OnSecondary: (action: string) -> (),
 	OnEquipHero: (step: number) -> (),
+	OnDollSlot: (slot: string, instanceId: string?) -> (), -- #73 : emplacement de la poupée touché
+	OnItem: (instanceId: string) -> (), -- #73 : carte d'objet touchée (détail ; re-toucher ferme)
+	OnItemBack: () -> (), -- #73 : retour à la poupée
+	OnEquipAction: () -> (), -- #73 : action principale du détail (Équiper / Retirer)
 	BindDrag: (frame: GuiObject, id: string) -> (),
+}
+-- Équipement V1 (#73), préparé par le contrôleur avec Shared.Sacoche.EquipmentModel (vues serveur seulement).
+export type Equip = {
+	Hero: string?, -- HeroInstanceId de la poupée
+	Doll: EquipmentModel.Doll,
+	Selected: string?, -- InstanceId de l'objet choisi
+	Card: InventoryModel.ItemCard?, -- carte de l'objet choisi (en-tête du détail)
+	Detail: EquipmentModel.Detail?,
+	Error: string?, -- dernier refus du serveur, en clair
+	Busy: boolean,
+	Slot: string, -- filtre d'emplacement courant (surligné sur la poupée)
 }
 -- Inventaire déjà préparé par le contrôleur (Shared.Sacoche.InventoryModel) : la vue ne trie ni ne filtre.
 export type Inventory = {
@@ -83,6 +104,7 @@ export type State = {
 	Inventory: Inventory?,
 	Total: number, -- héros possédés (avant filtre)
 	EquipHero: { HeroId: string, Name: string, Level: number }?,
+	Equip: Equip?, -- onglet Équipement seulement
 	Picking: boolean,
 }
 
@@ -767,7 +789,7 @@ end
 
 local function renderDetail(state: State)
 	local d = state.Detail
-	local key = if d then table.concat({ d.Id, d.Level, d.XP, d.XPToNext, tostring(d.MaxHealth), tostring(d.AttackDamage), tostring(d.Placed),
+	local key = if d then table.concat({ d.Id, d.Level, d.XP, d.XPToNext, tostring(d.MaxHealth), tostring(d.AttackDamage), tostring(d.HealthBonus), tostring(d.AttackBonus), tostring(d.Placed),
 		d.Key or "-", d.Primary.Label, tostring(d.Primary.Enabled), d.Secondary.Label, tostring(d.Secondary.Enabled), tostring(state.Picking), device }, "|")
 		else `none|{device}|{ui.first and ui.first.button.Name or ""}`
 	if key == detailKey then
@@ -888,8 +910,9 @@ local function renderDetail(state: State)
 		stats.Size = UDim2.new(1, 0, 0, L.StatSize + 30)
 		stats.Parent = inner
 		list(stats, true, 8)
-		statBlock(stats, ICON.Health, d.MaxHealth, "PV", 1)
-		statBlock(stats, ICON.Attack, d.AttackDamage, "ATK", 2)
+		-- stats finales du serveur ; la part d'équipement (#73) en clair sous la valeur
+		statBlock(stats, ICON.Health, d.MaxHealth, if d.HealthBonus ~= 0 then `PV ({EquipmentModel.signed(d.HealthBonus)})` else "PV", 1)
+		statBlock(stats, ICON.Attack, d.AttackDamage, if d.AttackBonus ~= 0 then `ATK ({EquipmentModel.signed(d.AttackBonus)})` else "ATK", 2)
 	end
 	-- actions : UNE principale (Placer / Retirer de l'arène), le raccourci en secondaire
 	local actions = Instance.new("Frame")
@@ -1069,7 +1092,7 @@ local function renderResources(other: Instance, inv: Inventory)
 end
 
 -- Équipement : « Tous » + emplacements possédés (cibles >= FilterHeight), compteur muted, grille de cartes.
-local function renderEquipmentList(inventory: Instance, inv: Inventory)
+local function renderEquipmentList(inventory: Instance, inv: Inventory, selected: string?)
 	local h = handlers :: Handlers
 	local bar = Instance.new("Frame")
 	bar.Name = "Filtres"
@@ -1101,10 +1124,22 @@ local function renderEquipmentList(inventory: Instance, inv: Inventory)
 		b.Name = `Filtre_{filter.Id}`
 		b.LayoutOrder = index
 	end
+	if #inv.Cards == 0 then
+		-- emplacement choisi sur la poupée sans aucun objet possédé : état honnête, filtres conservés
+		local holder = Instance.new("Frame")
+		holder.Name = "AucunObjet"
+		holder.BackgroundTransparency = 1
+		holder.Position = UDim2.fromOffset(0, L.FilterHeight + 6)
+		holder.Size = UDim2.new(1, 0, 1, -(L.FilterHeight + 6))
+		holder.Parent = inventory
+		empty(holder, ICON.Slots[inv.Slot] or ICON.Slots.weapon, "Aucun objet pour cet emplacement", "Il peut tomber à la fin d'un combat")
+		return
+	end
 	local grid = scroller(inventory, "Cartes")
 	grid.Position = UDim2.fromOffset(0, L.FilterHeight + 6)
 	grid.Size = UDim2.new(1, 0, 1, -(L.FilterHeight + 6))
-	padding(grid, 14, 6, 8) -- place pour le badge « Nouveau » à cheval sur le bord haut
+	padding(grid, 14, 6, 8) -- place pour le badge d'état à cheval sur le bord haut
+	ui.cardsScroll, ui.cardsSlot = grid, inv.Slot
 	local cols = L.ItemCols
 	local width = (ui.contentWidth or 600) - L.DollWidth - L.Gap
 	local cell = math.floor((width - 12 - UITheme.Stroke.ScrollBar - 6 - (cols - 1) * L.ItemGap) / cols)
@@ -1116,18 +1151,294 @@ local function renderEquipmentList(inventory: Instance, inv: Inventory)
 	for index, card in inv.Cards do
 		local frame = ItemCard.create(grid, card, {
 			Variant = "Tile", NameSize = L.ItemNameSize, LineSize = L.ItemLineSize, ArtSize = L.ItemArt,
+			Width = cell, BadgeSize = L.BadgeSize,
 		})
 		frame.LayoutOrder = index
+		-- carte choisie (#73) : contour Selected épais (l'état, jamais la rareté)
+		if card.InstanceId == selected then
+			local outline = frame:FindFirstChildOfClass("UIStroke")
+			if outline then
+				outline.Color = C.Selected
+				outline.Thickness = UITheme.Stroke.Thick
+			end
+		end
+		local hit = Instance.new("TextButton")
+		hit.Name = "Choisir"
+		hit.AutoButtonColor = false
+		hit.Text = ""
+		hit.BackgroundTransparency = 1
+		hit.Size = UDim2.fromScale(1, 1)
+		hit.ZIndex = 8
+		hit.Parent = frame
+		hit.Activated:Connect(function()
+			h.OnItem(card.InstanceId)
+		end)
 	end
+end
+
+-- Bouton plein de la taille d'un emplacement (poupée) ou d'une action secondaire (Retour).
+local function plainButton(parent: Instance, name: string, top: Color3, bottom: Color3, ring: Color3?): TextButton
+	local b = Instance.new("TextButton")
+	b.Name = name
+	b.AutoButtonColor = false
+	b.Text = ""
+	b.BackgroundColor3 = Color3.new(1, 1, 1)
+	b.BorderSizePixel = 0
+	b.Parent = parent
+	corner(b, 14)
+	UIKit.stroke(b, UITheme.Stroke.Regular, ring)
+	gradient(b, top, bottom)
+	return b
+end
+
+-- Ligne de texte pleine largeur (colonne du détail), repliée si besoin.
+local function line(parent: Instance, content: string, size: number, color: Color3?, order: number, wrap: boolean?): TextLabel
+	local label = UIKit.text(parent, content, size, { Color = color or C.TextLight, Align = Enum.TextXAlignment.Left })
+	label.LayoutOrder = order
+	label.Size = UDim2.new(1, 0, 0, math.ceil(size * 1.2))
+	if wrap then
+		label.TextWrapped = true
+		label.AutomaticSize = Enum.AutomaticSize.Y
+	else
+		label.TextTruncate = Enum.TextTruncate.AtEnd
+	end
+	return label
+end
+
+-- Poupée du héros courant (#73) : emplacements (objet porté ou vide, touchables), PV / ATK finales et leur
+-- bonus dans les coins hauts, « x/7 équipés » dans le coin bas droit.
+local function renderDoll(doll: Frame, equip: Equip?)
+	local h = handlers :: Handlers
+	local wide = device ~= "phone"
+	local S, M, R, G = L.SlotSize, L.DollMid, L.HeroRow, L.DollGap
+	local gridW, gridH = 2 * S + M + 2 * G, 3 * S + R + 3 * G
+	local spare = math.max(math.floor((L.DollWidth - gridW) / 2), 6)
+	local grid = Instance.new("Frame")
+	grid.Name = "Poupee"
+	grid.BackgroundTransparency = 1
+	grid.AnchorPoint = Vector2.new(0.5, 0.5)
+	grid.Position = UDim2.new(0.5, 0, 0.5, 26)
+	grid.Size = UDim2.fromOffset(gridW, gridH)
+	grid.Parent = doll
+	local colX = { 0, S + G, S + G + M + G }
+	local colW = { S, M, S }
+	local rowY = { 0, S + G, S + G + R + G, S + G + R + G + S + G }
+	local rowH = { S, R, S, S }
+	local portrait = box(grid, "Heros", Color3.new(1, 1, 1), 0, 14, UITheme.Stroke.Regular)
+	gradient(portrait, C.Cream, C.SandWarm)
+	portrait.Position = UDim2.fromOffset(colX[2], rowY[2])
+	portrait.Size = UDim2.fromOffset(colW[2], rowH[2])
+	portrait.ClipsDescendants = true
+	local hero = lastState and lastState.EquipHero
+	local model = hero and Icons.heroModel(hero.HeroId)
+	if model then
+		UIKit.portrait(portrait, model)
+	end
+	local filled: { [string]: EquipmentModel.DollSlot } = {}
+	if equip then
+		for _, s in equip.Doll.Slots do
+			filled[s.Slot] = s
+		end
+	end
+	for _, slot in SLOT_GRID do
+		local id, col, row = slot.Id, slot.Col, slot.Row
+		local worn = filled[id]
+		local on = equip ~= nil and equip.Slot == id
+		local cell = if worn and worn.InstanceId
+			then plainButton(grid, id, C.Cream, C.Sand, if on then C.Selected else nil)
+			else plainButton(grid, id, C.Ink, C.Ink, if on then C.Selected else C.StoneGrey)
+		cell.Position = UDim2.fromOffset(colX[col] + (colW[col] - S) / 2, rowY[row] + (rowH[row] - S) / 2)
+		cell.Size = UDim2.fromOffset(S, S)
+		if not (worn and worn.InstanceId) then
+			cell.BackgroundTransparency = 0.5
+		end
+		local ring = cell:FindFirstChildOfClass("UIStroke")
+		if ring and on then
+			ring.Thickness = UITheme.Stroke.Thick
+		end
+		if worn and worn.InstanceId then
+			-- objet porté : icône du catalogue (jamais teintée), sinon deux lettres du nom
+			local icon = ItemCard.icon(cell, { Icon = worn.Icon, Name = worn.Name or id } :: any, math.floor(S * 0.72))
+			icon.ZIndex = 2
+		else
+			local glyph = image(cell, ICON.Slots[id], math.floor(S * 0.52))
+			glyph.AnchorPoint = Vector2.new(0.5, 0.5)
+			glyph.Position = UDim2.fromScale(0.5, 0.5)
+			glyph.ImageTransparency = T.Disabled
+		end
+		if wide then
+			local tag = pill(cell, ItemConfig.SlotTypeNames[id] or id, C.WoodDeep, L.DollTagSize)
+			tag.AnchorPoint = Vector2.new(0.5, 0.5)
+			tag.Position = UDim2.new(0.5, 0, 1, 0)
+			tag.ZIndex = 3
+			for _, child in tag:GetDescendants() do
+				if child:IsA("GuiObject") then child.ZIndex = 4 end
+			end
+		end
+		cell.Activated:Connect(function()
+			h.OnDollSlot(id, if worn then worn.InstanceId else nil)
+		end)
+	end
+	if not equip then
+		return
+	end
+	-- coins libres de la grille : PV (haut gauche), ATK (haut droit), compteur (bas droit)
+	local cornerW = S + spare - 6
+	local function cornerBox(name: string, x: number, y: number, align: Enum.HorizontalAlignment): Frame
+		local f = Instance.new("Frame")
+		f.Name = name
+		f.BackgroundTransparency = 1
+		f.Position = UDim2.fromOffset(x, y)
+		f.Size = UDim2.fromOffset(cornerW, S)
+		f.Parent = grid
+		local l = list(f, false, 0)
+		l.HorizontalAlignment = align
+		return f
+	end
+	local stats = equip.Doll.Stats
+	if stats then
+		for index, stat in stats do
+			local left = index == 1
+			local f = cornerBox(stat.Key, if left then -(spare - 6) else colX[3], rowY[1], if left then Enum.HorizontalAlignment.Left else Enum.HorizontalAlignment.Right)
+			local value = text(f, stat.ValueText, L.DollStatSize)
+			value.LayoutOrder = 1
+			if stat.BonusText then
+				local extra = text(f, stat.BonusText, L.DollStatSize, C.SuccessLight)
+				extra.LayoutOrder = 2
+			end
+		end
+	end
+	local count = cornerBox("Equipes", colX[3], rowY[4], Enum.HorizontalAlignment.Right)
+	text(count, `{equip.Doll.Count}/{equip.Doll.Total}`, L.DollStatSize + 2).LayoutOrder = 1
+	text(count, "équipés", L.EquipNoteSize, C.TextMuted, false).LayoutOrder = 2
+end
+
+-- Détail de l'objet choisi (#73), à la place de la poupée : en-tête (icône, nom, rareté en texte via
+-- ItemCard, emplacement), bonus, état, comparaison pour le héros courant, refus du serveur, raison, puis
+-- « Retour » et UNE action principale.
+local function renderItemDetail(doll: Frame, equip: Equip, topHeight: number)
+	local h = handlers :: Handlers
+	local card = equip.Card :: InventoryModel.ItemCard
+	local d = equip.Detail :: EquipmentModel.Detail
+	local area = Instance.new("Frame")
+	area.Name = "Detail"
+	area.BackgroundTransparency = 1
+	area.Position = UDim2.fromOffset(10, topHeight)
+	area.Size = UDim2.new(1, -20, 1, -topHeight - 10)
+	area.Parent = doll
+	-- en-tête
+	local head = Instance.new("Frame")
+	head.Name = "Objet"
+	head.BackgroundTransparency = 1
+	head.Size = UDim2.new(1, 0, 0, L.EquipIcon)
+	head.Parent = area
+	local art = box(head, "Illustration", C.Sand, 0.1, 10, UITheme.Stroke.Regular)
+	art.Size = UDim2.fromOffset(L.EquipIcon, L.EquipIcon)
+	art.ClipsDescendants = true
+	ItemCard.icon(art, card, L.EquipIcon - 10)
+	local info = Instance.new("Frame")
+	info.BackgroundTransparency = 1
+	info.Position = UDim2.fromOffset(L.EquipIcon + 8, 0)
+	info.Size = UDim2.new(1, -(L.EquipIcon + 8), 1, 0)
+	info.Parent = head
+	list(info, false, 0)
+	line(info, card.Name, L.EquipNameSize, nil, 1)
+	-- rareté : texte, par le point d'accès unique ItemCard.rarity ; puis l'emplacement
+	line(info, ItemCard.rarityLine(card), L.EquipNoteSize, C.TextMuted, 2)
+	-- bas : Retour + action principale
+	local bottom = Instance.new("Frame")
+	bottom.Name = "Actions"
+	bottom.BackgroundTransparency = 1
+	bottom.AnchorPoint = Vector2.new(0, 1)
+	bottom.Position = UDim2.fromScale(0, 1)
+	bottom.Size = UDim2.new(1, 0, 0, L.EquipCtaHeight + 5)
+	bottom.Parent = area
+	local back = plainButton(bottom, "Retour", C.WoodLight, C.Wood)
+	back.Size = UDim2.fromOffset(L.BackWidth, L.EquipCtaHeight)
+	UIKit.text(back, "Retour", L.EquipNoteSize)
+	back.Activated:Connect(h.OnItemBack)
+	local a = d.Action
+	local on = a.Enabled and not equip.Busy
+	local holder, face = chunky(bottom, L.EquipCtaHeight,
+		if on then C.GoldLight else C.Disabled, if on then C.GoldDeep else C.StoneGrey, if on then C.GoldLip else C.DisabledLip, function()
+			if on then h.OnEquipAction() end
+		end)
+	holder.Name = "Principale"
+	holder.Position = UDim2.fromOffset(L.BackWidth + 8, 0)
+	holder.Size = UDim2.new(1, -(L.BackWidth + 8), 0, L.EquipCtaHeight + 5)
+	local label = UIKit.text(face, a.Label, L.EquipCtaSize)
+	label.ZIndex = 3
+	label.TextTransparency = if on then 0 else T.Disabled
+	-- corps : lignes défilantes entre l'en-tête et les actions (rien n'est coupé sur téléphone)
+	local body = scroller(area, "Lignes")
+	body.Position = UDim2.fromOffset(0, L.EquipIcon + L.EquipGap + 2)
+	body.Size = UDim2.new(1, 0, 1, -(L.EquipIcon + L.EquipGap + 2) - (L.EquipCtaHeight + 5) - L.EquipGap)
+	padding(body, 0, 2, 0)
+	list(body, false, L.EquipGap, Enum.VerticalAlignment.Top)
+	local order = 0
+	local function add(content: string, size: number, color: Color3?, wrap: boolean?): TextLabel
+		order += 1
+		return line(body, content, size, color, order, wrap)
+	end
+	if card.BonusText then
+		add(card.BonusText, L.EquipTextSize, C.GoldLight)
+	end
+	add(d.State.Label, L.EquipTextSize, if d.State.Kind == "Available" then C.TextLight else C.SuccessLight)
+	if d.Replaces then
+		add(`Remplace : {d.Replaces}`, L.EquipNoteSize, C.TextMuted, true)
+	end
+	if d.Note then
+		add(d.Note, L.EquipNoteSize, C.TextMuted, true)
+	end
+	-- avant → après pour le héros courant ; le signe est écrit, la couleur ne fait que le doubler
+	for _, compare in d.Lines do
+		add(compare.Text, L.EquipTextSize,
+			if compare.Delta > 0 then C.SuccessLight elseif compare.Delta < 0 then C.Error else C.TextLight)
+	end
+	if equip.Error then
+		add(equip.Error, L.EquipNoteSize, C.Error, true).Name = "Erreur"
+	end
+	if a.Reason then
+		add(a.Reason, L.EquipNoteSize, C.TextMuted, true).Name = "Raison"
+	end
+end
+
+-- Clé de rendu de l'onglet Équipement (#73) : tout ce que la poupée et le détail affichent.
+local function equipKey(e: Equip?): string
+	if not e then
+		return ""
+	end
+	local parts = { e.Hero or "", e.Selected or "", e.Error or "", tostring(e.Busy), e.Slot, e.Doll.CountText }
+	for _, s in e.Doll.Slots do
+		table.insert(parts, s.InstanceId or "-")
+	end
+	for _, stat in e.Doll.Stats or {} do
+		table.insert(parts, stat.Text)
+	end
+	local d = e.Detail
+	if d then
+		for _, value in { d.State.Label, d.Action.Label, tostring(d.Action.Enabled), d.Action.Reason or "", d.Note or "", d.Replaces or "" } do
+			table.insert(parts, value)
+		end
+		for _, compare in d.Lines do
+			table.insert(parts, compare.Text)
+		end
+	end
+	return table.concat(parts, "|")
 end
 
 local function renderOther(state: State)
 	local inv = state.Inventory
 	local key = table.concat({ state.Tab, device, state.EquipHero and state.EquipHero.HeroId or "", state.EquipHero and state.EquipHero.Level or 0,
-		if inv then inv.Revision else -1, if inv then inv.Slot else "", if inv then inv.FreshCount else 0 }, "|")
+		if inv then inv.Revision else -1, if inv then inv.Slot else "", if inv then inv.FreshCount else 0, equipKey(state.Equip) }, "|")
 	if ui.otherKey == key then
 		return
 	end
+	-- la liste des cartes garde sa position de défilement quand elle est redessinée sur le même filtre
+	local previous: ScrollingFrame? = ui.cardsScroll
+	local keepSlot = ui.cardsSlot
+	local keepCanvas = if previous and previous.Parent then previous.CanvasPosition else nil
+	ui.cardsScroll, ui.cardsSlot = nil, nil
 	ui.otherKey = key
 	local h = handlers :: Handlers
 	local wide = device ~= "phone"
@@ -1145,8 +1456,7 @@ local function renderOther(state: State)
 		end
 		return
 	end
-	-- Équipement : poupée aux 7 emplacements (toujours vides : rien n'est équipé dans cette version), liste des
-	-- exemplaires possédés à droite
+	-- Équipement : poupée du héros courant (ou détail de l'objet choisi) à gauche, exemplaires possédés à droite
 	local doll = box(other, "Poupee", C.Ink, 0.45, 14, UITheme.Stroke.Regular)
 	doll.Size = UDim2.new(0, L.DollWidth, 1, 0)
 	local hero = state.EquipHero
@@ -1185,50 +1495,16 @@ local function renderOther(state: State)
 	heroName.Size = UDim2.new(1, 0, 0, if wide then 22 else 17)
 	heroName.TextTruncate = Enum.TextTruncate.AtEnd
 	heroName.LayoutOrder = 1
-	-- niveau seul : rien n'est équipé dans cette version, donc aucun compteur « équipés »
-	local sub = UIKit.text(names, if hero then `Nv. {hero.Level}` else "", 14, { Color = C.TextMuted, Stroke = false })
-	sub.Size = UDim2.new(1, 0, 0, 16)
+	-- niveau ; le compteur « x/7 équipés » est dans le coin bas droit de la poupée (#73)
+	local sub = UIKit.text(names, if hero then `Nv. {hero.Level}` else "", L.EquipNoteSize, { Color = C.TextMuted, Stroke = false })
+	sub.Size = UDim2.new(1, 0, 0, 18)
 	sub.LayoutOrder = 2
-	-- grille 3 x 4 : héros au centre, emplacements autour (positions de la maquette)
-	local S, M, R, G = L.SlotSize, L.DollMid, L.HeroRow, L.DollGap
-	local gridW, gridH = 2 * S + M + 2 * G, 3 * S + R + 3 * G
-	local grid = Instance.new("Frame")
-	grid.BackgroundTransparency = 1
-	grid.AnchorPoint = Vector2.new(0.5, 0.5)
-	grid.Position = UDim2.new(0.5, 0, 0.5, 26)
-	grid.Size = UDim2.fromOffset(gridW, gridH)
-	grid.Parent = doll
-	local colX = { 0, S + G, S + G + M + G }
-	local colW = { S, M, S }
-	local rowY = { 0, S + G, S + G + R + G, S + G + R + G + S + G }
-	local rowH = { S, R, S, S }
-	local portrait = box(grid, "Heros", Color3.new(1, 1, 1), 0, 14, UITheme.Stroke.Regular)
-	gradient(portrait, C.Cream, C.SandWarm)
-	portrait.Position = UDim2.fromOffset(colX[2], rowY[2])
-	portrait.Size = UDim2.fromOffset(colW[2], rowH[2])
-	portrait.ClipsDescendants = true
-	local model = hero and Icons.heroModel(hero.HeroId)
-	if model then
-		UIKit.portrait(portrait, model)
-	end
-	for _, slot in SLOT_GRID do
-		local id, col, row = slot.Id, slot.Col, slot.Row
-		local cell = box(grid, id, C.Ink, 0.5, 14, UITheme.Stroke.Regular, C.StoneGrey)
-		cell.Position = UDim2.fromOffset(colX[col] + (colW[col] - S) / 2, rowY[row] + (rowH[row] - S) / 2)
-		cell.Size = UDim2.fromOffset(S, S)
-		local glyph = image(cell, ICON.Slots[id], math.floor(S * 0.52))
-		glyph.AnchorPoint = Vector2.new(0.5, 0.5)
-		glyph.Position = UDim2.fromScale(0.5, 0.5)
-		glyph.ImageTransparency = T.Disabled
-		if wide then
-			local tag = pill(cell, ItemConfig.SlotTypeNames[id] or id, C.WoodDeep, 12)
-			tag.AnchorPoint = Vector2.new(0.5, 0.5)
-			tag.Position = UDim2.new(0.5, 0, 1, 0)
-			tag.ZIndex = 3
-			for _, child in tag:GetDescendants() do
-				if child:IsA("GuiObject") then child.ZIndex = 4 end
-			end
-		end
+	-- poupée (grille 3 x 4 : héros au centre, emplacements autour), ou détail de l'objet choisi (#73)
+	local equip = state.Equip
+	if equip and equip.Detail and equip.Card then
+		renderItemDetail(doll, equip, 10 + UITheme.Spacing.TouchTarget + 8)
+	else
+		renderDoll(doll, equip)
 	end
 	local inventory = Instance.new("Frame")
 	inventory.Name = "Inventaire"
@@ -1241,7 +1517,13 @@ local function renderOther(state: State)
 	elseif #inv.Filters == 0 or inv.Filters[1].Count == 0 then
 		empty(inventory, ICON.Slots.weapon, "Aucun équipement", "Il peut tomber à la fin d'un combat")
 	else
-		renderEquipmentList(inventory, inv)
+		renderEquipmentList(inventory, inv, if equip then equip.Selected else nil)
+		local scroll: ScrollingFrame? = ui.cardsScroll
+		if scroll and keepCanvas and keepSlot == inv.Slot then
+			task.defer(function()
+				if scroll.Parent then scroll.CanvasPosition = keepCanvas end
+			end)
+		end
 	end
 end
 

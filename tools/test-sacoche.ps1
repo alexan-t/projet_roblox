@@ -30,13 +30,14 @@ $runnerSource = $shims +
     (Module 'ResourceConfig' 'src/shared/Config/ResourceConfig.lua') +
     (Module 'RarityConfig' 'src/shared/Config/RarityConfig.lua') +
     (Module 'InventoryModel' 'src/shared/Sacoche/InventoryModel.lua') +
+    (Module 'EquipmentModel' 'src/shared/Sacoche/EquipmentModel.lua') +
     # Ecran de fin (#72) : LootModel requiert ses voisins InventoryModel et SacocheModel (script.Parent.*) ; substitution locale.
     "local LootModel = (function()`nlocal script = { Parent = { InventoryModel = InventoryModel, SacocheModel = Model } }`nlocal function require(module) return module end`n" +
         (Source 'src/shared/Sacoche/LootModel.lua') + "`nend)()`n" +
     "local runTests = (function()`n" + (Source 'src/server/Tests/Sacoche.spec.lua') + "`nend)()`n" +
     "local runInventoryTests = (function()`n" + (Source 'src/server/Tests/SacocheInventory.spec.lua') + "`nend)()`n" +
     "runTests(Model, HeroConfig, UITheme.Pack.Sacoche)`n" +
-    "runInventoryTests(InventoryModel, LootModel, ItemConfig, ResourceConfig, RarityConfig, UITheme.Pack)`n"
+    "runInventoryTests(InventoryModel, LootModel, ItemConfig, ResourceConfig, RarityConfig, UITheme.Pack, EquipmentModel)`n"
 $runnerPath = Join-Path $testBuild 'sacoche-tests.luau'
 [System.IO.File]::WriteAllText($runnerPath, $runnerSource, [System.Text.UTF8Encoding]::new($false))
 & $LuauPath $runnerPath

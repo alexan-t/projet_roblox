@@ -9,8 +9,11 @@ local HeroConfig = require(ReplicatedStorage.Shared.Config.HeroConfig)
 local PlacementState = require(script.Parent.PlacementState)
 
 -- Level / XP / XPToNext / MaxLevel : vue serveur de la progression de CET exemplaire (#68), jamais calculée ici.
+-- Équipement (#73) : MaxHealth / AttackDamage sont les stats FINALES (niveau + équipement), BaseMaxHealth /
+-- BaseAttackDamage celles du niveau seul, EquipmentBonus leur différence, Equipment { [SlotType] = ItemInstanceId }.
 export type HeroView = { Id: string, HeroId: string, Level: number, XP: number?, XPToNext: number?, MaxLevel: number?,
-	MaxHealth: number?, AttackDamage: number? }
+	MaxHealth: number?, AttackDamage: number?, BaseMaxHealth: number?, BaseAttackDamage: number?,
+	EquipmentBonus: { MaxHealth: number, AttackDamage: number }?, Equipment: { [string]: string }? }
 
 local ArenaStore = {}
 
