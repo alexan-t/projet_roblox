@@ -58,6 +58,35 @@ function TutorialRules.firstOpen(config: any, seen: { [string]: boolean }, key: 
 	return entry.Steps
 end
 
+-- Guidage d'une partie d'interface (FirstOpen avec Screen) à lancer maintenant, ou nil : drapeau non vu,
+-- interface `Screen` ouverte (isOpen(screen) -> boolean), condition vraie, au moins une étape. Ordre des
+-- drapeaux de config.Flags (stable).
+function TutorialRules.followUp(config: any, seen: { [string]: boolean }, conditions: { [string]: boolean }, isOpen: (string) -> boolean): string?
+	for _, key in config.Flags do
+		local entry = config.FirstOpen[key]
+		if entry and entry.Screen and seen[key] ~= true and #entry.Steps > 0 and isOpen(entry.Screen)
+			and (entry.Condition == nil or conditions[entry.Condition] == true) then
+			return key
+		end
+	end
+	return nil
+end
+
+-- Condition HasEquipment : au moins un héros possédé et un équipement du catalogue porté par personne
+-- (entrées de la vue d'inventaire du serveur : { ItemId, EquippedBy? }). Sans héros ou sans objet libre :
+-- false, le guidage ne bloque rien.
+function TutorialRules.hasEquipment(heroCount: number, entries: any, items: { [string]: any }): boolean
+	if heroCount < 1 or typeof(entries) ~= "table" then
+		return false
+	end
+	for _, entry in entries do
+		if typeof(entry) == "table" and items[entry.ItemId] ~= nil and (entry.EquippedBy == nil or entry.EquippedBy == "") then
+			return true
+		end
+	end
+	return false
+end
+
 -- Rappels actifs : drapeau non vu ET condition vraie (conditions = { [nom]: boolean }).
 function TutorialRules.nudges(config: any, seen: { [string]: boolean }, conditions: { [string]: boolean }): { Candidate }
 	local list: { Candidate } = {}
@@ -69,8 +98,16 @@ function TutorialRules.nudges(config: any, seen: { [string]: boolean }, conditio
 	return list
 end
 
--- Badge « ! » d'une entrée du menu : drapeau non vu et condition (si présente) vraie.
-function TutorialRules.badge(entry: any, seen: { [string]: boolean }, conditions: { [string]: boolean }): boolean
+-- Badge « ! » d'une entrée du menu : drapeau non vu et condition (si présente) vraie ; avec `config`, aussi
+-- un rappel actif marqué Badge qui vise cette entrée (« Menu.<Id> »).
+function TutorialRules.badge(entry: any, seen: { [string]: boolean }, conditions: { [string]: boolean }, config: any?): boolean
+	if config then
+		for _, nudge in config.Nudges do
+			if nudge.Badge == true and nudge.Target == `Menu.{entry.Id}` and seen[nudge.Flag] ~= true and conditions[nudge.Condition] == true then
+				return true
+			end
+		end
+	end
 	if typeof(entry.Flag) ~= "string" or seen[entry.Flag] == true then
 		return false
 	end
@@ -111,6 +148,12 @@ function TutorialRules.problems(config: any): { string }
 	for key, entry in config.FirstOpen do
 		if not flags[key] then
 			table.insert(problems, `FirstOpen.{key} : drapeau inconnu`)
+		end
+		if entry.Screen ~= nil and (not flags[entry.Screen] or entry.Screen == key or config.FirstOpen[entry.Screen] == nil) then
+			table.insert(problems, `FirstOpen.{key} : Screen inconnu ({tostring(entry.Screen)})`)
+		end
+		if entry.Condition ~= nil and (entry.Screen == nil or typeof(entry.Condition) ~= "string") then
+			table.insert(problems, `FirstOpen.{key} : Condition sans Screen`)
 		end
 		for index, step in entry.Steps do
 			target(`FirstOpen.{key}[{index}]`, step.Target)

@@ -43,6 +43,12 @@ Rien pendant un combat, son outro ou l'écran de fin, sauf la découverte d'une 
 | `Index` | Index ouvert | le compteur « n / 60 découverts » |
 | `Stats` | Stats ouvertes | aucune étape (le drapeau éteint le badge) |
 | `Currencies` | premier gain d'or (HUD, attend qu'aucun écran ne soit ouvert) | la pastille d'or (« Ton or ») |
+| `Equipment` | Sacoche ouverte avec un objet à équiper (`Screen = "Bag"`, `Condition = "HasEquipment"`), après la découverte `Bag`, hors combat | 1. l'onglet Équipement (« Ton équipement », sauté s'il est déjà affiché) ; 2. le héros de la poupée (« Ton héros ») ; 3. le premier objet porté par personne (« Choisis un objet ») ; 4. « Équiper » (« Équipe-le ! »), seulement s'il est possible |
+
+Une entrée avec `Screen` guide une partie d'une interface déjà découverte : elle démarre quand `Screen`
+est ouverte et que sa condition est vraie (`TutorialRules.followUp`). Condition fausse (aucun héros, aucun
+objet libre) : rien n'est montré **ni enregistré**, le joueur n'est jamais bloqué. Rien n'est acheté ni
+généré : le guidage ne fait que montrer « Équiper », que le joueur touche lui-même.
 
 Une étape passe à la suivante au clic sur sa cible ou après sa durée (`Seconds`, 4 s par défaut). Une cible
 absente (ex. aucun héros) est sautée. **Le drapeau est enregistré dès le début** : fermer puis rouvrir
@@ -52,11 +58,16 @@ ne relance rien (pas de boucle).
 
 - Rappel `OpenBag` : après la première victoire, tant que la Sacoche n'a jamais été ouverte, la flèche
   montre le bouton Sac. Pas avant : pendant la première défense, la quête guide déjà.
+- Rappel `OpenEquipment` (`Badge = true`) : un objet à équiper et le guidage `Equipment` jamais vu, la flèche
+  et le « ! » montrent le bouton Sac, une fois l'écran de fin fermé (rien pendant le combat ni sur l'écran).
+  Même cible qu'`OpenBag` : une seule flèche. Le « ! » s'allume aussi pour tout équipement nouveau de la
+  session (`HeroBarController.HasNew`) ; il ne s'allume que sur le Sac (test : un seul badge à la fois).
 - Badges « ! » du menu : Sac (au moins un héros), Index (au moins deux héros), Stats (au moins un stage
   gagné), tant que le drapeau n'est pas vu. Un nouveau joueur n'en voit qu'un à la fois (test).
 
 Conditions, toujours venues du serveur : `HasHero` et `SecondHero` (collection `ArenaStore`),
-`FirstVictory` (`Remotes.GetPlayerStats`).
+`FirstVictory` (`Remotes.GetPlayerStats`), `HasEquipment` (un héros possédé et un objet du catalogue porté
+par personne, vue d'inventaire `InventoryStore`, `TutorialRules.hasEquipment`).
 
 ## Menu principal
 

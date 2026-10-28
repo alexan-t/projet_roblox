@@ -6,7 +6,8 @@
 //   - aucun bouton Améliorer / Forge, aucun niveau d'amélioration affiché à +0 ;
 //   - la rareté d'un item ne passe que par ItemCard (texte), jamais par le badge d'état ni la poupée ;
 //   - UNE action principale dans le détail, erreur serveur et raison affichées ;
-//   - textes >= 14 px et cibles >= 44 px dans les nouveaux blocs ; aucune nouvelle cible de guidage.
+//   - textes >= 14 px et cibles >= 44 px dans les nouveaux blocs ; seules cibles de guidage : celles que
+//     TutorialConfig vise (premier équipement : onglet, héros, premier objet libre, « Équiper »).
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -147,13 +148,20 @@ test('new blocks: texts >= 14 px (tokens), touch targets >= 44 px', () => {
 	}
 });
 
-test('no new guidance target or flag (tutorial unchanged)', () => {
+test('guidance targets: only those TutorialConfig points at; the first-equipment ones are registered', () => {
 	const registered = new Set();
 	for (const key of ['sacoche', 'heroBar']) {
 		for (const m of code[key].matchAll(/GuideTargets\.(?:register|open)\("([^"]+)"/g)) registered.add(m[1]);
 	}
-	const allowed = new Set(['Bag.FirstHero', 'Bag.Place', 'Bag', 'Hotbar.Bar', 'Hotbar.Guide']);
-	for (const name of registered) assert(allowed.has(name), `new guide target « ${name} »`);
+	const config = read('src/shared/Config/TutorialConfig.lua');
+	const allowed = new Set(['Bag', 'Hotbar.Bar', 'Hotbar.Guide']);
+	for (const m of config.matchAll(/Target = "([^"]+)"/g)) allowed.add(m[1]);
+	for (const name of registered) assert(allowed.has(name), `guide target « ${name} » not used by TutorialConfig`);
+	for (const name of ['Bag.EquipmentTab', 'Bag.EquipHero', 'Bag.FirstItem', 'Bag.EquipAction']) {
+		assert(registered.has(name), `first-equipment target « ${name} » not registered by the Sacoche`);
+	}
+	// « Équiper » seulement : jamais « Retirer », jamais un bouton désactivé (combat)
+	assert(/if on and a\.Kind == "Equip" then\s*GuideTargets\.register\("Bag\.EquipAction"/.test(code.sacoche), 'Bag.EquipAction: Équiper, enabled only');
 });
 
 test('views hold no asset id (item icons come from ItemConfig)', () => {

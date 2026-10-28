@@ -562,6 +562,10 @@ local function renderTabs(state: State)
 		tab.Activated:Connect(function()
 			h.OnTab(info.Id)
 		end)
+		-- guidage du premier équipement : l'onglet tant qu'il n'est pas affiché (déjà ouvert : étape sautée)
+		if info.Id == "Equipment" and not on then
+			GuideTargets.register("Bag.EquipmentTab", tab)
+		end
 	end
 end
 
@@ -1148,6 +1152,7 @@ local function renderEquipmentList(inventory: Instance, inv: Inventory, selected
 	layout.CellSize = UDim2.fromOffset(cell, L.ItemCellH)
 	layout.CellPadding = UDim2.fromOffset(L.ItemGap, L.ItemGap + 6)
 	layout.Parent = grid
+	local guided = false
 	for index, card in inv.Cards do
 		local frame = ItemCard.create(grid, card, {
 			Variant = "Tile", NameSize = L.ItemNameSize, LineSize = L.ItemLineSize, ArtSize = L.ItemArt,
@@ -1173,6 +1178,11 @@ local function renderEquipmentList(inventory: Instance, inv: Inventory, selected
 		hit.Activated:Connect(function()
 			h.OnItem(card.InstanceId)
 		end)
+		-- guidage du premier équipement : le premier objet porté par personne (jamais un objet déjà équipé)
+		if not guided and card.BadgeKind ~= "Equipped" then
+			guided = true
+			GuideTargets.register("Bag.FirstItem", hit)
+		end
 	end
 end
 
@@ -1369,6 +1379,10 @@ local function renderItemDetail(doll: Frame, equip: Equip, topHeight: number)
 	local label = UIKit.text(face, a.Label, L.EquipCtaSize)
 	label.ZIndex = 3
 	label.TextTransparency = if on then 0 else T.Disabled
+	-- guidage du premier équipement : « Équiper » seulement s'il est possible (pas « Retirer », pas en combat)
+	if on and a.Kind == "Equip" then
+		GuideTargets.register("Bag.EquipAction", holder)
+	end
 	-- corps : lignes défilantes entre l'en-tête et les actions (rien n'est coupé sur téléphone)
 	local body = scroller(area, "Lignes")
 	body.Position = UDim2.fromOffset(0, L.EquipIcon + L.EquipGap + 2)
@@ -1495,6 +1509,9 @@ local function renderOther(state: State)
 	heroName.Size = UDim2.new(1, 0, 0, if wide then 22 else 17)
 	heroName.TextTruncate = Enum.TextTruncate.AtEnd
 	heroName.LayoutOrder = 1
+	if hero then
+		GuideTargets.register("Bag.EquipHero", names) -- guidage du premier équipement : le héros qui recevra l'objet
+	end
 	-- niveau ; le compteur « x/7 équipés » est dans le coin bas droit de la poupée (#73)
 	local sub = UIKit.text(names, if hero then `Nv. {hero.Level}` else "", L.EquipNoteSize, { Color = C.TextMuted, Stroke = false })
 	sub.Size = UDim2.new(1, 0, 0, 18)

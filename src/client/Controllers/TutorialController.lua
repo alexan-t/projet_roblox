@@ -7,19 +7,23 @@
 --   • Étape de quête active (Quest) : le raccourci du héros à poser (ArenaStore.guide.hotbar, « Hotbar.Guide »),
 --     « Lancer » dans l'Expédition (ArenaStore.guide.expedition), « Invoquer » pendant l'invocation
 --     tutorielle. Rejoué à chaque réouverture TANT QUE c'est l'étape active (c'est le tuto).
+--   • Partie d'interface (FirstOpen avec Screen + Condition, ex. premier équipement dans la Sacoche) : lancée
+--     quand l'interface est ouverte, sa propre découverte finie, la condition vraie, hors combat.
 --   • Rappels (Nudges) : « ouvre ce menu », seulement sans écran ouvert et hors combat.
 -- Une seule flèche à la fois : TutorialRules.pick (FirstOpen > Quest > Nudge). Rien pendant un combat,
 -- son outro et l'écran de fin, sauf la découverte d'une fenêtre que le joueur vient lui-même d'ouvrir.
 -- Badges « ! » du menu : TutorialController.Badge(entry), TutorialController.changed.
 -- Le serveur ne garde que les drapeaux (TutorialService) ; les conditions viennent de ses vues
--- (héros possédés : ArenaStore ; stages gagnés : Remotes.GetPlayerStats).
+-- (héros possédés : ArenaStore ; stages gagnés : Remotes.GetPlayerStats ; équipements : InventoryStore).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local ItemConfig = require(ReplicatedStorage.Shared.Config.ItemConfig)
 local TutorialConfig = require(ReplicatedStorage.Shared.Config.TutorialConfig)
 local TutorialRules = require(ReplicatedStorage.Shared.Tutorial.TutorialRules)
 local ArenaStore = require(script.Parent.Parent.Arena.ArenaStore)
+local InventoryStore = require(script.Parent.Parent.Inventory.InventoryStore)
 local GuidePointer = require(script.Parent.Parent.UI.GuidePointer)
 local GuideTargets = require(script.Parent.Parent.UI.GuideTargets)
 local ScreenState = require(script.Parent.Parent.UI.ScreenState)
@@ -51,12 +55,13 @@ local SEND_GAP = 0.3 -- s entre deux envois de drapeau (le serveur limite la cad
 
 local seen: { [string]: boolean } = {}
 local loaded = false
-local conditions: { [string]: boolean } = { HasHero = false, SecondHero = false, FirstVictory = false, QuestClaimable = false }
+local conditions: { [string]: boolean } = { HasHero = false, SecondHero = false, FirstVictory = false, QuestClaimable = false, HasEquipment = false }
 local markRemote: RemoteEvent? = nil
 local outbox: { string } = {}
 local sending = false
 
-type Sequence = { key: string, steps: { TutorialConfig.Step }, index: number, started: number, hud: boolean }
+-- screen : interface dont la fermeture arrête le guidage (Screen de l'entrée, sinon son drapeau)
+type Sequence = { key: string, screen: string, steps: { TutorialConfig.Step }, index: number, started: number, hud: boolean }
 local sequence: Sequence? = nil
 local pendingOpen: { [string]: boolean } = {} -- ouvertes avant le chargement des drapeaux
 
@@ -95,7 +100,7 @@ function TutorialController.Seen(key: string): boolean
 end
 
 function TutorialController.Badge(entry: TutorialConfig.Entry): boolean
-	return loaded and TutorialRules.badge(entry, seen, conditions)
+	return loaded and TutorialRules.badge(entry, seen, conditions, TutorialConfig)
 end
 
 ------------------------------------------------------------------ première ouverture
@@ -114,7 +119,8 @@ local function startSequence(key: string)
 		return
 	end
 	local entry = TutorialConfig.FirstOpen[key]
-	sequence = { key = key, steps = steps, index = 1, started = os.clock(), hud = entry ~= nil and entry.Hud == true }
+	local screen = if entry and entry.Screen then entry.Screen else key
+	sequence = { key = key, screen = screen, steps = steps, index = 1, started = os.clock(), hud = entry ~= nil and entry.Hud == true }
 end
 
 local function nextStep()
@@ -176,7 +182,7 @@ local function update()
 	if current then
 		local step = current.steps[current.index]
 		local now = os.clock()
-		if not GuideTargets.isOpen(current.key) and not current.hud then
+		if not GuideTargets.isOpen(current.screen) and not current.hud then
 			sequence = nil -- interface fermée : la découverte s'arrête (déjà marquée vue)
 		elseif step and now >= current.started then
 			local elapsed = now - current.started
@@ -186,6 +192,12 @@ local function update()
 					nextStep()
 				end
 			end
+		end
+	elseif loaded and not blocked() then
+		-- partie d'une interface ouverte (ex. l'onglet Équipement), une fois sa découverte finie
+		local key = TutorialRules.followUp(TutorialConfig, seen, conditions, GuideTargets.isOpen)
+		if key then
+			startSequence(key)
 		end
 	end
 	local chosen = TutorialRules.pick(candidates(), function(id: string): boolean
@@ -214,14 +226,16 @@ end
 
 local statsRemote: RemoteFunction? = nil
 
-local function refreshHeroes()
+local function refreshOwned()
 	local count = 0
 	for _ in ArenaStore.heroes do
 		count += 1
 	end
 	local hasHero, second = count >= 1, count >= 2
-	if hasHero ~= conditions.HasHero or second ~= conditions.SecondHero then
-		conditions.HasHero, conditions.SecondHero = hasHero, second
+	local view = InventoryStore.view
+	local equipment = TutorialRules.hasEquipment(count, if view then view.Equipment else nil, ItemConfig.Items)
+	if hasHero ~= conditions.HasHero or second ~= conditions.SecondHero or equipment ~= conditions.HasEquipment then
+		conditions.HasHero, conditions.SecondHero, conditions.HasEquipment = hasHero, second, equipment
 		TutorialController.changed:Fire()
 	end
 end
@@ -267,13 +281,15 @@ function TutorialController:Start()
 	end)
 	local wasCombat = false
 	ArenaStore.changed.Event:Connect(function()
-		refreshHeroes()
+		refreshOwned()
 		local combat = ArenaStore.inCombat()
 		if wasCombat and not combat then
 			refreshVictory() -- un combat vient de finir : peut-être la première victoire
 		end
 		wasCombat = combat
 	end)
+	-- objet reçu ou équipé (vue d'inventaire du serveur) : condition HasEquipment
+	InventoryStore.changed.Event:Connect(refreshOwned)
 
 	local remotes = ReplicatedStorage:WaitForChild("Remotes")
 	local markEvent = remotes:WaitForChild("MarkTutorialSeen", 30)
@@ -302,7 +318,7 @@ function TutorialController:Start()
 			task.wait(1)
 		end
 	end
-	refreshHeroes()
+	refreshOwned()
 	refreshVictory()
 	TutorialController.changed:Fire()
 	for key in pendingOpen do

@@ -118,6 +118,91 @@ return function(Rules: any, config: any, createService: any)
 		assert(Rules.pick(twins, yes).Target == "A.One", "stable order")
 	end)
 
+	------------------------------------------------------------------ premier équipement
+
+	test("equipment: new flag, earlier flags kept in order (never renamed)", function()
+		local flags = table.concat(config.Flags, ",")
+		assert(flags:find("^Bag,Expedition,Summon,SummonBanners,Index,Stats,Currencies,Quests,") ~= nil, flags)
+		assert(table.find(config.Flags, "Equipment") ~= nil)
+	end)
+
+	test("equipment: tab -> hero -> first item -> Équiper, captions of 2 to 4 words", function()
+		local entry = config.FirstOpen.Equipment
+		assert(entry.Screen == "Bag" and entry.Condition == "HasEquipment")
+		local targets = {}
+		for _, step in entry.Steps do
+			table.insert(targets, step.Target)
+			local words = 0
+			for word in string.gmatch(step.Text, "[^%s!%?%.]+") do
+				words += 1
+			end
+			-- « Équipe-le ! » compte pour deux mots (verbe + pronom)
+			if step.Text:find("-", 1, true) then words += 1 end
+			assert(words >= 2 and words <= 4, step.Text)
+		end
+		assert(table.concat(targets, ",") == "Bag.EquipmentTab,Bag.EquipHero,Bag.FirstItem,Bag.EquipAction", table.concat(targets, ","))
+	end)
+
+	test("hasEquipment: an owned hero AND a known item worn by nobody", function()
+		local items = { item_004 = { Name = "Épée" } }
+		assert(Rules.hasEquipment(1, { { ItemId = "item_004" } }, items) == true)
+		assert(Rules.hasEquipment(0, { { ItemId = "item_004" } }, items) == false, "no hero")
+		assert(Rules.hasEquipment(1, { { ItemId = "item_004", EquippedBy = "H1" } }, items) == false, "already worn")
+		assert(Rules.hasEquipment(1, { { ItemId = "inconnu" } }, items) == false, "not in the catalogue")
+		assert(Rules.hasEquipment(1, {}, items) == false and Rules.hasEquipment(1, nil, items) == false, "no item: never blocks")
+	end)
+
+	test("followUp: Sacoche open + item to equip, after the bag discovery; never without an item", function()
+		local open = function(key: string) return key == "Bag" end
+		local closed = function() return false end
+		assert(Rules.followUp(config, {}, { HasEquipment = true }, open) == "Equipment")
+		assert(Rules.followUp(config, {}, { HasEquipment = false }, open) == nil, "no compatible item: nothing")
+		assert(Rules.followUp(config, {}, { HasEquipment = true }, closed) == nil, "bag closed")
+		assert(Rules.followUp(config, { Equipment = true }, { HasEquipment = true }, open) == nil, "seen once")
+	end)
+
+	test("nudges: item to equip -> one arrow on the bag button, even with OpenBag", function()
+		local list = Rules.nudges(config, { Bag = true }, { HasHero = true, HasEquipment = true })
+		assert(#list == 1 and list[1].Target == "Menu.Bag", "bag opened before: the equipment nudge")
+		assert(#Rules.nudges(config, { Bag = true, Equipment = true }, { HasEquipment = true }) == 0, "guidance seen: gone")
+		local both = Rules.nudges(config, {}, { HasHero = true, FirstVictory = true, HasEquipment = true })
+		local picked = Rules.pick(both, function() return true end)
+		assert(picked and picked.Target == "Menu.Bag", "same target: a single arrow")
+	end)
+
+	test("badge: new equipment lights only the bag (one badge at a time)", function()
+		local conditions = { HasHero = true, HasEquipment = true }
+		local lit = {}
+		for _, entry in config.Menu.Entries do
+			if Rules.badge(entry, { Bag = true }, conditions, config) then table.insert(lit, entry.Id) end
+		end
+		assert(table.concat(lit, ",") == "Bag", table.concat(lit, ","))
+		local shown = 0
+		for _, entry in config.Menu.Entries do
+			if Rules.badge(entry, {}, conditions, config) then shown += 1 end
+		end
+		assert(shown == 1, "new player with an item: only the bag " .. shown)
+		for _, entry in config.Menu.Entries do
+			assert(not Rules.badge(entry, { Bag = true, Equipment = true }, conditions, config), "seen: no badge " .. entry.Id)
+		end
+	end)
+
+	test("problems: Screen must be another known first-open, Condition needs a Screen", function()
+		local broken = {
+			Flags = { "Bag", "Part", "Lost" },
+			FirstOpen = {
+				Bag = { Steps = {} },
+				Part = { Screen = "Nope", Condition = "X", Steps = { { Target = "Bag.Item" } } },
+				Lost = { Condition = "X", Steps = { { Target = "Bag.Item" } } },
+			},
+			Nudges = {},
+			Menu = { Entries = {} },
+		}
+		local text = table.concat(Rules.problems(broken), "\n")
+		assert(text:find("FirstOpen.Part : Screen inconnu", 1, true), text)
+		assert(text:find("FirstOpen.Lost : Condition sans Screen", 1, true), text)
+	end)
+
 	------------------------------------------------------------------ service
 
 	local function fixture(): any

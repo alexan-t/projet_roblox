@@ -14,6 +14,10 @@
 --                 légende proposée par la vue, ex. l'action possible de l'Expédition) ;
 --       Seconds : durée maximale de l'étape (s) ; un clic sur la cible passe aussi à la suivante.
 --   Hud : true pour un élément du HUD (pas une fenêtre) : le guidage attend qu'aucun écran ne soit ouvert.
+--   Screen + Condition : guidage d'une partie d'une interface (ex. l'onglet Équipement de la Sacoche),
+--     montré quand l'interface `Screen` est ouverte ET que la condition (voir Nudges) est vraie, après sa
+--     propre découverte, jamais pendant un combat. Condition fausse : rien n'est montré ni enregistré (le
+--     joueur sans objet n'est pas bloqué, son guidage viendra quand il en aura un).
 --   Une étape dont la cible n'existe pas (ex. aucun héros) est sautée. Le drapeau est enregistré dès le
 --   début du guidage ; interface fermée : le guidage s'arrête (pas de boucle à la réouverture).
 --
@@ -21,7 +25,10 @@
 --   que la condition est remplie, seulement quand aucun écran n'est ouvert et hors combat.
 --   Conditions (calculées par TutorialController, valeurs du serveur) : HasHero (au moins un héros),
 --   SecondHero (au moins deux héros), FirstVictory (au moins un stage gagné), QuestClaimable (la quête
---   active attend « Récupérer », vue du serveur).
+--   active attend « Récupérer », vue du serveur), HasEquipment (un héros possédé et un équipement
+--   porté par personne : InventoryStore).
+--   Badge : true pour allumer aussi le « ! » de l'entrée du menu visée (« Menu.<Id> ») tant que le rappel
+--   est actif (une seule entrée à la fois : test).
 --
 -- Menu.Entries : boutons du menu principal (grille de 2 colonnes x 3 lignes à gauche), dans l'ordre :
 --   Id (cible UI « Menu.<Id> », clé de Shared.Config.MenuIconConfig pour l'icône), Label (sous l'icône),
@@ -30,8 +37,8 @@
 --   Badge (condition facultative de cette attention).
 
 export type Step = { Target: string, Text: string?, Seconds: number? }
-export type FirstOpen = { Steps: { Step }, Hud: boolean? }
-export type Nudge = { Id: string, Target: string, Flag: string, Condition: string }
+export type FirstOpen = { Steps: { Step }, Hud: boolean?, Screen: string?, Condition: string? }
+export type Nudge = { Id: string, Target: string, Flag: string, Condition: string, Badge: boolean? }
 export type Entry = { Id: string, Label: string, View: string, Soon: string?, Flag: string?, Badge: string? }
 
 local TutorialConfig = {
@@ -44,6 +51,7 @@ local TutorialConfig = {
 		"Stats", -- Statistiques ouvertes
 		"Currencies", -- première monnaie gagnée : les pastilles du HUD
 		"Quests", -- panneau Quêtes ouvert
+		"Equipment", -- premier équipement : onglet Équipement de la Sacoche, objet, « Équiper »
 	},
 
 	-- Durée d'une étape par défaut (s) et pause entre deux étapes.
@@ -89,6 +97,17 @@ local TutorialConfig = {
 				{ Target = "Quests.Claim", Text = "Récupère !" },
 			},
 		},
+		-- Sacoche ouverte avec un objet à équiper, après la découverte « Bag » : héros possédé, objet, Équiper
+		Equipment = {
+			Screen = "Bag",
+			Condition = "HasEquipment",
+			Steps = {
+				{ Target = "Bag.EquipmentTab", Text = "Ton équipement", Seconds = 6 },
+				{ Target = "Bag.EquipHero", Text = "Ton héros", Seconds = 3 },
+				{ Target = "Bag.FirstItem", Text = "Choisis un objet", Seconds = 6 },
+				{ Target = "Bag.EquipAction", Text = "Équipe-le !", Seconds = 6 },
+			},
+		},
 		Currencies = {
 			Hud = true,
 			Steps = {
@@ -103,6 +122,9 @@ local TutorialConfig = {
 		{ Id = "OpenBag", Target = "Menu.Bag", Flag = "Bag", Condition = "FirstVictory" },
 		-- Première récompense de quête à récupérer, panneau jamais ouvert : la flèche montre le bouton Quêtes.
 		{ Id = "OpenQuests", Target = "Menu.Quest", Flag = "Quests", Condition = "QuestClaimable" },
+		-- Objet à équiper, guidage jamais vu : la flèche et le « ! » montrent le bouton Sac, une fois l'écran
+		-- de fin fermé (rien pendant le combat ni sur l'écran). Même cible qu'OpenBag : une seule flèche.
+		{ Id = "OpenEquipment", Target = "Menu.Bag", Flag = "Equipment", Condition = "HasEquipment", Badge = true },
 	} :: { Nudge },
 
 	Menu = {
