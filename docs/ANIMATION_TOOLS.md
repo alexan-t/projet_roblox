@@ -176,6 +176,102 @@ vers la gauche, +rz = bras droit vers l'extérieur (bras gauche : -rz). Les jamb
 buste, compenser sur les jambes une inclinaison ou une rotation du buste pour garder les pieds au sol.
 L'`Easing` d'une clé règle le trajet vers la clé suivante (`In` = accélère vers le coup).
 
+## Attaques des héros (22/10/2026)
+
+Les 60 héros du Bestiaire ont une attaque de base, rangée dans leur jeu propre
+`ReplicatedStorage.Assets.Animations.<NomDuModèle>` (séquence `Attaque`, attribut `Impact`). L'Écuyer
+garde son attaque validée dans `EcuyerDuRempart` ; la version de l'atelier est dans
+`Atelier_EcuyerDuRempart`. Copies riggées : `Workspace.AtelierAnimation.<Nom>_Anim`, en grille à
+X = -140…-32, Z = -280…-360, attaque en boucle au Play.
+
+Six styles par famille d'arme (`Kit.Attacks`), plus le miroir main gauche (suffixe `_G`) :
+
+| Style | Arme | Durée | Impact | Mouvement |
+| --- | --- | --- | --- | --- |
+| `Epee` | épée, coutelas, épée-clé | 0,6 s | 0,2 s | armé à l'épaule, diagonale vers le bas devant soi |
+| `Masse` | masse, marteau, maillet, glaive, faux | 0,65 s | 0,25 s | levée derrière la tête, abattue devant |
+| `Estoc` | lance, hallebarde, harpon, trident, étendard | 0,6 s | 0,25 s | pointe abaissée, estoc bras tendu |
+| `Sort` | bâton, sceptre, quenouille | 0,7 s | 0,3 s | bâton contre l'épaule, tête pointée vers la cible, main libre en avant |
+| `Tir` / `Arbalete` | arc / arbalète | 0,8 s | 0,45 s | buste tourné, corde tirée, lâcher à l'impact |
+| `Poing` | mains nues (#20) | 0,5 s | 0,2 s | fente avant, poings projetés (bras modelés levés) |
+
+| Style | Héros |
+| --- | --- |
+| `Epee` | #01, #15, #23, #27, #29, #37, #40, #49, #54, #57, #59 |
+| `Masse` | #05, #21, #24, #26, #34, #36, #42, #44, #45, #46, #50, #61, #63, #65, #66 ; `Masse_G` #19 |
+| `Estoc` | #03, #18, #30, #31, #39, #52, #62, #64, #67 ; `Estoc_G` #56 |
+| `Sort` | #04, #16, #25, #28, #33, #35, #38, #41, #43, #47, #48, #51, #53, #58, #60, #68 ; `Sort_G` #17, #22, #32, #55 |
+| `Tir` / `Arbalete` / `Poing` | #14 / #02 / #20 |
+
+**Visée de l'arme** : les héros ne tiennent pas leur arme pareil au repos (debout, tête en bas, en
+travers). Un angle d'arme commun les envoyait dans toutes les directions (lance pointée vers le
+ciel, arbalète vers le sol). `Kit.aimedAttack(model, style, options)` garde les poses du style et
+calcule, pour chaque clé, la rotation de l'os d'arme qui amène le manche (axe de la `Prise`) sur la
+direction de `Kit.AttackAims`. Options : `Flip` quand la Prise pointe vers le talon (#55,
+champignon), `Free` pour un bâton dont la Prise est libre (#41, #51, #65).
+
+```lua
+local Kit = _G.AnimationKit
+local m = workspace.AtelierAnimation.LanciereDesSources_Anim -- copie riggée (Kit.copy + Kit.rig)
+Kit.install(m, "LanciereDesSources", Kit.attack(m, Kit.aimedAttack(m, "Estoc")))
+Kit.preview(m, "LanciereDesSources", "Attaque")
+```
+
+Contrôle fait : pose d'impact de chacun des 60 héros en capture (trois-quarts), puis Play (60/60
+animés). Sans visée : #20 (mains nues). Elyria (#68) a deux jambes invisibles ajoutées à sa copie
+d'atelier (le squelette commun en demande deux) et lévite à 1 stud.
+
+**En combat (23/10/2026, place test 3)** : les 59 autres héros ont leur modèle articulé
+`ReplicatedStorage.Assets.Combat.Heros_<Modèle>` (copie de l'atelier, tags et attributs d'aperçu
+retirés) et leur `CombatTemplate` dans `HeroConfig`. Attributs : `JeuAnimations = <Modèle>`,
+`JeuAnimationsCommun = Squelette_Leger` (marche commune, générée sur #03), `Squelette = Humanoide`,
+`HauteurPieds` = hauteur du pivot au-dessus des pieds : `ArenaService` pose le héros avec, car le bas
+de la boîte est l'arme pour #05 et #59 (ils flottaient) ; Elyria : ourlet + 1 stud (lévitation).
+Une place qui n'a pas encore ces modèles (DEV) montre le vrai modèle du héros, par son HeroId.
+Vérifié en combat réel (stage 1-1, #05, #14, #16, #44) : chaque héros joue sa marche (0,6 s) puis son
+attaque (Masse 0,65 s, Tir 0,8 s, Sort 0,7 s), posé sur sa case. L'Écuyer de test 3 est resté sur
+l'ancien squelette (la DEV a sa version migrée). **À faire** : importer dans la DEV les 59 modèles,
+les jeux `<Modèle>` et `Squelette_Leger`, puis publier les séquences (`AssetId`).
+
+## Ultimes des héros (brief `docs/ultimes/ULTIMES.md`)
+
+Chaque ultime = une séquence « Ultime » dans le jeu propre du héros (style de `Kit.Attacks`) + un
+effet du client choisi par l'attribut texte `EffetUltime` du modèle de combat
+(`UltimateEffectController`, une fonction par effet). L'instant où l'effet part est l'attribut
+`Impact` de la séquence, plus le trajet de l'effet (`TRAVEL`) : les dégâts et disparitions tombent
+au coup (`ImpactDelay(speed, caster)`). Sans attribut : onde dorée « Charge du Rempart ».
+
+| Héros | Ultime | Style | Durée / impact | `EffetUltime` |
+| --- | --- | --- | --- | --- |
+| #01 Écuyer du Rempart | Rempart Fermé | `RempartFerme` | 0,7 s / 0,3 s | `RempartFerme` : écu doré qui frappe 2 à 5 studs devant lui |
+| #02 Tireuse des Faubourgs | Le Dernier Carreau | `DernierCarreau` (visé) | 0,8 s / 0,45 s | `DernierCarreau` : carreau lourd qui traverse la cible, traînée fine |
+| #03 Lancier des Champs | Haie de Lances | `HaieDeLances` (visé) | 0,85 s / 0,3 s | `HaieDeLances` : trois traits de fer en éventail depuis la pointe, un par estoc |
+| #04 Apprenti Pyromancien | Braise Indocile | `BraiseIndocile` (visé) | 0,85 s / 0,45 s | `BraiseIndocile` : prélude, la gemme tousse trois braises ; une braise frappe la cible puis rebondit sur une seconde |
+| #05 Brise-Pierre | Fendaille de Carrière | `FendailleDeCarriere` (visé) | 0,9 s / 0,42 s | `FendailleDeCarriere` : fissure en zigzag d'une longueur de masse, partie de la tête de la masse, poussière |
+| #06 Guetteuse des Pins | Cor des Cimes | `CorDesCimes` (visé) | 0,95 s / 0,62 s | `CorDesCimes` : prélude, deux ondes d'appel depuis sa tête ; flèche à traînée vert pâle jusqu'au contour fin d'un pin |
+
+```lua
+local Kit = _G.AnimationKit
+local m = workspace.AtelierAnimation.TireuseDesFaubourgs_Anim
+Kit.install(m, "TireuseDesFaubourgs", Kit.ultimate(m, Kit.aimedAttack(m, "DernierCarreau")))
+-- puis attribut EffetUltime = "DernierCarreau" sur Assets.Combat.Heros_TireuseDesFaubourgs
+```
+
+Préludes (`PRELUDE` du contrôleur) : effets qui partent dès le début de l'animation, avant le coup
+(braises de #04, cor de #06). #06 : le modèle n'a pas de cor à la ceinture ; la main libre monte à
+la bouche et les ondes disent l'appel (à revoir si un cor est ajouté au modèle).
+
+Peu communs vérifiés le 23/10/2026 (test 3) : poses clés en Edit (éventail de #03 vu de dessus, sol
+contrôlé par mesure : rien sous le sol sauf la masse de #05 qui mord de 0,1 stud), effets à x0,1
+dans l'atelier, combat réel stage 1-1 : les quatre ultimes partent (traits, braises, fissure, cor et
+pin).
+
+Communs vérifiés le 23/10/2026 (test 3) : captures à x0,1 dans l'atelier (pose d'impact de profil, écu,
+carreau et traînée) ; combat réel stage 1-1, chaque héros seul : l'Écuyer lance l'écu, la Tireuse
+attaque 5 fois puis l'ultime, carreau parti 0,47 s après le début de l'animation. Dans test 3,
+l'ultime de l'Écuyer est dans `Atelier_EcuyerDuRempart` (son jeu `EcuyerDuRempart` y est encore sur
+l'ancien squelette) ; dans la DEV, le ranger dans `EcuyerDuRempart` à la place du style `Rempart`.
+
 ## Aperçu au Play
 
 `MonsterAnimationController` anime en boucle tout modèle tagué `ApercuAnimation` (Attente, puis
@@ -300,7 +396,7 @@ de design, pas une source de vérité gameplay.
   propriétaire de l'expérience uniquement : `docs/ASSET_OWNERSHIP.md`.
 - Pas de genoux ni de pieds articulés : les modèles IA ont une seule pièce par jambe.
 - Les capes et tabards sont fixés au buste, sans mouvement secondaire.
-- Marche, attaque de base et ultime (Écuyer) sont générés ; pas encore d'Attente (repos).
+- Marche (commune), attaque de base (60 héros) et ultime (Écuyer) sont générés ; pas encore d'Attente (repos).
 - **Bras en coque** (Roi Orc) : ses bras sont ouverts sur toute leur face intérieure (côté buste).
   Au repos le buste cache l'ouverture ; dès que le bras s'écarte, on voit l'intérieur, noir.
   `Kit.closeArms(model, couleurPeau)` ferme cette face avec un ellipsoïde couleur peau porté par le

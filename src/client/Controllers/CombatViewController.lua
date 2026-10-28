@@ -269,9 +269,10 @@ local function onEvents(_combatId: number, events: { { [string]: any } })
 			}
 			attachBars(event.UnitId, event.MiniBoss == true, 0)
 		elseif kind == "UltimateUsed" then
+			local launcher = views[event.UnitId]
 			for _, id in event.Hits do
 				ultimateHits[id] = true
-				hitDelay[id] = UltimateEffectController.ImpactDelay(speed)
+				hitDelay[id] = UltimateEffectController.ImpactDelay(speed, launcher and launcher.model)
 			end
 			-- Animation « Ultime » du héros et onde dorée jusqu'au centre de la zone touchée
 			-- (anneau au rayon des ennemis touchés, au moins celui d'une petite zone).
