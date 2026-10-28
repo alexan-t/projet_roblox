@@ -384,6 +384,13 @@ function CombatService:StartCombat(player: Player, zoneSessionId: number, format
 end
 
 -- État lisible du combat du joueur (copie), ou nil.
+-- Vrai si le joueur a un combat en cours (session vivante). Sert à refuser Équiper / Retirer (#73) : le roster est
+-- figé au lancement et changer la Sacoche ne doit pas modifier la session.
+function CombatService:IsInCombat(player: Player): boolean
+	local session = sessions[player]
+	return session ~= nil and contextAlive(session)
+end
+
 function CombatService:GetCombat(player: Player): CombatView?
 	local session = sessions[player]
 	if not session or not contextAlive(session) then

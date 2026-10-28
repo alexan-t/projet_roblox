@@ -18,6 +18,9 @@
 -- Niveaux et XP (#68) : par exemplaire (HeroInstanceId). GetCombatRoster fige, au lancement d'un combat,
 -- les héros posés et leurs stats de niveau ; GrantCombatXP leur donne l'XP d'une victoire acceptée
 -- (appelé par le combat, jamais par un client : aucune remote d'XP).
+-- Équipement (#73) : les stats de combat et de la Sacoche ajoutent, APRÈS le niveau, les bonus plats des objets
+-- portés par l'exemplaire (EquipmentRules + EquipmentConfig). Les mutations Équiper / Retirer sont dans
+-- EquipmentService ; ici, seulement le calcul (roster figé au lancement, vue) et le nettoyage d'un héros supprimé.
 -- Au démarrage, les modèles des héros activés sont clonés de ServerStorage.Assets.Heros vers
 -- ReplicatedStorage.Assets.Heros (révélation de l'invocation côté client).
 
@@ -33,6 +36,9 @@ local SummonBannerConfig = require(ReplicatedStorage.Shared.Config.SummonBannerC
 local CombatConfig = require(script.Parent.Parent.Config.CombatConfig)
 local SummonConfig = require(script.Parent.Parent.Config.SummonConfig)
 local HeroProgressionConfig = require(script.Parent.Parent.Config.HeroProgressionConfig)
+local EquipmentConfig = require(script.Parent.Parent.Config.EquipmentConfig)
+local ItemConfig = require(ReplicatedStorage.Shared.Config.ItemConfig)
+local EquipmentRules = require(script.Parent.Parent.Inventory.EquipmentRules)
 local HeroRules = require(script.Parent.Parent.Heroes.HeroRules)
 local HeroProgressionRules = require(script.Parent.Parent.Heroes.HeroProgressionRules)
 local SummonRules = require(script.Parent.Parent.Heroes.SummonRules)
@@ -64,6 +70,29 @@ local idSequence = 0
 -- Règles + config de progression, pour les vues envoyées au client (Level, XP, XPToNext, MaxLevel, et
 -- MaxHealth / AttackDamage de l'exemplaire à son niveau : fiche de la Sacoche).
 local PROGRESSION = { rules = HeroProgressionRules, config = HeroProgressionConfig, heroes = HeroConfig.Heroes, combat = CombatConfig.Heroes }
+local ITEM_CATALOGS = { Item = ItemConfig }
+-- Config d'équipement validée une fois ; invalide -> nil : bonus nul dans le roster et la vue (jamais de NaN).
+local EQUIPMENT = EquipmentRules.activeConfig(EquipmentConfig, ITEM_CATALOGS, RarityConfig.Tiers)
+
+-- Vue des héros pour le client : HeroRules.view (niveau, XP, stats de niveau) + équipement (#73) :
+-- MaxHealth / AttackDamage deviennent les stats FINALES de l'exemplaire, BaseMaxHealth / BaseAttackDamage les stats
+-- de niveau seules, EquipmentBonus la somme des bonus, Equipment { [SlotType] = ItemInstanceId } (liens valides).
+local function heroView(data: any): any
+	local view = HeroRules.view(data, PROGRESSION)
+	local holders = EquipmentRules.holders(data, ITEM_CATALOGS)
+	for _, entry in view.Heroes do
+		local bonus = EquipmentRules.heroBonus(data, entry.Id, ITEM_CATALOGS, EQUIPMENT, holders)
+		entry.Equipment = EquipmentRules.heroItems(data, entry.Id, ITEM_CATALOGS, holders)
+		entry.EquipmentBonus = bonus
+		if typeof(entry.MaxHealth) == "number" and typeof(entry.AttackDamage) == "number" then
+			entry.BaseMaxHealth = entry.MaxHealth
+			entry.BaseAttackDamage = entry.AttackDamage
+			entry.MaxHealth += bonus.MaxHealth
+			entry.AttackDamage += bonus.AttackDamage
+		end
+	end
+	return view
+end
 
 -- Identifiant d'exemplaire unique, horodaté (largeur fixe) : KingdomService range les héros dans
 -- l'ordre d'obtention (anciens "H_<GUID>" d'abord, puis "H_T…" par date) ; le premier héros reste sur Heros_1.
@@ -84,11 +113,16 @@ local function push(player: Player)
 	local data = DataService:GetData(player)
 	local event = changedEvent
 	if data and event and player.Parent == Players then
-		event:FireClient(player, HeroRules.view(data, PROGRESSION))
+		event:FireClient(player, heroView(data))
 	end
 	if data then
 		QuestService:SyncState(player)
 	end
+end
+
+-- Pousse la vue des héros à jour (après Équiper / Retirer, EquipmentService).
+function HeroService:Push(player: Player)
+	push(player)
 end
 
 function HeroService:HotbarAction(player: Player, action: any, first: any, second: any): (boolean, string?)
@@ -128,6 +162,8 @@ function HeroService:RemoveHero(player: Player, instanceId: string): boolean
 	if not data or not HeroRules.removeHero(data, instanceId) then
 		return false
 	end
+	-- ses objets restent dans l'inventaire : seul le lien d'équipement disparaît (#73)
+	EquipmentRules.dropHero(data, instanceId)
 	KingdomService:Refresh(player)
 	push(player)
 	return true
@@ -141,10 +177,12 @@ export type RosterEntry = {
 	CombatTemplate: string,
 	Level: number,
 	Stats: { [string]: any },
+	-- Bonus d'équipement déjà inclus dans Stats (#73), pour les journaux et les tests.
+	EquipmentBonus: EquipmentRules.Bonus,
 }
 
 -- Roster figé d'un combat : pour chaque case de la formation serveur (case -> HeroInstanceId), l'exemplaire
--- réellement possédé, son profil de combat et ses stats de niveau (copies). Refus si un exemplaire n'est
+-- réellement possédé, son profil de combat et ses stats finales (niveau puis équipement, copies). Refus si un exemplaire n'est
 -- plus jouable. Le client ne fournit rien ici : la formation est celle d'ArenaService.
 function HeroService:GetCombatRoster(player: Player, formation: { [number]: string }): ({ [number]: RosterEntry }?, string?)
 	local data = DataService:GetData(player)
@@ -152,12 +190,16 @@ function HeroService:GetCombatRoster(player: Player, formation: { [number]: stri
 		return nil, "données non chargées"
 	end
 	local roster: { [number]: RosterEntry } = {}
+	local holders = EquipmentRules.holders(data, ITEM_CATALOGS)
 	for slot, instanceId in formation do
 		local hero, reason = HeroRules.combatHero(data, instanceId, HeroConfig.Heroes, CombatConfig.Heroes)
 		if not hero then
 			return nil, reason
 		end
 		local level = HeroProgressionRules.normalize(data.Heroes[instanceId], HeroProgressionConfig)
+		-- ordre #73 : profil de combat → niveau (#68) → + bonus plats de l'équipement porté → stats finales
+		local levelStats = HeroProgressionRules.combatStats(CombatConfig.Heroes[hero.CombatProfile], level, HeroProgressionConfig)
+		local bonus = EquipmentRules.heroBonus(data, instanceId, ITEM_CATALOGS, EQUIPMENT, holders)
 		roster[slot] = {
 			Slot = slot,
 			HeroInstanceId = instanceId,
@@ -165,7 +207,8 @@ function HeroService:GetCombatRoster(player: Player, formation: { [number]: stri
 			CombatProfile = hero.CombatProfile,
 			CombatTemplate = hero.CombatTemplate,
 			Level = level,
-			Stats = HeroProgressionRules.combatStats(CombatConfig.Heroes[hero.CombatProfile], level, HeroProgressionConfig),
+			Stats = EquipmentRules.applyBonus(levelStats, bonus, EQUIPMENT),
+			EquipmentBonus = bonus,
 		}
 	end
 	return roster, nil
@@ -494,7 +537,7 @@ function HeroService:Start()
 	get.Name = "GetHeroes"
 	get.OnServerInvoke = function(player: Player): any
 		local data = DataService:GetData(player)
-		return if data then HeroRules.view(data, PROGRESSION) else nil
+		return if data then heroView(data) else nil
 	end
 	get.Parent = remotes
 	local edit = Instance.new("RemoteFunction")
@@ -506,7 +549,7 @@ function HeroService:Start()
 		local ok, reason = self:HotbarAction(player, action, first, second)
 		if ok then push(player) end
 		local data = DataService:GetData(player)
-		return ok, reason, if data then HeroRules.view(data, PROGRESSION) else nil
+		return ok, reason, if data then heroView(data) else nil
 	end
 	edit.Parent = remotes
 	-- Requête V2 strictement validée : aucune donnée de coût, HeroId ou taux venant du client.

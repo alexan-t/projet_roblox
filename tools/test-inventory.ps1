@@ -12,7 +12,7 @@ function Module([string]$path) { "(function()`n$(Source $path)`nend)()" }
 $runner = "local ItemConfig = $(Module 'src/shared/Config/ItemConfig.lua')`n" +
 	"local ResourceConfig = $(Module 'src/shared/Config/ResourceConfig.lua')`n" +
 	"local InventoryRules = $(Module 'src/server/Inventory/InventoryRules.lua')`n" +
-	"local modules = { Item = ItemConfig, Resource = ResourceConfig, ItemConfig = ItemConfig, ResourceConfig = ResourceConfig, LootConfig = $(Module 'src/server/Config/LootConfig.lua') }`n" +
+	"local modules = { Item = ItemConfig, Resource = ResourceConfig, ItemConfig = ItemConfig, ResourceConfig = ResourceConfig, LootConfig = $(Module 'src/server/Config/LootConfig.lua'), RarityConfig = $(Module 'src/shared/Config/RarityConfig.lua'), EquipmentConfig = $(Module 'src/server/Config/EquipmentConfig.lua'), EquipmentRules = $(Module 'src/server/Inventory/EquipmentRules.lua') }`n" +
 	"local function createService(env)`n    local game, script, require, Instance = env.game, env.script, env.require, env.Instance`n$(Source 'src/server/Services/InventoryService.lua')`nend`n" +
 	"local ok1, err1 = pcall($(Module 'src/server/Tests/InventoryRules.spec.lua'), InventoryRules, modules)`n" +
 	"local ok2, err2 = pcall($(Module 'src/server/Tests/InventoryService.spec.lua'), createService, InventoryRules, modules)`n" +

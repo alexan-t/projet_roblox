@@ -99,7 +99,7 @@ return function(factories: any, configs: any, CombatEngine: any, RewardRules: an
 			config.StageConfig = stageConfig
 		end
 		local tree = { Config = config, Combat = { CombatEngine = CombatEngine, Difficulty = configs.Difficulty }, Rewards = { RewardRules = RewardRules },
-			Loot = { LootRules = lootModules.LootRules }, Inventory = { InventoryRules = lootModules.InventoryRules } }
+			Loot = { LootRules = lootModules.LootRules }, Inventory = { InventoryRules = lootModules.InventoryRules, EquipmentRules = lootModules.EquipmentRules } }
 		local function scriptFor(): any return { Parent = setmetatable({ Parent = tree }, { __index = services }) } end
 		services.InventoryService = factories.inventory(env, scriptFor())
 		services.RewardService = factories.reward(env, scriptFor())

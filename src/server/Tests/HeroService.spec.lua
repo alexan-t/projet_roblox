@@ -104,7 +104,7 @@ return function(createService: any, modules: any)
 		local replicated = inst("Folder", "ReplicatedStorage")
 		replicated.Shared = { Utils = { Log = { debug = function() end, info = function() end,
 			warn = function(_s: string, m: string) table.insert(env.warnings, m) end } },
-			Config = { HeroConfig = HeroConfig, RarityConfig = modules.RarityConfig, SummonBannerConfig = modules.SummonBannerConfig } }
+			Config = { HeroConfig = HeroConfig, RarityConfig = modules.RarityConfig, SummonBannerConfig = modules.SummonBannerConfig, ItemConfig = modules.ItemConfig } }
 		env.replicated = replicated
 		-- ServerStorage.Assets.Heros : modèles réels (dont un avec script parasite) + un héros d'un
 		-- autre format qui ne doit jamais être copié.
@@ -180,8 +180,9 @@ return function(createService: any, modules: any)
 			return true
 		end
 		env.script = { Parent = { DataService = dataService, PlotService = plotService, KingdomService = kingdomService, QuestService = questService,
-			Parent = { Config = { CombatConfig = modules.CombatConfig, SummonConfig = SummonConfig, HeroProgressionConfig = modules.HeroProgressionConfig },
-				Heroes = { HeroRules = modules.HeroRules, SummonRules = modules.SummonRules, HeroProgressionRules = modules.HeroProgressionRules } } } }
+			Parent = { Config = { CombatConfig = modules.CombatConfig, SummonConfig = SummonConfig, HeroProgressionConfig = modules.HeroProgressionConfig, EquipmentConfig = modules.EquipmentConfig },
+				Heroes = { HeroRules = modules.HeroRules, SummonRules = modules.SummonRules, HeroProgressionRules = modules.HeroProgressionRules },
+				Inventory = { EquipmentRules = modules.EquipmentRules } } } }
 		env.require = function(m: any): any return m end
 
 		-- Plot avec portail : pivot du portail = position donnée.
@@ -885,6 +886,93 @@ return function(createService: any, modules: any)
 		assert(roster[5].Stats.UltimateDamage == modules.CombatConfig.Heroes.Epeiste.UltimateDamage, "ultimate unchanged")
 		local none, why = s:GetCombatRoster(p, { [1] = "Fantome" })
 		assert(none == nil and why == "héros inconnu")
+	end)
+
+	-- #73 : objets possédés et portés, posés directement dans les données (les mutations sont testées par
+	-- tools/test-equipment.ps1) ; HeroService ne fait que calculer.
+	local function wear(e: any, p: any, heroInstanceId: string, items: { [string]: string })
+		local d = e.data[p]
+		d.Inventory = d.Inventory or { Equipment = {}, Resources = {} }
+		d.HeroEquipment = d.HeroEquipment or {}
+		d.HeroEquipment[heroInstanceId] = d.HeroEquipment[heroInstanceId] or {}
+		for instanceId, itemId in items do
+			d.Inventory.Equipment[instanceId] = { ItemId = itemId, UpgradeLevel = 0 }
+			d.HeroEquipment[heroInstanceId][modules.ItemConfig.Items[itemId].SlotType] = instanceId
+		end
+	end
+
+	test("#73 combat roster: level stats THEN flat equipment bonus; only PV / ATK change; Lv1 without item unchanged", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		local starter = e.data[p].Hotbar[1]
+		e.data[p].Heroes[starter].Level = 2
+		wear(e, p, starter, { I_arm = "item_008", I_wpn = "item_015" }) -- +45 PV, +6 ATK
+		heroOf(e, p, "D", "ecuyer_du_rempart", 1, 0)
+		local roster = s:GetCombatRoster(p, { [5] = starter, [2] = "D" })
+		assert(roster and roster[5].Stats.MaxHealth == 158 + 45 and roster[5].Stats.AttackDamage == 17 + 6, `{roster[5].Stats.MaxHealth}/{roster[5].Stats.AttackDamage}`)
+		assert(roster[5].EquipmentBonus.MaxHealth == 45 and roster[5].EquipmentBonus.AttackDamage == 6)
+		local base = modules.CombatConfig.Heroes.Epeiste
+		for _, key in { "AttackInterval", "AttackRange", "MoveSpeed", "EnergyPerAttack", "MaxEnergy", "UltimateDamage" } do
+			assert(roster[5].Stats[key] == base[key], key .. " unchanged")
+		end
+		assert(roster[2].Stats.MaxHealth == 150 and roster[2].Stats.AttackDamage == 16, "same HeroId, other copy, no item: current stats")
+	end)
+
+	test("#73 roster frozen: changing the equipment after the launch never changes the roster already built", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		local starter = e.data[p].Hotbar[1]
+		wear(e, p, starter, { I_wpn = "item_042" })
+		local roster = s:GetCombatRoster(p, { [5] = starter })
+		assert(roster[5].Stats.AttackDamage == 16 + 12)
+		e.data[p].HeroEquipment[starter] = nil
+		assert(roster[5].Stats.AttackDamage == 28, "frozen copy")
+		assert(s:GetCombatRoster(p, { [5] = starter })[5].Stats.AttackDamage == 16, "next launch reads the new state")
+	end)
+
+	test("#73 invalid links never reach the combat: wrong slot, missing item, item worn twice", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		local starter = e.data[p].Hotbar[1]
+		-- « Z » est après l'Écuyer « H_T… » dans l'ordre des identifiants : en cas de doublon, l'Écuyer garde l'objet
+		heroOf(e, p, "Z", "ecuyer_du_rempart", 1, 0)
+		wear(e, p, starter, { I_wpn = "item_015" })
+		e.data[p].HeroEquipment.Z = { weapon = "I_wpn", helmet = "I_wpn", armor = "I_gone" } -- doublon, mauvais slot, objet absent
+		local roster = s:GetCombatRoster(p, { [1] = "Z", [5] = starter })
+		assert(roster[1].Stats.AttackDamage == 16 and roster[1].Stats.MaxHealth == 150, "Z gets nothing")
+		assert(roster[5].EquipmentBonus.AttackDamage == 6 and roster[5].Stats.AttackDamage == 22, "the item is counted once, on its first holder")
+	end)
+
+	test("#73 hero view: final PV / ATK, level stats, equipment bonus and worn items per instance", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		local starter = e.data[p].Hotbar[1]
+		wear(e, p, starter, { I_arm = "item_008" })
+		heroOf(e, p, "D", "ecuyer_du_rempart", 1, 0)
+		local view = e.remote("GetHeroes").OnServerInvoke(p)
+		local byId = {}
+		for _, h in view.Heroes do byId[h.Id] = h end
+		local a = byId[starter]
+		assert(a.MaxHealth == 195 and a.BaseMaxHealth == 150 and a.AttackDamage == 16 and a.BaseAttackDamage == 16, `{a.MaxHealth}/{a.BaseMaxHealth}`)
+		assert(a.EquipmentBonus.MaxHealth == 45 and a.Equipment.armor == "I_arm" and count(a.Equipment) == 1)
+		assert(byId.D.MaxHealth == 150 and count(byId.D.Equipment) == 0 and byId.D.EquipmentBonus.MaxHealth == 0, "other copy independent")
+		s:Push(p)
+		local pushed = e.events(p, "HeroesChanged")
+		assert(#pushed > 0 and pushed[#pushed].Heroes ~= nil, "Push sends the same view")
+	end)
+
+	test("#73 a removed hero frees its items (they stay in the inventory)", function()
+		local e = fixture()
+		local s = e.start()
+		local p = e.player("A")
+		heroOf(e, p, "D", "ecuyer_du_rempart", 1, 0)
+		wear(e, p, "D", { I_wpn = "item_015" })
+		assert(s:RemoveHero(p, "D"))
+		assert(e.data[p].HeroEquipment.D == nil and e.data[p].Inventory.Equipment.I_wpn ~= nil)
 	end)
 
 	test("#68 GrantCombatXP: only the given participants (placed heroes), collection hero 0, HeroesChanged with XP", function()

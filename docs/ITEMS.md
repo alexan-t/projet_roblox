@@ -12,7 +12,8 @@ une icône.
 | Icônes 2D livrées (AssetId publié, vitrine remplie) | **OUI : 100 / 100** : 58 du partenaire (PR #74, `item_035` à `item_044`, `item_053` à `item_100`) et 42 produites ici (`item_001` à `item_034`, `item_045` à `item_052`, PNG dans `assets/icons/items/`) |
 | Stockage dans `PlayerData` | **OUI (#72, V1 serveur)** : `PlayerData.Inventory.Equipment`, une entrée par exemplaire (`{ ItemId, UpgradeLevel = 0 }`, clé = `ItemInstanceId` « I_T… ») |
 | Obtention (récompenses, butin) | **OUI (#72, V1 serveur)** : loot de victoire de la Zone 1, `LootConfig` (valeurs **ALPHA 0.0.2 PROVISOIRE**) ; voir `docs/REWARDS.md` § Loot |
-| Équipement des héros, statistiques, Forge | **NON** (#73) : aucun bouton Équiper, `UpgradeLevel` sans effet |
+| Équipement des héros et statistiques | **OUI (#73, V1)** : un objet s'équipe sur un **exemplaire** de héros (`HeroEquipment`), bonus plats PV / ATK au combat ; voir § 7 (valeurs **ALPHA 0.0.2 PROVISOIRE**, #112) |
+| Forge, amélioration (`UpgradeLevel`) | **NON** : `UpgradeLevel` stocké sans aucun effet |
 
 Catalogue défini ≠ asset 2D livré ≠ système de jeu implémenté.
 
@@ -43,7 +44,7 @@ Catalogue défini ≠ asset 2D livré ≠ système de jeu implémenté.
   préfixe `I_T`) qui pointe vers un `ItemId` du catalogue : plusieurs exemplaires d'un même `ItemId` sont autorisés et ne sont **jamais
   fusionnés**. `UpgradeLevel = 0` est stocké dès V1 sans aucun effet ; pas d'affixe, pas d'item hors catalogue. Règles pures :
   `src/server/Inventory/InventoryRules.lua` ; vue en lecture seule : `GetInventory` / `InventoryChanged` (`InventoryService`, aucun
-  remote d'écriture). Un exemplaire ne s'équipera que sur un seul héros (#73). Tirage : rareté d'abord, puis item uniforme parmi les items
+  remote d'écriture). Un exemplaire ne s'équipe que sur un seul héros à la fois (#73, § 7). Tirage : rareté d'abord, puis item uniforme parmi les items
   de cette rareté ; Zone 1 Normal ⊂ Commun / Peu commun / Rare, Élite ⊂ Rare / Épique / Légendaire, jamais au-dessus de Légendaire.
 - **Choix PROVISOIRES et points ouverts** (ALPHA 0.0.2, à arbitrer après simulation, voir `docs/REWARDS.md` § Loot) : plafond de
   **500 instances** (au-delà, l'équipement n'est pas créé et `Overflow = true`) ; équipement garanti du premier clear de 1-5 Normal ;
@@ -172,3 +173,56 @@ dans une PR, et ne rien livrer tant qu'il signale un écart.
 
 Un nouvel item s'ajoute **dans le même ordre** aux deux endroits : son emplacement dans la vitrine
 (§ 3) et sa ligne dans `ItemConfig.lua` ; mettre à jour la répartition du § 2 et le test.
+
+## 7. Équipement V1 (#73) — ALPHA 0.0.2 PROVISOIRE
+
+**Boucle** : victoire → objet dans la Sacoche → héros choisi → objet équipé → PV / ATK de CET exemplaire augmentés au
+combat suivant (Normal et Élite) → retrouvé tel quel après reconnexion.
+
+- **Données** : `PlayerData.HeroEquipment = { [HeroInstanceId] = { [SlotType] = ItemInstanceId } }`, clé fixe ajoutée aux
+  anciens profils par Reconcile (aucune migration, `DataVersion` reste 4). L'équipement appartient à l'**exemplaire** de héros :
+  deux exemplaires d'un même `HeroId` portent des objets différents.
+- **Invariants** : un `ItemInstanceId` n'est porté que par **un** héros, dans **un** slot, qui est le `SlotType` de son `ItemId`
+  (lu dans `ItemConfig`, jamais choisi par le client). Équiper sur un slot occupé **remplace** : l'ancien objet reste dans
+  l'inventaire, disponible. Retirer libère le slot, l'objet reste. Un objet porté par un autre héros est **refusé** (le retirer
+  d'abord). Aucun objet n'est jamais créé, supprimé ni dupliqué par l'équipement.
+- **Données invalides** (héros supprimé, objet absent ou inconnu, slot incompatible, objet porté deux fois) : ignorées à la lecture
+  et nettoyées au chargement du joueur et avant chaque mutation (`EquipmentRules.normalize`) ; en cas de doublon, le premier porteur
+  dans l'ordre `HeroInstanceId` croissant puis ordre des slots garde l'objet. Un héros supprimé libère ses objets.
+- **Bonus** (`src/server/Config/EquipmentConfig.lua`) : plats, `MaxHealth` et `AttackDamage` seulement, selon **slot × rareté**
+  (pas par `ItemId`) : `arrondi(base du slot × multiplicateur de rareté)`. `UpgradeLevel` sans effet.
+
+| Slot | Base (Commun) |
+| --- | --- |
+| Arme (`weapon`) | +3 ATK |
+| Casque (`helmet`) | +20 PV |
+| Armure (`armor`) | +30 PV |
+| Gants (`gloves`) | +2 ATK |
+| Bottes (`boots`) | +15 PV |
+| Accessoire (`accessory`) | +10 PV, +1 ATK |
+| Relique (`relic`) | +15 PV, +2 ATK |
+
+| Rareté | Commun | Peu commun | Rare | Épique | Légendaire | Mythique | Maudit | Suprême | Calamité | Transcendant |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Multiplicateur | 1 | 1,5 | 2 | 3 | 4 | 5 | 6 | 7,5 | 9 | 11 |
+
+  Exemples : Lame des Ronces (Rare, arme) +6 ATK ; Cuirasse du Domaine (Peu commun, armure) +45 PV ; Cisaille des Portes Oubliées
+  (Légendaire, arme) +12 ATK. Repères : Épéiste niveau 1 = 150 PV / 16 ATK. Ces valeurs sont **provisoires** jusqu'à
+  l'équilibrage #112 ; le constat du § 1 tient toujours (aucun `gloves` en Zone 1 Normal : un 7/7 n'est pas garanti en Zone 1).
+- **Ordre de calcul** (serveur) : profil de combat → niveau (#68, +5 % / niveau) → **+ bonus plats d'équipement** → stats finales de
+  l'exemplaire. Rien d'autre ne change (cadence, portée, vitesse, énergie, ultime). Voir `docs/COMBAT.md` et `docs/HEROES.md`.
+- **Serveur** : règles pures `src/server/Inventory/EquipmentRules.lua` ; seul point d'écriture `EquipmentService`, remote
+  `EquipmentAction` : `("Equip", HeroInstanceId, ItemInstanceId)` et `("Unequip", HeroInstanceId, SlotType)`. Refus : héros ou objet
+  inconnu / non possédé (dont ceux d'un autre joueur), slot inconnu, objet porté par un autre héros, emplacement vide, **combat en
+  cours** (roster figé au lancement), rafale (0,2 s, `ActionCooldown`), argument en trop. Aucune stat n'est acceptée du client.
+- **Vues** : `GetHeroes` / `HeroesChanged` donnent par exemplaire `MaxHealth` / `AttackDamage` **finales**, `BaseMaxHealth` /
+  `BaseAttackDamage` (niveau seul), `EquipmentBonus` et `Equipment` ; `GetInventory` / `InventoryChanged` donnent par objet `Bonus`,
+  `EquippedBy` et `EquippedSlot`. La Sacoche n'en fait que l'arithmétique d'affichage (comparaison avant / après).
+- **Hors V1** : Forge, `UpgradeLevel`, affixes, sets, fusion, recyclage, vente, échange, apparence 3D sur le héros.
+- **Tests** : `./tools/test-equipment.ps1` (règles et service), `./tools/test-heroes.ps1` (roster et vue), `./tools/test-combat.ps1`
+  (stats équipées en Normal et Élite), `./tools/test-security.ps1`.
+- **Recette Studio** : toujours sur un store de recette (`StoreRecette`, `docs/SECURITY.md` § Recettes Studio). En Studio
+  seulement, `ServerStorage.DebugData:Invoke(player, "AddItem", "item_004")` ajoute un exemplaire de test (même chemin que le
+  loot : catalogue, plafond) pour jouer remplacement, doublons et Sacoche pleine sans attendre un drop.
+- **Config invalide** : `EquipmentRules.activeConfig` renvoie `nil` ; aucun bonus n'est alors appliqué (roster, vues) et
+  `EquipmentService` refuse les mutations : une erreur de config ne fausse jamais un combat.

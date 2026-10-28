@@ -65,6 +65,8 @@ Un palier sans héros invocable reporte sa chance sur le palier inférieur le pl
 - `Hotbar : { string }` : **exactement 10** identifiants d'exemplaires, `""` = raccourci vide
   (pas de tableau à trous). La hotbar et l'arène utilisent toujours le `HeroInstanceId`.
 - `Summons : { Total }` : invocations réussies ; `Total = 0` → la prochaine est la première.
+- `HeroEquipment : { [HeroInstanceId] = { [SlotType] = ItemInstanceId } }` (#73) : objets portés par **chaque exemplaire**
+  (clé fixe, Reconcile, aucune migration). Supprimer un héros libère ses objets, qui restent dans l'inventaire.
 
 ### Migration v1 → v2 (`src/server/Data/Migrations.lua`)
 
@@ -119,6 +121,15 @@ ont chacun leur niveau. `HeroId` (catalogue) ≠ `HeroInstanceId` (exemplaire) �
   barre qui se remplit ; montée : « NIVEAU SUPÉRIEUR ! », « Nv.1 → Nv.2 », pop et lueur dorée).
 - Règles pures : `src/server/Heroes/HeroProgressionRules.lua` (`xpToNext`, `grantXP`, `combatStats`,
   `stageXP`), testées par `tools/test-heroes.ps1` (suite `progression`).
+
+## Équipement porté (#73) — ALPHA 0.0.2 PROVISOIRE
+
+Chaque exemplaire porte au plus un objet par slot (7 slots de `ItemConfig`). Ses stats **finales** ajoutent, après le niveau,
+les bonus plats de ses objets (PV / ATK seulement, `EquipmentConfig`, valeurs provisoires #112) : profil de combat → niveau →
++ équipement. Exemple : Écuyer du Rempart Nv.2 = 158 PV / 17 ATK ; + Cuirasse du Domaine (+45 PV) + Lame des Ronces (+6 ATK)
+= 203 PV / 23 ATK. `GetCombatRoster` fige ces stats au lancement (avec `EquipmentBonus`) ; la vue `GetHeroes` donne les stats
+finales, les stats de niveau (`BaseMaxHealth` / `BaseAttackDamage`), `EquipmentBonus` et `Equipment`. Équiper / retirer :
+`EquipmentService` (remote `EquipmentAction`, refusé pendant un combat). Règles et valeurs : `docs/ITEMS.md` § 7.
 
 ### Migration v3 → v4
 
@@ -192,7 +203,9 @@ ServerStorage n'est pas modifiée. Seuls les HeroId de HeroConfig sont copiés.
 | `CanSummon(player)` | données du joueur, ou `nil` et la raison |
 | `OnHeroObtained(callback)` | voir Événements |
 | `AddHero(player, heroId)` | identifiant du nouvel exemplaire (héros activé uniquement, sinon `nil`) |
-| `RemoveHero(player, instanceId)` | `true` si retiré (et libéré de la hotbar) |
+| `RemoveHero(player, instanceId)` | `true` si retiré (et libéré de la hotbar ; ses objets portés sont libérés, #73) |
+| `GetCombatRoster(player, formation)` | roster figé : stats finales niveau + équipement de chaque exemplaire posé (#68, #73) |
+| `Push(player)` | renvoie la vue `HeroesChanged` (après Équiper / Retirer, `EquipmentService`) |
 
 Chaque changement rafraîchit le royaume (`KingdomService:Refresh`) et le client (`HeroesChanged`).
 ArenaService envoie au combat le **profil** (`heroOf`) et pose le **template** de l'exemplaire ;

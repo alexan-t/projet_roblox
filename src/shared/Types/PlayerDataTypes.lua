@@ -61,6 +61,10 @@ export type Inventory = {
 	Resources: { [string]: number },
 }
 
+-- Équipement porté (#73) : SlotType (ItemConfig.SlotTypes) -> ItemInstanceId de Inventory.Equipment.
+-- Slot absent ou "" = vide. Un exemplaire n'est porté que par un héros, dans un slot (EquipmentRules).
+export type HeroSlots = { [string]: string }
+
 export type PlayerData = {
 	DataVersion: number,
 	Currencies: Currencies,
@@ -81,6 +85,8 @@ export type PlayerData = {
 	Tutorial: Tutorial,
 	-- Ajouté aux anciens profils par Reconcile (aucune migration) : vide = rien possédé.
 	Inventory: Inventory,
+	-- Clé = HeroInstanceId (exemplaire de Heroes). Ajouté aux anciens profils par Reconcile (aucune migration).
+	HeroEquipment: { [string]: HeroSlots },
 }
 
 return {}
