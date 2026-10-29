@@ -10,6 +10,10 @@
 --   team(placed, max)                   -> pied de fenêtre « Équipe X/4 » et indice ;
 --   rewards(stage)                      -> blocs « Première victoire » et « À chaque victoire » réels ;
 --   chance(value)                       -> « 30 % », « 0,5 % », « Garanti » (chance d'un butin, 0..1) ;
+--   equipment(stage, names)             -> lignes « Équipement » du butin (#120) : garanti à la 1re victoire,
+--                                          puis chance par victoire et part de chaque rareté (LootConfig réelle) ;
+--   milestone(previous, objective)      -> annonce « Mode Élite débloqué ! » / « Zone n maîtrisée ! » (#120) ;
+--   eliteNote(objective, zone)          -> sous-titre de l'onglet Élite (fin de contenu ou raison de jouer) ;
 --   device(width, height)               -> "pc" | "tablet" | "phone" (dispositions de la maquette).
 
 export type Reward = { Kind: string, Amount: number }
@@ -23,7 +27,11 @@ export type Stage = {
 	FirstClearRewards: { Reward }?,
 	RepeatRewards: { Reward }?,
 	PotentialDrops: { any }?,
+	-- Équipement (#120, StagePreview.Equipment) : chance par victoire, par rareté, garanti au premier clear.
+	Equipment: { Chance: number, Rarities: { { Rarity: string, Chance: number } }, FirstClear: { { Rarity: string, Chance: number } }? }?,
 }
+-- Prochain objectif envoyé par le serveur (ArenaState.Objective, ArenaRules.objective).
+export type Objective = { Kind: string, Mode: string, Zone: number, Stage: number }
 export type Node = { Stage: number, State: string, Boss: boolean, Badge: string, BadgeKind: string, Label: string }
 
 local ExpeditionModel = {}
@@ -180,6 +188,63 @@ function ExpeditionModel.chance(value: number): string
 		return `{math.floor(percent)} %`
 	end
 	return (string.format("%.1f %%", percent):gsub("%.", ","))
+end
+
+-- Chance : texte de la pastille ; Value : la probabilité (0..1, 1 = garanti), pour sa couleur.
+export type EquipmentLine = { Label: string, Chance: string, Value: number, Detail: string, Guaranteed: boolean }
+
+-- « Rare 19,2 % · Épique 11,2 % · Légendaire 1,6 % » ; names : Id de rareté → libellé (RarityConfig).
+local function rarityText(list: { { Rarity: string, Chance: number } }, names: { [string]: string }?): string
+	local parts: { string } = {}
+	for _, entry in list do
+		local name = if names and names[entry.Rarity] then names[entry.Rarity] else entry.Rarity
+		table.insert(parts, `{name} {ExpeditionModel.chance(entry.Chance)}`)
+	end
+	return table.concat(parts, " · ")
+end
+
+-- Lignes « Équipement » du butin possible, en tête de liste (#120). Uniquement les valeurs du serveur
+-- (StagePreview.Equipment, lu dans LootConfig) : aucun pourcentage ici. Une chance PAR VICTOIRE (jamais par
+-- ennemi). L'équipement garanti de la première victoire n'est montré que tant qu'elle reste à gagner.
+function ExpeditionModel.equipment(stage: Stage, names: { [string]: string }?): { EquipmentLine }
+	local lines: { EquipmentLine } = {}
+	local equipment = stage.Equipment
+	if not equipment then
+		return lines
+	end
+	if equipment.FirstClear and #equipment.FirstClear > 0 and not stage.Cleared then
+		table.insert(lines, { Label = "Équipement · 1re victoire", Chance = "Garanti", Value = 1, Detail = rarityText(equipment.FirstClear, names), Guaranteed = true })
+	end
+	if equipment.Chance > 0 then
+		table.insert(lines, { Label = "Équipement aléatoire", Chance = ExpeditionModel.chance(equipment.Chance), Value = equipment.Chance,
+			Detail = rarityText(equipment.Rarities, names), Guaranteed = false })
+	end
+	return lines
+end
+
+export type Milestone = { Title: string, Text: string }
+
+-- Annonce d'un palier franchi pendant la session (jamais au join : previous = nil). L'Élite vient de
+-- s'ouvrir (objectif Normal → EliteNew) ; ou tout le butin est gagné (Élite → Farm Élite).
+function ExpeditionModel.milestone(previous: Objective?, objective: Objective?): Milestone?
+	if not previous or not objective or previous.Kind == objective.Kind then
+		return nil
+	end
+	if previous.Kind == "Normal" and objective.Kind == "EliteNew" then
+		return { Title = "Mode Élite débloqué !", Text = `Ennemis plus forts, meilleur équipement : lance {objective.Zone}-{objective.Stage} en Élite` }
+	end
+	if (previous.Kind == "EliteNew" or previous.Kind == "Elite") and objective.Kind == "Farm" and objective.Mode == "Elite" then
+		return { Title = `Zone {objective.Zone} maîtrisée !`, Text = "Améliore ton équipe en Élite en attendant les prochaines zones" }
+	end
+	return nil
+end
+
+-- Sous-titre de l'onglet Élite : fin de contenu de la zone (tout est gagné), sinon la raison d'y jouer.
+function ExpeditionModel.eliteNote(objective: Objective?, zone: number): string
+	if objective and objective.Kind == "Farm" and objective.Mode == "Elite" and objective.Zone == zone then
+		return `Zone {zone} maîtrisée ! Améliore ton équipe en attendant les prochaines zones`
+	end
+	return "Ennemis plus coriaces, meilleur équipement"
 end
 
 -- Disposition de la maquette selon la taille de l'écran (px) : téléphone en paysage (hauteur < 520),

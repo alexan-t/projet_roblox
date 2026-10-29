@@ -125,6 +125,100 @@ return function(StagePreview: any, Model: any, configs: any)
 		assert(loot.Rules.preview(loot.Config, "Normal", "2-1") == nil, "no table for a future zone: section hidden")
 	end)
 
+	-- Aperçu complet d'un stage avec la vraie LootConfig (comme ArenaService.previewSources).
+	local function withEquipment(stage: number, mode: string): any
+		local loot = configs.Loot
+		local s = { Rewards = configs.Rewards, Progression = configs.Progression, Elite = configs.Elite,
+			Drops = loot.Rules.preview(loot.Config, mode, `1-{stage}`), Equipment = loot.Rules.equipment(loot.Config, mode, `1-{stage}`) }
+		local p = StagePreview.build(configs.Stages.Zones[1].Stages[stage], 1, stage, mode, s)
+		p.Zone, p.Stage = 1, stage
+		return p
+	end
+	local RARITY_NAMES = {}
+	for _, tier in configs.Loot.Catalogs.Rarity.Tiers do RARITY_NAMES[tier.Id] = tier.Name end
+
+	test("#120 Equipment preview = the real LootConfig: chance per victory, per rarity (chance x weight / total), first clear", function()
+		local loot = configs.Loot
+		for _, mode in { "Normal", "Elite" } do
+			local source = if mode == "Elite" then loot.Config.EliteStages else loot.Config.Stages
+			for stage = 1, 5 do
+				local entry = source[`1-{stage}`]
+				local equipment = withEquipment(stage, mode).Equipment
+				assert(equipment and equipment.Chance == entry.Equipment.Chance, `{mode} 1-{stage}: chance per victory`)
+				local total, sum = 0, 0
+				for _, r in entry.Equipment.Rarities do total += r.Weight end
+				assert(#equipment.Rarities == #entry.Equipment.Rarities, `{mode} 1-{stage}: every rarity`)
+				for i, r in equipment.Rarities do
+					local expected = entry.Equipment.Chance * entry.Equipment.Rarities[i].Weight / total
+					assert(r.Rarity == entry.Equipment.Rarities[i].Rarity and math.abs(r.Chance - expected) < 1e-9, `{mode} 1-{stage} {r.Rarity}`)
+					sum += r.Chance
+				end
+				assert(math.abs(sum - equipment.Chance) < 1e-9, `{mode} 1-{stage}: rarities add up to the chance`)
+				assert((equipment.FirstClear ~= nil) == (entry.FirstClearEquipment ~= nil), `{mode} 1-{stage}: guaranteed only where configured`)
+			end
+		end
+		local guaranteed = withEquipment(5, "Normal").Equipment.FirstClear
+		local share = 0
+		for _, r in guaranteed do share += r.Chance end
+		assert(math.abs(share - 1) < 1e-9, "1-5 first clear: one equipment, rarity shares add up to 100 %")
+		assert(loot.Rules.equipment(loot.Config, "Normal", "2-1") == nil and withEquipment(1, "Normal").Equipment.FirstClear == nil)
+		assert(preview(1).Equipment == nil, "no loot table given: no equipment line (nothing invented)")
+	end)
+
+	test("#120 Model.equipment: guaranteed line until the first clear, then the random chance with rarity shares (texts from the config)", function()
+		local loot = configs.Loot
+		for _, mode in { "Normal", "Elite" } do
+			local source = if mode == "Elite" then loot.Config.EliteStages else loot.Config.Stages
+			for stage = 1, 5 do
+				local p = withEquipment(stage, mode)
+				local lines = Model.equipment(p, RARITY_NAMES)
+				local random = lines[#lines]
+				assert(random.Label == "Équipement aléatoire" and random.Guaranteed == false, `{mode} 1-{stage}`)
+				assert(random.Chance == Model.chance(source[`1-{stage}`].Equipment.Chance) and random.Value == source[`1-{stage}`].Equipment.Chance)
+				assert(not string.find(random.Detail, "Epique", 1, true) and not string.find(random.Detail, "PeuCommun", 1, true), "display names")
+				assert(#lines == (if mode == "Normal" and stage == 5 then 2 else 1), `{mode} 1-{stage}: guaranteed line only on 1-5 Normal`)
+			end
+		end
+		local boss = withEquipment(5, "Normal")
+		local lines = Model.equipment(boss, RARITY_NAMES)
+		assert(lines[1].Guaranteed and lines[1].Chance == "Garanti" and lines[1].Label == "Équipement · 1re victoire" and lines[1].Value == 1)
+		assert(string.find(lines[1].Detail, "Peu commun", 1, true), lines[1].Detail)
+		boss.Cleared = true
+		lines = Model.equipment(boss, RARITY_NAMES)
+		assert(#lines == 1 and not lines[1].Guaranteed, "first clear already won: the guarantee is no longer shown")
+		local elite4 = Model.equipment(withEquipment(4, "Elite"), RARITY_NAMES)[1]
+		local e = loot.Config.EliteStages["1-4"].Equipment
+		local total = 0
+		for _, r in e.Rarities do total += r.Weight end
+		local parts = {}
+		for _, r in e.Rarities do table.insert(parts, `{RARITY_NAMES[r.Rarity]} {Model.chance(e.Chance * r.Weight / total)}`) end
+		assert(elite4.Detail == table.concat(parts, " · "), elite4.Detail)
+		assert(#Model.equipment({ Zone = 2, Stage = 1 }, RARITY_NAMES) == 0, "no loot yet: no equipment line")
+	end)
+
+	test("#120 milestones: Élite unlocked after 1-5, Zone mastered after 1-5E, never at join nor for a stage change", function()
+		local normal = { Kind = "Normal", Mode = "Normal", Zone = 1, Stage = 5 }
+		local eliteNew = { Kind = "EliteNew", Mode = "Elite", Zone = 1, Stage = 1 }
+		local elite = { Kind = "Elite", Mode = "Elite", Zone = 1, Stage = 5 }
+		local farm = { Kind = "Farm", Mode = "Elite", Zone = 1, Stage = 5 }
+		local unlocked = Model.milestone(normal, eliteNew)
+		assert(unlocked and unlocked.Title == "Mode Élite débloqué !" and string.find(unlocked.Text, "1-1 en Élite", 1, true), "after 1-5")
+		local mastered = Model.milestone(elite, farm)
+		assert(mastered and mastered.Title == "Zone 1 maîtrisée !" and string.find(mastered.Text, "Élite", 1, true), "after 1-5E")
+		assert(Model.milestone(nil, eliteNew) == nil and Model.milestone(nil, farm) == nil, "join / rejoin: no announcement")
+		assert(Model.milestone(eliteNew, elite) == nil and Model.milestone(normal, { Kind = "Normal", Mode = "Normal", Zone = 1, Stage = 2 }) == nil)
+		assert(Model.milestone(farm, farm) == nil and Model.milestone(normal, nil) == nil)
+		assert(Model.milestone(normal, { Kind = "Farm", Mode = "Normal", Zone = 1, Stage = 5 }) == nil, "no Élite configured: no false mastery")
+	end)
+
+	test("#120 Élite subtitle: why play Élite, then an honest end-of-content note once everything is won", function()
+		assert(Model.eliteNote(nil, 1) == "Ennemis plus coriaces, meilleur équipement")
+		assert(Model.eliteNote({ Kind = "Elite", Mode = "Elite", Zone = 1, Stage = 3 }, 1) == "Ennemis plus coriaces, meilleur équipement")
+		local note = Model.eliteNote({ Kind = "Farm", Mode = "Elite", Zone = 1, Stage = 5 }, 1)
+		assert(string.find(note, "Zone 1 maîtrisée", 1, true), note)
+		assert(Model.eliteNote({ Kind = "Farm", Mode = "Elite", Zone = 1, Stage = 5 }, 2) == "Ennemis plus coriaces, meilleur équipement", "other zone")
+	end)
+
 	test("copies: editing the preview never changes the configs", function()
 		local p = preview(1)
 		p.FirstClearRewards[1].Amount = 99999
