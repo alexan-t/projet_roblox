@@ -43,20 +43,55 @@ Rien pendant un combat, son outro ou l'écran de fin, sauf la découverte d'une 
 | `Index` | Index ouvert | le compteur « n / 60 découverts » |
 | `Stats` | Stats ouvertes | aucune étape (le drapeau éteint le badge) |
 | `Currencies` | premier gain d'or (HUD, attend qu'aucun écran ne soit ouvert) | la pastille d'or (« Ton or ») |
+| `Equipment` | Sacoche ouverte avec un objet à équiper (`Screen = "Bag"`, `Condition = "HasEquipment"`, `Done = "Equipped"`), après la découverte `Bag`, hors combat | 1. l'onglet Équipement (« Ton équipement », sauté s'il est déjà affiché) ; 2. l'en-tête du héros de la poupée, flèches « < > » comprises (« Ton héros ») ; 3. le premier objet porté par personne (« Choisis un objet ») ; 4. « Équiper » (« Équipe-le ! »), seulement s'il est possible |
+
+Une entrée avec `Screen` guide une partie d'une interface déjà découverte : elle démarre quand `Screen`
+est ouverte et que sa condition est vraie (`TutorialRules.followUp`). Condition fausse (aucun héros, aucun
+objet libre) : rien n'est montré **ni enregistré**, le joueur n'est jamais bloqué. Rien n'est acheté ni
+généré : le guidage ne fait que montrer « Équiper », que le joueur touche lui-même. Les étapes où le joueur
+agit (onglet, objet, « Équiper ») sont `Hold` : sans durée, elles attendent son clic (ou la disparition de
+leur cible), sinon une étape écoulée sauterait toute la suite.
 
 Une étape passe à la suivante au clic sur sa cible ou après sa durée (`Seconds`, 4 s par défaut). Une cible
-absente (ex. aucun héros) est sautée. **Le drapeau est enregistré dès le début** : fermer puis rouvrir
-ne relance rien (pas de boucle).
+absente (ex. aucun héros) est sautée. Les découvertes ordinaires sont enregistrées au début.
+
+**Exception : les entrées avec `Done`** (aujourd'hui `Equipment`, `Done = "Equipped"`). Leur drapeau n'est
+enregistré qu'à la confirmation du serveur : `InventoryStore` reçoit une vue où un objet du catalogue est
+porté par un héros possédé (`TutorialRules.hasEquipped`, puis `TutorialRules.done`). Un clic client ne suffit
+jamais. Règles de reprise (`TutorialController`, `TutorialRules.resume`) :
+
+| Situation | Comportement |
+| --- | --- |
+| Sacoche fermée à n'importe quelle étape | guidage arrêté, **rien n'est enregistré** ; « ! » et flèche reviennent sur le Sac |
+| Réouverture | reprise à l'étape **la plus avancée affichée** : onglet déjà ouvert → « Choisis un objet » ; objet encore choisi → « Équipe-le ! » |
+| Cible absente pendant le guidage (autre onglet, objet désélectionné) | retour à l'étape affichée la plus avancée ; aucune affichée : la flèche attend, le guidage ne finit jamais seul |
+| Étape `Hold` déjà faite (objet choisi pendant « Choisis un objet », « Équiper » réaffiché après un refus) | avance directement à cette étape |
+| « Équiper » refusé par le serveur | la dernière étape attend la confirmation, pas le clic : la flèche reste sur « Équiper » |
+| Équipement confirmé | drapeau enregistré, flèche retirée, plus jamais rejoué (même avec un nouvel objet) |
+| Déconnexion / reconnexion | drapeau absent du serveur : rappel et « ! » sur le Sac, puis reprise |
+| Objet déjà porté au chargement (profil antérieur) | drapeau enregistré dès le chargement, aucun guidage |
+| Aucun héros ou aucun objet libre | ni guidage, ni flèche, ni drapeau |
+
+`InventoryStore` relit l'inventaire (1 s) tant que le serveur répond `nil` (profil pas encore chargé, cas
+courant à la reconnexion) : sans cela, la Sacoche restait « Inventaire indisponible » et le guidage ne
+revenait pas.
 
 ## Rappels et badges
 
 - Rappel `OpenBag` : après la première victoire, tant que la Sacoche n'a jamais été ouverte, la flèche
   montre le bouton Sac. Pas avant : pendant la première défense, la quête guide déjà.
+- Rappel `OpenEquipment` (`Badge = true`) : un objet à équiper et le guidage `Equipment` jamais vu, la flèche
+  et le « ! » montrent le bouton Sac, une fois l'écran de fin fermé (rien pendant le combat ni sur l'écran).
+  Même cible qu'`OpenBag` : une seule flèche. Placé **avant** `OpenQuests` : la victoire 1-5 donne le premier
+  équipement et termine une quête en même temps ; la quête garde son « ! » et son bouton « Récupérer », la
+  flèche montre le Sac. Le « ! » s'allume aussi pour tout équipement nouveau de la
+  session (`HeroBarController.HasNew`) ; il ne s'allume que sur le Sac (test : un seul badge à la fois).
 - Badges « ! » du menu : Sac (au moins un héros), Index (au moins deux héros), Stats (au moins un stage
   gagné), tant que le drapeau n'est pas vu. Un nouveau joueur n'en voit qu'un à la fois (test).
 
 Conditions, toujours venues du serveur : `HasHero` et `SecondHero` (collection `ArenaStore`),
-`FirstVictory` (`Remotes.GetPlayerStats`).
+`FirstVictory` (`Remotes.GetPlayerStats`), `HasEquipment` (un héros possédé et un objet du catalogue porté
+par personne, vue d'inventaire `InventoryStore`, `TutorialRules.hasEquipment`).
 
 ## Menu principal
 

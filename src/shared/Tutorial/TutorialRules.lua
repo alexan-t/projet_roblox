@@ -58,6 +58,74 @@ function TutorialRules.firstOpen(config: any, seen: { [string]: boolean }, key: 
 	return entry.Steps
 end
 
+-- Guidage d'une partie d'interface (FirstOpen avec Screen) à lancer maintenant, ou nil : drapeau non vu,
+-- interface `Screen` ouverte (isOpen(screen) -> boolean), condition vraie, au moins une étape. Ordre des
+-- drapeaux de config.Flags (stable).
+function TutorialRules.followUp(config: any, seen: { [string]: boolean }, conditions: { [string]: boolean }, isOpen: (string) -> boolean): string?
+	for _, key in config.Flags do
+		local entry = config.FirstOpen[key]
+		if entry and entry.Screen and seen[key] ~= true and #entry.Steps > 0 and isOpen(entry.Screen)
+			and (entry.Condition == nil or conditions[entry.Condition] == true) then
+			return key
+		end
+	end
+	return nil
+end
+
+-- Condition HasEquipment : au moins un héros possédé et un équipement du catalogue porté par personne
+-- (entrées de la vue d'inventaire du serveur : { ItemId, EquippedBy? }). Sans héros ou sans objet libre :
+-- false, le guidage ne bloque rien.
+function TutorialRules.hasEquipment(heroCount: number, entries: any, items: { [string]: any }): boolean
+	if heroCount < 1 or typeof(entries) ~= "table" then
+		return false
+	end
+	for _, entry in entries do
+		if typeof(entry) == "table" and items[entry.ItemId] ~= nil and (entry.EquippedBy == nil or entry.EquippedBy == "") then
+			return true
+		end
+	end
+	return false
+end
+
+-- Un équipement est confirmé uniquement lorsque la vue InventoryStore (générée par le serveur)
+-- relie un ItemId valide à un HeroInstanceId. Un clic client ne suffit jamais.
+function TutorialRules.hasEquipped(heroCount: number, entries: any, items: { [string]: any }): boolean
+	if heroCount < 1 or typeof(entries) ~= "table" then
+		return false
+	end
+	for _, entry in entries do
+		if typeof(entry) == "table" and typeof(entry.ItemId) == "string" and items[entry.ItemId] ~= nil
+			and typeof(entry.EquippedBy) == "string" and entry.EquippedBy ~= "" then
+			return true
+		end
+	end
+	return false
+end
+
+-- Guidages FirstOpen avec Done dont la condition de fin est vraie : leur drapeau s'enregistre maintenant,
+-- jamais à leur début (Equipment : un objet porté, vu par le serveur ; un clic client ne suffit jamais).
+function TutorialRules.done(config: any, seen: { [string]: boolean }, conditions: { [string]: boolean }): { string }
+	local list: { string } = {}
+	for _, key in config.Flags do
+		local entry = config.FirstOpen[key]
+		if entry and typeof(entry.Done) == "string" and seen[key] ~= true and conditions[entry.Done] == true then
+			table.insert(list, key)
+		end
+	end
+	return list
+end
+
+-- Étape où (re)prendre un guidage Done : la plus avancée dont la cible est affichée (exists(target) ->
+-- boolean), nil si aucune. Rouvrir la Sacoche sur un objet déjà choisi reprend à « Équiper », pas au début.
+function TutorialRules.resume(steps: { any }, exists: (string) -> boolean): number?
+	for index = #steps, 1, -1 do
+		if exists(steps[index].Target) then
+			return index
+		end
+	end
+	return nil
+end
+
 -- Rappels actifs : drapeau non vu ET condition vraie (conditions = { [nom]: boolean }).
 function TutorialRules.nudges(config: any, seen: { [string]: boolean }, conditions: { [string]: boolean }): { Candidate }
 	local list: { Candidate } = {}
@@ -69,8 +137,16 @@ function TutorialRules.nudges(config: any, seen: { [string]: boolean }, conditio
 	return list
 end
 
--- Badge « ! » d'une entrée du menu : drapeau non vu et condition (si présente) vraie.
-function TutorialRules.badge(entry: any, seen: { [string]: boolean }, conditions: { [string]: boolean }): boolean
+-- Badge « ! » d'une entrée du menu : drapeau non vu et condition (si présente) vraie ; avec `config`, aussi
+-- un rappel actif marqué Badge qui vise cette entrée (« Menu.<Id> »).
+function TutorialRules.badge(entry: any, seen: { [string]: boolean }, conditions: { [string]: boolean }, config: any?): boolean
+	if config then
+		for _, nudge in config.Nudges do
+			if nudge.Badge == true and nudge.Target == `Menu.{entry.Id}` and seen[nudge.Flag] ~= true and conditions[nudge.Condition] == true then
+				return true
+			end
+		end
+	end
 	if typeof(entry.Flag) ~= "string" or seen[entry.Flag] == true then
 		return false
 	end
@@ -112,10 +188,26 @@ function TutorialRules.problems(config: any): { string }
 		if not flags[key] then
 			table.insert(problems, `FirstOpen.{key} : drapeau inconnu`)
 		end
+		if entry.Screen ~= nil and (not flags[entry.Screen] or entry.Screen == key or config.FirstOpen[entry.Screen] == nil) then
+			table.insert(problems, `FirstOpen.{key} : Screen inconnu ({tostring(entry.Screen)})`)
+		end
+		if entry.Condition ~= nil and (entry.Screen == nil or typeof(entry.Condition) ~= "string") then
+			table.insert(problems, `FirstOpen.{key} : Condition sans Screen`)
+		end
+		if entry.Done ~= nil and (typeof(entry.Done) ~= "string" or entry.Screen == nil) then
+			table.insert(problems, `FirstOpen.{key} : Done sans Screen`)
+		end
+		local last = entry.Steps[#entry.Steps]
+		if entry.Done ~= nil and last and last.Hold ~= true then
+			table.insert(problems, `FirstOpen.{key} : Done, dernière étape sans Hold`)
+		end
 		for index, step in entry.Steps do
 			target(`FirstOpen.{key}[{index}]`, step.Target)
 			if step.Seconds ~= nil and (typeof(step.Seconds) ~= "number" or step.Seconds <= 0) then
 				table.insert(problems, `FirstOpen.{key}[{index}] : Seconds doit être > 0`)
+			end
+			if step.Hold ~= nil and (step.Hold ~= true or step.Seconds ~= nil) then
+				table.insert(problems, `FirstOpen.{key}[{index}] : Hold vaut true, sans Seconds`)
 			end
 		end
 	end
