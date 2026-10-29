@@ -388,6 +388,13 @@ joueur est arrivé (`Near`). Le même langage s'applique à l'interface : raccou
 Flèches du tutoriel (`docs/TUTORIAL_GUIDANCE.md`) : une flèche dorée chunky (icône 3D `Fleche`), au sol en
 chaîne, au-dessus de la cible dans le monde, ou en flèche UI (`UI/GuidePointer`, une seule à la fois) qui
 rebondit vers un élément et l'entoure d'une lueur dorée, avec une légende de 2 à 4 mots au plus.
+Placement de la flèche UI (général, aucune position par résolution) : parmi les quatre côtés de la cible,
+et des glissements le long de son bord, `GuidePointer` garde la place où flèche et légende sont entières
+dans l'écran et recouvrent le moins de boutons (poids 2) et de textes (poids 0,5) des écrans au moins aussi
+hauts que celui de la cible ; à place égale : au-dessus, en dessous, à droite, à gauche, centrée. La place
+est revue chaque seconde et dès que la cible bouge, et ne change que pour nettement mieux. Exceptions
+validées : menu principal en grille (à droite) ou sur une ligne (en dessous). La légende ne descend jamais
+sous `Caption` (14 px réels) et reste dans l'écran. Flèche et légende ne captent aucun clic.
 Menu principal (`MenuView`) : icônes PNG du ZIP « Icones Menu » (`MenuIconConfig`), sans panneau, nom
 Fredoka dessous ; sélectionné : pastille ronde WoodDeep à HUD et contour Selected sous l'icône ; attention :
 variante PNG « ! » ; mis en avant : halo doré `World.Guide` qui respire (`Animation.Scale.Highlight`).
