@@ -3,7 +3,8 @@
 -- logique (GuideTargets), décidée à partir des données de Shared.Config.TutorialConfig.
 --   • Première ouverture (FirstOpen) : quand une interface signale son ouverture (GuideTargets.opened) et
 --     que son drapeau n'est pas encore vu, ses étapes passent l'une après l'autre (clic sur la cible ou
---     durée écoulée). Le drapeau est enregistré dès le début (Remotes.MarkTutorialSeen) : jamais rejoué.
+--     durée écoulée). Découvertes ordinaires : drapeau vu dès le début. Equipment : uniquement
+--     après confirmation serveur d'un équipement porté, pour reprendre après une fermeture.
 --   • Étape de quête active (Quest) : le raccourci du héros à poser (ArenaStore.guide.hotbar, « Hotbar.Guide »),
 --     « Lancer » dans l'Expédition (ArenaStore.guide.expedition), « Invoquer » pendant l'invocation
 --     tutorielle. Rejoué à chaque réouverture TANT QUE c'est l'étape active (c'est le tuto).
@@ -114,7 +115,11 @@ local function startSequence(key: string)
 		return -- une découverte à la fois ; l'autre interface sera découverte à sa prochaine ouverture
 	end
 	local steps = TutorialRules.firstOpen(TutorialConfig, seen, key)
-	mark(key) -- vu dès maintenant : fermer puis rouvrir ne relance rien
+	-- Equipment n'est terminé qu'après confirmation d'un objet réellement équipé par le serveur.
+	-- Fermer la Sacoche avant cette confirmation doit permettre de recommencer le guidage.
+	if key ~= "Equipment" then
+		mark(key)
+	end
 	if not steps then
 		return
 	end
@@ -218,9 +223,11 @@ local function update()
 	end
 	point(chosen.Target)
 	local fromSequence = chosen.Source == "FirstOpen"
+	-- Le clic sur Équiper peut être refusé : attendre la vue InventoryStore confirmée.
+	local equipmentLast = fromSequence and sequence ~= nil and sequence.key == "Equipment" and sequence.index == #sequence.steps
 	GuidePointer.show(target, {
 		Text = chosen.Text,
-		OnActivated = if fromSequence then nextStep else nil,
+		OnActivated = if fromSequence and not equipmentLast then nextStep else nil,
 	})
 end
 
@@ -235,7 +242,17 @@ local function refreshOwned()
 	end
 	local hasHero, second = count >= 1, count >= 2
 	local view = InventoryStore.view
-	local equipment = TutorialRules.hasEquipment(count, if view then view.Equipment else nil, ItemConfig.Items)
+	local entries = if view then view.Equipment else nil
+	local equipment = TutorialRules.hasEquipment(count, entries, ItemConfig.Items)
+	-- Marquer le tutoriel uniquement après une mise à jour serveur confirmant l'équipement.
+	if loaded and not seen.Equipment and TutorialRules.hasEquipped(count, entries, ItemConfig.Items) then
+		mark("Equipment")
+		if sequence and sequence.key == "Equipment" then
+			sequence = nil
+			GuidePointer.hide()
+			point(nil)
+		end
+	end
 	if hasHero ~= conditions.HasHero or second ~= conditions.SecondHero or equipment ~= conditions.HasEquipment then
 		conditions.HasHero, conditions.SecondHero, conditions.HasEquipment = hasHero, second, equipment
 		TutorialController.changed:Fire()
