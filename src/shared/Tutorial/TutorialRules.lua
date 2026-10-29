@@ -87,6 +87,21 @@ function TutorialRules.hasEquipment(heroCount: number, entries: any, items: { [s
 	return false
 end
 
+-- Un équipement est confirmé uniquement lorsque la vue InventoryStore (générée par le serveur)
+-- relie un ItemId valide à un HeroInstanceId. Un clic client ne suffit jamais.
+function TutorialRules.hasEquipped(heroCount: number, entries: any, items: { [string]: any }): boolean
+	if heroCount < 1 or typeof(entries) ~= "table" then
+		return false
+	end
+	for _, entry in entries do
+		if typeof(entry) == "table" and typeof(entry.ItemId) == "string" and items[entry.ItemId] ~= nil
+			and typeof(entry.EquippedBy) == "string" and entry.EquippedBy ~= "" then
+			return true
+		end
+	end
+	return false
+end
+
 -- Rappels actifs : drapeau non vu ET condition vraie (conditions = { [nom]: boolean }).
 function TutorialRules.nudges(config: any, seen: { [string]: boolean }, conditions: { [string]: boolean }): { Candidate }
 	local list: { Candidate } = {}
