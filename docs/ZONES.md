@@ -164,10 +164,38 @@ Le jeu passe par l'arène (#11) : la pancarte du stage envoie `ArenaAction("Sele
 | `FirstClearRewards`, `RepeatRewards` | `RewardConfig` (vide = rien affiché) |
 | `Multipliers = { MaxHealth, AttackDamage }` | `EliteConfig` (Élite seulement) |
 | `PotentialDrops?` | `LootConfig` via `LootRules.preview` (#72) : `{ Kind = "Resource" \| "Item", Id, Chance 0..1, Min?, Max? }` ; ressources avec leurs chances réelles, items précis configurés (aucun aujourd'hui) |
+| `Equipment?` | `LootConfig` via `LootRules.equipment` (#120) : `{ Chance, Rarities = { { Rarity, Chance } }, FirstClear? }` |
 
 - **Construction** : `Server.Arena.StagePreview.build`, un module pur qui copie les configs (testé).
-- **Butin (#72)** : `ArenaService` construit `PotentialDrops` depuis `LootConfig` (`LootRules.preview`, valeurs **ALPHA 0.0.2 PROVISOIRE**). Il liste les ressources avec leurs chances réelles. Le contrat `Drop` n'est pas étendu (pas de `Kind` ItemPool) : l'équipement aléatoire n'est donc **pas** listé ligne par ligne, seuls d'éventuels items précis configurés (`Items`, aucun aujourd'hui) le seraient. Sans table pour le stage, ou si `LootConfig` est invalide (aucun loot n'est alors accordé), `PotentialDrops` vaut `nil` et la fenêtre affiche « Pas de butin pour l'instant ». Aucun pourcentage n'est inventé.
+- **Butin (#72)** : `ArenaService` construit `PotentialDrops` depuis `LootConfig` (`LootRules.preview`, valeurs **ALPHA 0.0.2 PROVISOIRE**). Il liste les ressources avec leurs chances réelles. Le contrat `Drop` n'est pas étendu (pas de `Kind` ItemPool) : l'équipement aléatoire n'y est **pas** listé, il a son propre champ `Equipment` (#120, ci-dessous) ; seuls d'éventuels items précis configurés (`Items`, aucun aujourd'hui) seraient dans `PotentialDrops`. Sans table pour le stage, ou si `LootConfig` est invalide (aucun loot n'est alors accordé), `PotentialDrops` vaut `nil` et la fenêtre affiche « Pas de butin pour l'instant ». Aucun pourcentage n'est inventé.
+- **Équipement (#120)** : en tête du « Butin possible ».
+  - « Équipement · 1re victoire » **Garanti** tant que la première victoire reste à gagner (`FirstClearEquipment`, 1-5 Normal aujourd'hui), avec la part de chaque rareté.
+  - « Équipement aléatoire » avec `Equipment.Chance`, la probabilité **par victoire** (jamais par ennemi), puis la probabilité par victoire de chaque rareté (`Chance × poids / total`).
+  - Tablette et téléphone : libellés courts (« 1re victoire », « Équipement »), mêmes valeurs.
+  - Tout vient de `LootConfig` : un changement de #112 s'affiche sans toucher l'UI (tests : les textes sont recalculés depuis la config, aucun pourcentage codé en dur).
 - **Élite verrouillée** : le message de déblocage utilise la vraie progression Normal (`X/5 stages terminés`).
+- **Sous-titre Élite (PC)** : « Ennemis plus coriaces, meilleur équipement » ; tout gagné : « Zone 1 maîtrisée ! Améliore ton équipe en attendant les prochaines zones » (`ExpeditionModel.eliteNote`).
+
+## Prochain objectif (#120)
+
+`ArenaRules.objective` (pur, testé) calcule le prochain objectif depuis la progression réelle. `ArenaState.Objective = { Kind, Mode, Zone, Stage }` l'envoie au client. Un stage **sans table de loot** (Zone 2 tant que #115 n'est pas livrée) n'est jamais proposé, mais reste jouable si le joueur le choisit.
+
+| Progression | `Kind` | Stage proposé |
+| --- | --- | --- |
+| Nouveau profil | `Normal` | 1-1 (la quête principale guide d'abord vers l'invocation) |
+| Avant 1-5 Normal | `Normal` | premier stage Normal non gagné |
+| Après 1-5 Normal | `EliteNew` | 1-1E, jamais 2-1 |
+| Élite en cours | `Elite` | premier stage Élite non gagné |
+| Toute l'Élite gagnée | `Farm` | 1-5E (meilleure source), rien d'inédit promis |
+
+- **Sélection** (`ArenaService`) :
+  - sans choix du joueur (join, rejoin), le stage sélectionné est l'objectif ;
+  - après une victoire, c'est l'objectif s'il reste un stage à gagner (y compris après un replay) ; tout gagné, c'est le même stage (rejouer).
+  - Le joueur peut toujours choisir un autre stage débloqué. Sans aucune table de loot, l'ancien comportement s'applique (`defaultStage`, `nextStage`).
+- **Annonces** (`ObjectiveController`) : une seule fois, pendant la session, après l'écran de fin et l'annonce de quête.
+  - « Mode Élite débloqué ! Ennemis plus forts, meilleur équipement : lance 1-1 en Élite » (`Normal` → `EliteNew`) ;
+  - « Zone 1 maîtrisée ! Améliore ton équipe en Élite en attendant les prochaines zones » (Élite → `Farm`).
+  - Jamais au join : la quête, la pancarte guidée et l'Expédition présélectionnée suffisent.
 
 ## Contrats
 

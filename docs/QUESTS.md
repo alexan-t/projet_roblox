@@ -14,6 +14,24 @@ Le monde (chemin lumineux, cibles qui pulsent) montre quoi faire ; la quête dit
 | `DefendStage14` | Gagne la défense 1-4 | `StageCompleted` 1-4 | pancarte | « Récupérer » | 150 Or, 15 Gemmes |
 | `DefeatRoiOrc` | Vaincre le Roi Orc | `StageCompleted` 1-5 (tout le stage, boss compris) | pancarte | « Récupérer » | 250 Or, 25 Gemmes, 1 Ticket |
 
+### Zone 1 Élite (#120)
+
+Ouverte quand `DefeatRoiOrc` est **réclamée**. Une victoire Élite émet `EliteStageCompleted` (jamais
+`StageCompleted`) : elle ne fait avancer que ces quêtes, et une victoire Normal ne les fait jamais avancer.
+
+| Id | Titre | Objectif | Guidage | Réclamation | Récompense (Alpha 0.0.2, **provisoire, #112**) |
+| --- | --- | --- | --- | --- | --- |
+| `EliteStage11` | Gagne 1-1 en Élite | `EliteStageCompleted` 1-1 | pancarte | « Récupérer » | 200 Or, 20 Gemmes |
+| `EliteStage12` | Gagne 1-2 en Élite | `EliteStageCompleted` 1-2 | pancarte | « Récupérer » | 250 Or, 25 Gemmes |
+| `EliteStage13` | Gagne 1-3 en Élite | `EliteStageCompleted` 1-3 | pancarte | « Récupérer » | 300 Or, 30 Gemmes |
+| `EliteStage14` | Gagne 1-4 en Élite | `EliteStageCompleted` 1-4 | pancarte | « Récupérer » | 350 Or, 35 Gemmes |
+| `DefeatRoiOrcElite` | Roi Orc en Élite | `EliteStageCompleted` 1-5 | pancarte | « Récupérer » | 500 Or, 50 Gemmes, 2 Tickets |
+
+Montants validés pour #120 ; leur équilibrage relève de #112 et se fait uniquement dans `QuestConfig`.
+Un stage Élite déjà gagné (`Progression.EliteFirstClears`) termine sa quête dès qu'elle devient active,
+sans rejouer (anciens profils, victoire Élite avant la réclamation du Roi Orc). Ligne finie : la quête
+principale devient celle de la collection de héros (renforcer son équipe).
+
 Les récompenses de quête ne vivent que dans `QuestConfig.Rewards` : un bonus de progression unique,
 en plus des récompenses de stage (`RewardConfig` : First Clear, replay). Une victoire peut donc donner
 l'écran de fin du stage **puis** le reveal de la quête : c'est voulu. Le nom du boss dans le titre doit
@@ -182,6 +200,7 @@ courant (« Défense du domaine · Palier 3/5 ») ; une ligne finie montre son d
 | Ligne | Ouverte | Paliers |
 | --- | --- | --- |
 | Défense du domaine (`Stages`) | après `SummonStarter` | 1-1 → 1-2 → 1-3 → 1-4 → Roi Orc (1-5) |
+| Zone 1 Élite (`Elite`, #120) | après `DefeatRoiOrc` réclamée | 1-1E → 1-2E → 1-3E → 1-4E → Roi Orc Élite (1-5E) |
 | Collection de héros (`Heroes`) | dès le début | premier héros (tutoriel) → 2 → 5 → 10 → 20 → 30 → 45 → 60 héros |
 
 - « Possède N héros » : objectif d'état `HeroesOwned` = nombre de héros **différents** (HeroId) possédés,
@@ -190,7 +209,8 @@ courant (« Défense du domaine · Palier 3/5 ») ; une ligne finie montre son d
   PROVISOIRES (QuestConfig).
 - Quête **principale** (suivi du HUD, guidage, caméra d'accueil) : la quête active de la première ligne
   ouverte. Nouveau profil : seule la ligne Héros est ouverte (SummonStarter), puis la Défense s'ouvre et
-  devient principale : le tutoriel est inchangé. Défense finie : le palier Héros devient principal.
+  devient principale : le tutoriel est inchangé. Défense finie : la ligne Élite devient principale ; Élite
+  finie : le palier Héros devient principal.
 - Réclamation : seule la quête active de SA ligne, terminée, est réclamable ; les autres lignes ne bougent
   pas. La vue principale porte `ClaimableCount` (quêtes à récupérer, toutes lignes) pour le « ! » du bouton
   Quêtes.
