@@ -3,8 +3,8 @@
 -- logique (GuideTargets), décidée à partir des données de Shared.Config.TutorialConfig.
 --   • Première ouverture (FirstOpen) : quand une interface signale son ouverture (GuideTargets.opened) et
 --     que son drapeau n'est pas encore vu, ses étapes passent l'une après l'autre (clic sur la cible ou
---     durée écoulée). Découvertes ordinaires : drapeau vu dès le début. Equipment : uniquement
---     après confirmation serveur d'un équipement porté, pour reprendre après une fermeture.
+--     durée écoulée). Découvertes ordinaires : drapeau vu dès le début. Entrée avec Done (Equipment) :
+--     uniquement à la confirmation serveur (objet porté) ; fermée avant, elle reprend à la réouverture.
 --   • Étape de quête active (Quest) : le raccourci du héros à poser (ArenaStore.guide.hotbar, « Hotbar.Guide »),
 --     « Lancer » dans l'Expédition (ArenaStore.guide.expedition), « Invoquer » pendant l'invocation
 --     tutorielle. Rejoué à chaque réouverture TANT QUE c'est l'étape active (c'est le tuto).
@@ -56,15 +56,22 @@ local SEND_GAP = 0.3 -- s entre deux envois de drapeau (le serveur limite la cad
 
 local seen: { [string]: boolean } = {}
 local loaded = false
-local conditions: { [string]: boolean } = { HasHero = false, SecondHero = false, FirstVictory = false, QuestClaimable = false, HasEquipment = false }
+local conditions: { [string]: boolean } = { HasHero = false, SecondHero = false, FirstVictory = false, QuestClaimable = false, HasEquipment = false, Equipped = false }
 local markRemote: RemoteEvent? = nil
 local outbox: { string } = {}
 local sending = false
 
 -- screen : interface dont la fermeture arrête le guidage (Screen de l'entrée, sinon son drapeau)
-type Sequence = { key: string, screen: string, steps: { TutorialConfig.Step }, index: number, started: number, hud: boolean }
+-- confirmed : entrée avec Done, terminée seulement par la confirmation du serveur (jamais par ses étapes)
+type Sequence = {
+	key: string, screen: string, steps: { TutorialConfig.Step }, index: number, started: number, hud: boolean, confirmed: boolean,
+}
 local sequence: Sequence? = nil
 local pendingOpen: { [string]: boolean } = {} -- ouvertes avant le chargement des drapeaux
+
+local function exists(id: string): boolean
+	return GuideTargets.get(id) ~= nil
+end
 
 ------------------------------------------------------------------ drapeaux
 
@@ -115,17 +122,23 @@ local function startSequence(key: string)
 		return -- une découverte à la fois ; l'autre interface sera découverte à sa prochaine ouverture
 	end
 	local steps = TutorialRules.firstOpen(TutorialConfig, seen, key)
-	-- Equipment n'est terminé qu'après confirmation d'un objet réellement équipé par le serveur.
-	-- Fermer la Sacoche avant cette confirmation doit permettre de recommencer le guidage.
-	if key ~= "Equipment" then
+	local entry = TutorialConfig.FirstOpen[key]
+	-- Done (Equipment) : le drapeau attend la confirmation du serveur (refreshOwned), jamais l'ouverture ;
+	-- fermer la Sacoche avant laisse le guidage disponible à la réouverture.
+	local confirmed = entry ~= nil and entry.Done ~= nil
+	if not confirmed then
 		mark(key)
 	end
 	if not steps then
 		return
 	end
-	local entry = TutorialConfig.FirstOpen[key]
 	local screen = if entry and entry.Screen then entry.Screen else key
-	sequence = { key = key, screen = screen, steps = steps, index = 1, started = os.clock(), hud = entry ~= nil and entry.Hud == true }
+	-- reprise : l'étape la plus avancée déjà affichée (onglet ouvert, objet choisi), sinon la première
+	local index = if confirmed then TutorialRules.resume(steps, exists) or 1 else 1
+	sequence = {
+		key = key, screen = screen, steps = steps, index = index, started = os.clock(),
+		hud = entry ~= nil and entry.Hud == true, confirmed = confirmed,
+	}
 end
 
 local function nextStep()
@@ -136,7 +149,11 @@ local function nextStep()
 	current.index += 1
 	current.started = os.clock() + TutorialConfig.StepGap
 	if current.index > #current.steps then
-		sequence = nil
+		if current.confirmed then
+			current.index = #current.steps -- seule la confirmation du serveur termine ce guidage
+		else
+			sequence = nil
+		end
 	end
 	GuidePointer.hide()
 end
@@ -188,13 +205,24 @@ local function update()
 		local step = current.steps[current.index]
 		local now = os.clock()
 		if not GuideTargets.isOpen(current.screen) and not current.hud then
-			sequence = nil -- interface fermée : la découverte s'arrête (déjà marquée vue)
+			-- interface fermée : la découverte s'arrête (sans Done : déjà vue ; avec Done : reprise à la réouverture)
+			sequence = nil
 		elseif step and now >= current.started then
 			local elapsed = now - current.started
 			local target = GuideTargets.get(step.Target)
 			-- Hold : pas de durée, l'étape attend le clic du joueur (ou la disparition de sa cible)
 			local limit = if step.Hold then math.huge else (step.Seconds or TutorialConfig.StepSeconds)
-			if (not target and elapsed > MISSING) or elapsed > limit then
+			-- guidage Done : toujours l'étape affichée la plus avancée quand la cible manque (autre onglet,
+			-- objet désélectionné ; aucune affichée : la flèche attend), ou quand une étape Hold est déjà faite
+			-- (objet choisi pendant « Choisis un objet », « Équiper » réaffiché après un refus du serveur)
+			local furthest = if current.confirmed and (not target or step.Hold) then TutorialRules.resume(current.steps, exists) else nil
+			if current.confirmed and not target then
+				if furthest and elapsed > MISSING then
+					current.index, current.started = furthest, now
+				end
+			elseif furthest and furthest > current.index then
+				current.index, current.started = furthest, now
+			elseif (not target and elapsed > MISSING) or elapsed > limit then
 				if not (current.hud and not ScreenState.free()) then
 					nextStep()
 				end
@@ -223,11 +251,12 @@ local function update()
 	end
 	point(chosen.Target)
 	local fromSequence = chosen.Source == "FirstOpen"
-	-- Le clic sur Équiper peut être refusé : attendre la vue InventoryStore confirmée.
-	local equipmentLast = fromSequence and sequence ~= nil and sequence.key == "Equipment" and sequence.index == #sequence.steps
+	-- Dernière étape d'un guidage Done (« Équiper ») : le clic peut être refusé, seule la vue serveur termine.
+	local active = sequence
+	local awaiting = fromSequence and active ~= nil and active.confirmed and active.index == #active.steps
 	GuidePointer.show(target, {
 		Text = chosen.Text,
-		OnActivated = if fromSequence and not equipmentLast then nextStep else nil,
+		OnActivated = if fromSequence and not awaiting then nextStep else nil,
 	})
 end
 
@@ -244,18 +273,23 @@ local function refreshOwned()
 	local view = InventoryStore.view
 	local entries = if view then view.Equipment else nil
 	local equipment = TutorialRules.hasEquipment(count, entries, ItemConfig.Items)
-	-- Marquer le tutoriel uniquement après une mise à jour serveur confirmant l'équipement.
-	if loaded and not seen.Equipment and TutorialRules.hasEquipped(count, entries, ItemConfig.Items) then
-		mark("Equipment")
-		if sequence and sequence.key == "Equipment" then
-			sequence = nil
-			GuidePointer.hide()
-			point(nil)
-		end
-	end
-	if hasHero ~= conditions.HasHero or second ~= conditions.SecondHero or equipment ~= conditions.HasEquipment then
+	local equipped = TutorialRules.hasEquipped(count, entries, ItemConfig.Items)
+	if hasHero ~= conditions.HasHero or second ~= conditions.SecondHero or equipment ~= conditions.HasEquipment
+		or equipped ~= conditions.Equipped then
 		conditions.HasHero, conditions.SecondHero, conditions.HasEquipment = hasHero, second, equipment
+		conditions.Equipped = equipped
 		TutorialController.changed:Fire()
+	end
+	-- Guidages Done (Equipment) : drapeau enregistré seulement ici, sur une vue du serveur (objet porté)
+	if loaded then
+		for _, key in TutorialRules.done(TutorialConfig, seen, conditions) do
+			mark(key)
+			if sequence and sequence.key == key then
+				sequence = nil
+				GuidePointer.hide()
+				point(nil)
+			end
+		end
 	end
 end
 

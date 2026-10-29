@@ -20,15 +20,21 @@
 --     montré quand l'interface `Screen` est ouverte ET que la condition (voir Nudges) est vraie, après sa
 --     propre découverte, jamais pendant un combat. Condition fausse : rien n'est montré ni enregistré (le
 --     joueur sans objet n'est pas bloqué, son guidage viendra quand il en aura un).
---   Une étape dont la cible n'existe pas (ex. aucun héros) est sautée. Le drapeau est enregistré dès le
---   début du guidage ; interface fermée : le guidage s'arrête (pas de boucle à la réouverture).
+--   Done : condition de fin (calculée par TutorialController, vue du serveur), ex. Equipped (un objet
+--     porté). Le drapeau n'est alors enregistré qu'à cette confirmation : fermer l'interface avant arrête
+--     le guidage, la réouverture le reprend à l'étape la plus avancée affichée (TutorialRules.resume).
+--     Interface ouverte, il ne finit jamais seul : une cible absente le ramène à l'étape affichée la plus
+--     avancée ; la dernière étape (Hold) attend la confirmation, pas le clic (refus du serveur : la flèche
+--     reste sur l'action).
+--   Une étape dont la cible n'existe pas (ex. aucun héros) est sautée. Sans Done, le drapeau est enregistré
+--   dès le début du guidage ; interface fermée : le guidage s'arrête (pas de boucle à la réouverture).
 --
 -- Nudges : rappels « ouvre ce menu », une flèche UI sur une entrée tant que son drapeau n'est pas vu et
 --   que la condition est remplie, seulement quand aucun écran n'est ouvert et hors combat.
 --   Conditions (calculées par TutorialController, valeurs du serveur) : HasHero (au moins un héros),
 --   SecondHero (au moins deux héros), FirstVictory (au moins un stage gagné), QuestClaimable (la quête
 --   active attend « Récupérer », vue du serveur), HasEquipment (un héros possédé et un équipement
---   porté par personne : InventoryStore).
+--   porté par personne : InventoryStore), Equipped (un héros possédé et un objet porté : InventoryStore).
 --   Badge : true pour allumer aussi le « ! » de l'entrée du menu visée (« Menu.<Id> ») tant que le rappel
 --   est actif (une seule entrée à la fois : test).
 --
@@ -39,7 +45,7 @@
 --   Badge (condition facultative de cette attention).
 
 export type Step = { Target: string, Text: string?, Seconds: number?, Hold: boolean? }
-export type FirstOpen = { Steps: { Step }, Hud: boolean?, Screen: string?, Condition: string? }
+export type FirstOpen = { Steps: { Step }, Hud: boolean?, Screen: string?, Condition: string?, Done: string? }
 export type Nudge = { Id: string, Target: string, Flag: string, Condition: string, Badge: boolean? }
 export type Entry = { Id: string, Label: string, View: string, Soon: string?, Flag: string?, Badge: string? }
 
@@ -103,6 +109,7 @@ local TutorialConfig = {
 		Equipment = {
 			Screen = "Bag",
 			Condition = "HasEquipment",
+			Done = "Equipped", -- drapeau enregistré à la confirmation serveur d'un objet porté
 			Steps = {
 				-- Hold : le joueur agit lui-même ; une durée écoulée perdrait la suite (cibles absentes ailleurs)
 				{ Target = "Bag.EquipmentTab", Text = "Ton équipement", Hold = true },
@@ -123,11 +130,13 @@ local TutorialConfig = {
 		-- Premier stage gagné, Sacoche jamais ouverte : la flèche montre le bouton Sac (pas avant : pendant
 		-- la première défense, le guidage de quête montre déjà la hotbar et la pancarte).
 		{ Id = "OpenBag", Target = "Menu.Bag", Flag = "Bag", Condition = "FirstVictory" },
-		-- Première récompense de quête à récupérer, panneau jamais ouvert : la flèche montre le bouton Quêtes.
-		{ Id = "OpenQuests", Target = "Menu.Quest", Flag = "Quests", Condition = "QuestClaimable" },
 		-- Objet à équiper, guidage jamais vu : la flèche et le « ! » montrent le bouton Sac, une fois l'écran
 		-- de fin fermé (rien pendant le combat ni sur l'écran). Même cible qu'OpenBag : une seule flèche.
+		-- Avant OpenQuests : la victoire 1-5 donne le premier équipement ET termine une quête ; la quête garde
+		-- son « ! » et son bouton « Récupérer », la flèche montre l'objet à équiper.
 		{ Id = "OpenEquipment", Target = "Menu.Bag", Flag = "Equipment", Condition = "HasEquipment", Badge = true },
+		-- Première récompense de quête à récupérer, panneau jamais ouvert : la flèche montre le bouton Quêtes.
+		{ Id = "OpenQuests", Target = "Menu.Quest", Flag = "Quests", Condition = "QuestClaimable" },
 	} :: { Nudge },
 
 	Menu = {

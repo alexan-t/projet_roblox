@@ -167,11 +167,21 @@ test('guidance targets: only those TutorialConfig points at; the first-equipment
 test('equipment tutorial remains pending until the server inventory confirms an equipped item', () => {
 	const controller = read('src/client/Controllers/TutorialController.lua');
 	const rules = read('src/shared/Tutorial/TutorialRules.lua');
-	assert(/if key ~= "Equipment" then\s*mark\(key\)/.test(controller), 'Equipment flagged at opening');
+	const config = read('src/shared/Config/TutorialConfig.lua');
+	// Equipment porte Done = "Equipped" : jamais marqué à l'ouverture, seulement sur la vue serveur
+	assert(/Equipment = \{[\s\S]*?Done = "Equipped"/.test(config), 'Equipment must end on the server confirmation (Done)');
+	assert(/local confirmed = entry ~= nil and entry\.Done ~= nil\s*if not confirmed then\s*mark\(key\)/.test(controller), 'Equipment flagged at opening');
 	assert(/TutorialRules\.hasEquipped\(count, entries, ItemConfig\.Items\)/.test(controller), 'server equipment confirmation missing');
-	assert(/not seen\.Equipment[\s\S]*?TutorialRules\.hasEquipped[\s\S]*?mark\("Equipment"\)/.test(controller), 'equipment marked before confirmation');
-	assert(/local equipmentLast[\s\S]*?sequence\.key == "Equipment"[\s\S]*?OnActivated = if fromSequence and not equipmentLast then nextStep else nil/.test(controller), 'last step must not end on a rejected Equip click');
+	assert(/conditions\.Equipped = equipped[\s\S]*?TutorialRules\.done\(TutorialConfig, seen, conditions\)[\s\S]*?mark\(key\)/.test(controller), 'equipment marked before confirmation');
+	assert(!/mark\("Equipment"\)/.test(controller), 'Equipment must only be marked through TutorialRules.done');
+	assert(/local awaiting = fromSequence and active ~= nil and active\.confirmed and active\.index == #active\.steps[\s\S]*?OnActivated = if fromSequence and not awaiting then nextStep else nil/.test(controller), 'last step must not end on a rejected Equip click');
+	// interface ouverte : un guidage Done ne finit jamais seul (pas de relance en boucle, pas de perte)
+	assert(/if current\.confirmed then\s*current\.index = #current\.steps/.test(controller), 'a Done guidance must not end with its steps');
+	assert(/TutorialRules\.resume\(steps, exists\)/.test(controller) && /TutorialRules\.resume\(current\.steps, exists\)/.test(controller), 'reopen / missing target: resume at the furthest displayed step');
+	// refus du serveur : « Équiper » réaffiché pendant « Choisis un objet » → le guidage y revient
+	assert(/current\.confirmed and \(not target or step\.Hold\)/.test(controller) && /elseif furthest and furthest > current\.index then/.test(controller), 'a Hold step already done must move forward to the displayed step');
 	assert(/function TutorialRules\.hasEquipped/.test(rules), 'missing pure server inventory rule');
+	assert(/function TutorialRules\.done/.test(rules) && /function TutorialRules\.resume/.test(rules), 'missing pure resume rules');
 });
 
 test('views hold no asset id (item icons come from ItemConfig)', () => {

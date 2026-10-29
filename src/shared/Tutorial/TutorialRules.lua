@@ -102,6 +102,30 @@ function TutorialRules.hasEquipped(heroCount: number, entries: any, items: { [st
 	return false
 end
 
+-- Guidages FirstOpen avec Done dont la condition de fin est vraie : leur drapeau s'enregistre maintenant,
+-- jamais à leur début (Equipment : un objet porté, vu par le serveur ; un clic client ne suffit jamais).
+function TutorialRules.done(config: any, seen: { [string]: boolean }, conditions: { [string]: boolean }): { string }
+	local list: { string } = {}
+	for _, key in config.Flags do
+		local entry = config.FirstOpen[key]
+		if entry and typeof(entry.Done) == "string" and seen[key] ~= true and conditions[entry.Done] == true then
+			table.insert(list, key)
+		end
+	end
+	return list
+end
+
+-- Étape où (re)prendre un guidage Done : la plus avancée dont la cible est affichée (exists(target) ->
+-- boolean), nil si aucune. Rouvrir la Sacoche sur un objet déjà choisi reprend à « Équiper », pas au début.
+function TutorialRules.resume(steps: { any }, exists: (string) -> boolean): number?
+	for index = #steps, 1, -1 do
+		if exists(steps[index].Target) then
+			return index
+		end
+	end
+	return nil
+end
+
 -- Rappels actifs : drapeau non vu ET condition vraie (conditions = { [nom]: boolean }).
 function TutorialRules.nudges(config: any, seen: { [string]: boolean }, conditions: { [string]: boolean }): { Candidate }
 	local list: { Candidate } = {}
@@ -169,6 +193,13 @@ function TutorialRules.problems(config: any): { string }
 		end
 		if entry.Condition ~= nil and (entry.Screen == nil or typeof(entry.Condition) ~= "string") then
 			table.insert(problems, `FirstOpen.{key} : Condition sans Screen`)
+		end
+		if entry.Done ~= nil and (typeof(entry.Done) ~= "string" or entry.Screen == nil) then
+			table.insert(problems, `FirstOpen.{key} : Done sans Screen`)
+		end
+		local last = entry.Steps[#entry.Steps]
+		if entry.Done ~= nil and last and last.Hold ~= true then
+			table.insert(problems, `FirstOpen.{key} : Done, dernière étape sans Hold`)
 		end
 		for index, step in entry.Steps do
 			target(`FirstOpen.{key}[{index}]`, step.Target)

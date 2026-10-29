@@ -172,6 +172,102 @@ return function(Rules: any, config: any, createService: any)
 		assert(Rules.followUp(config, seen, { HasEquipment = true }, open) == nil, "finished")
 	end)
 
+	test("equipment: Done = Equipped, flag only from the server view, never from the opening", function()
+		assert(config.FirstOpen.Equipment.Done == "Equipped")
+		local seen = {}
+		assert(#Rules.done(config, seen, { HasEquipment = true }) == 0, "item received, nothing worn: not finished")
+		assert(#Rules.done(config, seen, { HasEquipment = true, Equipped = false }) == 0, "Équiper refused by the server")
+		local list = Rules.done(config, seen, { Equipped = true })
+		assert(#list == 1 and list[1] == "Equipment", "server confirms a worn item")
+		assert(#Rules.done(config, { Equipment = true }, { Equipped = true }) == 0, "marked once")
+		-- seules les entrées avec Done : les découvertes ordinaires ne passent jamais par là
+		for _, key in Rules.done(config, {}, { Equipped = true, HasEquipment = true, HasHero = true, FirstVictory = true }) do
+			assert(config.FirstOpen[key].Done ~= nil, key)
+		end
+	end)
+
+	test("resume: furthest displayed step, nil when nothing is displayed", function()
+		local steps = config.FirstOpen.Equipment.Steps
+		local function shown(...)
+			local set = {}
+			for _, id in { ... } do set[id] = true end
+			return function(id: string): boolean return set[id] == true end
+		end
+		-- autre onglet de la Sacoche : seul l'onglet Équipement est affiché
+		assert(Rules.resume(steps, shown("Bag.EquipmentTab")) == 1, "closed before « Ton équipement »")
+		-- onglet Équipement déjà ouvert (la Sacoche s'en souvient) : héros et objets affichés
+		assert(Rules.resume(steps, shown("Bag.EquipHero", "Bag.FirstItem")) == 3, "closed after « Ton équipement » / « Ton héros »")
+		-- objet déjà choisi : reprise directement sur « Équiper »
+		assert(Rules.resume(steps, shown("Bag.EquipHero", "Bag.FirstItem", "Bag.EquipAction")) == 4, "closed just before Équiper")
+		assert(Rules.resume(steps, shown()) == nil, "nothing displayed: wait, never finish")
+	end)
+
+	test("equipment scenarios: interruptions, refusal, reconnection, already equipped, no hero", function()
+		local open = function(key: string): boolean return key == "Bag" end
+		local item = { item_004 = { Name = "Heaume" } }
+		local free = { { ItemId = "item_004" } }
+		local worn = { { ItemId = "item_004", EquippedBy = "H1" } }
+		local function conditionsFor(heroes: number, entries: any)
+			return {
+				HasHero = heroes >= 1,
+				FirstVictory = true,
+				HasEquipment = Rules.hasEquipment(heroes, entries, item),
+				Equipped = Rules.hasEquipped(heroes, entries, item),
+			}
+		end
+		-- 1. premier objet reçu : une seule flèche et un seul « ! », sur le Sac
+		local seen = { Bag = true }
+		local c = conditionsFor(1, free)
+		local nudges = Rules.nudges(config, seen, c)
+		assert(#nudges == 1 and nudges[1].Target == "Menu.Bag", "one arrow on the bag")
+		-- 2. Sacoche ouverte puis fermée à n'importe quelle étape : rien n'est enregistré, tout reste disponible
+		for _, closedAt in { "before tab", "after tab", "after item", "before Équiper" } do
+			assert(#Rules.done(config, seen, c) == 0, closedAt)
+			assert(seen.Equipment == nil, closedAt)
+			assert(Rules.followUp(config, seen, c, open) == "Equipment", "reopened: " .. closedAt)
+			assert(#Rules.nudges(config, seen, c) == 1, "bag closed: arrow back on the bag " .. closedAt)
+		end
+		-- 3. clic « Équiper » refusé : la vue serveur ne change pas, le guidage continue
+		assert(#Rules.done(config, seen, conditionsFor(1, free)) == 0, "refused")
+		-- 4. déconnexion : le serveur ne renvoie que les drapeaux enregistrés (Equipment absent)
+		local reloaded = Rules.view(config, { Bag = true, Equipment = false })
+		assert(reloaded.Equipment == nil and Rules.followUp(config, reloaded, c, open) == "Equipment", "reconnection: guidance back")
+		-- 5. équipement réussi (vue serveur) : drapeau, plus de flèche ni de relance
+		local ok = conditionsFor(1, worn)
+		for _, key in Rules.done(config, seen, ok) do
+			assert(Rules.mark(config, seen, key))
+		end
+		assert(seen.Equipment == true)
+		assert(Rules.followUp(config, seen, conditionsFor(1, free), open) == nil, "never replayed, even with a new item")
+		assert(#Rules.nudges(config, seen, conditionsFor(1, free)) == 0, "no bag arrow any more")
+		-- 6. joueur déjà équipé au démarrage : terminé dès le chargement, sans guidage
+		local veteran = { Bag = true }
+		assert(#Rules.done(config, veteran, conditionsFor(2, worn)) == 1, "already equipped at start")
+		-- 7. sans héros ou sans objet : ni guidage, ni flèche, ni drapeau
+		for _, case in { conditionsFor(0, free), conditionsFor(1, {}), conditionsFor(1, nil) } do
+			assert(Rules.followUp(config, { Bag = true }, case, open) == nil)
+			assert(#Rules.nudges(config, { Bag = true }, case) == 0)
+			assert(#Rules.done(config, { Bag = true }, case) == 0)
+		end
+	end)
+
+	test("problems: Done needs a Screen and a last Hold step", function()
+		local broken = {
+			Flags = { "Bag", "Part", "Loose" },
+			FirstOpen = {
+				Bag = { Steps = {} },
+				Part = { Done = "X", Steps = { { Target = "Bag.Item", Hold = true } } },
+				Loose = { Screen = "Bag", Done = "X", Steps = { { Target = "Bag.Item", Seconds = 3 } } },
+			},
+			Nudges = {},
+			Menu = { Entries = {} },
+		}
+		local text = table.concat(Rules.problems(broken), "\n")
+		assert(text:find("FirstOpen.Part : Done sans Screen", 1, true), text)
+		assert(text:find("FirstOpen.Loose : Done, dernière étape sans Hold", 1, true), text)
+		assert(#Rules.problems(config) == 0, table.concat(Rules.problems(config), "\n"))
+	end)
+
 	test("followUp: Sacoche open + item to equip, after the bag discovery; never without an item", function()
 		local open = function(key: string) return key == "Bag" end
 		local closed = function() return false end
@@ -188,6 +284,10 @@ return function(Rules: any, config: any, createService: any)
 		local both = Rules.nudges(config, {}, { HasHero = true, FirstVictory = true, HasEquipment = true })
 		local picked = Rules.pick(both, function() return true end)
 		assert(picked and picked.Target == "Menu.Bag", "same target: a single arrow")
+		-- 1-5 : premier équipement et quête à récupérer en même temps → la flèche reste sur le Sac
+		local claim = Rules.nudges(config, { Bag = true }, { HasHero = true, QuestClaimable = true, HasEquipment = true })
+		local first = Rules.pick(claim, function() return true end)
+		assert(#claim == 2 and first and first.Target == "Menu.Bag", "equipment before the quest reminder")
 	end)
 
 	test("badge: new equipment lights only the bag (one badge at a time)", function()
