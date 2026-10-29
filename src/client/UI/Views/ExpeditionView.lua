@@ -932,7 +932,7 @@ function ExpeditionView.Show(data: Data, options: Options?)
 			end
 			local drops = stage.PotentialDrops or {}
 			-- équipement (#120) : garanti à la 1re victoire, puis chance par victoire et par rareté, en tête
-			local equipment = ExpeditionModel.equipment(stage, RARITY_NAMES)
+			local equipment = ExpeditionModel.equipment(stage, RARITY_NAMES, device ~= "pc") -- libellés courts hors PC
 			if #drops > 0 or #equipment > 0 then
 				local list = Instance.new("ScrollingFrame")
 				list.Name = "Butin"

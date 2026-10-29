@@ -206,17 +206,19 @@ end
 -- Lignes « Équipement » du butin possible, en tête de liste (#120). Uniquement les valeurs du serveur
 -- (StagePreview.Equipment, lu dans LootConfig) : aucun pourcentage ici. Une chance PAR VICTOIRE (jamais par
 -- ennemi). L'équipement garanti de la première victoire n'est montré que tant qu'elle reste à gagner.
-function ExpeditionModel.equipment(stage: Stage, names: { [string]: string }?): { EquipmentLine }
+-- compact : colonne étroite (tablette, téléphone), libellés courts pour ne pas être tronqués.
+function ExpeditionModel.equipment(stage: Stage, names: { [string]: string }?, compact: boolean?): { EquipmentLine }
 	local lines: { EquipmentLine } = {}
 	local equipment = stage.Equipment
 	if not equipment then
 		return lines
 	end
 	if equipment.FirstClear and #equipment.FirstClear > 0 and not stage.Cleared then
-		table.insert(lines, { Label = "Équipement · 1re victoire", Chance = "Garanti", Value = 1, Detail = rarityText(equipment.FirstClear, names), Guaranteed = true })
+		table.insert(lines, { Label = if compact then "1re victoire" else "Équipement · 1re victoire", Chance = "Garanti", Value = 1,
+			Detail = rarityText(equipment.FirstClear, names), Guaranteed = true })
 	end
 	if equipment.Chance > 0 then
-		table.insert(lines, { Label = "Équipement aléatoire", Chance = ExpeditionModel.chance(equipment.Chance), Value = equipment.Chance,
+		table.insert(lines, { Label = if compact then "Équipement" else "Équipement aléatoire", Chance = ExpeditionModel.chance(equipment.Chance), Value = equipment.Chance,
 			Detail = rarityText(equipment.Rarities, names), Guaranteed = false })
 	end
 	return lines

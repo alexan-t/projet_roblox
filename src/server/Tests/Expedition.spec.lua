@@ -183,6 +183,8 @@ return function(StagePreview: any, Model: any, configs: any)
 		local lines = Model.equipment(boss, RARITY_NAMES)
 		assert(lines[1].Guaranteed and lines[1].Chance == "Garanti" and lines[1].Label == "Équipement · 1re victoire" and lines[1].Value == 1)
 		assert(string.find(lines[1].Detail, "Peu commun", 1, true), lines[1].Detail)
+		local compact = Model.equipment(boss, RARITY_NAMES, true)
+		assert(compact[1].Label == "1re victoire" and compact[2].Label == "Équipement" and compact[2].Chance == lines[2].Chance, "tablet / phone: short labels, same values")
 		boss.Cleared = true
 		lines = Model.equipment(boss, RARITY_NAMES)
 		assert(#lines == 1 and not lines[1].Guaranteed, "first clear already won: the guarantee is no longer shown")
