@@ -171,6 +171,23 @@ restent en ligne et ne sont plus référencés par ces modèles.
 - **Profil Studio** : les combats de contrôle ont tourné sur `PlayerData_Studio` ; corrigé pour la
   suite par l'attribut `StoreRecette` (`SECURITY.md` § Recettes Studio).
 
+**Enquête sur `Workspace.Lobby.MeshPart` (25/10/2026, lecture seule, rien supprimé).**
+- Constat : `MeshPart` nommée par défaut, mesh `81802835707210` (nouveau bras gauche de l'Écuyer,
+  n°53 du lot), sans texture, non ancrée, orientation nulle, matériau Plastic et couleur grise par
+  défaut, **taille native du mesh** (1,62 × 2,40 × 1,33), différente de la pièce de l'Écuyer (1,86 ×
+  2,76 × 1,53) : ce n'est pas une copie de la pièce du modèle, c'est une création neuve à partir de
+  l'asset. Posée au sol (Y = 1,3) à environ 30 studs du point visé par la caméra de Studio.
+- Ce n'est pas un outil du projet : aucun script de `tools/` ni de `src/` ne range de `MeshPart`
+  dans `Lobby` ; le seul appel `CreateMeshPartAsync` (`tools/studio-replace-asset-ids.luau`) garde ses
+  pièces sources hors de la place et les détruit à la fin ; les contrôles du lot (comparaisons par
+  `EditableMesh`, copies de Play) n'ont rien laissé. Elle n'existait pas au contrôle d'après
+  remplacement (les 1 067 propriétés étaient toutes dans les conteneurs attendus).
+- Origine la plus probable : **insertion manuelle depuis Studio** (Gestionnaire d'assets ou Boîte à
+  outils, où les 62 nouveaux assets apparaissent dans les meshes de `nxtoma`) : une telle insertion
+  crée exactement cette pièce neuve, à taille native, sans texture, posée sous le point de vue.
+- À confirmer par l'utilisateur ou le collaborateur présent en Team Create, puis suppression sur
+  accord : elle n'est référencée par aucun code (`git grep` sans résultat) ni aucun modèle.
+
 La voie est prévue par Roblox : l'Assets API accepte un mesh « uniquement s'il a été téléchargé par
 l'Asset Delivery API » et renvoie vers l'Importer « si vous n'essayez pas de télécharger puis
 republier des meshes ». Les images se republient directement (PNG/JPEG). L'outil

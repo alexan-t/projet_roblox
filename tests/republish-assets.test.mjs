@@ -6,7 +6,7 @@ import path from "node:path";
 import test from "node:test";
 import zlib from "node:zlib";
 
-import { buildMapping, createClient, inspectFile, loadKey, lotFromCheckOutput, openWorkspace, runDownload, runPublish, runRefresh } from "../tools/republish-assets.mjs";
+import { buildMapping, buildPlan, createClient, inspectFile, loadKey, loadRegistry, lotFromCheckOutput, openWorkspace, registerLot, runDownload, runPublish, runRefresh } from "../tools/republish-assets.mjs";
 
 const KEY = "cle-secrete-de-test-123";
 const png = (w, h) => {
@@ -143,4 +143,45 @@ test("refresh : un asset « Reviewing » n'entre dans le mapping qu'une fois app
 	assert.deepEqual(await runRefresh(lot, work, client, quiet), { approved: 1, pending: 0, failed: 0 });
 	assert.ok(roblox.calls.some((c) => c.url.includes("readMask=creationContext,moderationResult")));
 	assert.equal(buildMapping(lot, work).ready.length, 3);
+});
+
+test("registre : un asset déjà publié (même ancien id ou même contenu) n'est jamais republié", async () => {
+	const files = { "107504521703864": png(64, 64), "98155401096105": mesh, "111": png(32, 32) };
+	const roblox = fakeRoblox({ files });
+	const client = createClient({ key: KEY, fetchImpl: roblox.fetchImpl, sleep: async () => {} });
+	// Premier lot : publication normale, puis inscription au registre (mémoire, sans fichier).
+	const first = tmpWork();
+	await runDownload(lot, first, client, {}, quiet);
+	await runPublish(lot, first, client, { confirm: true, limit: 5 }, quiet);
+	const registry = loadRegistry(null);
+	assert.equal(registerLot(lot, first, registry), 3);
+	const posts = roblox.calls.filter((c) => c.method === "POST").length;
+	// Second lot : un ancien id déjà connu, et un autre id au contenu identique au mesh publié.
+	const second = { lot: "lot-suivant", targetOwner: lot.targetOwner, assets: [
+		{ n: 1, piece: "X", type: "Image", oldId: "107504521703864" },
+		{ n: 2, piece: "Y", type: "Mesh", oldId: "222" },
+	] };
+	files["222"] = mesh;
+	const work = tmpWork();
+	await runDownload(second, work, client, {}, quiet);
+	const plan = buildPlan(second, work, registry);
+	assert.equal(plan.reuse.length, 2);
+	assert.equal(plan.upload.length, 0);
+	await runPublish(second, work, client, { confirm: true, limit: 5, registry }, quiet);
+	assert.equal(roblox.calls.filter((c) => c.method === "POST").length, posts, "aucun nouvel upload");
+	assert.equal(work.state["222"].publish.newId, first.state["98155401096105"].publish.newId);
+	assert.equal(work.state["222"].publish.reused, "registre");
+});
+
+test("mapping : le retour arrière inverse chaque paire", async () => {
+	const files = { "107504521703864": png(64, 64), "98155401096105": mesh, "111": png(32, 32) };
+	const roblox = fakeRoblox({ files });
+	const client = createClient({ key: KEY, fetchImpl: roblox.fetchImpl, sleep: async () => {} });
+	const work = tmpWork();
+	await runDownload(lot, work, client, {}, quiet);
+	await runPublish(lot, work, client, { confirm: true, limit: 5 }, quiet);
+	const { ready, rollback, rollbackLuau } = buildMapping(lot, work);
+	assert.equal(rollback.length, ready.length);
+	for (const [oldId, newId] of ready) assert.ok(rollback.some(([n, o]) => n === newId && o === oldId));
+	assert.match(rollbackLuau, /local MAPPING/);
 });

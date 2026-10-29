@@ -12,12 +12,21 @@
 //     Publie les fichiers contrôlés sous creationContext.creator.userId = targetOwner.userId du lot
 //     (Assets API, scopes asset:read + asset:write), attend l'opération, puis relit l'asset pour
 //     vérifier le propriétaire. Sans --limit, un seul asset par lancement.
+//   node tools/republish-assets.mjs plan <lot.json>
+//     Après download, sans réseau : assets déjà publiés sous le propriétaire (registre, même ancien
+//     AssetId ou même contenu SHA-256) réutilisés, et assets restant à publier.
+//   node tools/republish-assets.mjs register <lot.json>
+//     Ajoute au registre les assets publiés, approuvés et au bon propriétaire du lot.
 //   node tools/republish-assets.mjs refresh <lot.json>
 //     Relit propriétaire et modération des assets publiés non encore approuvés (« Reviewing »).
 //   node tools/republish-assets.mjs status <lot.json>
 //   node tools/republish-assets.mjs mapping <lot.json>
 //     Écrit build/republication/<lot>/mapping.luau (bloc MAPPING de tools/studio-replace-asset-ids.luau)
-//     et mapping.json, pour les seuls assets publiés, approuvés et au bon propriétaire.
+//     et mapping.json, pour les seuls assets publiés, approuvés et au bon propriétaire, plus
+//     rollback.luau / rollback.json (nouveau → ancien) pour revenir en arrière avec le même script.
+//
+// Registre automation/republication/published-registry.json : un asset déjà publié sous le
+// propriétaire (même ancien AssetId, ou même contenu SHA-256 et même type) n'est jamais republié.
 //
 // Clé : variable d'environnement ROBLOX_OPEN_CLOUD_KEY, ou ROBLOX_OPEN_CLOUD_KEY_FILE (chemin d'un
 // fichier HORS du dépôt). La clé n'est jamais écrite, affichée ni envoyée ailleurs qu'à
@@ -36,6 +45,7 @@ const MAX_BYTES = 20 * 1024 * 1024;
 const MAX_IMAGE_SIDE = 8000;
 // Intervalle minimal entre deux appels (quotas : livraison 1000/min, création 120/min, opérations 300/min).
 const SPACING_MS = { delivery: 100, cdn: 0, create: 700, operation: 250, read: 600 };
+const REGISTRY_FILE = path.join(ROOT, "automation", "republication", "published-registry.json");
 const CONTENT_TYPES = { Image: { png: "image/png", jpeg: "image/jpeg" }, Mesh: { mesh: "model/x-file-mesh-data" } };
 
 export class HttpError extends Error {
@@ -156,6 +166,42 @@ export function createClient({ key, fetchImpl = fetch, sleep = (ms) => new Promi
 // L'API renvoie « Approved » (constaté le 24/10/2026) ; la doc annonce « MODERATION_STATE_APPROVED ».
 export const isApproved = (state) => state === "Approved" || state === "MODERATION_STATE_APPROVED";
 
+// --- Registre des assets déjà publiés sous le propriétaire ---
+
+export function loadRegistry(file = REGISTRY_FILE) {
+	const data = file && fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : { assets: [] };
+	let bySha = new Map();
+	let byOldId = new Map();
+	const index = () => {
+		bySha = new Map();
+		byOldId = new Map();
+		for (const entry of data.assets) {
+			bySha.set(`${entry.type}:${entry.sha256}`, entry);
+			for (const oldId of entry.oldIds) byOldId.set(oldId, entry);
+		}
+	};
+	index();
+	return {
+		data,
+		find(oldId, type, sha256) {
+			return byOldId.get(oldId) ?? (sha256 ? bySha.get(`${type}:${sha256}`) : undefined);
+		},
+		add({ oldId, type, sha256, newId, owner, moderation, lot }) {
+			const existing = bySha.get(`${type}:${sha256}`);
+			if (existing) {
+				if (existing.newId !== newId) throw new Error(`registre : contenu ${sha256} déjà publié sous ${existing.newId}`);
+				if (!existing.oldIds.includes(oldId)) existing.oldIds.push(oldId);
+			} else {
+				data.assets.push({ sha256, type, newId, owner, moderation, lot, oldIds: [oldId] });
+			}
+			index();
+		},
+		save() {
+			if (file) fs.writeFileSync(file, `${JSON.stringify(data, null, 2)}\n`);
+		},
+	};
+}
+
 // --- Lot, état et journal ---
 
 export function loadLot(file) {
@@ -238,6 +284,15 @@ export async function runPublish(lot, work, client, options = {}, log = console.
 			log(`SAUTÉ #${asset.n} ${asset.oldId} : pas de fichier contrôlé (lancer download)`);
 			continue;
 		}
+		const known = options.registry?.find(asset.oldId, asset.type, entry.download.sha256);
+		if (known) {
+			entry.publish = { newId: known.newId, owner: known.owner, ownerOk: known.owner === userId, moderation: known.moderation, reused: "registre" };
+			work.journal({ step: "publish", oldId: asset.oldId, reused: "registre", newId: known.newId });
+			log(`RÉUTILISÉ #${asset.n} ${asset.oldId} → ${known.newId} (déjà publié, registre)`);
+			work.state[asset.oldId] = entry;
+			work.save();
+			continue;
+		}
 		const duplicate = bySha.get(entry.download.sha256);
 		if (duplicate) {
 			entry.publish = { ...duplicate, duplicateOf: duplicate.oldId };
@@ -257,6 +312,10 @@ export async function runPublish(lot, work, client, options = {}, log = console.
 			const owner = String(meta.creationContext?.creator?.userId ?? meta.creationContext?.creator?.groupId ?? "");
 			entry.publish = { ...result, owner, ownerOk: owner === userId };
 			bySha.set(entry.download.sha256, { oldId: asset.oldId, ...entry.publish });
+			if (options.registry && entry.publish.ownerOk) {
+				options.registry.add({ oldId: asset.oldId, type: asset.type, sha256: entry.download.sha256, newId: result.newId, owner, moderation: result.moderation, lot: lot.lot });
+				options.registry.save();
+			}
 			work.journal({ step: "publish", oldId: asset.oldId, ...entry.publish });
 			log(`${entry.publish.ownerOk ? "PUBLIÉ" : "PROPRIÉTAIRE FAUX"} #${asset.n} ${asset.oldId} → ${result.newId} (${result.moderation}, propriétaire ${owner})`);
 			published++;
@@ -299,6 +358,45 @@ export async function runRefresh(lot, work, client, log = console.log) {
 	return { approved, pending, failed };
 }
 
+// Sans réseau, après download : ce qui sera réutilisé (registre) et ce qui reste à publier.
+export function buildPlan(lot, work, registry) {
+	const reuse = [];
+	const upload = [];
+	const missing = [];
+	const seen = new Map();
+	for (const asset of lot.assets) {
+		const d = work.state[asset.oldId]?.download;
+		if (!d?.ok) {
+			missing.push(asset.oldId);
+			continue;
+		}
+		const known = registry.find(asset.oldId, asset.type, d.sha256);
+		if (known) {
+			reuse.push([asset.oldId, known.newId]);
+			continue;
+		}
+		const key = `${asset.type}:${d.sha256}`;
+		if (seen.has(key)) reuse.push([asset.oldId, `même contenu que ${seen.get(key)}`]);
+		else {
+			seen.set(key, asset.oldId);
+			upload.push(asset.oldId);
+		}
+	}
+	return { reuse, upload, missing };
+}
+
+export function registerLot(lot, work, registry) {
+	let added = 0;
+	for (const asset of lot.assets) {
+		const entry = work.state[asset.oldId];
+		const publish = entry?.publish;
+		if (!publish?.newId || !publish.ownerOk || !isApproved(publish.moderation) || !entry.download?.sha256) continue;
+		registry.add({ oldId: asset.oldId, type: asset.type, sha256: entry.download.sha256, newId: publish.newId, owner: publish.owner, moderation: publish.moderation, lot: lot.lot });
+		added++;
+	}
+	return added;
+}
+
 export function buildMapping(lot, work) {
 	const ready = [];
 	const pending = [];
@@ -307,8 +405,11 @@ export function buildMapping(lot, work) {
 		if (publish?.newId && publish.ownerOk && isApproved(publish.moderation)) ready.push([asset.oldId, publish.newId]);
 		else pending.push(asset.oldId);
 	}
-	const luau = `local MAPPING: { [string]: string } = {\n${ready.map(([o, n]) => `\t["${o}"] = "${n}",`).join("\n")}\n}\n`;
-	return { ready, pending, luau };
+	const block = (pairs) => `local MAPPING: { [string]: string } = {\n${pairs.map(([o, n]) => `\t["${o}"] = "${n}",`).join("\n")}\n}\n`;
+	// Retour arrière : nouveau → ancien. Un nouvel AssetId partagé (contenu identique) revient à un seul ancien.
+	const back = new Map();
+	for (const [o, n] of ready) if (!back.has(n)) back.set(n, o);
+	return { ready, pending, luau: block(ready), rollback: [...back], rollbackLuau: block([...back]) };
 }
 
 // Lot à partir de la sortie de tools/studio-check-asset-ownership.luau (lignes « FIX-PROPRIETAIRE »,
@@ -357,7 +458,7 @@ async function main() {
 	}
 	const { command, lotFile, options } = parseArgs(process.argv.slice(2));
 	if (!command || !lotFile) {
-		console.log("Usage : node tools/republish-assets.mjs <lot|download|publish|refresh|status|mapping> <lot.json> [--only id,id] [--limit N] [--confirm]");
+		console.log("Usage : node tools/republish-assets.mjs <lot|download|plan|publish|refresh|register|status|mapping> <lot.json> [--only id,id] [--limit N] [--confirm]");
 		process.exit(2);
 	}
 	const lot = loadLot(lotFile);
@@ -368,14 +469,29 @@ async function main() {
 		return;
 	}
 	if (command === "mapping") {
-		const { ready, pending, luau } = buildMapping(lot, work);
+		const { ready, pending, luau, rollback, rollbackLuau } = buildMapping(lot, work);
 		fs.writeFileSync(path.join(work.dir, "mapping.luau"), luau);
+		fs.writeFileSync(path.join(work.dir, "rollback.luau"), rollbackLuau);
+		fs.writeFileSync(path.join(work.dir, "rollback.json"), `${JSON.stringify(Object.fromEntries(rollback), null, 2)}\n`);
 		fs.writeFileSync(path.join(work.dir, "mapping.json"), `${JSON.stringify(Object.fromEntries(ready), null, 2)}\n`);
 		console.log(`${ready.length} paires prêtes, ${pending.length} en attente → ${path.relative(ROOT, work.dir)}/mapping.luau`);
 		return;
 	}
+	if (command === "plan") {
+		const { reuse, upload, missing } = buildPlan(lot, work, loadRegistry());
+		for (const [oldId, newId] of reuse) console.log(`RÉUTILISER ${oldId} → ${newId}`);
+		console.log(`${lot.assets.length} assets : ${reuse.length} réutilisés, ${upload.length} à publier, ${missing.length} non téléchargés`);
+		return;
+	}
+	if (command === "register") {
+		const registry = loadRegistry();
+		const added = registerLot(lot, work, registry);
+		registry.save();
+		console.log(`${added} assets du lot dans le registre (${registry.data.assets.length} au total)`);
+		return;
+	}
 	const client = createClient({ key: loadKey(), log: console.log });
-	const result = command === "download" ? await runDownload(lot, work, client, options) : command === "publish" ? await runPublish(lot, work, client, options) : command === "refresh" ? await runRefresh(lot, work, client) : null;
+	const result = command === "download" ? await runDownload(lot, work, client, options) : command === "publish" ? await runPublish(lot, work, client, { ...options, registry: loadRegistry() }) : command === "refresh" ? await runRefresh(lot, work, client) : null;
 	if (!result) throw new Error(`commande inconnue : ${command}`);
 	console.log(JSON.stringify(result));
 	if (result.failed) process.exitCode = 1;
