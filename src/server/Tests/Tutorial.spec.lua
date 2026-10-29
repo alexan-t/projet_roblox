@@ -155,6 +155,23 @@ return function(Rules: any, config: any, createService: any)
 		assert(Rules.hasEquipment(1, {}, items) == false and Rules.hasEquipment(1, nil, items) == false, "no item: never blocks")
 	end)
 
+	test("equipment: a successful server inventory assignment is required to finish the guidance", function()
+		local items = { item_004 = { Name = "Heaume" } }
+		local free = { { ItemId = "item_004" } }
+		local worn = { { ItemId = "item_004", EquippedBy = "H1" } }
+		assert(Rules.hasEquipped(1, free, items) == false, "received but not equipped")
+		assert(Rules.hasEquipped(1, worn, items) == true, "server confirms a wearer")
+		assert(Rules.hasEquipped(0, worn, items) == false, "no owned hero")
+		assert(Rules.hasEquipped(1, { { ItemId = "unknown", EquippedBy = "H1" } }, items) == false, "unknown item")
+		assert(Rules.hasEquipped(1, { { ItemId = "item_004", EquippedBy = "" } }, items) == false, "no wearer")
+		assert(Rules.hasEquipped(1, nil, items) == false, "server view unavailable")
+		local seen = {} -- closing the bag early must not mark Equipment
+		local open = function(key: string): boolean return key == "Bag" end
+		assert(Rules.followUp(config, seen, { HasEquipment = true }, open) == "Equipment", "reopens")
+		seen.Equipment = true -- only after the inventory confirmation
+		assert(Rules.followUp(config, seen, { HasEquipment = true }, open) == nil, "finished")
+	end)
+
 	test("followUp: Sacoche open + item to equip, after the bag discovery; never without an item", function()
 		local open = function(key: string) return key == "Bag" end
 		local closed = function() return false end
