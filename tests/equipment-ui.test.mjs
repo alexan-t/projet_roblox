@@ -164,6 +164,16 @@ test('guidance targets: only those TutorialConfig points at; the first-equipment
 	assert(/if on and a\.Kind == "Equip" then\s*GuideTargets\.register\("Bag\.EquipAction"/.test(code.sacoche), 'Bag.EquipAction: Équiper, enabled only');
 });
 
+test('equipment tutorial remains pending until the server inventory confirms an equipped item', () => {
+	const controller = read('src/client/Controllers/TutorialController.lua');
+	const rules = read('src/shared/Tutorial/TutorialRules.lua');
+	assert(/if key ~= "Equipment" then\s*mark\(key\)/.test(controller), 'Equipment flagged at opening');
+	assert(/TutorialRules\.hasEquipped\(count, entries, ItemConfig\.Items\)/.test(controller), 'server equipment confirmation missing');
+	assert(/not seen\.Equipment[\s\S]*?TutorialRules\.hasEquipped[\s\S]*?mark\("Equipment"\)/.test(controller), 'equipment marked before confirmation');
+	assert(/local equipmentLast[\s\S]*?sequence\.key == "Equipment"[\s\S]*?OnActivated = if fromSequence and not equipmentLast then nextStep else nil/.test(controller), 'last step must not end on a rejected Equip click');
+	assert(/function TutorialRules\.hasEquipped/.test(rules), 'missing pure server inventory rule');
+});
+
 test('views hold no asset id (item icons come from ItemConfig)', () => {
 	for (const key of ['sacoche', 'card', 'store', 'model', 'heroBar']) {
 		assert(!/rbxassetid/.test(code[key]), `${files[key]} contains a rbxassetid`);
