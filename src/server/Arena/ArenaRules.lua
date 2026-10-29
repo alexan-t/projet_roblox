@@ -185,4 +185,61 @@ function ArenaRules.nextStage(stages: { StageEntry }, zone: number, stage: numbe
 	return zone, stage
 end
 
+-- Prochain objectif du joueur (#120, voir docs/ZONES.md § Prochain objectif). normal / elite = listes de
+-- ListStages (zone puis stage) avec Loot = true si le stage a une table de loot (LootConfig) : un stage sans
+-- butin (Zone 2 tant que #115 n'est pas livrée) n'est jamais proposé, mais reste jouable s'il est choisi.
+--   "Normal"   : premier stage Normal débloqué, non terminé, avec butin ;
+--   "EliteNew" : sinon premier stage Élite débloqué, non terminé, avec butin, aucun stage Élite encore gagné
+--                (l'Élite vient d'être débloquée) ;
+--   "Elite"    : même chose, avec au moins un stage Élite déjà gagné ;
+--   "Farm"     : tout ce qui a du butin est terminé : le dernier stage Élite terminé avec butin (meilleure
+--                source), sinon le dernier stage Normal terminé avec butin. Rien d'inédit n'est promis.
+-- nil : aucun stage avec butin n'est débloqué (config de loot absente) ; l'appelant garde defaultStage.
+export type ObjectiveEntry = StageEntry & { Loot: boolean? }
+export type Objective = { Kind: string, Mode: string, Zone: number, Stage: number }
+
+function ArenaRules.objective(normal: { ObjectiveEntry }, elite: { ObjectiveEntry }): Objective?
+	for _, entry in normal do
+		if entry.Status == "Unlocked" and not entry.Cleared and entry.Loot then
+			return { Kind = "Normal", Mode = "Normal", Zone = entry.Zone, Stage = entry.Stage }
+		end
+	end
+	local started = false
+	for _, entry in elite do
+		if entry.Cleared then
+			started = true
+		end
+	end
+	for _, entry in elite do
+		if entry.Status == "Unlocked" and not entry.Cleared and entry.Loot then
+			return { Kind = if started then "Elite" else "EliteNew", Mode = "Elite", Zone = entry.Zone, Stage = entry.Stage }
+		end
+	end
+	local function farm(list: { ObjectiveEntry }, mode: string): Objective?
+		for index = #list, 1, -1 do
+			local entry = list[index]
+			if entry.Status == "Unlocked" and entry.Cleared and entry.Loot then
+				return { Kind = "Farm", Mode = mode, Zone = entry.Zone, Stage = entry.Stage }
+			end
+		end
+		return nil
+	end
+	return farm(elite, "Elite") or farm(normal, "Normal")
+end
+
+-- Stage sélectionné après une victoire sur (mode, zone, stage) : le prochain objectif s'il reste un stage à
+-- gagner (jamais un stage déjà terminé quand un objectif existe, jamais une zone sans butin) ; tout est
+-- terminé (Farm) : le même stage, pour le rejouer. Sans objectif (pas de loot) : nextStage dans le même mode.
+function ArenaRules.afterVictory(normal: { ObjectiveEntry }, elite: { ObjectiveEntry }, mode: string, zone: number, stage: number): (string, number, number)
+	local objective = ArenaRules.objective(normal, elite)
+	if objective and objective.Kind ~= "Farm" then
+		return objective.Mode, objective.Zone, objective.Stage
+	end
+	if objective then
+		return mode, zone, stage
+	end
+	local nextZone, nextStage = ArenaRules.nextStage(if mode == "Elite" then elite else normal, zone, stage)
+	return mode, nextZone, nextStage
+end
+
 return ArenaRules
