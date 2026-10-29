@@ -14,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local InventoryModel = require(ReplicatedStorage.Shared.Sacoche.InventoryModel)
 
 local WAIT = 20 -- s d'attente de chaque remote avant de renoncer (le reste du jeu n'attend pas)
+local RETRY = 1 -- s entre deux lectures de l'inventaire tant que le serveur n'a pas les données
 
 local InventoryStore = {}
 
@@ -99,10 +100,18 @@ function InventoryStore.start()
 		end
 		local getRemote = remotes:WaitForChild("GetInventory", WAIT)
 		if getRemote and getRemote:IsA("RemoteFunction") then
-			local before = pushes
-			local ok, view = pcall(getRemote.InvokeServer, getRemote)
-			if ok and pushes == before then
-				apply(view)
+			-- Le profil peut arriver après le client (reconnexion) : le serveur répond nil tant qu'il n'est pas
+			-- chargé. On relit jusqu'à une vue (ou une vue poussée entre-temps), sinon la Sacoche resterait
+			-- « indisponible » et le premier équipement sans guidage.
+			while not InventoryStore.loaded do
+				local before = pushes
+				local ok, view = pcall(getRemote.InvokeServer, getRemote)
+				if ok and pushes == before then
+					apply(view)
+				end
+				if not InventoryStore.loaded then
+					task.wait(RETRY)
+				end
 			end
 		end
 	end)

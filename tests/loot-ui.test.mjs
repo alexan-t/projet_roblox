@@ -129,6 +129,8 @@ test('InventoryStore is read-only: GetInventory + InventoryChanged, no write rem
 	assert((code.store.match(/InvokeServer/g) ?? []).length === 1, 'exactly one InvokeServer (GetInventory)');
 	assert(/pcall\(getRemote\.InvokeServer/.test(code.store), 'GetInventory is not protected by pcall (remote may be absent)');
 	assert(/InventoryStore\.start\(\)/.test(code.heroBar), 'HeroBarController does not start the store');
+	// reconnexion : le serveur répond nil tant que le profil n'est pas chargé ; le store relit jusqu'à une vue
+	assert(/while not InventoryStore\.loaded do[\s\S]*?pcall\(getRemote\.InvokeServer[\s\S]*?task\.wait\(RETRY\)/.test(code.store), 'GetInventory must be retried until the server has the data');
 });
 
 test('views hold no asset id (icons stay in the configs and catalogues)', () => {
