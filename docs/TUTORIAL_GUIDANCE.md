@@ -53,8 +53,12 @@ agit (onglet, objet, « Équiper ») sont `Hold` : sans durée, elles attendent 
 leur cible), sinon une étape écoulée sauterait toute la suite.
 
 Une étape passe à la suivante au clic sur sa cible ou après sa durée (`Seconds`, 4 s par défaut). Une cible
-absente (ex. aucun héros) est sautée. **Le drapeau est enregistré dès le début** : fermer puis rouvrir
-ne relance rien (pas de boucle).
+absente (ex. aucun héros) est sautée. Les découvertes ordinaires sont enregistrées au début.
+**Exception : `Equipment`** reste non vu jusqu'à ce que `InventoryStore` reçoive une vue serveur
+confirmant un équipement du catalogue porté par un héros. Fermer la Sacoche avant le clic « Équiper »
+ne valide rien : le guidage peut reprendre à la réouverture. Un clic refusé par le serveur
+ne termine pas le tutoriel. Si le joueur a déjà équipé un objet avant cette version, la vue serveur
+le confirme à la connexion et évite de rejouer inutilement cette découverte.
 
 ## Rappels et badges
 
