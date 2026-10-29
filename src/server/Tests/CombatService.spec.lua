@@ -823,6 +823,38 @@ return function(createService: any, CombatEngine: any, combatConfig: any, _stage
 		end
 	end)
 
+	-- #73 : le roster porte déjà les stats finales (niveau + équipement, calculées par HeroService) ; le combat les
+	-- utilise telles quelles, en Normal comme en Élite (la difficulté ne touche que les ennemis), et un coup de base
+	-- d'un héros équipé atteint son ATK équipée.
+	test("#73 equipped roster stats reach the engine in Normal and Elite; basic hits use the equipped ATK", function()
+		for _, mode in { "Normal", "Elite" } do
+			local e = fixture()
+			local s = e.start()
+			local p = e.player("A")
+			if mode == "Elite" then
+				e.stages[p].Mode = "Elite"
+				e.stages[p].Difficulty = { MaxHealth = 2.25, AttackDamage = 1.5 }
+			end
+			local equipped = table.clone(combatConfig.Heroes.Epeiste)
+			equipped.MaxHealth, equipped.AttackDamage = 150 + 45, 16 + 12 -- Armure Peu commune + Arme Légendaire
+			local ctx = rosterContext(e, { [5] = "Epeiste" }, { [5] = equipped })
+			s:StartCombat(p, e.stages[p].Id, { [5] = "Epeiste" }, ctx)
+			assert(s:IsInCombat(p), "IsInCombat during the combat")
+			local ally
+			for _, u in s:GetCombat(p).Units do if u.Team == "Ally" then ally = u end end
+			assert(ally and ally.MaxHealth == 195, `{mode}: equipped PV used, not scaled by the difficulty`)
+			e.runUntilEnd(s, p, 400)
+			local allyId
+			for _, ev in e.events(p, "UnitSpawned") do if ev.Team == "Ally" then allyId = ev.UnitId end end
+			local best = 0
+			for _, ev in e.events(p, "Damage") do
+				if ev.SourceId == allyId and ev.Amount <= 28 then best = math.max(best, ev.Amount) end
+			end
+			assert(best == 28, `{mode}: a basic hit deals the equipped ATK (got {best})`)
+			assert(not s:IsInCombat(p), "IsInCombat false after the end")
+		end
+	end)
+
 	test("#69 Elite combat: enemies spawn with scaled stats and their usual EnemyId; heroes untouched; mode passed to GrantXP", function()
 		local e = fixture()
 		local s = e.start()

@@ -3,7 +3,7 @@
 //   - le butin (CombatEnded.Loot) est relayé et lu à part des monnaies (Rewards) ;
 //   - aucune rareté ni couleur de rareté sur les ressources (règle 1 de docs/UI_DESIGN_SYSTEM.md § 2) ;
 //   - une seule fonction de carte d'équipement (ItemCard), point de bascule unique pour #61 / #75 ;
-//   - aucun bouton Équiper, aucun compteur « équipés », aucun texte en dur périmé ;
+//   - aucun compteur « 0/7 équipés » en dur, aucun texte en dur périmé (Équiper / Retirer : equipment-ui) ;
 //   - les libellés d'états vides honnêtes, sans date ni nom de système futur ;
 //   - le store d'inventaire est en lecture seule (GetInventory / InventoryChanged, aucun remote d'écriture) ;
 //   - aucun rbxassetid dans les vues (icônes centralisées dans les *VisualConfig / catalogues).
@@ -94,9 +94,10 @@ test('one item card: Sacoche and the reward screen both go through ItemCard, whi
 	assert(!/UIKit\.stroke\([^)]*(RarityStyle|Rarity)/.test(code.card), 'the card outline uses a rarity colour');
 });
 
-test('Sacoche: no Equip button, no "0/7 équipés", no obsolete hard-coded text', () => {
-	assert(!/Équiper|Equiper|Equip\b/.test(code.sacoche.replace(/EquipHero|OnEquipHero|renderEquipmentList|Equipment/g, '')), 'an Équiper action appears in the Sacoche');
-	assert(!/0\/7|équipés/.test(code.sacoche), 'the "0/7 équipés" counter is back');
+// #73 : l'action Équiper / Retirer existe désormais (détail d'un objet) ; elle est contrôlée par
+// tests/equipment-ui.test.mjs. Ici : le compteur « x/7 » n'est jamais écrit en dur.
+test('Sacoche: no hard-coded "0/7 équipés", no obsolete hard-coded text', () => {
+	assert(!/0\/7|\/7 équipés/.test(code.sacoche), 'a hard-coded "0/7 équipés" counter is back');
 	for (const stale of ['Le butin d\'Expédition arrive bientôt', 'Tes ressources apparaîtront ici']) {
 		assert(!code.sacoche.includes(stale), `obsolete text "${stale}"`);
 	}

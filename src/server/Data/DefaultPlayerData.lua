@@ -44,6 +44,9 @@ local DefaultPlayerData: PlayerDataTypes.PlayerData = {
 		Equipment = {},
 		Resources = {},
 	},
+	-- Équipement porté (#73) : par EXEMPLAIRE de héros (clé = HeroInstanceId), { [SlotType] = ItemInstanceId }.
+	-- Clé fixe : ajoutée aux anciens profils par Reconcile (aucune migration, DataVersion reste 4).
+	HeroEquipment = {},
 	-- Guidage du tutoriel (TutorialService) : drapeaux « vu une fois » de TutorialConfig.Flags.
 	Tutorial = {
 		Seen = {},

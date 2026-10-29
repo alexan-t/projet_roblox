@@ -30,6 +30,9 @@ $runner = "local HeroRules = $(Module 'src/server/Heroes/HeroRules.lua')`n" +
 	"    Migrations = $(Module 'src/server/Data/Migrations.lua'),`n" +
 	"    HeroProgressionConfig = $(Module 'src/server/Config/HeroProgressionConfig.lua'),`n" +
 	"    HeroProgressionRules = $(Module 'src/server/Heroes/HeroProgressionRules.lua'),`n" +
+	"    ItemConfig = $(Module 'src/shared/Config/ItemConfig.lua'),`n" +
+	"    EquipmentConfig = $(Module 'src/server/Config/EquipmentConfig.lua'),`n" +
+	"    EquipmentRules = $(Module 'src/server/Inventory/EquipmentRules.lua'),`n" +
 	"}`n" +
 	"local reconcile = $reconcileSource`n" +
 	"local defaultData = $defaultData`n" +

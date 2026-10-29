@@ -73,6 +73,12 @@ correspond pas à la formation) et `ArenaContext.GrantXP`. Seuls `MaxHealth` et 
 (+5 % par niveau au-delà du premier) ; aucune progression de l'ultime. La session garde les
 `participants` (`HeroInstanceId` figés) : seuls eux gagnent l'XP.
 
+**Équipement (#73, ALPHA 0.0.2 PROVISOIRE)** : les `Stats` du roster sont les stats **finales** de l'exemplaire, calculées par
+HeroService au lancement : profil → niveau → **+ bonus plats des objets portés** (`MaxHealth` et `AttackDamage` seulement,
+`EquipmentConfig`). CombatEngine n'est pas modifié : il reçoit ces `Stats` comme pour le niveau. La difficulté Élite ne touche
+toujours que les ennemis. Équiper / retirer est **refusé pendant un combat** (`CombatService:IsInCombat`) ; le roster déjà figé
+reste la vérité du combat. Valeurs et règles : `docs/ITEMS.md` § 7.
+
 ## Simulation
 
 - **Pas fixe** : 1/20 s. CombatService accumule `min(dt, 0.25) × vitesse` à chaque

@@ -4,7 +4,7 @@ param([string]$LuauPath = 'luau')
 # qui traversent les vrais contrats (remotes, services, sessions) ; ce script les lance et résume
 # les cas #12 (préfixe « #12 »). Toute suite en échec fait échouer le script.
 $ErrorActionPreference = 'Stop'
-$suites = @('test-rewards.ps1', 'test-heroes.ps1', 'test-arena.ps1', 'test-quests.ps1', 'test-playerstate.ps1', 'test-plots.ps1', 'test-inventory.ps1')
+$suites = @('test-rewards.ps1', 'test-heroes.ps1', 'test-arena.ps1', 'test-quests.ps1', 'test-playerstate.ps1', 'test-plots.ps1', 'test-inventory.ps1', 'test-equipment.ps1')
 $failedSuites = @()
 $cases = @()
 foreach ($suite in $suites) {

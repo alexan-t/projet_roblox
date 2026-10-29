@@ -366,6 +366,31 @@ return function(Migrations: any, HeroRules: any, hotbarSize: number, reconcile: 
 		assert(next(fresh.Inventory.Equipment) == nil and next(fresh.Inventory.Resources) == nil)
 	end)
 
+	-- #73 : HeroEquipment est une clé fixe du template (même contrat que Inventory, aucune migration).
+	test("#73 profile from #72 (inventory, no HeroEquipment): Reconcile adds an empty HeroEquipment, nothing lost", function()
+		assert(typeof(defaultData.HeroEquipment) == "table" and next(defaultData.HeroEquipment) == nil, "template carries HeroEquipment")
+		local d = v4WithoutInventory()
+		d.Inventory = { Equipment = { I_a = { ItemId = "item_015", UpgradeLevel = 0 } }, Resources = { resource_011 = 3 } }
+		d.HeroEquipment = nil
+		local before = without(d, "HeroEquipment")
+		assert(Migrations.run(d) == "Ok" and d.DataVersion == 4 and d.HeroEquipment == nil, "no migration invents equipment")
+		reconcile(d, defaultData)
+		assert(typeof(d.HeroEquipment) == "table" and next(d.HeroEquipment) == nil)
+		assert(without(d, "HeroEquipment") == before, "heroes, levels, inventory, progression, currencies untouched")
+		d.HeroEquipment.H_a = { weapon = "I_a" }
+		assert(next(defaultData.HeroEquipment) == nil, "the default is never shared")
+	end)
+
+	test("#73 Reconcile keeps worn equipment per hero instance (dynamic keys, unknown slots tolerated)", function()
+		local d = v4WithoutInventory()
+		d.Inventory = { Equipment = { I_a = { ItemId = "item_015", UpgradeLevel = 0 } }, Resources = {} }
+		d.HeroEquipment = { H_a = { weapon = "I_a", future = "x" } }
+		local before = dump(d)
+		reconcile(d, defaultData)
+		reconcile(d, defaultData)
+		assert(dump(d) == before and Migrations.run(d) == "Ok" and d.HeroEquipment.H_a.weapon == "I_a")
+	end)
+
 	test("missing Heroes / Hotbar / Team tables do not crash", function()
 		local d: any = { DataVersion = 1 }
 		assert(Migrations.run(d) == "Ok" and typeof(d.Heroes) == "table")

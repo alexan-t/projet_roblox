@@ -16,7 +16,7 @@
 local SacocheModel = {}
 
 export type Hero = { Id: string, HeroId: string, Level: number, XP: number?, XPToNext: number?, MaxLevel: number?,
-	MaxHealth: number?, AttackDamage: number? }
+	MaxHealth: number?, AttackDamage: number?, EquipmentBonus: any? }
 export type Info = { Name: string, Rarity: string, Order: number }
 export type Context = {
 	Infos: { [string]: Info }, -- HeroConfig.Heroes
@@ -36,6 +36,7 @@ export type Detail = {
 	Id: string, HeroId: string, Name: string, Rarity: string, Level: number,
 	XP: number, XPToNext: number, XPText: string, XPRatio: number, Max: boolean,
 	MaxHealth: number?, AttackDamage: number?,
+	HealthBonus: number, AttackBonus: number, -- part d'équipement des stats finales (#73), 0 sans équipement
 	Placed: boolean, Key: string?, States: { { Kind: string, Label: string } },
 	Primary: Action, Secondary: Action,
 }
@@ -131,6 +132,15 @@ function SacocheModel.cards(heroes: { [string]: Hero }, ctx: Context): { Card }
 	return list
 end
 
+-- Bonus d'équipement envoyé par le serveur (#73) : entier, 0 si absent ou invalide.
+local function bonusOf(bonus: any, key: string): number
+	local value = if typeof(bonus) == "table" then bonus[key] else nil
+	if typeof(value) ~= "number" or value ~= value or math.abs(value) == math.huge then
+		return 0
+	end
+	return math.floor(value + 0.5)
+end
+
 function SacocheModel.detail(hero: Hero, info: Info?, ctx: Context): Detail
 	local placed = ctx.Placed[hero.Id] == true
 	local key = SacocheModel.keyLabel(table.find(ctx.Hotbar, hero.Id))
@@ -156,6 +166,7 @@ function SacocheModel.detail(hero: Hero, info: Info?, ctx: Context): Detail
 		XPText = if max then "Niveau max" elseif need > 0 then `{xp} / {need}` else "",
 		XPRatio = if max then 1 elseif need > 0 then math.clamp(xp / need, 0, 1) else 0,
 		MaxHealth = hero.MaxHealth, AttackDamage = hero.AttackDamage,
+		HealthBonus = bonusOf(hero.EquipmentBonus, "MaxHealth"), AttackBonus = bonusOf(hero.EquipmentBonus, "AttackDamage"),
 		Placed = placed, Key = key, States = states, Primary = primary, Secondary = secondary,
 	}
 end

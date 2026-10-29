@@ -6,7 +6,10 @@
 -- Remotes (ReplicatedStorage.Remotes) :
 --   GetInventory (RemoteFunction)    -> vue { Equipment, Resources, Count, Cap } du joueur, ou nil sans données ;
 --   InventoryChanged (RemoteEvent)   -> la même vue, poussée après chaque mutation.
--- AUCUN remote d'écriture (pas de GrantItem / GrantResource / équiper) : les arguments client sont ignorés.
+-- AUCUN remote d'écriture (pas de GrantItem / GrantResource) : les arguments client sont ignorés. Équiper /
+-- Retirer passe par EquipmentService (#73), qui revalide tout côté serveur.
+-- Équipement (#73) : chaque entrée de Equipment porte aussi Bonus { MaxHealth, AttackDamage } (EquipmentConfig,
+-- calculé ici) et, si l'objet est porté, EquippedBy (HeroInstanceId) et EquippedSlot (SlotType).
 -- La vue ne contient jamais de rareté : le client lit nom / rareté / slot / icône / famille dans ItemConfig et
 -- ResourceConfig.
 
@@ -16,11 +19,16 @@ local HttpService = game:GetService("HttpService")
 
 local DataService = require(script.Parent.DataService)
 local InventoryRules = require(script.Parent.Parent.Inventory.InventoryRules)
+local EquipmentRules = require(script.Parent.Parent.Inventory.EquipmentRules)
+local EquipmentConfig = require(script.Parent.Parent.Config.EquipmentConfig)
+local RarityConfig = require(ReplicatedStorage.Shared.Config.RarityConfig)
 local LootConfig = require(script.Parent.Parent.Config.LootConfig)
 local ItemConfig = require(ReplicatedStorage.Shared.Config.ItemConfig)
 local ResourceConfig = require(ReplicatedStorage.Shared.Config.ResourceConfig)
 
 local CATALOGS = { Item = ItemConfig, Resource = ResourceConfig }
+-- Config d'équipement validée une fois ; invalide -> nil : Bonus nul dans la vue.
+local EQUIPMENT = EquipmentRules.activeConfig(EquipmentConfig, CATALOGS, RarityConfig.Tiers)
 
 local InventoryService = {}
 
@@ -49,7 +57,20 @@ end
 -- Vue de l'inventaire du joueur, ou nil si ses données ne sont pas chargées.
 function InventoryService:GetView(player: Player): any
 	local data = loaded(player)
-	return if data then InventoryRules.view(data, LootConfig.EquipmentCap, CATALOGS) else nil
+	if not data then
+		return nil
+	end
+	local view = InventoryRules.view(data, LootConfig.EquipmentCap, CATALOGS)
+	local holders = EquipmentRules.holders(data, CATALOGS)
+	for _, entry in view.Equipment do
+		entry.Bonus = EquipmentRules.itemBonus(entry.ItemId, CATALOGS, EQUIPMENT)
+		local holder = holders[entry.InstanceId]
+		if holder then
+			entry.EquippedBy = holder.Hero
+			entry.EquippedSlot = holder.Slot
+		end
+	end
+	return view
 end
 
 -- Pousse la vue à jour au client (après une mutation). Sans effet si les données ne sont pas chargées.

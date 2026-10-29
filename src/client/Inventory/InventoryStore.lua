@@ -1,6 +1,7 @@
 --!strict
 -- Reflet client de l'inventaire (équipements + ressources) — issue #72. Lecture seule : le serveur
--- (InventoryService) reste seul juge ; aucun remote d'écriture n'existe. Patron ArenaStore :
+-- (InventoryService) reste seul juge ; aucun remote d'écriture ici (équiper / retirer : EquipmentStore, #73).
+-- Patron ArenaStore :
 --   - RemoteFunction Remotes.GetInventory à l'init -> vue ;
 --   - RemoteEvent Remotes.InventoryChanged -> même vue, poussée après chaque mutation.
 -- Tolérant : si les remotes sont absents (serveur plus ancien, démarrage lent), le store reste « non chargé »

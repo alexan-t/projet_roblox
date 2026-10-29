@@ -26,10 +26,12 @@ $runner = "local RewardRules = $(Module 'src/server/Rewards/RewardRules.lua')`n"
 	"    ItemConfig = $(Module 'src/shared/Config/ItemConfig.lua'),`n" +
 	"    ResourceConfig = $(Module 'src/shared/Config/ResourceConfig.lua'),`n" +
 	"    RarityConfig = $(Module 'src/shared/Config/RarityConfig.lua'),`n" +
+	"    EquipmentConfig = $(Module 'src/server/Config/EquipmentConfig.lua'),`n" +
 	"}`n" +
 	"local CombatEngine = $(Module 'src/server/Combat/CombatEngine.lua')`n" +
 	"local lootModules = {`n" +
 	"    LootRules = $(Module 'src/server/Loot/LootRules.lua'), InventoryRules = $(Module 'src/server/Inventory/InventoryRules.lua'),`n" +
+	"    EquipmentRules = $(Module 'src/server/Inventory/EquipmentRules.lua'),`n" +
 	"    LootConfig = configs.LootConfig, ItemConfig = configs.ItemConfig, ResourceConfig = configs.ResourceConfig, RarityConfig = configs.RarityConfig,`n" +
 	"}`n" +
 	"local factories = {`n" +

@@ -19,7 +19,7 @@ return function(createService: any, InventoryRules: any, modules: any)
 	local function fixture(): any
 		local env: any = { data = {}, instances = {}, fired = {}, guid = 0 }
 		env.players = {}
-		local replicated: any = { Shared = { Config = { ItemConfig = modules.ItemConfig, ResourceConfig = modules.ResourceConfig } } }
+		local replicated: any = { Shared = { Config = { ItemConfig = modules.ItemConfig, ResourceConfig = modules.ResourceConfig, RarityConfig = modules.RarityConfig } } }
 		function replicated:FindFirstChild(name: string): any
 			for _, i in env.instances do if i.Name == name and i.Parent == replicated then return i end end
 			return nil
@@ -42,7 +42,8 @@ return function(createService: any, InventoryRules: any, modules: any)
 		end }
 		local dataService: any = {}
 		function dataService:GetData(player: any): any return env.data[player] end
-		env.script = { Parent = { DataService = dataService, Parent = { Inventory = { InventoryRules = InventoryRules }, Config = { LootConfig = modules.LootConfig } } } }
+		env.script = { Parent = { DataService = dataService, Parent = { Inventory = { InventoryRules = InventoryRules, EquipmentRules = modules.EquipmentRules },
+			Config = { LootConfig = modules.LootConfig, EquipmentConfig = modules.EquipmentConfig } } } }
 		function env.player(name: string): any
 			local p: any = { Name = name, Parent = env.players, attributes = { DataLoaded = true } }
 			function p:GetAttribute(key: string): any return self.attributes[key] end
@@ -120,7 +121,12 @@ return function(createService: any, InventoryRules: any, modules: any)
 		InventoryRules.addEquipment(e.data[p], "item_015", 500, function(): string return e.service:NewInstanceId() end, modules)
 		InventoryRules.addResource(e.data[p], "resource_030", 1, modules)
 		local view = e.get.OnServerInvoke(p)
-		for k in view.Equipment[1] do assert(k == "InstanceId" or k == "ItemId" or k == "UpgradeLevel", k) end
+		-- #73 : Bonus (PV / ATK de l'objet) et, s'il est porté, EquippedBy / EquippedSlot ; jamais de rareté
+		local allowed = { InstanceId = true, ItemId = true, UpgradeLevel = true, Bonus = true, EquippedBy = true, EquippedSlot = true }
+		for k in view.Equipment[1] do assert(allowed[k], k) end
+		for k in view.Equipment[1].Bonus do assert(k == "MaxHealth" or k == "AttackDamage", k) end
+		assert(view.Equipment[1].Bonus.AttackDamage == 6 and view.Equipment[1].Bonus.MaxHealth == 0, "item_015 = Rare weapon: +6 ATK")
+		assert(view.Equipment[1].EquippedBy == nil, "not worn")
 		for k in view.Resources[1] do assert(k == "ResourceId" or k == "Amount", k) end
 	end)
 

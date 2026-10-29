@@ -9,6 +9,9 @@
 --   game.ServerStorage.DebugData:Invoke(player, "AddHero", "tireuse_des_faubourgs") -> identifiant (héros activé de HeroConfig, sinon nil)
 --   game.ServerStorage.DebugData:Invoke(player, "RemoveHero", id)           -> true si retiré (HeroService)
 --   game.ServerStorage.DebugData:Invoke(player, "SetHeroLevel", id, 20)      -> niveau de test (Studio uniquement)
+--   game.ServerStorage.DebugData:Invoke(player, "AddItem", "item_015")        -> ItemInstanceId, ou nil et la raison
+--                                                                             (exemplaire d'équipement de test, même
+--                                                                             chemin que le loot : catalogue, plafond)
 --   game.ServerStorage.DebugData:Invoke(player, "RefreshKingdom")           -> résultat de KingdomService:Refresh
 --   game.ServerStorage.DebugData:Invoke(player, "GetActiveQuest")           -> QuestService:GetActiveQuest
 --   game.ServerStorage.DebugData:Invoke(player, "QuestEvent", "StageCompleted", { Zone = 1, Stage = 1 })
@@ -31,6 +34,13 @@ local KingdomService = require(script.Parent.KingdomService)
 local QuestService = require(script.Parent.QuestService)
 local ZoneService = require(script.Parent.ZoneService)
 local HeroProgressionConfig = require(script.Parent.Parent.Config.HeroProgressionConfig)
+local InventoryService = require(script.Parent.InventoryService)
+local InventoryRules = require(script.Parent.Parent.Inventory.InventoryRules)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ITEM_CATALOGS = {
+	Item = require(ReplicatedStorage.Shared.Config.ItemConfig),
+	Resource = require(ReplicatedStorage.Shared.Config.ResourceConfig),
+}
 
 local DebugService = {}
 
@@ -72,6 +82,16 @@ local function handle(player: Player, command: string, ...: any): any
 		end
 		hero.Level, hero.XP = level, 0
 		return level
+	elseif command == "AddItem" then
+		-- Recette de l'équipement (#73) : un exemplaire du catalogue, comme un loot (plafond compris).
+		local itemId = ...
+		local instanceId, reason = InventoryRules.addEquipment(data, itemId, InventoryService:GetCap(), function(): string
+			return InventoryService:NewInstanceId()
+		end, ITEM_CATALOGS)
+		if instanceId then
+			InventoryService:Push(player)
+		end
+		return instanceId, reason
 	elseif command == "RefreshKingdom" then
 		return KingdomService:Refresh(player)
 	elseif command == "GetActiveQuest" then
