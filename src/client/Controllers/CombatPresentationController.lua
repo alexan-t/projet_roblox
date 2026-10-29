@@ -23,6 +23,7 @@ local Config = require(ReplicatedStorage.Shared.Config.EnemyPresentationConfig)
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local ArenaStore = require(script.Parent.Parent.Arena.ArenaStore)
 local PlotView = require(script.Parent.Parent.Arena.PlotView)
+local BossGate = require(script.Parent.Parent.Combat.BossGate)
 local OutroGate = require(script.Parent.Parent.Combat.OutroGate)
 local RewardBagGuard = require(script.Parent.Parent.Combat.RewardBagGuard)
 local ScreenState = require(script.Parent.Parent.UI.ScreenState)
@@ -45,6 +46,7 @@ local lastScreen: string? = nil
 
 type Arena = {
 	sources: { BasePart },
+	gate: Model?, -- porte du boss du décor de zone (Combat/BossGate), s'il en a une
 	heroFeet: Vector3, -- centre de la formation des héros (où regardent les ennemis)
 }
 
@@ -85,7 +87,7 @@ local function resolveArena(): Arena?
 	if count == 0 then
 		return nil
 	end
-	return { sources = sources, heroFeet = sum / count }
+	return { sources = sources, heroFeet = sum / count, gate = BossGate.find(folder.Parent) }
 end
 
 local function sourceFeet(source: BasePart): Vector3
@@ -222,15 +224,26 @@ local function enter(unitId: number, enemyId: string, breather: number, budget: 
 		return
 	end
 	task.wait(breather + delay)
+	local alive = function(): boolean
+		return clone.Parent ~= nil and model.Parent ~= nil
+	end
+	-- boss : la porte de sa structure s'ouvre d'abord (forge allumée, chaînes, battants), puis il en sort
+	local gate = if Config.spawnStyle(Config.profile(enemyId)).Heavy then geometry.gate else nil
+	local opening = 0
+	if gate then
+		opening = math.min((budget - delay) * Config.Gate.Share, Config.Gate.Open)
+		BossGate.open(gate, opening, alive)
+	end
 	EnemyPresentationController.Enter(clone, enemyId, {
 		Path = pathFor(geometry, enemyId, feetOf(model)),
 		LookAt = geometry.heroFeet,
-		Duration = math.max(budget - delay, 0.6),
-		Alive = function(): boolean
-			return clone.Parent ~= nil and model.Parent ~= nil
-		end,
+		Duration = math.max(budget - delay - opening, 0.6),
+		Alive = alive,
 	})
 	swap(clone, model)
+	if gate then
+		BossGate.close(gate, Config.Gate.Close)
+	end
 end
 
 ------------------------------------------------------------------ outro (fin de combat)

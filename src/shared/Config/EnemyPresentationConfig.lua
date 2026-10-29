@@ -73,6 +73,10 @@ local EnemyPresentationConfig = {
 		Glow = Color3.fromHex("#F5CB5C"), -- lueur du sac (GoldLight)
 	}),
 
+	-- Porte du boss (décor de zone « PorteBoss », client Combat/BossGate) : ouverture avant l'entrée d'un style
+	-- Heavy, prise sur le budget d'entrée (au plus Share du budget, au plus Open s), fermeture après l'arrivée.
+	Gate = table.freeze({ Open = 1.6, Share = 0.4, Close = 1.4 }),
+
 	SpawnStyles = table.freeze({
 		Lake = table.freeze({ Modes = table.freeze({ "SautMare" }), Kind = "Lake" }),
 		Camp = table.freeze({ Modes = table.freeze({ "SortieTente", "DescenteRampe", "SautPlateau" }), Kind = "Walk" }),
@@ -149,6 +153,158 @@ local EnemyPresentationConfig = {
 		KingTreant = table.freeze({
 			Family = "Treant", SpawnStyle = "CampBoss", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFallHeavy", Impact = 0.45,
 			EffectColor = Color3.fromHex("#8C643C"),
+			DeathTiming = table.freeze({ GroundImpact = 1.15, BagDrop = 1.5, FadeStart = 2.9, Complete = 3.4 }),
+		}),
+		-- Zones 2 à 6, version B : copies de combat statiques des monstres des fiches (comme les précédents) ;
+		-- les gelées sortent de l'eau et éclatent, les autres chargent d'un bloc et basculent.
+		VaseDesSables = table.freeze({
+			Family = "Slime", SpawnStyle = "Lake", AttackStyle = "SlimeHeadbutt", DeathStyle = "SlimeBurst", Impact = 0.27,
+			EffectColor = Color3.fromHex("#DCB48C"),
+			DeathTiming = table.freeze({ BagDrop = 0.45, FadeStart = 0.26, Complete = 0.8 }),
+		}),
+		ChacalParchemin = table.freeze({
+			Family = "Desert", SpawnStyle = "Bush", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFall", Impact = 0.35,
+			EffectColor = Color3.fromHex("#B4B48C"),
+			DeathTiming = table.freeze({ GroundImpact = 0.8, BagDrop = 1.0, FadeStart = 2.3, Complete = 2.75 }),
+		}),
+		ScarabeeForgeSoleil = table.freeze({
+			Family = "Desert", SpawnStyle = "Bush", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFall", Impact = 0.35,
+			EffectColor = Color3.fromHex("#F5C542"),
+			DeathTiming = table.freeze({ GroundImpact = 0.8, BagDrop = 1.0, FadeStart = 2.3, Complete = 2.75 }),
+		}),
+		MangeDune = table.freeze({
+			Family = "Desert", SpawnStyle = "Bush", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFall", Impact = 0.35,
+			EffectColor = Color3.fromHex("#8C643C"),
+			DeathTiming = table.freeze({ GroundImpact = 0.8, BagDrop = 1.0, FadeStart = 2.3, Complete = 2.75 }),
+		}),
+		GardienSansVisage = table.freeze({
+			Family = "Desert", SpawnStyle = "Bush", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFall", Impact = 0.35,
+			EffectColor = Color3.fromHex("#B4B48C"),
+			DeathTiming = table.freeze({ GroundImpact = 0.8, BagDrop = 1.0, FadeStart = 2.3, Complete = 2.75 }),
+		}),
+		ColosseEnseveli = table.freeze({
+			Family = "Desert", SpawnStyle = "CampBoss", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFallHeavy", Impact = 0.45,
+			EffectColor = Color3.fromHex("#DCB48C"),
+			DeathTiming = table.freeze({ GroundImpact = 1.15, BagDrop = 1.5, FadeStart = 2.9, Complete = 3.4 }),
+		}),
+		Givrelot = table.freeze({
+			Family = "Glace", SpawnStyle = "Bush", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFall", Impact = 0.35,
+			EffectColor = Color3.fromHex("#8CB4DC"),
+			DeathTiming = table.freeze({ GroundImpact = 0.8, BagDrop = 1.0, FadeStart = 2.3, Complete = 2.75 }),
+		}),
+		CrocDeGlacier = table.freeze({
+			Family = "Glace", SpawnStyle = "Bush", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFall", Impact = 0.35,
+			EffectColor = Color3.fromHex("#64B4DC"),
+			DeathTiming = table.freeze({ GroundImpact = 0.8, BagDrop = 1.0, FadeStart = 2.3, Complete = 2.75 }),
+		}),
+		ArmureGelee = table.freeze({
+			Family = "Glace", SpawnStyle = "Bush", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFall", Impact = 0.35,
+			EffectColor = Color3.fromHex("#8CB4DC"),
+			DeathTiming = table.freeze({ GroundImpact = 0.8, BagDrop = 1.0, FadeStart = 2.3, Complete = 2.75 }),
+		}),
+		BonhommeRoyal = table.freeze({
+			Family = "Glace", SpawnStyle = "Bush", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFall", Impact = 0.35,
+			EffectColor = Color3.fromHex("#DCDCDC"),
+			DeathTiming = table.freeze({ GroundImpact = 0.8, BagDrop = 1.0, FadeStart = 2.3, Complete = 2.75 }),
+		}),
+		MammouthCristallin = table.freeze({
+			Family = "Glace", SpawnStyle = "Bush", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFallHeavy", Impact = 0.4,
+			EffectColor = Color3.fromHex("#64B4DC"),
+			DeathTiming = table.freeze({ GroundImpact = 1.15, BagDrop = 1.5, FadeStart = 2.9, Complete = 3.4 }),
+		}),
+		RoiSansEte = table.freeze({
+			Family = "Glace", SpawnStyle = "CampBoss", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFallHeavy", Impact = 0.45,
+			EffectColor = Color3.fromHex("#8CB4DC"),
+			DeathTiming = table.freeze({ GroundImpact = 1.15, BagDrop = 1.5, FadeStart = 2.9, Complete = 3.4 }),
+		}),
+		ChevalierRivete = table.freeze({
+			Family = "Forge", SpawnStyle = "Bush", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFall", Impact = 0.35,
+			EffectColor = Color3.fromHex("#8C8C8C"),
+			DeathTiming = table.freeze({ GroundImpact = 0.8, BagDrop = 1.0, FadeStart = 2.3, Complete = 2.75 }),
+		}),
+		GolemCloche = table.freeze({
+			Family = "Forge", SpawnStyle = "Bush", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFall", Impact = 0.35,
+			EffectColor = Color3.fromHex("#B48C3C"),
+			DeathTiming = table.freeze({ GroundImpact = 0.8, BagDrop = 1.0, FadeStart = 2.3, Complete = 2.75 }),
+		}),
+		FourneauAmbulant = table.freeze({
+			Family = "Forge", SpawnStyle = "Bush", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFall", Impact = 0.35,
+			EffectColor = Color3.fromHex("#F08C3C"),
+			DeathTiming = table.freeze({ GroundImpact = 0.8, BagDrop = 1.0, FadeStart = 2.3, Complete = 2.75 }),
+		}),
+		Martelet = table.freeze({
+			Family = "Forge", SpawnStyle = "Bush", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFall", Impact = 0.35,
+			EffectColor = Color3.fromHex("#8C8C8C"),
+			DeathTiming = table.freeze({ GroundImpact = 0.8, BagDrop = 1.0, FadeStart = 2.3, Complete = 2.75 }),
+		}),
+		Chaine = table.freeze({
+			Family = "Forge", SpawnStyle = "Bush", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFall", Impact = 0.35,
+			EffectColor = Color3.fromHex("#646464"),
+			DeathTiming = table.freeze({ GroundImpact = 0.8, BagDrop = 1.0, FadeStart = 2.3, Complete = 2.75 }),
+		}),
+		MaitreDesForges = table.freeze({
+			Family = "Forge", SpawnStyle = "CampBoss", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFallHeavy", Impact = 0.45,
+			EffectColor = Color3.fromHex("#F08C3C"),
+			DeathTiming = table.freeze({ GroundImpact = 1.15, BagDrop = 1.5, FadeStart = 2.9, Complete = 3.4 }),
+		}),
+		MeduseCouronnee = table.freeze({
+			Family = "Slime", SpawnStyle = "Lake", AttackStyle = "SlimeHeadbutt", DeathStyle = "SlimeBurst", Impact = 0.27,
+			EffectColor = Color3.fromHex("#64B4DC"),
+			DeathTiming = table.freeze({ BagDrop = 0.45, FadeStart = 0.26, Complete = 0.8 }),
+		}),
+		MureneMiroir = table.freeze({
+			Family = "Abysses", SpawnStyle = "Bush", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFall", Impact = 0.35,
+			EffectColor = Color3.fromHex("#648CDC"),
+			DeathTiming = table.freeze({ GroundImpact = 0.8, BagDrop = 1.0, FadeStart = 2.3, Complete = 2.75 }),
+		}),
+		CoffreBernard = table.freeze({
+			Family = "Abysses", SpawnStyle = "Bush", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFall", Impact = 0.35,
+			EffectColor = Color3.fromHex("#B48C3C"),
+			DeathTiming = table.freeze({ GroundImpact = 0.8, BagDrop = 1.0, FadeStart = 2.3, Complete = 2.75 }),
+		}),
+		ChevalierNoye = table.freeze({
+			Family = "Abysses", SpawnStyle = "Bush", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFall", Impact = 0.35,
+			EffectColor = Color3.fromHex("#64B4A0"),
+			DeathTiming = table.freeze({ GroundImpact = 0.8, BagDrop = 1.0, FadeStart = 2.3, Complete = 2.75 }),
+		}),
+		CrabeCathedrale = table.freeze({
+			Family = "Abysses", SpawnStyle = "Bush", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFall", Impact = 0.35,
+			EffectColor = Color3.fromHex("#B4643C"),
+			DeathTiming = table.freeze({ GroundImpact = 0.8, BagDrop = 1.0, FadeStart = 2.3, Complete = 2.75 }),
+		}),
+		Leviathan = table.freeze({
+			Family = "Abysses", SpawnStyle = "CampBoss", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFallHeavy", Impact = 0.45,
+			EffectColor = Color3.fromHex("#648CDC"),
+			DeathTiming = table.freeze({ GroundImpact = 1.15, BagDrop = 1.5, FadeStart = 2.9, Complete = 3.4 }),
+		}),
+		GargouilleAilee = table.freeze({
+			Family = "Ciel", SpawnStyle = "Bush", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFallHeavy", Impact = 0.4,
+			EffectColor = Color3.fromHex("#8C8C8C"),
+			DeathTiming = table.freeze({ GroundImpact = 1.15, BagDrop = 1.5, FadeStart = 2.9, Complete = 3.4 }),
+		}),
+		MiniColosseCeleste = table.freeze({
+			Family = "Ciel", SpawnStyle = "Bush", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFallHeavy", Impact = 0.4,
+			EffectColor = Color3.fromHex("#F5C542"),
+			DeathTiming = table.freeze({ GroundImpact = 1.15, BagDrop = 1.5, FadeStart = 2.9, Complete = 3.4 }),
+		}),
+		MoutonNuage = table.freeze({
+			Family = "Slime", SpawnStyle = "Lake", AttackStyle = "SlimeHeadbutt", DeathStyle = "SlimeBurst", Impact = 0.27,
+			EffectColor = Color3.fromHex("#DCDCEB"),
+			DeathTiming = table.freeze({ BagDrop = 0.45, FadeStart = 0.26, Complete = 0.8 }),
+		}),
+		PoissonDuCiel = table.freeze({
+			Family = "Ciel", SpawnStyle = "Bush", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFall", Impact = 0.35,
+			EffectColor = Color3.fromHex("#8CB4DC"),
+			DeathTiming = table.freeze({ GroundImpact = 0.8, BagDrop = 1.0, FadeStart = 2.3, Complete = 2.75 }),
+		}),
+		BecTonnerre = table.freeze({
+			Family = "Ciel", SpawnStyle = "Bush", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFallHeavy", Impact = 0.4,
+			EffectColor = Color3.fromHex("#F5C542"),
+			DeathTiming = table.freeze({ GroundImpact = 1.15, BagDrop = 1.5, FadeStart = 2.9, Complete = 3.4 }),
+		}),
+		GardienCeleste = table.freeze({
+			Family = "Ciel", SpawnStyle = "CampBoss", AttackStyle = "SlimeHeadbutt", DeathStyle = "HumanoidFallHeavy", Impact = 0.45,
+			EffectColor = Color3.fromHex("#F5C542"),
 			DeathTiming = table.freeze({ GroundImpact = 1.15, BagDrop = 1.5, FadeStart = 2.9, Complete = 3.4 }),
 		}),
 	} :: { [string]: Profile }),
