@@ -1510,7 +1510,9 @@ local function renderOther(state: State)
 	heroName.TextTruncate = Enum.TextTruncate.AtEnd
 	heroName.LayoutOrder = 1
 	if hero then
-		GuideTargets.register("Bag.EquipHero", names) -- guidage du premier équipement : le héros qui recevra l'objet
+		-- guidage du premier équipement : le héros qui recevra l'objet, avec ses flèches < > (la flèche du
+		-- guidage se pose hors de l'en-tête, jamais sur un bouton du sélecteur)
+		GuideTargets.register("Bag.EquipHero", top)
 	end
 	-- niveau ; le compteur « x/7 équipés » est dans le coin bas droit de la poupée (#73)
 	local sub = UIKit.text(names, if hero then `Nv. {hero.Level}` else "", L.EquipNoteSize, { Color = C.TextMuted, Stroke = false })
