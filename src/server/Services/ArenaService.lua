@@ -30,25 +30,17 @@ local stateEvent: RemoteEvent
 -- aussitôt ; seules les répétitions d'une même action sont freinées.
 local lastAction: { [Player]: { [string]: number } } = {}
 local stateVersion: { [Player]: number } = {}
--- Stage sélectionné (pancarte, fenêtre Expédition) : utilisé au prochain lancement de session. Sans
--- choix, il se déduit de la progression (premier stage débloqué non terminé : 1-2 après le 1-1 au
--- rejoin) ; après une victoire, il passe au stage suivant (1-1 → 1-2 … 1-5, pas de 1-6). Jamais lancé
--- automatiquement : seulement sélectionné / affiché.
--- Le choix porte aussi un MODE ("Normal" / "Elite", #69) ; sans choix (join, rejoin) : Normal. En Élite,
--- la victoire sélectionne le stage Élite suivant (1-1E → 1-2E … 1-5E reste 1-5E).
+-- Stage sélectionné (pancarte, fenêtre Expédition) : utilisé au prochain lancement de session. Il porte
+-- un MODE ("Normal" / "Elite", #69). Sans choix (join, rejoin), c'est le prochain objectif du joueur
+-- (ArenaRules.objective, #120) : premier stage Normal avec butin non terminé, puis l'Élite (1-1E après
+-- 1-5, jamais une Zone 2 sans butin), puis, tout terminé, le meilleur stage Élite à rejouer. Après une
+-- victoire : le prochain objectif s'il en reste un, sinon le même stage (ArenaRules.afterVictory).
+-- Jamais lancé automatiquement : seulement sélectionné / affiché ; le joueur peut toujours choisir un
+-- autre stage débloqué (SelectStage).
 local chosen: { [Player]: { mode: string, zone: number, stage: number } } = {}
 -- Fin de combat : le décor ne change pas pendant l'outro (CombatConfig.Presentation.EndHold), même si la
--- victoire a sélectionné le premier stage de la zone suivante.
+-- victoire a sélectionné un autre stage (autre zone, ou l'Élite).
 local outroUntil: { [Player]: number } = {}
-
-local function chosenOf(player: Player): (number, number, string)
-	local c = chosen[player]
-	if c then
-		return c.zone, c.stage, c.mode
-	end
-	local zone, stage = ArenaRules.defaultStage(ZoneService:ListStages(player) :: any)
-	return zone or Config.Zone, stage or Config.Stage, "Normal"
-end
 
 local function context(player: Player): any
 	local c = contexts[player]
@@ -93,7 +85,8 @@ local function canCommand(player: Player, c: any): (boolean, string?)
 end
 
 -- Sources de l'aperçu des stages (StagePreview) : vraies configs serveur. Butin (#72) : LootRules.preview lit
--- LootConfig (chances réelles des ressources, items précis s'il y en a ; l'équipement aléatoire n'est pas listé).
+-- LootConfig (chances réelles des ressources, items précis s'il y en a) ; LootRules.equipment : chance réelle
+-- d'équipement par victoire, par rareté, et l'équipement garanti du premier clear (#120).
 -- Si LootConfig est invalide, RewardService n'accorde aucun loot : l'aperçu n'en promet donc aucun non plus.
 local PREVIEW_SOURCES: any = { Rewards = RewardConfig, Progression = HeroProgressionConfig, Elite = EliteConfig }
 local LOOT_PREVIEW = #LootRules.problems(LootConfig, { Item = ItemConfig, Resource = ResourceConfig, Rarity = RarityConfig }) == 0
@@ -101,6 +94,7 @@ local LOOT_PREVIEW = #LootRules.problems(LootConfig, { Item = ItemConfig, Resour
 local function previewSources(mode: string, zone: number, stage: number): any
 	local sources: any = table.clone(PREVIEW_SOURCES)
 	sources.Drops = if LOOT_PREVIEW then LootRules.preview(LootConfig, mode, `{zone}-{stage}`) else nil
+	sources.Equipment = if LOOT_PREVIEW then LootRules.equipment(LootConfig, mode, `{zone}-{stage}`) else nil
 	return sources
 end
 
@@ -120,6 +114,42 @@ local function stagesOf(player: Player, mode: string?): { any }
 		table.insert(list, view)
 	end
 	return list
+end
+
+-- Progression du joueur pour le prochain objectif (ArenaRules.objective) : stages Normal et Élite, Loot = le
+-- stage a une table de loot valide (un stage sans butin n'est jamais proposé).
+local function progressOf(player: Player): ({ any }, { any })
+	local function annotate(mode: string): { any }
+		local source = if mode == "Elite" then LootConfig.EliteStages else LootConfig.Stages
+		local list = {}
+		for _, entry in ZoneService:ListStages(player, mode) do
+			table.insert(list, { Zone = entry.Zone, Stage = entry.Stage, Status = entry.Status, Cleared = entry.Cleared,
+				Loot = LOOT_PREVIEW and source[`{entry.Zone}-{entry.Stage}`] ~= nil })
+		end
+		return list
+	end
+	return annotate("Normal"), annotate("Elite")
+end
+
+-- Prochain objectif du joueur (#120) : { Kind, Mode, Zone, Stage } ou nil.
+local function objectiveOf(player: Player): ArenaRules.Objective?
+	local normal, elite = progressOf(player)
+	return ArenaRules.objective(normal, elite)
+end
+
+-- Stage sélectionné : le choix du joueur, sinon son prochain objectif (join, rejoin : 1-1E après 1-5 au
+-- lieu d'une Zone 2 sans butin), sinon le premier stage Normal débloqué non terminé.
+local function chosenOf(player: Player): (number, number, string)
+	local c = chosen[player]
+	if c then
+		return c.zone, c.stage, c.mode
+	end
+	local objective = objectiveOf(player)
+	if objective then
+		return objective.Zone, objective.Stage, objective.Mode
+	end
+	local zone, stage = ArenaRules.defaultStage(ZoneService:ListStages(player) :: any)
+	return zone or Config.Zone, stage or Config.Stage, "Normal"
 end
 
 local function spawnModel(templateName: string, parent: Instance, feet: Vector3, lookAt: Vector3, attributes: any): Model?
@@ -197,7 +227,7 @@ local function stateOf(player: Player, message: string?): any
 		MaxHeroes = Config.MaxHeroes, Zone = zone, Stage = stageNumber, Mode = mode, FirstWave = firstWave,
 		Enemies = if stage then ArenaRules.summarize(stage) else {},
 		Stages = stagesOf(player), EliteStages = stagesOf(player, "Elite"), EliteUnlocked = ZoneService:IsEliteUnlocked(player, zone),
-		Available = context(player) ~= nil, Message = message }
+		Objective = objectiveOf(player), Available = context(player) ~= nil, Message = message }
 end
 
 local function send(player: Player, message: string?)
@@ -426,8 +456,9 @@ function ArenaService:Start()
 		local prep = manager.preps[player]
 		if result == "Victory" and prep and prep.combatId == id then
 			local zone, stage, mode = chosenOf(player)
-			local nextZone, nextStage = ArenaRules.nextStage(ZoneService:ListStages(player, mode) :: any, zone, stage)
-			chosen[player] = { mode = mode, zone = nextZone, stage = nextStage }
+			local normal, elite = progressOf(player)
+			local nextMode, nextZone, nextStage = ArenaRules.afterVictory(normal, elite, mode, zone, stage)
+			chosen[player] = { mode = nextMode, zone = nextZone, stage = nextStage }
 		end
 		-- Le résultat n'est annoncé que par l'écran de fin (RewardScreenController), pas par un message.
 		if manager:combatEnded(player, id) then

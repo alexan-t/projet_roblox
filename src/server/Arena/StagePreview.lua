@@ -10,10 +10,15 @@
 --                       première victoire donne FirstClearRewards SEULEMENT, les suivantes RepeatRewards ;
 --   Multipliers       : Élite seulement, { MaxHealth, AttackDamage } (EliteConfig) ;
 --   PotentialDrops    : butin possible par victoire, { { Kind = "Resource" | "Item", Id, Chance (0..1),
---                       Min, Max } }, UNIQUEMENT si une table de loot réelle est fournie (#72) ; sinon nil.
+--                       Min, Max } }, UNIQUEMENT si une table de loot réelle est fournie (#72) ; sinon nil ;
+--   Equipment         : équipement aléatoire et garanti (#120), { Chance (par victoire, 0..1), Rarities =
+--                       { { Rarity, Chance } } (par victoire), FirstClear = { { Rarity, Chance } }? (garanti à la
+--                       première victoire, part de chaque rareté) }, calculé par LootRules.equipment ; sinon nil.
 
 export type Reward = { Kind: string, Amount: number }
 export type Drop = { Kind: string, Id: string, Chance: number, Min: number, Max: number }
+export type RarityChance = { Rarity: string, Chance: number }
+export type Equipment = { Chance: number, Rarities: { RarityChance }, FirstClear: { RarityChance }? }
 export type Wave = { Enemies: { { EnemyId: string, Count: number } } }
 export type Preview = {
 	Waves: { Wave },
@@ -23,6 +28,7 @@ export type Preview = {
 	RepeatRewards: { Reward },
 	Multipliers: { MaxHealth: number, AttackDamage: number }?,
 	PotentialDrops: { Drop }?,
+	Equipment: Equipment?,
 }
 
 local StagePreview = {}
@@ -54,9 +60,32 @@ local function drops(list: any): { Drop }?
 	return if #out > 0 then out else nil
 end
 
+-- Raretés valides seulement (chance 0..1), copiées.
+local function rarities(list: any): { RarityChance }
+	local out: { RarityChance } = {}
+	for _, entry in if typeof(list) == "table" then list else {} do
+		if typeof(entry) == "table" and typeof(entry.Rarity) == "string" and typeof(entry.Chance) == "number" and entry.Chance > 0 and entry.Chance <= 1 then
+			table.insert(out, { Rarity = entry.Rarity, Chance = entry.Chance })
+		end
+	end
+	return out
+end
+
+-- Équipement : copie de l'aperçu de LootRules.equipment ; rien sans chance ni garantie.
+local function equipment(source: any): Equipment?
+	if typeof(source) ~= "table" or typeof(source.Chance) ~= "number" or source.Chance < 0 or source.Chance > 1 then
+		return nil
+	end
+	local first = if source.FirstClear ~= nil then rarities(source.FirstClear) else nil
+	if source.Chance == 0 and not (first and #first > 0) then
+		return nil
+	end
+	return { Chance = source.Chance, Rarities = rarities(source.Rarities), FirstClear = if first and #first > 0 then first else nil }
+end
+
 -- stage : entrée de StageConfig ; mode : "Normal" / "Elite" ; key : "<zone>-<stage>" ;
 -- sources = { Rewards = RewardConfig, Progression = HeroProgressionConfig, Elite = EliteConfig,
---             Drops = table de butin du stage (#72) ou nil }.
+--             Drops = table de butin du stage (#72) ou nil, Equipment = LootRules.equipment du stage ou nil }.
 function StagePreview.build(stage: any, zone: number, stageNumber: number, mode: string, sources: any): Preview
 	local elite = mode == "Elite"
 	local key = `{zone}-{stageNumber}`
@@ -87,6 +116,7 @@ function StagePreview.build(stage: any, zone: number, stageNumber: number, mode:
 		RepeatRewards = rewards(entry and entry.RepeatReward),
 		Multipliers = multipliers,
 		PotentialDrops = drops(sources.Drops),
+		Equipment = equipment(sources.Equipment),
 	}
 end
 

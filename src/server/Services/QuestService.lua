@@ -203,18 +203,23 @@ local function validate(config: any): { string }
 	return problems
 end
 
--- Objectif « gagner un stage » (StageCompleted, Target 1, Match.Zone / Match.Stage) déjà atteint :
--- le stage est dans FirstClears (gagné avant que la quête soit active). La quête est alors terminée,
--- jamais réclamée ici : le joueur garde son « Récupérer », sans refaire le stage. Ne fait que monter.
+-- Objectif « gagner un stage » (Target 1, Match.Zone / Match.Stage) déjà atteint : le stage est dans
+-- FirstClears (StageCompleted) ou EliteFirstClears (EliteStageCompleted, #120), gagné avant que la quête
+-- soit active. La quête est alors terminée, jamais réclamée ici : le joueur garde son « Récupérer », sans
+-- refaire le stage. Ne fait que monter.
+local CLEARS_OF_EVENT: { [string]: string } = { StageCompleted = "FirstClears", EliteStageCompleted = "EliteFirstClears" }
+
 local function syncCleared(data: PlayerData, id: string)
 	local objective = quests[id].Objective
 	local match = objective.Match
 	local state = data.Quests[id]
-	if objective.Event ~= "StageCompleted" or objective.Target ~= 1 or not match or state.Progress >= 1 then
+	local field = CLEARS_OF_EVENT[objective.Event]
+	if not field or objective.Target ~= 1 or not match or state.Progress >= 1 then
 		return
 	end
+	local clears = (data.Progression :: any)[field]
 	local zone, stage = match.Zone, match.Stage
-	if typeof(zone) == "number" and typeof(stage) == "number" and data.Progression.FirstClears[`{zone}-{stage}`] == true then
+	if typeof(clears) == "table" and typeof(zone) == "number" and typeof(stage) == "number" and clears[`{zone}-{stage}`] == true then
 		state.Progress = 1
 	end
 end

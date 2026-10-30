@@ -138,7 +138,7 @@ return function(createService: any, productionConfig: any, QuestGuide: any, aren
 		return true
 	end
 
-	test("production config: lines Défense (1-1 -> Roi Orc, after SummonStarter) and Héros (SummonStarter -> 2 -> 5 -> ...)", function()
+	test("production config: lines Défense (1-1 -> Roi Orc), Zone 1 Élite (after the Roi Orc) and Héros (SummonStarter -> 2 -> 5 -> ...)", function()
 		local e = fixture(productionConfig)
 		e.start()
 		assert(#e.warnings == 0, "production config valid")
@@ -146,8 +146,9 @@ return function(createService: any, productionConfig: any, QuestGuide: any, aren
 		local first = productionConfig.Quests.SummonStarter
 		assert(first.Title == "Invoque ton premier héros" and first.NextQuestId == "OwnHeroes2", "the Heroes line continues")
 		local lines = productionConfig.Lines
-		assert(#lines == 2 and lines[1].Id == "Stages" and lines[1].FirstQuestId == "DefendDomain" and lines[1].After == "SummonStarter")
-		assert(lines[2].Id == "Heroes" and lines[2].FirstQuestId == "SummonStarter" and lines[2].After == nil)
+		assert(#lines == 3 and lines[1].Id == "Stages" and lines[1].FirstQuestId == "DefendDomain" and lines[1].After == "SummonStarter")
+		assert(lines[2].Id == "Elite" and lines[2].FirstQuestId == "EliteStage11" and lines[2].After == "DefeatRoiOrc", "Élite opens after the Roi Orc claim")
+		assert(lines[3].Id == "Heroes" and lines[3].FirstQuestId == "SummonStarter" and lines[3].After == nil)
 		local tiers, id = {}, "OwnHeroes2"
 		while id do
 			local quest = productionConfig.Quests[id]
@@ -178,6 +179,24 @@ return function(createService: any, productionConfig: any, QuestGuide: any, aren
 			assert(deepEqual(rewards, row[5]), row[1] .. " rewards")
 		end
 		assert(productionConfig.Quests.DefendDomain.Guide.Placement == true, "1-1 teaches the placement")
+		-- Ligne Élite (#120) : chaque stage Élite gagné une fois, récompenses validées (PROVISOIRES, #112).
+		local elite = {
+			{ "EliteStage11", 1, "EliteStage12", { Gold = 200, Gems = 20 } },
+			{ "EliteStage12", 2, "EliteStage13", { Gold = 250, Gems = 25 } },
+			{ "EliteStage13", 3, "EliteStage14", { Gold = 300, Gems = 30 } },
+			{ "EliteStage14", 4, "DefeatRoiOrcElite", { Gold = 350, Gems = 35 } },
+			{ "DefeatRoiOrcElite", 5, nil, { Gold = 500, Gems = 50, SummonTicket = 2 } },
+		}
+		for _, row in elite do
+			local quest = productionConfig.Quests[row[1]]
+			assert(quest and quest.NextQuestId == row[3] and string.find(quest.Title, "Élite", 1, true), row[1])
+			assert(quest.Objective.Event == "EliteStageCompleted" and quest.Objective.Target == 1, row[1] .. ": Élite victory only")
+			assert(quest.Objective.Match.Zone == 1 and quest.Objective.Match.Stage == row[2], row[1])
+			assert(quest.Guide.Target == "StageSign" and quest.AutoClaim == nil, row[1] .. ": waits for Récupérer")
+			local rewards = {}
+			for _, reward in quest.Rewards do rewards[reward.Kind] = reward.Amount end
+			assert(deepEqual(rewards, row[4]), row[1] .. " rewards")
+		end
 	end)
 
 	test("boss quest title uses the official boss name (ArenaConfig.EnemyNames.Boss)", function()
@@ -261,9 +280,9 @@ return function(createService: any, productionConfig: any, QuestGuide: any, aren
 			assert(c.Gold == totals[stage][1] and c.Gems == totals[stage][2] and c.SummonTickets == totals[stage][3], `{id} totals {c.Gold}/{c.Gems}/{c.SummonTickets}`)
 		end
 		local after = s:GetActiveQuest(p)
-		assert(after and after.Id == "OwnHeroes2", "Défense finished: the Heroes line becomes the main quest")
+		assert(after and after.Id == "EliteStage11" and after.GuideTarget == "StageSign", "Défense finished: the Élite line becomes the main quest")
 		local sent = e.sent(p)
-		assert(sent[#sent] and sent[#sent].Id == "OwnHeroes2")
+		assert(sent[#sent] and sent[#sent].Id == "EliteStage11")
 	end)
 
 	test("#12 Zone 1 quest claims: forged / not active / not finished / spam -> refused, rewards only from QuestConfig", function()
@@ -346,8 +365,156 @@ return function(createService: any, productionConfig: any, QuestGuide: any, aren
 			DefendStage14 = { Progress = 1, Claimed = true }, DefeatRoiOrc = { Progress = 1, Claimed = true } }
 		local doneData = e.join(q, done)
 		local main = s:GetActiveQuest(q)
-		assert(main and main.Id == "OwnHeroes2" and doneData.Currencies.Gold == 0, "Zone 1 finished: Heroes line next, nothing given")
+		assert(main and main.Id == "EliteStage11" and main.Progress == 0 and doneData.Currencies.Gold == 0, "Zone 1 finished: Élite line next, nothing given")
 	end)
+	-- Élite (#120) : victoire Élite comme ZoneService puis RewardService (EliteStageCompleted, EliteFirstClears).
+	local function winElite(s: any, p: any, data: any, stage: number)
+		s:HandleGameplayEvent(p, "EliteStageCompleted", { Zone = 1, Stage = stage })
+		data.Progression.EliteFirstClears = data.Progression.EliteFirstClears or {}
+		data.Progression.EliteFirstClears[`1-{stage}`] = true
+	end
+	-- Profil qui a gagné et récupéré toute la ligne Défense (Roi Orc compris).
+	local function zone1Done(e: any): any
+		local data = e.freshData()
+		data.Progression.FirstClears = { ["1-1"] = true, ["1-2"] = true, ["1-3"] = true, ["1-4"] = true, ["1-5"] = true }
+		data.Quests = { SummonStarter = { Progress = 1, Claimed = true }, DefendDomain = { Progress = 1, Claimed = true },
+			DefendStage12 = { Progress = 1, Claimed = true }, DefendStage13 = { Progress = 1, Claimed = true },
+			DefendStage14 = { Progress = 1, Claimed = true }, DefeatRoiOrc = { Progress = 1, Claimed = true } }
+		return data
+	end
+	local ELITE_CHAIN = { "EliteStage11", "EliteStage12", "EliteStage13", "EliteStage14", "DefeatRoiOrcElite" }
+
+	test("#120 Élite line: opens only once the Roi Orc is claimed, Élite wins only, rewards once each, then Héros", function()
+		local e = fixture(productionConfig)
+		local s = e.start()
+		local p = e.player("A")
+		local data = e.join(p)
+		s:HandleGameplayEvent(p, "StarterHeroSummoned")
+		local claim = e.remote("ClaimQuest").OnServerInvoke
+		for stage, id in { "DefendDomain", "DefendStage12", "DefendStage13", "DefendStage14" } do
+			win(s, p, data, stage)
+			assert(claim(p, id) == true, id)
+		end
+		win(s, p, data, 5)
+		assert(data.Quests.EliteStage11 == nil and s:GetActiveQuest(p).Id == "DefeatRoiOrc", "1-5 won, not claimed: Élite line not open yet")
+		assert(claim(p, "EliteStage11") == false, "Élite quest not reachable before the Roi Orc claim")
+		assert(claim(p, "DefeatRoiOrc") == true)
+		local gold, gems, tickets = data.Currencies.Gold, data.Currencies.Gems, data.Currencies.SummonTickets
+		local view = s:GetActiveQuest(p)
+		assert(view.Id == "EliteStage11" and view.Progress == 0 and view.GuideTarget == "StageSign", "Élite becomes the main quest")
+		assert(s:HandleGameplayEvent(p, "StageCompleted", { Zone = 1, Stage = 1 }) == false, "a Normal replay never counts for Élite")
+		assert(data.Quests.EliteStage11.Progress == 0)
+		local totals = { { 200, 20, 0 }, { 450, 45, 0 }, { 750, 75, 0 }, { 1100, 110, 0 }, { 1600, 160, 2 } }
+		for stage, id in ELITE_CHAIN do
+			assert(s:GetActiveQuest(p).Id == id, `active {id}`)
+			assert(claim(p, id) == false, `{id}: refused before the Élite win`)
+			winElite(s, p, data, stage)
+			assert(s:HandleGameplayEvent(p, "EliteStageCompleted", { Zone = 1, Stage = stage }) == false, `{id}: repeated victory event ignored`)
+			assert(claim(p, id) == true, `{id} claimed`)
+			for _ = 1, 5 do assert(claim(p, id) == false, `{id}: never twice`) end
+			local c = data.Currencies
+			assert(c.Gold - gold == totals[stage][1] and c.Gems - gems == totals[stage][2] and c.SummonTickets - tickets == totals[stage][3], `{id} totals`)
+		end
+		assert(s:GetActiveQuest(p).Id == "OwnHeroes2", "Zone 1 Élite finished: the Heroes line (team) is the main quest")
+		local log = s:GetQuestLog(p)
+		assert(log.Quests[2].Id == "DefeatRoiOrcElite" and log.Quests[2].Claimed == true and log.Quests[2].Tier == 5, "Élite card: last tier claimed")
+	end)
+
+	test("#120 Élite: a later Élite quest is never claimable early (not active), even forged as completed", function()
+		local e = fixture(productionConfig)
+		local s = e.start()
+		local p = e.player("A")
+		local data = e.join(p, zone1Done(e))
+		local claim = e.remote("ClaimQuest").OnServerInvoke
+		data.Quests.EliteStage13 = { Progress = 1, Claimed = false }
+		local ok, why = claim(p, "EliteStage13")
+		assert(ok == false and why == "quête non active")
+		for _, bad in { "DefeatRoiOrcElite", "EliteStage12", "Élite", 7 } :: { any } do
+			assert(claim(p, bad) == false, tostring(bad))
+		end
+		assert(data.Currencies.Gold == 0 and data.Currencies.Gems == 0 and data.Currencies.SummonTickets == 0)
+	end)
+
+	test("#120 old profiles: Élite stages already won complete their quests at activation (no replay), claimed in order", function()
+		local e = fixture(productionConfig)
+		local s = e.start()
+		local claim = e.remote("ClaimQuest").OnServerInvoke
+		-- 1-1E à 1-3E gagnés avant cette version
+		local p = e.player("Partiel")
+		local partial = zone1Done(e)
+		partial.Progression.EliteFirstClears = { ["1-1"] = true, ["1-2"] = true, ["1-3"] = true }
+		local data = e.join(p, partial)
+		local view = s:GetActiveQuest(p)
+		assert(view.Id == "EliteStage11" and view.Completed == true, "1-1E synced from EliteFirstClears")
+		for _, id in { "EliteStage11", "EliteStage12", "EliteStage13" } do
+			assert(s:GetActiveQuest(p).Id == id and s:GetActiveQuest(p).Completed == true, id)
+			assert(claim(p, id) == true, id)
+		end
+		view = s:GetActiveQuest(p)
+		assert(view.Id == "EliteStage14" and view.Completed == false and view.Progress == 0, "1-4E never won: to play")
+		assert(data.Currencies.Gold == 750 and data.Currencies.Gems == 75)
+		-- toute l'Élite gagnée avant cette version : cinq « Récupérer », puis la ligne Héros
+		local q = e.player("Complet")
+		local full = zone1Done(e)
+		full.Progression.EliteFirstClears = { ["1-1"] = true, ["1-2"] = true, ["1-3"] = true, ["1-4"] = true, ["1-5"] = true }
+		local fullData = e.join(q, full)
+		for _, id in ELITE_CHAIN do
+			assert(claim(q, id) == true, id)
+		end
+		assert(s:GetActiveQuest(q).Id == "OwnHeroes2" and fullData.Currencies.Gold == 1600 and fullData.Currencies.SummonTickets == 2)
+		for _, id in ELITE_CHAIN do
+			assert(claim(q, id) == false, `{id}: never twice`)
+		end
+	end)
+
+	test("#120 Élite won before the line opens (Roi Orc not claimed yet) is still counted, never replayed", function()
+		local e = fixture(productionConfig)
+		local s = e.start()
+		local p = e.player("A")
+		local early = zone1Done(e)
+		early.Quests.DefeatRoiOrc = { Progress = 1, Claimed = false }
+		local data = e.join(p, early)
+		winElite(s, p, data, 1) -- l'événement ne trouve aucune quête Élite active
+		assert(data.Quests.EliteStage11 == nil)
+		assert(e.remote("ClaimQuest").OnServerInvoke(p, "DefeatRoiOrc") == true)
+		local view = s:GetActiveQuest(p)
+		assert(view.Id == "EliteStage11" and view.Completed == true, "synced from EliteFirstClears at activation")
+	end)
+
+	test("#120 rejoin: after an Élite win before the claim, after the claim, mid-chain; two players stay apart", function()
+		local e = fixture(productionConfig)
+		local s = e.start()
+		local a = e.player("A")
+		local b = e.player("B")
+		local data = e.join(a, zone1Done(e))
+		local other = e.join(b, zone1Done(e))
+		local function rejoin()
+			data = e.join(a, e.leave(a))
+		end
+		local claim = e.remote("ClaimQuest").OnServerInvoke
+		rejoin()
+		assert(s:GetActiveQuest(a).Id == "EliteStage11" and s:GetActiveQuest(a).Completed == false, "rejoin: Élite objective back")
+		winElite(s, a, data, 1)
+		rejoin()
+		assert(s:GetActiveQuest(a).Id == "EliteStage11" and s:GetActiveQuest(a).Completed == true, "quit right after the win: still to claim")
+		assert(claim(a, "EliteStage11") == true)
+		rejoin()
+		assert(s:GetActiveQuest(a).Id == "EliteStage12" and data.Currencies.Gold == 200, "quit after the claim: next Élite stage, reward once")
+		assert(claim(a, "EliteStage11") == false)
+		assert(s:GetActiveQuest(b).Id == "EliteStage11" and s:GetActiveQuest(b).Completed == false and other.Currencies.Gold == 0, "B untouched")
+		assert(other.Quests.EliteStage11.Progress == 0)
+	end)
+
+	test("#120 an Élite victory never advances a Normal stage quest", function()
+		local e = fixture(productionConfig)
+		local s = e.start()
+		local p = e.player("A")
+		local data = e.join(p)
+		s:HandleGameplayEvent(p, "StarterHeroSummoned")
+		assert(s:HandleGameplayEvent(p, "EliteStageCompleted", { Zone = 1, Stage = 1 }) == false)
+		assert(data.Quests.DefendDomain.Progress == 0)
+	end)
+
 	test("AutoClaim quest saved completed but unclaimed (older version) is settled at load, once", function()
 		local e = fixture(productionConfig)
 		local s = e.start()
@@ -794,7 +961,8 @@ return function(createService: any, productionConfig: any, QuestGuide: any, aren
 		e.join(p, done)
 		local log = s:GetQuestLog(p)
 		assert(log.Quests[1].Id == "DefeatRoiOrc" and log.Quests[1].Claimed == true and log.Quests[1].Tier == 5 and log.Quests[1].Tiers == 5)
-		assert(log.Quests[2].Id == "OwnHeroes2")
+		assert(log.Quests[2].Id == "EliteStage11" and log.Quests[2].Line == "Elite" and log.Quests[2].LineTitle == "Zone 1 Élite" and log.Quests[2].Tiers == 5)
+		assert(log.Quests[3].Id == "OwnHeroes2")
 	end)
 
 	test("heroes line: distinct heroes owned, synced from PlayerData (duplicates count once), tier by tier", function()

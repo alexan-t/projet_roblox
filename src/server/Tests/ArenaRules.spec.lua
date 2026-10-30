@@ -174,6 +174,75 @@ return function(ArenaRules: any, stageConfig: any, arenaConfig: any)
 		assert(z == 1 and s == 1, "next still locked (no First Clear recorded): stay")
 	end)
 
+	-- Progression façon ArenaService (#120) : Zone 1 (avec butin) puis Zone 2 (sans butin, tant que #115 n'est
+	-- pas livrée) en Normal ; Élite de la Zone 1 débloquée par 1-5, chaque stage Élite par le précédent.
+	-- normalCleared : stages Normal gagnés dans l'ordre (0..10) ; eliteCleared : stages Élite gagnés (0..5).
+	local function progress(normalCleared: number, eliteCleared: number, zone2Loot: boolean?): ({ any }, { any })
+		local normal = {}
+		for index = 1, 10 do
+			local zone, stage = if index <= 5 then 1 else 2, (index - 1) % 5 + 1
+			table.insert(normal, { Zone = zone, Stage = stage, Status = if index <= normalCleared + 1 then "Unlocked" else "Locked",
+				Cleared = index <= normalCleared, Loot = zone == 1 or zone2Loot == true })
+		end
+		local elite = {}
+		for stage = 1, 5 do
+			local open = normalCleared >= 5 and stage <= eliteCleared + 1
+			table.insert(elite, { Zone = 1, Stage = stage, Status = if open then "Unlocked" else "Locked", Cleared = stage <= eliteCleared, Loot = true })
+		end
+		return normal, elite
+	end
+	local function same(objective: any, kind: string, mode: string, zone: number, stage: number): boolean
+		return objective ~= nil and objective.Kind == kind and objective.Mode == mode and objective.Zone == zone and objective.Stage == stage
+	end
+
+	test("#120 objective: new player 1-1, Normal in progress, Élite after 1-5 (never 2-1 without loot), farm 1-5E at the end", function()
+		assert(same(ArenaRules.objective(progress(0, 0)), "Normal", "Normal", 1, 1), "new player: 1-1")
+		assert(same(ArenaRules.objective(progress(3, 0)), "Normal", "Normal", 1, 4), "after 1-3: 1-4")
+		assert(same(ArenaRules.objective(progress(5, 0)), "EliteNew", "Elite", 1, 1), "after 1-5: discover the Élite on 1-1E, not 2-1")
+		assert(same(ArenaRules.objective(progress(5, 2)), "Elite", "Elite", 1, 3), "Élite in progress: next Élite stage")
+		assert(same(ArenaRules.objective(progress(6, 2)), "Elite", "Elite", 1, 3), "2-1 won anyway: Zone 2 still not proposed")
+		assert(same(ArenaRules.objective(progress(5, 5)), "Farm", "Elite", 1, 5), "everything won: farm 1-5E, the best source")
+		assert(same(ArenaRules.objective(progress(5, 0, true)), "Normal", "Normal", 2, 1), "Zone 2 with loot (#115): proposed again")
+	end)
+
+	test("#120 objective: no loot anywhere -> nil (the caller keeps defaultStage); never a locked stage", function()
+		local normal, elite = progress(5, 0)
+		for _, entry in normal do entry.Loot = false end
+		for _, entry in elite do entry.Loot = false end
+		assert(ArenaRules.objective(normal, elite) == nil)
+		local n2, e2 = progress(5, 0)
+		for _, entry in e2 do entry.Status = "Locked" end
+		assert(same(ArenaRules.objective(n2, e2), "Farm", "Normal", 1, 5), "Élite not unlocked: nothing locked is proposed")
+	end)
+
+	test("#120 after a victory: next objective (1-5 -> 1-1E, Élite -> next Élite), replays jump to the objective, farm stays", function()
+		-- progression APRÈS la victoire (First Clear déjà enregistré), puis le stage qui vient d'être gagné
+		local function after(normalCleared: number, eliteCleared: number, mode: string, zone: number, stage: number): (string, number, number)
+			local normal, elite = progress(normalCleared, eliteCleared)
+			return ArenaRules.afterVictory(normal, elite, mode, zone, stage)
+		end
+		local mode, z, s = after(5, 0, "Normal", 1, 5)
+		assert(mode == "Elite" and z == 1 and s == 1, "Roi Orc beaten: 1-1E, not 2-1")
+		mode, z, s = after(5, 1, "Elite", 1, 1)
+		assert(mode == "Elite" and z == 1 and s == 2, "1-1E -> 1-2E")
+		mode, z, s = after(5, 3, "Normal", 1, 2)
+		assert(mode == "Elite" and z == 1 and s == 4, "Normal replay won while 1-4E waits: back to the objective")
+		mode, z, s = after(5, 5, "Elite", 1, 5)
+		assert(mode == "Elite" and z == 1 and s == 5, "1-5E beaten: stays on 1-5E (farm)")
+		mode, z, s = after(5, 5, "Elite", 1, 2)
+		assert(mode == "Elite" and z == 1 and s == 2, "everything won: the farmed stage stays selected")
+		mode, z, s = after(2, 0, "Normal", 1, 2)
+		assert(mode == "Normal" and z == 1 and s == 3, "Normal: 1-2 -> 1-3 as before")
+	end)
+
+	test("#120 after a victory without any loot table: the old nextStage behaviour in the same mode", function()
+		local normal, elite = progress(2, 0)
+		for _, entry in normal do entry.Loot = false end
+		for _, entry in elite do entry.Loot = false end
+		local mode, z, s = ArenaRules.afterVictory(normal, elite, "Normal", 1, 2)
+		assert(mode == "Normal" and z == 1 and s == 3)
+	end)
+
 	test("stage selection uses the real StageConfig: 6 zones of exactly 5 stages", function()
 		assert(#stageConfig.Zones == 6)
 		for zone = 1, 6 do

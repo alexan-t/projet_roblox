@@ -337,4 +337,40 @@ function LootRules.preview(config: any, mode: string?, key: string): { Drop }?
 	return if #out > 0 then out else nil
 end
 
+export type RarityChance = { Rarity: string, Chance: number }
+export type EquipmentPreview = { Chance: number, Rarities: { RarityChance }, FirstClear: { RarityChance }? }
+
+-- Rareté par rareté, dans l'ordre de l'entrée : Chance = scale * poids / total des poids.
+local function rarityChances(list: any, scale: number): { RarityChance }
+	local total = 0
+	for _, entry in list do
+		total += entry.Weight
+	end
+	local out: { RarityChance } = {}
+	for _, entry in list do
+		table.insert(out, { Rarity = entry.Rarity, Chance = scale * entry.Weight / total })
+	end
+	return out
+end
+
+-- Aperçu de l'équipement ALÉATOIRE d'un stage (fenêtre Expédition, #120), calculé depuis la table réelle :
+--   Chance     : probabilité d'obtenir UN équipement par victoire (Equipment.Chance, jamais par ennemi) ;
+--   Rarities   : probabilité par victoire de chaque rareté (Chance x poids / total des poids) ;
+--   FirstClear : équipement garanti de la première victoire (FirstClearEquipment), part de chaque rareté.
+-- nil si le stage n'a pas d'entrée ni d'équipement. N'appeler qu'avec une config validée (LootRules.problems).
+function LootRules.equipment(config: any, mode: string?, key: string): EquipmentPreview?
+	local source = if typeof(config) == "table" then (if mode == "Elite" then config.EliteStages else config.Stages) else nil
+	local entry = if typeof(source) == "table" then source[key] else nil
+	if typeof(entry) ~= "table" or (entry.Equipment == nil and entry.FirstClearEquipment == nil) then
+		return nil
+	end
+	local equipment = entry.Equipment
+	local first = entry.FirstClearEquipment
+	return {
+		Chance = if equipment then equipment.Chance else 0,
+		Rarities = if equipment then rarityChances(equipment.Rarities, equipment.Chance) else {},
+		FirstClear = if first then rarityChances(first.Rarities, 1) else nil,
+	}
+end
+
 return LootRules

@@ -460,7 +460,7 @@ openStageMenu = function(shownZone: number?)
 	ExpeditionView.Show({ Zone = zone, Title = title, Stages = stages,
 		EliteStages = if #eliteStages > 0 then eliteStages else nil, EliteUnlocked = eliteUnlocked,
 		Mode = if chosenZone then state.Mode else "Normal", Subtitle = ArenaConfig.ZoneSubtitles[zone],
-		PreviousZone = neighbour(-1), NextZone = neighbour(1) }, {
+		PreviousZone = neighbour(-1), NextZone = neighbour(1), Objective = state.Objective }, {
 		OnClose = closed,
 		Guide = ArenaStore.guide.expedition,
 		Selected = if chosenZone then state.Stage else nil,

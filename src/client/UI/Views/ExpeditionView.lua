@@ -10,16 +10,19 @@
 --   pointe) ; Élite verrouillée : voile et « Termine le Stage 1-5 pour débloquer l'Élite » (progression
 --   Normal réelle) ; détail : ennemis par vague (vrais modèles en ViewportFrame, ×n), boss (Roi Orc),
 --   récompenses (« Première victoire » une fois, « Ensuite / À chaque victoire » avec l'XP par héros),
---   butin possible (« Pas de butin pour l'instant » si le serveur n'en liste aucun) ; pied : équipe X/4 (portraits des héros
+--   butin possible : en tête l'équipement (#120 : « Équipement · 1re victoire » Garanti tant qu'elle reste à
+--   gagner, « Équipement aléatoire » avec sa chance PAR VICTOIRE et la part de chaque rareté, valeurs de
+--   LootConfig envoyées par le serveur), puis les ressources (« Pas de butin pour l'instant » si le serveur
+--   n'annonce rien) ; sous-titre Élite : ExpeditionModel.eliteNote ; pied : équipe X/4 (portraits des héros
 --   posés), « Préparer l'équipe » (mis en avant sans héros), « Lancer » (sous-texte : stage ou raison).
 --   Trois dispositions (UITheme.Pack.Expedition) : PC, tablette (espacements réduits), téléphone (844 x 390,
 --   ses propres tailles, sections compactes).
 -- API : ExpeditionView.Show(data, options) ; ExpeditionView.Hide().
 --   data = { Zone, Title?, Subtitle?, Stages = { stage }, EliteStages = { stage }?, EliteUnlocked?, Mode?,
---            PreviousZone?, NextZone? } (flèches < > autour du titre, avec options.OnZone(zone) ; pas d'onglet
---            Élite sans EliteStages)
+--            PreviousZone?, NextZone?, Objective? } (flèches < > autour du titre, avec options.OnZone(zone) ;
+--            pas d'onglet Élite sans EliteStages ; Objective = ArenaState.Objective)
 --     stage = { Zone, Stage, Status, Cleared, Waves = { { Enemies = { { EnemyId, Count } } } }, Boss?,
---               HeroXP, FirstClearRewards, RepeatRewards, Multipliers?, PotentialDrops? } (ArenaService)
+--               HeroXP, FirstClearRewards, RepeatRewards, Multipliers?, PotentialDrops?, Equipment? } (ArenaService)
 --   options = { OnLaunch(zone, stage, mode)?, OnClose?, Selected?, OnSelect(zone, stage, mode)?,
 --               Team = { Placed, Max, Heroes = { HeroId } }?, OnPrepare?, Guide? }
 -- Guidage : cibles « Expedition.Stage » (stage proposé), « Expedition.Launch », « Expedition.Prepare »,
@@ -35,7 +38,9 @@ local CurrencyVisualConfig = require(ReplicatedStorage.Shared.Config.CurrencyVis
 local ExpeditionModel = require(ReplicatedStorage.Shared.Expedition.ExpeditionModel)
 local ExpeditionVisualConfig = require(ReplicatedStorage.Shared.Config.ExpeditionVisualConfig)
 local ItemConfig = require(ReplicatedStorage.Shared.Config.ItemConfig)
+local RarityConfig = require(ReplicatedStorage.Shared.Config.RarityConfig)
 local ResourceConfig = require(ReplicatedStorage.Shared.Config.ResourceConfig)
+local SacocheVisualConfig = require(ReplicatedStorage.Shared.Config.SacocheVisualConfig)
 local UITheme = require(ReplicatedStorage.Shared.Config.UITheme)
 local GuideTargets = require(script.Parent.Parent.GuideTargets)
 local Icons = require(script.Parent.Parent.Icons)
@@ -45,10 +50,15 @@ local C = UITheme.Colors
 local PACK = UITheme.Pack.Expedition
 local INK = UITheme.Stroke.Color
 local ICON = ExpeditionVisualConfig
+-- Libellés des raretés (« Peu commun »), pour la part de chaque rareté de l'équipement.
+local RARITY_NAMES: { [string]: string } = {}
+for _, tier in RarityConfig.Tiers do
+	RARITY_NAMES[tier.Id] = tier.Name
+end
 
 export type Stage = ExpeditionModel.Stage & { Waves: { any }?, Multipliers: { MaxHealth: number, AttackDamage: number }? }
 export type Data = { Zone: number, Title: string?, Subtitle: string?, Stages: { Stage }, EliteStages: { Stage }?, EliteUnlocked: boolean?, Mode: string?,
-	PreviousZone: number?, NextZone: number? }
+	PreviousZone: number?, NextZone: number?, Objective: ExpeditionModel.Objective? }
 export type Team = { Placed: number, Max: number, Heroes: { string }? }
 export type Options = {
 	OnLaunch: ((zone: number, stage: number, mode: string) -> ())?,
@@ -442,7 +452,7 @@ function ExpeditionView.Show(data: Data, options: Options?)
 			UIKit.stroke(tag, UITheme.Stroke.Thin)
 			UIKit.popIn(tag, 0, 1.12)
 		end
-		local subtitle = if elite then "Mêmes stages, ennemis bien plus coriaces" else data.Subtitle
+		local subtitle = if elite then ExpeditionModel.eliteNote(data.Objective, data.Zone) else data.Subtitle
 		if wide and subtitle then
 			local sub = text(titleBlock, subtitle, L.SubSize, C.TextMuted, false)
 			sub.LayoutOrder = 2
@@ -920,8 +930,10 @@ function ExpeditionView.Show(data: Data, options: Options?)
 				padding(per, 0, 8, 0)
 				text(per, "par victoire", 14, C.TextMuted, false)
 			end
-			local drops = stage.PotentialDrops
-			if drops and #drops > 0 then
+			local drops = stage.PotentialDrops or {}
+			-- équipement (#120) : garanti à la 1re victoire, puis chance par victoire et par rareté, en tête
+			local equipment = ExpeditionModel.equipment(stage, RARITY_NAMES, device ~= "pc") -- libellés courts hors PC
+			if #drops > 0 or #equipment > 0 then
 				local list = Instance.new("ScrollingFrame")
 				list.Name = "Butin"
 				list.LayoutOrder = 2
@@ -933,18 +945,17 @@ function ExpeditionView.Show(data: Data, options: Options?)
 				list.Size = UDim2.new(1, 0, 1, -math.ceil(L.SectionSize * 1.2) - L.SectionGap)
 				list.Parent = cols[3]
 				column(list, L.DropGap)
-				for order, drop in drops do
-					local config = if drop.Kind == "Item" then ItemConfig.Items[drop.Id] else ResourceConfig.Resources[drop.Id]
-					local name = if config then config.Name else drop.Id
+				-- Une ligne : icône (ou initiales), nom, pastille de chance colorée selon la valeur.
+				local function dropLine(parent: Instance, order: number, name: string, icon: string?, chance: number, chanceText: string): Frame
 					local line = Instance.new("Frame")
 					line.BackgroundTransparency = 1
 					line.LayoutOrder = order
 					line.Size = UDim2.new(1, -6, 0, L.DropIcon)
-					line.Parent = list
+					line.Parent = parent
 					local iconBox = box(line, "Icone", C.Sand, 0.08, 10, 3)
 					iconBox.Size = UDim2.fromOffset(L.DropIcon, L.DropIcon)
-					if config and config.Icon then
-						local img = image(iconBox, config.Icon, L.DropIcon - 8)
+					if icon then
+						local img = image(iconBox, icon, L.DropIcon - 8)
 						img.AnchorPoint = Vector2.new(0.5, 0.5)
 						img.Position = UDim2.fromScale(0.5, 0.5)
 					else
@@ -955,15 +966,44 @@ function ExpeditionView.Show(data: Data, options: Options?)
 					label.TextTruncate = Enum.TextTruncate.AtEnd
 					label.Position = UDim2.fromOffset(L.DropIcon + 10, 0)
 					label.Size = UDim2.new(1, -(L.DropIcon + 20 + L.ChanceWidth), 1, 0)
-					local percent = drop.Chance * 100
-					local chanceColor = if drop.Chance >= 1 or percent >= 20 then C.Success elseif percent >= 10 then C.Info elseif percent >= 5 then C.DropChanceLow else C.Gold
-					local chance = box(line, "Chance", chanceColor, 0, 999, 2)
-					chance.AnchorPoint = Vector2.new(1, 0.5)
-					chance.Position = UDim2.fromScale(1, 0.5)
-					chance.AutomaticSize = Enum.AutomaticSize.X
-					chance.Size = UDim2.fromOffset(L.ChanceWidth, L.DropSize + 6)
-					padding(chance, 0, 8, 0)
-					UIKit.text(chance, ExpeditionModel.chance(drop.Chance), L.DropSize)
+					local percent = chance * 100
+					local chanceColor = if chance >= 1 or percent >= 20 then C.Success elseif percent >= 10 then C.Info elseif percent >= 5 then C.DropChanceLow else C.Gold
+					local pillBox = box(line, "Chance", chanceColor, 0, 999, 2)
+					pillBox.AnchorPoint = Vector2.new(1, 0.5)
+					pillBox.Position = UDim2.fromScale(1, 0.5)
+					pillBox.AutomaticSize = Enum.AutomaticSize.X
+					pillBox.Size = UDim2.fromOffset(L.ChanceWidth, L.DropSize + 6)
+					padding(pillBox, 0, 8, 0)
+					UIKit.text(pillBox, chanceText, L.DropSize)
+					return line
+				end
+				for order, info in equipment do
+					-- ligne + part de chaque rareté dessous (texte réel du serveur, retour à la ligne)
+					local block = Instance.new("Frame")
+					block.Name = if info.Guaranteed then "EquipementGaranti" else "Equipement"
+					block.BackgroundTransparency = 1
+					block.LayoutOrder = order
+					block.AutomaticSize = Enum.AutomaticSize.Y
+					block.Size = UDim2.new(1, -6, 0, 0)
+					block.Parent = list
+					column(block, 2)
+					local line = dropLine(block, 1, info.Label, SacocheVisualConfig.Tabs.Equipment, info.Value, info.Chance)
+					line.Size = UDim2.new(1, 0, 0, L.DropIcon)
+					local detail = UIKit.text(block, info.Detail, L.DropSize, { Color = C.TextMuted, Stroke = false })
+					detail.Name = "Raretes"
+					detail.LayoutOrder = 2
+					detail.TextXAlignment = Enum.TextXAlignment.Left
+					detail.TextWrapped = true
+					detail.AutomaticSize = Enum.AutomaticSize.Y
+					detail.Size = UDim2.new(1, 0, 0, 0)
+					local inset = Instance.new("UIPadding")
+					inset.PaddingLeft = UDim.new(0, L.DropIcon + 10)
+					inset.Parent = detail
+				end
+				for order, drop in drops do
+					local config = if drop.Kind == "Item" then ItemConfig.Items[drop.Id] else ResourceConfig.Resources[drop.Id]
+					local name = if config then config.Name else drop.Id
+					dropLine(list, #equipment + order, name, if config then config.Icon else nil, drop.Chance, ExpeditionModel.chance(drop.Chance))
 				end
 			else
 				-- aucun butin listé pour ce stage (le serveur n'en annonce pas) : aucun pourcentage inventé

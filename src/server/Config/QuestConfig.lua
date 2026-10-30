@@ -24,12 +24,17 @@
 --
 -- Objectif StageCompleted (Target 1, Match.Zone / Match.Stage) : un stage déjà gagné (First Clear)
 -- avant que la quête devienne active la termine aussitôt (jamais de stage à refaire).
+-- Objectif EliteStageCompleted (#120) : la même chose en mode Élite (victoire Élite, EliteFirstClears).
+-- Une victoire Élite n'émet jamais StageCompleted : elle ne fait pas avancer une quête Normal.
 --
 -- Lignes (Lines) : les quêtes sont regroupées par famille ; chaque ligne est une chaîne de paliers et
 -- avance en parallèle des autres ; le panneau Quêtes montre UNE carte par ligne (palier courant). L'ordre
 -- des lignes fixe la quête principale (suivi du HUD, guidage) : la première ligne ouverte.
 --   Défense (Stages, ouverte après SummonStarter) :
 --     DefendDomain (1-1) → DefendStage12 → DefendStage13 → DefendStage14 → DefeatRoiOrc (1-5, boss) → fin.
+--   Zone 1 Élite (Elite, ouverte après DefeatRoiOrc réclamée, #120) :
+--     EliteStage11 (1-1E) → EliteStage12 → EliteStage13 → EliteStage14 → DefeatRoiOrcElite (1-5E) → fin.
+--     Ensuite, la quête principale est celle de la ligne Héros (agrandir et renforcer son équipe).
 --   Héros (Heroes) :
 --     SummonStarter (invocation tutorielle gratuite de l'Écuyer, SummonConfig.Starter ; AutoClaim, sans
 --     récompense : l'Écuyer et son reveal SONT la récompense)
@@ -45,6 +50,7 @@ local QuestConfig = {
 	FirstQuestId = "SummonStarter",
 	Lines = {
 		{ Id = "Stages", Title = "Défense du domaine", FirstQuestId = "DefendDomain", After = "SummonStarter" },
+		{ Id = "Elite", Title = "Zone 1 Élite", FirstQuestId = "EliteStage11", After = "DefeatRoiOrc" },
 		{ Id = "Heroes", Title = "Collection de héros", FirstQuestId = "SummonStarter" },
 	},
 	Quests = {
@@ -106,6 +112,50 @@ local QuestConfig = {
 			Objective = { Event = "StageCompleted", Match = { Zone = 1, Stage = 5 }, Target = 1 },
 			Guide = { Target = "StageSign" },
 			Rewards = { { Kind = "Gold", Amount = 250 }, { Kind = "Gems", Amount = 25 }, { Kind = "SummonTicket", Amount = 1 } },
+			NextQuestId = nil,
+		},
+
+		-- Ligne Zone 1 Élite (#120) : chaque stage Élite gagné une fois. Guidées vers la pancarte, comme la
+		-- ligne Défense ; la fenêtre Expédition s'ouvre sur le stage Élite visé (ArenaRules.objective).
+		-- Récompenses ALPHA 0.0.2 PROVISOIRES, validées pour #120, à rééquilibrer dans #112 uniquement ici.
+		EliteStage11 = {
+			Title = "Gagne 1-1 en Élite",
+			Description = "Ennemis plus forts, meilleur équipement : lance 1-1 en Élite",
+			Objective = { Event = "EliteStageCompleted", Match = { Zone = 1, Stage = 1 }, Target = 1 },
+			Guide = { Target = "StageSign" },
+			Rewards = { { Kind = "Gold", Amount = 200 }, { Kind = "Gems", Amount = 20 } },
+			NextQuestId = "EliteStage12",
+		},
+		EliteStage12 = {
+			Title = "Gagne 1-2 en Élite",
+			Description = "Termine le stage 1-2 en Élite",
+			Objective = { Event = "EliteStageCompleted", Match = { Zone = 1, Stage = 2 }, Target = 1 },
+			Guide = { Target = "StageSign" },
+			Rewards = { { Kind = "Gold", Amount = 250 }, { Kind = "Gems", Amount = 25 } },
+			NextQuestId = "EliteStage13",
+		},
+		EliteStage13 = {
+			Title = "Gagne 1-3 en Élite",
+			Description = "Termine le stage 1-3 en Élite",
+			Objective = { Event = "EliteStageCompleted", Match = { Zone = 1, Stage = 3 }, Target = 1 },
+			Guide = { Target = "StageSign" },
+			Rewards = { { Kind = "Gold", Amount = 300 }, { Kind = "Gems", Amount = 30 } },
+			NextQuestId = "EliteStage14",
+		},
+		EliteStage14 = {
+			Title = "Gagne 1-4 en Élite",
+			Description = "Termine le stage 1-4 en Élite",
+			Objective = { Event = "EliteStageCompleted", Match = { Zone = 1, Stage = 4 }, Target = 1 },
+			Guide = { Target = "StageSign" },
+			Rewards = { { Kind = "Gold", Amount = 350 }, { Kind = "Gems", Amount = 35 } },
+			NextQuestId = "DefeatRoiOrcElite",
+		},
+		DefeatRoiOrcElite = {
+			Title = "Roi Orc en Élite",
+			Description = "Termine le stage 1-5 en Élite, la meilleure source d'équipement",
+			Objective = { Event = "EliteStageCompleted", Match = { Zone = 1, Stage = 5 }, Target = 1 },
+			Guide = { Target = "StageSign" },
+			Rewards = { { Kind = "Gold", Amount = 500 }, { Kind = "Gems", Amount = 50 }, { Kind = "SummonTicket", Amount = 2 } },
 			NextQuestId = nil,
 		},
 
