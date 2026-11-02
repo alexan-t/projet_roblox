@@ -45,7 +45,7 @@ mares restent en place, les slimes bondissent donc plus loin.
 | --- | --- | --- |
 | `Lake` (Slime) | `SautMare` | les mares du coin des slimes : sous l'eau, remonte, bondit, petits bonds |
 | `Camp` (Gobelin) | `SortieTente`, `DescenteRampe`, `SautPlateau` | la tente et la rampe du camp, marche (animation Marche) |
-| `CampBoss` (Roi Orc) | `DescenteRampe`, `SortieTente` | descend la rampe du camp, lourd, poussière et petite secousse à l'arrêt |
+| `CampBoss` (Roi Orc) | `DescenteRampe`, `SortieTente` | descend la rampe du camp, lourd, poussière et petite secousse à l'arrêt ; si le décor a une `PorteBoss` (Zone 4 : Porte-Fournaise), elle s'ouvre d'abord et le boss en sort (`docs/ZONES.md` § Porte du boss) |
 | `Bush` (inconnu) | `SortieBuisson` | buissons |
 
 Tout est résolu depuis le plot du joueur local (`PlotView`) : jamais `Workspace.PlotTravail`, jamais le

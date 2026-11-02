@@ -228,3 +228,258 @@ Studio, ni deux clients. Ces étapes, dans l'ordre, permettent de lever le verdi
    ligne « Deux joueurs et deux combats simultanés » et le critère « Interface / matériaux
    des images » par le résultat obtenu. Verdict global **PASS** seulement si les deux passent.
 3. Réinitialiser la caméra de Studio (`docs/MONSTER_PRODUCTION.md` § Outils).
+
+## Zone 2 — Royaume des Sables, 21 octobre 2026
+
+Décor du Désert des Ruines complété d'après les recos de l'équipe et renommé **Le Royaume des Sables**
+(`ArenaConfig.ZoneNames[2]`, outils, doc). Gabarit reconstruit dans « test 3 » par
+`tools/studio-zones-assets.luau` (Zone 2 seule), une étape ChangeHistoryService par passe.
+
+Ajouts par rapport à la Zone 1 : crêtes de grès le long du rempart (falaises vertes), bassin d'oasis
+bordé de pierres sous la grande mare, palmiers, roseaux et canal ancien à demi ensablé (rivière),
+avant-poste du désert avec palissades de bois sec, auvent déchiré, drapeaux et amphores (camp gobelin),
+ossements, amphores et petits tas de sable dispersés. Signature : **tête de statue colossale** (22 studs,
+némès rayé d'or) qui sort du sable côté est, tournée vers l'entrée. Repères `SourcesEnnemis`, portique
+et cases des héros inchangés ; allée et cases dégagées.
+
+Captures (Edit, gabarit posé dans l'arène de Plot_1 puis Zone 1 restaurée) :
+[vue d'ensemble](../automation/screenshots/zones/zone2-sables-overview.jpg),
+[tête](../automation/screenshots/zones/zone2-sables-tete.jpg),
+[avant-poste](../automation/screenshots/zones/zone2-sables-avant-poste.jpg),
+[fond](../automation/screenshots/zones/zone2-sables-fond.jpg),
+[oasis](../automation/screenshots/zones/zone2-sables-oasis.jpg),
+[vitrine `PlotsZones.Plot_Zone2`](../automation/screenshots/zones/zone2-sables-vitrine.jpg).
+
+Le décor est posé à son emplacement prévu, la vitrine `Workspace.PlotsZones.Plot_Zone2` (panneau renommé),
+et non dans les arènes du hub. L'outil d'assets supprimait la copie de la vitrine en reconstruisant une
+zone : il l'y remplace désormais par le nouveau décor.
+
+Correction du sol du fond : le cercle `SolZone` s'arrêtait vers z -54 alors que le rempart descend
+jusqu'à z -74 ; l'herbe du plot (teintée olive par la vitrine) apparaissait derrière la pyramide.
+Nappe de sable `SolZone.FondArriere` ajoutée ([capture](../automation/screenshots/zones/zone2-sables-fond-sol.jpg)).
+Les zones 3 à 6 avaient le même trou (même cercle, même rempart) : la nappe est désormais créée par
+`groundOf` pour toutes les zones et a été ajoutée aux gabarits et aux vitrines des zones 3 à 6, à la couleur
+du sol de chaque zone ([zone 3](../automation/screenshots/zones/zone3-fond-sol.jpg),
+[zone 5](../automation/screenshots/zones/zone5-fond-sol.jpg)).
+
+| Critère | Grille | Observation |
+| --- | --- | --- |
+| Brief | OK | Tous les éléments des recos présents, signature lisible depuis l'entrée |
+| Zone / palette | OK | Sable, grès ocre, accents or et toile rouge ; eau turquoise de l'oasis |
+| Lisibilité de l'arène | OK | Cases, allée et front ennemi dégagés |
+| Volumes | OK | Formes arrondies ; crêtes refaites trois fois (piles puis jarres refusées) |
+| Géométrie / clipping visible | OK | Rien ne flotte, accessoires hors cases |
+| Présence de la signature | OK | La tête domine le flanc est (rempart 9 à 15 studs) |
+| Falaises | KO non bloquant | Crêtes rocheuses basses (9 à 15 studs), pas de vraies falaises hautes |
+
+**Verdict : PASS** (1 KO non bloquant). Non testé : combat en Play dans ce décor (repères inchangés).
+
+## Zone 3 — Royaume Gelé, 21 octobre 2026
+
+Les Terres Gelées complétées d'après les recos et renommées **Le Royaume Gelé**. Gabarit reconstruit dans
+« test 3 » (Zone 3 seule) et reposé dans sa vitrine `Workspace.PlotsZones.Plot_Zone3` (panneau renommé),
+aucune copie dans le hub.
+
+Ajouts : **château prisonnier d'un glacier** au fond (signature, à la place du trône ; donjon et tourelles
+à toits bleus qui sortent de masses de glace translucides, fenêtre lumineuse), falaises glacées à calottes
+de neige, cascade gelée sur la falaise ouest, pont verglacé sur le ruisseau du lac gelé, fort gelé (pieux de
+glace, tour crénelée, drapeaux bleus), ruines et statues de chevalier prises dans la glace, barricades gelées,
+blocs de glace, arbres enneigés, lanternes froides le long de l'allée, neige sur le plateau. Repères
+`SourcesEnnemis`, portique et cases inchangés.
+
+Captures : [vue d'ensemble](../automation/screenshots/zones/zone3-gele-overview.jpg),
+[château](../automation/screenshots/zones/zone3-gele-chateau.jpg),
+[cascade et pont](../automation/screenshots/zones/zone3-gele-cascade-pont.jpg),
+[fort](../automation/screenshots/zones/zone3-gele-fort.jpg).
+
+| Critère | Grille | Observation |
+| --- | --- | --- |
+| Brief | OK | Tous les éléments des recos présents, signature lisible depuis l'entrée |
+| Zone / palette | OK | Neige, glace bleutée, toits bleu roi, lueurs cyan |
+| Lisibilité de l'arène | OK | Cases, allée et front ennemi dégagés |
+| Volumes | OK | Strates en soucoupes et cascade en boules corrigées (calottes posées, cascade d'un seul tenant) |
+| Géométrie / clipping visible | OK | Château décollé du rempart ; rien ne flotte |
+| Blocs de glace | KO non bloquant | Blocs cubiques (demandés par les recos), seule forme anguleuse du décor |
+
+**Verdict : PASS** (1 KO non bloquant). Non testé : combat en Play dans ce décor (repères inchangés).
+
+### Zone 3 — refonte visuelle, 22 octobre 2026
+
+Retour de l'équipe : « pas très beau ». Défauts relevés sur les captures : tout de la même valeur (blanc
+et bleu pâle), formes en boîtes (remparts crénelés, damier, piliers, blocs cubiques), glacier en bulle et toits
+empilés, accessoires éparpillés sans composition. Le camp de la Zone 1 n'est plus conservé.
+
+Refonte (`glacialRealm`) : rempart en couronne de rochers sombres coiffés de neige (tailles et décalages
+variés, blocs au pied, cristaux), château à toits en flèche pris dans des dalles de glace inclinées hérissées de
+cristaux, falaises en roche sombre, lac gelé bordé de neige et pont verglacé, bosquet de sapins enneigés autour
+d'un grand cristal lumineux (à la place du fort), allée en neige tassée, cristaux à la place des piliers, pied
+de la tour des sorties en rochers enneigés. Barricades, damier et blocs cubiques retirés. Repères inchangés.
+
+Captures : [vue d'ensemble](../automation/screenshots/zones/zone3-gele-v2-overview.jpg),
+[château](../automation/screenshots/zones/zone3-gele-v2-chateau.jpg),
+[vue de combat](../automation/screenshots/zones/zone3-gele-v2-combat.jpg),
+[bosquet](../automation/screenshots/zones/zone3-gele-v2-bosquet.jpg).
+
+| Critère | Grille | Observation |
+| --- | --- | --- |
+| Brief | OK | Signature lisible depuis l'entrée et depuis la zone de combat |
+| Zone / palette | OK | Roche bleu sombre, neige, glace du profond au clair, toits bleu roi, lueurs cyan limitées |
+| Lisibilité de l'arène | OK | Cases, allée et front ennemi dégagés |
+| Volumes | OK | Plus aucune boîte hors ossature des sorties (plateau, porte) |
+| Géométrie / clipping visible | OK | Glacier hors du plateau des sorties ; rien ne flotte |
+| Calottes de neige | KO non bloquant | Calottes du rempart encore un peu plates en vue rasante |
+
+**Verdict : PASS** (1 KO non bloquant). Non testé : combat en Play dans ce décor.
+
+### Zone 3 — grande porte et décors du biome, 22 octobre 2026
+
+Retour : le plateau de la Zone 1 (d'où venait le boss) n'a pas sa place ici, et la zone fait vide.
+Plateau, rampe, porte et tour retirés ; **grande porte** au pied du donjon (fond bleu nuit, montants de pierre,
+arche de glace, seuil lumineux). Repères déplacés sur la porte (`Tente`, `HautRampe`, `BordPlateau1/2`) et sur la
+corniche du donjon (`SommetTour`) : le Roi sans Été (CampBoss : DescenteRampe puis SortieTente) sort du château.
+Décors ajoutés : deux igloos, mare gelée avec trou de pêche, tabouret et canne, défenses de mammouth en arche,
+trois arbres morts givrés, congères, petits cristaux au pied du rempart. Allée de neige prolongée jusqu'à la porte,
+glacier écarté pour dégager le passage.
+
+Captures : [vue d'ensemble](../automation/screenshots/zones/zone3-gele-v3-overview.jpg),
+[porte](../automation/screenshots/zones/zone3-gele-v3-porte.jpg),
+[vue de combat](../automation/screenshots/zones/zone3-gele-v3-combat.jpg).
+
+**Verdict visuel : PASS** (KO non bloquant inchangé : calottes un peu plates). **Non testé en Play** : la sortie
+réelle des ennemis par la porte ; à contrôler au prochain combat de la Zone 3.
+
+### Zone 3 — zone de bataille, 22 octobre 2026
+
+Bande de neige damée bleutée `#A7C5E0` (taches `#93B4D4`) au centre de l'arène, de l'entrée à la grande porte,
+sous les cases et le front ennemi (`battleground`) ; la glace du lac passe au-dessus. Première teinte `#C3D6E6`
+trop proche de la neige, foncée après capture. [Capture](../automation/screenshots/zones/zone3-gele-zone-bataille.jpg).
+Règles de décor (structure du boss propre à la zone, zone de bataille) ajoutées à `docs/ZONES.md`.
+
+## Zones 4 à 6 — structure du boss et zone de bataille, 22 octobre 2026
+
+Règles de décor de `docs/ZONES.md` appliquées (la Zone 2 n'est pas concernée, à la demande de l'équipe).
+Plateau générique retiré ; repères de sortie déplacés sur la nouvelle porte (`moveMarkers`) :
+
+| Zone | Porte du boss | Zone de bataille | Coin de l'ancien plateau | Captures |
+| --- | --- | --- | --- | --- |
+| 4 · Les Forges | Gueule de la forge et braises, au pied du fourneau | Dalles chaudes `#8A7462` | Enclume géante, marteau, charbon fumant, lingots | [vue](../automation/screenshots/zones/zone4-bataille-porte.jpg), [porte](../automation/screenshots/zones/zone4-porte.jpg) |
+| 5 · La Cité Engloutie | Porte de temple englouti, coraux et algues, devant l'épave | Sable du fond `#B4A584` | Bénitier géant et perle, algues | [vue](../automation/screenshots/zones/zone5-bataille-porte.jpg), [porte](../automation/screenshots/zones/zone5-porte.jpg) |
+| 6 · Les Îles du Ciel | Portail doré à voile de lumière, devant le sanctuaire | Ciel pâle `#BFD6EE` | Cloche dorée sur portique, lanternes d'or | [vue](../automation/screenshots/zones/zone6-bataille-porte.jpg), [porte](../automation/screenshots/zones/zone6-porte.jpg) |
+
+**Verdict visuel : PASS** pour les deux règles (porte lisible depuis l'entrée, zone de bataille nettement
+distincte du sol). Remarque non bloquante : la Zone 6 reste assez vide hors de l'allée. **Non testé en Play** :
+sortie réelle des ennemis par les nouvelles portes.
+
+## Zone 4 — Porte-Fournaise, 22 octobre 2026
+
+La gueule de forge générique (`bossGate`) est remplacée par la **Porte-Fournaise** (`furnaceGate`, modèle
+`PorteBoss`) : arche de métal, battants, tuyaux et vapeur, chaînes, marteaux mécaniques, symboles forgés.
+Repères du boss dans l'embrasure, derrière les battants ; tas de charbon déplacé pour laisser la place aux marteaux.
+
+Contrôles successifs :
+
+1. Porte fermée : **FIX** (symboles en flèche, lisibles comme une interface, et rouge vif au repos) →
+   losanges forgés, rouge sombre au repos.
+2. Ouverture jouée dans Studio (code de `BossGate`, Edit) : battants vers l'arène, chaînes, lueurs →
+   **FIX** (allumé jaune pâle) → orange braise.
+3. Porte ouverte avec le Maître des Forges dans l'embrasure : **PASS** (le boss tient dans l'ouverture,
+   encadré par la lueur). [Capture](../automation/screenshots/zones/zone4-fournaise-ouverte.jpg),
+   [battants](../automation/screenshots/zones/zone4-fournaise-battants.jpg).
+4. Vue d'ensemble depuis l'entrée : **FIX** (porte trop modeste pour une « immense arche ») → agrandie de 1,35 →
+   **PASS** : héros en bas, voie de combat, ennemis, porte au fond.
+   [Capture](../automation/screenshots/zones/zone4-fournaise-vue.jpg).
+
+Porte remise au repos après l'essai, caméra de Studio réinitialisée. **Non testé en Play** : la séquence
+complète pendant un vrai combat contre le Maître des Forges (calage sur la retenue `EntranceHold`, sons).
+
+## Zone 4 — fond haut et arène habitée, 22 octobre 2026
+
+Retour de l'équipe : zone très vide hors de la porte, fond pas assez haut. Ajouts : citadelle-forge de 42 à
+52 studs derrière le rempart, cheminées de 66 à 76 qui fument, engrenage, creuset, cascades de lave ; rempart
+qui monte de 14 à 34 vers le fond ; ateliers des flancs (postes de forge, râteliers, réserves, minerai,
+fissures de lave) ; lave du lac et rigoles passées à l'orange (`#D2501E`). 757 pièces dans le décor.
+
+Contrôles :
+
+1. Avant : **FIX** (murs bas, horizon et plots voisins visibles, sol nu). [Capture](../automation/screenshots/zones/zone4-citadelle-avant.jpg).
+2. Vue de combat après ajout : citadelle et cheminées cachent l'horizon, flancs remplis.
+   [Capture](../automation/screenshots/zones/zone4-citadelle-vue.jpg).
+3. Vue de côté : **FIX** (feux des braseros et cheminées à l'horizontale ; creuset dans le vide) → feux sur une
+   pièce droite, creuset pendu à une poutre ancrée dans la citadelle. [Capture](../automation/screenshots/zones/zone4-citadelle-cote.jpg).
+4. Vue au sol vers la porte : **PASS** (la citadelle domine, la porte reste le centre).
+   [Capture](../automation/screenshots/zones/zone4-citadelle-sol.jpg).
+
+Remarque non bloquante : de face, le creuset se lit encore mal (boule à côté de l'engrenage). Caméra de Studio
+réinitialisée. **Non testé en Play.**
+
+## Zone 4 — courant de lave et roches, 22 octobre 2026
+
+Retour de l'équipe : décorations des côtés sans allure, cercles de lave inutiles. Lac de la Zone 1 et bassins
+retirés ; courant de lave depuis chaque cascade (ouest jusque sous le rempart, est vers l'angle du fond), repères
+`SautMare` déplacés dessus (aucun ennemi de la Zone 4 ne les utilise). Orgues basaltiques et roches.
+
+1. Premier essai : **FIX** (orgues noires et régulières, lues comme des tonneaux, posées au bout des murs ;
+   roches en cubes noirs) → orgues sur deux rangs aux tons chauds, adossées aux murs ; roches en masses arrondies.
+2. Vue de combat : **PASS**. [Capture](../automation/screenshots/zones/zone4-lave-vue.jpg),
+   [courant de près](../automation/screenshots/zones/zone4-lave-courant.jpg).
+
+Caméra de Studio réinitialisée. **Non testé en Play.**
+
+## Zone 4 — haut-fourneau du flanc est, 22 octobre 2026
+
+Demande de l'équipe : une petite structure un peu haute à droite, dans le biome. Haut-fourneau (`blastFurnace`)
+entre les deux postes de forge du flanc est, à la place d'une réserve et d'un faisceau d'orgues.
+
+Vue de combat et vue de près : **PASS** (tour lisible depuis l'arène, environ 30 studs, ne masque pas la porte).
+[Vue de combat](../automation/screenshots/zones/zone4-haut-fourneau-vue.jpg),
+[de près](../automation/screenshots/zones/zone4-haut-fourneau.jpg). Caméra de Studio réinitialisée. **Non testé en Play.**
+
+## Zone 4 — limite avec le portique et le royaume, 22 octobre 2026
+
+Demande de l'équipe : délimiter légèrement la zone de combat de l'avant du plot (royaume, portique). Limite
+basse (`frontBoundary`) à z 47 : muret, chaînes, braseros, roches, passage central encadré de deux piliers à
+bannière en face du portique. Sans collision.
+
+Vue depuis le royaume et vue depuis l'arène : **PASS** (séparation lisible, arène toujours ouverte, passage
+aligné sur le portique). [Depuis le royaume](../automation/screenshots/zones/zone4-limite-royaume.jpg),
+[depuis l'arène](../automation/screenshots/zones/zone4-limite-arene.jpg). Caméra de Studio réinitialisée.
+**Non testé en Play.**
+
+## Zone 6 — Sanctuaire du Ciel, 22 octobre 2026
+
+Brief de l'équipe : structure du boss céleste (plateforme circulaire, colonnes blanches, statues ailées, pierres
+flottantes, lumière, escalier suspendu, cristaux) et entrée du boss invoqué par le sanctuaire. Décor refait selon
+les quatre règles (structure du boss, zone de bataille, fond haut et arène habitée, limite avant).
+
+1. Avant : **FIX** (zone très vide et basse, petit dôme, horizon visible).
+   [Capture](../automation/screenshots/zones/zone6-sanctuaire-avant.jpg).
+2. Premier essai : **FIX** (sanctuaire noyé dans la mer de nuages, blanc sur blanc).
+   [Capture](../automation/screenshots/zones/zone6-sanctuaire-noye.jpg) → nuages dégagés derrière le sanctuaire,
+   couronne du fond bleutée, rapprochée (elle se perdait dans la brume) puis étirée en hauteur ; sanctuaire agrandi,
+   halo d'or derrière le grand cristal.
+3. Vue au sol vers le sanctuaire : **PASS**. [Capture](../automation/screenshots/zones/zone6-sanctuaire-sol.jpg).
+4. Invocation jouée dans Studio (code de `BossGate`, Edit) : cristaux et cercle allumés, colonne de lumière,
+   anneaux : **PASS** (anneaux discrets). [Capture](../automation/screenshots/zones/zone6-sanctuaire-invocation.jpg).
+   Sanctuaire remis au repos (colonne invisible, anneaux pâles) après l'essai.
+5. Vue de combat : **PASS** (sanctuaire au centre, fond qui cache l'horizon, flancs remplis).
+   [Capture](../automation/screenshots/zones/zone6-sanctuaire-vue.jpg).
+6. Limite depuis le royaume : **PASS**. [Capture](../automation/screenshots/zones/zone6-limite-royaume.jpg).
+
+Caméra de Studio réinitialisée. **Non testé en Play** : l'invocation pendant un vrai combat contre le Gardien
+Céleste (descente de l'escalier, calage sur `EntranceHold`).
+
+## Zone 6 — observatoire céleste de l'entrée ouest, 22 octobre 2026
+
+Demande de l'équipe : une structure du biome à l'entrée, côté gauche, trop vide. Observatoire céleste
+(`skyObservatory`, environ 34 studs) : tour de marbre sur un nuage, galerie, dôme d'or, sphère armillaire.
+Lanterne voisine décalée.
+
+1. Retour de l'équipe : bien, sauf la porte. Capture : **FIX** (porte petite et plate, à moitié cachée par le
+   nuage du socle, coupée par une bande d'or). [Capture](../automation/screenshots/zones/zone6-observatoire-porte-avant.jpg)
+   → nuage décalé derrière la tour, bandes remontées, vraie porte : pilastres à chapiteau d'or, arc cerclé d'or,
+   deux battants bleu nuit à clous et poignées d'or, cristal en clé de voûte, seuil et marche.
+2. Porte : **PASS**. [Capture](../automation/screenshots/zones/zone6-observatoire-porte.jpg).
+3. Vue de combat : **PASS**. [Capture](../automation/screenshots/zones/zone6-observatoire-vue.jpg).
+
+Caméra de Studio réinitialisée. **Non testé en Play.**
+
