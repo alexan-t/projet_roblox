@@ -1,0 +1,602 @@
+[
+  {
+    "hero_id": "hero_001",
+    "hero_name": "Écuyer du Rempart",
+    "rarity": "Commun",
+    "ultimate_name": "Rempart Fermé",
+    "animation_brief": "Il cale son bouclier de bois au sol et avance d'un pas ; un choc court en forme de bouclier frappe devant lui.",
+    "gameplay_intent": "Protection brève des alliés proches et interruption légère des ennemis en face.",
+    "visual_duration_target": "0,6 à 0,8 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_002",
+    "hero_name": "Tireuse des Faubourgs",
+    "rarity": "Commun",
+    "ultimate_name": "Le Dernier Carreau",
+    "animation_brief": "Elle pose un genou à terre, arme son arbalète et lâche un carreau lourd qui laisse une fine traînée tendue.",
+    "gameplay_intent": "Tir perforant sur une ligne courte, priorité à une cible distante.",
+    "visual_duration_target": "0,6 à 0,8 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_003",
+    "hero_name": "Lancier des Champs",
+    "rarity": "Peu commun",
+    "ultimate_name": "Haie de Lances",
+    "animation_brief": "Il pivote sa longue lance à l'horizontale puis porte trois estocs en éventail, avec de sobres traits de fer.",
+    "gameplay_intent": "Repousse ou interrompt brièvement les ennemis de première ligne.",
+    "visual_duration_target": "0,7 à 0,9 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_004",
+    "hero_name": "Apprenti Pyromancien",
+    "rarity": "Peu commun",
+    "ultimate_name": "Braise Indocile",
+    "animation_brief": "La gemme du bâton tousse trois petites braises ; il en rattrape une du bout du bâton et la propulse sur deux cibles.",
+    "gameplay_intent": "Petit sort de feu rebondissant, brûlure courte.",
+    "visual_duration_target": "0,7 à 0,9 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_005",
+    "hero_name": "Brise Pierre",
+    "rarity": "Peu commun",
+    "ultimate_name": "Fendaille de Carrière",
+    "animation_brief": "Elle ramène sa masse de pierre derrière la tête et assène un coup massif ; le sol s'ouvre en une fissure d'une seule longueur de masse.",
+    "gameplay_intent": "Fort dégât sur cible et affaiblissement d'armure.",
+    "visual_duration_target": "0,7 à 0,9 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_006",
+    "hero_name": "Guetteuse des Pins",
+    "rarity": "Peu commun",
+    "ultimate_name": "Cor des Cimes",
+    "animation_brief": "Elle sonne brièvement du cor à sa ceinture puis décoche une flèche qui suit le contour lumineux très fin d'un pin.",
+    "gameplay_intent": "Désigne une cible prioritaire et augmente les dégâts concentrés contre elle.",
+    "visual_duration_target": "0,7 à 0,9 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_007",
+    "hero_name": "Chevalier du Lierre",
+    "rarity": "Rare",
+    "ultimate_name": "Muraille de Lierre",
+    "animation_brief": "Il frappe le bas de son bouclier ; trois grosses tiges de lierre jaillissent comme un parapet miniature puis se rétractent.",
+    "gameplay_intent": "Protège les héros derrière lui et gêne l'avancée ennemie.",
+    "visual_duration_target": "0,8 à 1,1 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_008",
+    "hero_name": "Mage des Lanternes",
+    "rarity": "Rare",
+    "ultimate_name": "La Veillée",
+    "animation_brief": "Elle balance sa lanterne au bout du bâton ; un ruban ambré en rejoint deux alliés puis revient dans la lanterne.",
+    "gameplay_intent": "Bouclier léger ou petit soin de soutien ciblé.",
+    "visual_duration_target": "0,8 à 1,1 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_009",
+    "hero_name": "Fauconnier Gris",
+    "rarity": "Rare",
+    "ultimate_name": "Piqué du Fauconnier",
+    "animation_brief": "Le faucon quitte son gant en spirale, replie les ailes, plonge sur la cible, puis revient aussitôt se poser.",
+    "gameplay_intent": "Frappe ciblée et marque facilitant les prochaines attaques.",
+    "visual_duration_target": "0,8 à 1,1 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_010",
+    "hero_name": "Lancière des Sources",
+    "rarity": "Rare",
+    "ultimate_name": "Serment de la Source",
+    "animation_brief": "Elle décrit un demi-cercle avec sa lance ; un étroit ruban d'eau suit la pointe puis éclate en gouttes contre la première ligne.",
+    "gameplay_intent": "Balayage de mêlée et légère régénération de l'allié le plus proche.",
+    "visual_duration_target": "0,8 à 1,1 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_011",
+    "hero_name": "Barde de Fer",
+    "rarity": "Rare",
+    "ultimate_name": "Accord de Fer",
+    "animation_brief": "Il pince une grosse corde de son luth puis frappe sa cloche-masse : deux notes métalliques visibles se propagent au sol.",
+    "gameplay_intent": "Améliore brièvement l'attaque alliée et trouble les monstres proches.",
+    "visual_duration_target": "0,8 à 1,1 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_012",
+    "hero_name": "Moine du Vent Bas",
+    "rarity": "Rare",
+    "ultimate_name": "Trois Pas Rasants",
+    "animation_brief": "Il glisse très bas entre deux ennemis, frappe de chaque paume et finit par une poussée circulaire de ses gantelets.",
+    "gameplay_intent": "Triple frappe rapide en mêlée, léger recul final.",
+    "visual_duration_target": "0,8 à 1,1 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_013",
+    "hero_name": "Gardien des Ronces",
+    "rarity": "Épique",
+    "ultimate_name": "Bastion d'Épines",
+    "animation_brief": "Il plante son bouclier-pavois, abaisse sa masse et fait dresser un mur de trois ronces épaisses en chevron.",
+    "gameplay_intent": "Blocage temporaire et immobilisation locale des ennemis.",
+    "visual_duration_target": "1 à 1,3 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_014",
+    "hero_name": "Cartomancienne d'Ambre",
+    "rarity": "Épique",
+    "ultimate_name": "Les Trois Présages",
+    "animation_brief": "Elle éventaille trois cartes d'ambre, en choisit une d'un geste sec ; les deux autres frappent les côtés de la cible.",
+    "gameplay_intent": "Trois frappes de contrôle, avec ralentissement ou courte pétrification.",
+    "visual_duration_target": "1 à 1,3 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_015",
+    "hero_name": "Duelliste du Croissant",
+    "rarity": "Épique",
+    "ultimate_name": "Croissant Retourné",
+    "animation_brief": "Il laisse l'ennemi attaquer, pivote sur son talon en parade et dessine un unique croissant argenté avec son sabre.",
+    "gameplay_intent": "Contre-attaque rapide à la première ligne, dégâts plus forts à la cible focalisée.",
+    "visual_duration_target": "1 à 1,3 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_016",
+    "hero_name": "Forgeron Runique",
+    "rarity": "Épique",
+    "ultimate_name": "Le Sceau du Marteau",
+    "animation_brief": "Il frappe son marteau runique dans l'air comme sur une enclume ; une marque de forge descend sur les armes des alliés proches.",
+    "gameplay_intent": "Petit choc frontal et renforcement offensif temporaire des alliés.",
+    "visual_duration_target": "1 à 1,3 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_017",
+    "hero_name": "Prêtresse aux Lucioles",
+    "rarity": "Épique",
+    "ultimate_name": "La Luciole-Mère",
+    "animation_brief": "Elle ouvre la main ; la fleur du bâton s'entrouvre et cinq lucioles vert-or rejoignent en courbe les alliés blessés.",
+    "gameplay_intent": "Soin réparti, petite bénédiction défensive.",
+    "visual_duration_target": "1 à 1,3 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_018",
+    "hero_name": "Briseur de Cloche",
+    "rarity": "Épique",
+    "ultimate_name": "Beffroi Fracturé",
+    "animation_brief": "Il cogne son battant contre la cloche-bouclier ; une seule onde de bronze en anneau se détache de la fissure.",
+    "gameplay_intent": "Étourdissement très court en zone proche et protection du lanceur.",
+    "visual_duration_target": "1 à 1,3 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_019",
+    "hero_name": "Veneur de Givre",
+    "rarity": "Épique",
+    "ultimate_name": "Le Cri de la Meute Blanche",
+    "animation_brief": "Il souffle dans son cor ; l'ombre d'un grand loup blanc jaillit de sa cape, traverse une cible puis s'évapore en givre.",
+    "gameplay_intent": "Charge spectrale qui ralentit la cible et inflige un coup fort.",
+    "visual_duration_target": "1 à 1,3 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_020",
+    "hero_name": "Alchimiste aux Masques",
+    "rarity": "Épique",
+    "ultimate_name": "Le Masque Émeraude",
+    "animation_brief": "Elle relève son masque d'os, retourne son bâton-alambic et projette deux grosses gouttes vertes, l'une alliée, l'autre ennemie.",
+    "gameplay_intent": "Amélioration ou soin d'un allié et affaiblissement d'un ennemi.",
+    "visual_duration_target": "1 à 1,3 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_021",
+    "hero_name": "Chevalier du Soleil Creux",
+    "rarity": "Légendaire",
+    "ultimate_name": "Jugement du Soleil Creux",
+    "animation_brief": "Il présente son bouclier ; l'anneau solaire de son heaume s'aligne derrière lui, puis il abat son épée dans un rayon bronze étroit.",
+    "gameplay_intent": "Frappe frontale et petit bouclier accordé aux alliés adjacents.",
+    "visual_duration_target": "1,1 à 1,5 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_022",
+    "hero_name": "Dame aux Mille Bannières",
+    "rarity": "Légendaire",
+    "ultimate_name": "La Marche des Étendards",
+    "animation_brief": "Elle plante son étendard-lance ; ses trois fanions dorsaux se déploient l'un après l'autre dans un claquement impeccable.",
+    "gameplay_intent": "Ralliement : bonus d'attaque et de résistance des alliés proches.",
+    "visual_duration_target": "1,1 à 1,5 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_023",
+    "hero_name": "Lancier des Sept Orages",
+    "rarity": "Légendaire",
+    "ultimate_name": "Fracture des Sept Cieux",
+    "animation_brief": "Il fait tourner sa lance ; sept pointes de foudre s'alignent brièvement sur son fer avant un estoc qui trace un zigzag précis.",
+    "gameplay_intent": "Dégâts sur une ligne et interruption d'attaque ennemie.",
+    "visual_duration_target": "1,1 à 1,5 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_024",
+    "hero_name": "Architecte de Golems",
+    "rarity": "Légendaire",
+    "ultimate_name": "Main du Bâtisseur",
+    "animation_brief": "Elle pose son bâton-clef de voûte ; son énorme gantelet de pierre se déploie puis deux murs courts émergent en tenaille.",
+    "gameplay_intent": "Coup de zone restreinte, rassemblement et protection des alliés.",
+    "visual_duration_target": "1,1 à 1,5 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_025",
+    "hero_name": "Veuve du Lac Miroir",
+    "rarity": "Légendaire",
+    "ultimate_name": "Reflet d'Absence",
+    "animation_brief": "Elle incline son bâton-miroir ; un seul reflet argenté apparaît derrière la cible et reproduit son geste avec un temps de retard.",
+    "gameplay_intent": "Renvoie une part des dégâts et ralentit l'ennemi visé.",
+    "visual_duration_target": "1,1 à 1,5 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_026",
+    "hero_name": "Chasseur de Comètes",
+    "rarity": "Légendaire",
+    "ultimate_name": "La Comète Captive",
+    "animation_brief": "Il fait pivoter son marteau-cage au-dessus de l'épaule et écrase le fragment incandescent sur le sol, soulevant trois éclats rocheux.",
+    "gameplay_intent": "Forte frappe de mêlée avec petite zone d'impact.",
+    "visual_duration_target": "1,1 à 1,5 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_027",
+    "hero_name": "Saint du Brasier Bleu",
+    "rarity": "Légendaire",
+    "ultimate_name": "Procession du Brasier Bleu",
+    "animation_brief": "Il lève sa vasque de feu bleu puis la ramène près du cœur ; une procession de flammes basses longe les alliés.",
+    "gameplay_intent": "Purification et soin bref des alliés, brûlure des ennemis tout proches.",
+    "visual_duration_target": "1,1 à 1,5 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_028",
+    "hero_name": "Gardienne de la Dernière Cloche",
+    "rarity": "Légendaire",
+    "ultimate_name": "Dernière Résonance",
+    "animation_brief": "Elle tourne les épaules et frappe la cloche portée sur son dos avec son maillet ; deux arcs de bronze résonnent devant elle.",
+    "gameplay_intent": "Réduction de dégâts alliée et étourdissement frontal bref.",
+    "visual_duration_target": "1,1 à 1,5 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_029",
+    "hero_name": "Prince des Racines d'Or",
+    "rarity": "Légendaire",
+    "ultimate_name": "Droit des Racines d'Or",
+    "animation_brief": "Il plante son épée ; trois racines dorées s'entrelacent en arc protecteur, puis une pointe s'élance vers l'ennemi.",
+    "gameplay_intent": "Protection de la première ligne et entrave d'une cible.",
+    "visual_duration_target": "1,1 à 1,5 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_030",
+    "hero_name": "Archiviste du Temps Mort",
+    "rarity": "Légendaire",
+    "ultimate_name": "La Seconde Rayée",
+    "animation_brief": "Il retourne son bâton-sablier : les grains remontent ; les ennemis ralentissent en silhouettes dédoublées pendant un instant.",
+    "gameplay_intent": "Contrôle temporel court et petite réparation des PV alliés.",
+    "visual_duration_target": "1,1 à 1,5 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_031",
+    "hero_name": "Navigateur des Cieux Renversés",
+    "rarity": "Mythique",
+    "ultimate_name": "Latitude Inversée",
+    "animation_brief": "Il trace un cap avec sa gaffe-harpon ; sa rose des vents se retourne, soulevant légèrement les ennemis avant de les reposer lourdement.",
+    "gameplay_intent": "Soulèvement bref en petite zone et soutien de placement.",
+    "visual_duration_target": "1,2 à 1,6 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_032",
+    "hero_name": "Reine des Cent Lames",
+    "rarity": "Mythique",
+    "ultimate_name": "Couronne des Cent Lames",
+    "animation_brief": "Ses six épées dorsales se referment comme les doigts d'une main puis piquent des cibles successives avant un dernier coup de sa propre épée.",
+    "gameplay_intent": "Frappes réparties sur quelques ennemis, priorité à la cible principale.",
+    "visual_duration_target": "1,2 à 1,6 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_033",
+    "hero_name": "Berger des Astres",
+    "rarity": "Mythique",
+    "ultimate_name": "Le Troupeau des Astres",
+    "animation_brief": "Il ramène les trois étoiles de sa houlette d'un geste de berger ; elles dessinent la silhouette fugace d'un bélier qui charge.",
+    "gameplay_intent": "Protection alliée et poussée douce des ennemis en ligne.",
+    "visual_duration_target": "1,2 à 1,6 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_034",
+    "hero_name": "Géant au Cœur de Verre",
+    "rarity": "Mythique",
+    "ultimate_name": "Dernier Battement de Verre",
+    "animation_brief": "Il frappe son cœur cristallin du poing ; les cinq éclats derrière lui s'ouvrent en éventail puis se referment comme une cage.",
+    "gameplay_intent": "Provocation ou absorption de dégâts, contre-choc en mêlée.",
+    "visual_duration_target": "1,2 à 1,6 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_035",
+    "hero_name": "Sorcière des Marées Lunaires",
+    "rarity": "Mythique",
+    "ultimate_name": "Marée à Rebours",
+    "animation_brief": "Elle incline son croissant de nacre ; une lame d'eau étroite remonte vers elle, emporte deux ennemis et repart en vague douce.",
+    "gameplay_intent": "Rassemblement bref des cibles et dégâts de contrôle.",
+    "visual_duration_target": "1,2 à 1,6 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_036",
+    "hero_name": "Chevalier de l'Éclipse Blanche",
+    "rarity": "Mythique",
+    "ultimate_name": "Éclipse du Rempart",
+    "animation_brief": "Son disque d'éclipse se place devant son bouclier ; les coups absorbés se dessinent en quelques traits or pâle qu'il renvoie d'un coup de masse.",
+    "gameplay_intent": "Bouclier d'équipe local et contre-attaque frontale.",
+    "visual_duration_target": "1,2 à 1,6 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_037",
+    "hero_name": "Maître des Portes Oubliées",
+    "rarity": "Mythique",
+    "ultimate_name": "La Porte Entre-Deux",
+    "animation_brief": "Il tourne sa clé géante ; les cinq pierres de son arche composent un seuil près des ennemis, dont les battants se referment aussitôt.",
+    "gameplay_intent": "Entrave de petite zone et réduction d'élan des ennemis.",
+    "visual_duration_target": "1,2 à 1,6 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_038",
+    "hero_name": "Gardienne du Dragon Dormant",
+    "rarity": "Mythique",
+    "ultimate_name": "Souffle du Dragon Endormi",
+    "animation_brief": "Elle baisse sa glaive ; ses cinq écailles flottantes dessinent un museau de dragon qui souffle une rafale d'ambre en cône.",
+    "gameplay_intent": "Balayage, ralentissement et protection légère de l'avant-garde.",
+    "visual_duration_target": "1,2 à 1,6 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_039",
+    "hero_name": "Tisseur de Destins",
+    "rarity": "Mythique",
+    "ultimate_name": "Nœud Irrévocable",
+    "animation_brief": "Ses fuseaux filent trois fils carmin vers des cibles ; il tire d'un coup sur la quenouille et resserre les liens.",
+    "gameplay_intent": "Relie quelques ennemis pour partager une part des dégâts reçus.",
+    "visual_duration_target": "1,2 à 1,6 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_040",
+    "hero_name": "Empereur des Cendres d'Or",
+    "rarity": "Mythique",
+    "ultimate_name": "Le Dernier Décret",
+    "animation_brief": "Il pose son sceptre-masse comme un insigne impérial ; ses pointes de couronne se rangent en trône derrière lui, puis un sceau de cendres tombe.",
+    "gameplay_intent": "Coup de zone courte et bref commandement offensif des alliés.",
+    "visual_duration_target": "1,2 à 1,6 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_041",
+    "hero_name": "Porteur du Cœur Noir",
+    "rarity": "Maudit",
+    "ultimate_name": "La Dîme du Cœur",
+    "animation_brief": "Son cœur noir suspendu bat deux fois ; des nervures d'ombre rampent vers les ennemis proches et reviennent se refermer sur sa cage thoracique.",
+    "gameplay_intent": "Drain de vie local et récupération défensive du lanceur.",
+    "visual_duration_target": "1,2 à 1,6 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_042",
+    "hero_name": "Chevalier aux Mille Clous",
+    "rarity": "Maudit",
+    "ultimate_name": "Litanie des Mille Clous",
+    "animation_brief": "Il frappe son maillet au sol ; quelques clous sortent de son armure, se dressent en demi-cercle puis tombent en cadence.",
+    "gameplay_intent": "Dégâts en cône et réduction temporaire de défense.",
+    "visual_duration_target": "1,2 à 1,6 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_043",
+    "hero_name": "Nonne de la Lune Fendue",
+    "rarity": "Maudit",
+    "ultimate_name": "Lune Sacrifiée",
+    "animation_brief": "Elle fauche à hauteur de taille ; son halo lunaire fendu quitte un instant sa cornette, décrit une orbite coupante et revient.",
+    "gameplay_intent": "Balayage en arc avec vol de vie modéré.",
+    "visual_duration_target": "1,2 à 1,6 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_044",
+    "hero_name": "Roi des Corbeaux Sans Ombre",
+    "rarity": "Maudit",
+    "ultimate_name": "Sacre des Corbeaux",
+    "animation_brief": "Il ouvre son manteau de plumes ; cinq corbeaux noirs en jaillissent, piquent un ennemi puis se recomposent en cape.",
+    "gameplay_intent": "Assaut ciblé et affaiblissement temporaire de la cible.",
+    "visual_duration_target": "1,2 à 1,6 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_045",
+    "hero_name": "Marionnettiste des Tombes",
+    "rarity": "Maudit",
+    "ultimate_name": "La Danse des Tombes",
+    "animation_brief": "Il croise les mains comme un marionnettiste ; deux bras de squelette surgissent brièvement, guidés par des fils, pour frapper en cadence.",
+    "gameplay_intent": "Contrôle de deux cibles et frappes fantomatiques courtes.",
+    "visual_duration_target": "1,2 à 1,6 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_046",
+    "hero_name": "Lame du Serment Brisé",
+    "rarity": "Maudit",
+    "ultimate_name": "Serment à Rebours",
+    "animation_brief": "Elle traîne sa lame brisée, marque un arrêt, puis bondit : la portion manquante de la lame apparaît une fraction de seconde pour achever l'entaille.",
+    "gameplay_intent": "Frappe lourde en ligne, dégâts accrus aux ennemis déjà blessés.",
+    "visual_duration_target": "1,2 à 1,6 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_047",
+    "hero_name": "Sorcier de la Couronne Parasite",
+    "rarity": "Maudit",
+    "ultimate_name": "La Couronne qui Germe",
+    "animation_brief": "La couronne parasite ouvre ses pointes comme des pétales ; trois graines sombres bondissent aux pieds adverses et s'enracinent.",
+    "gameplay_intent": "Spore de petite zone, dégâts progressifs et affaiblissement.",
+    "visual_duration_target": "1,2 à 1,6 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_048",
+    "hero_name": "Chasseur de Noms",
+    "rarity": "Maudit",
+    "ultimate_name": "Le Nom Rayé",
+    "animation_brief": "Il harponne sa cible ; un parchemin se déroule sur la hampe et une barre noire traverse une rune avant qu'il tire violemment.",
+    "gameplay_intent": "Harpon ciblé, rapprochement ou immobilisation et bonus de finition.",
+    "visual_duration_target": "1,2 à 1,6 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_049",
+    "hero_name": "Séraphin des Sept Sceaux",
+    "rarity": "Suprême",
+    "ultimate_name": "Les Sept Fermetures",
+    "animation_brief": "Il tourne son épée-clé ; sept sceaux sacrés s'emboîtent en petite rosace autour des ennemis avant de claquer en silence.",
+    "gameplay_intent": "Scelle temporairement les cibles et protège la première ligne.",
+    "visual_duration_target": "1,4 à 1,8 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_050",
+    "hero_name": "Reine du Firmament Doré",
+    "rarity": "Suprême",
+    "ultimate_name": "Décret du Firmament",
+    "animation_brief": "Elle élève son sceptre-astre ; trois étoiles dorées forment une couronne triangulaire, puis trois traits de lumière douce descendent sur des cibles.",
+    "gameplay_intent": "Dégâts de zone contrôlés et bénédiction des alliés.",
+    "visual_duration_target": "1,4 à 1,8 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_051",
+    "hero_name": "Chevalier de l'Aube Infinie",
+    "rarity": "Suprême",
+    "ultimate_name": "Premier Matin",
+    "animation_brief": "Il lève son épée ; le demi-soleil derrière ses épaules s'élève de quelques degrés, puis la lame trace un arc horizontal couleur d'aube.",
+    "gameplay_intent": "Percée frontale, légère protection de son groupe.",
+    "visual_duration_target": "1,4 à 1,8 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_052",
+    "hero_name": "Oracle aux Cent Yeux",
+    "rarity": "Suprême",
+    "ultimate_name": "Tout Est Écrit",
+    "animation_brief": "Son éventail d'yeux s'ouvre rang par rang ; elle pointe un ennemi et trois symboles de prédiction apparaissent au-dessus des attaques à venir.",
+    "gameplay_intent": "Révèle les cibles prioritaires et accorde une esquive ou protection anticipée.",
+    "visual_duration_target": "1,4 à 1,8 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_053",
+    "hero_name": "Forgeâme",
+    "rarity": "Suprême",
+    "ultimate_name": "Enclume de l'Âme",
+    "animation_brief": "Il présente son marteau ; une enclume de lumière sobre apparaît à ses pieds et un seul coup de forge projette deux marques vers les alliés.",
+    "gameplay_intent": "Amélioration temporaire des armes alliées et choc en mêlée.",
+    "visual_duration_target": "1,4 à 1,8 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_054",
+    "hero_name": "Gardien du Trône Vide",
+    "rarity": "Suprême",
+    "ultimate_name": "Défense du Roi Absent",
+    "animation_brief": "Il pose sa hallebarde devant lui ; l'ombre d'un trône vide se déploie derrière ses épaules, encadrée de deux gardes de pierre éphémères.",
+    "gameplay_intent": "Gros bouclier de ligne et contre-attaque sur les assaillants.",
+    "visual_duration_target": "1,4 à 1,8 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_055",
+    "hero_name": "Marcheur du Cataclysme",
+    "rarity": "Calamité",
+    "ultimate_name": "La Chute en Marche",
+    "animation_brief": "Il soulève sa masse-météore ; trois dalles fendues se décollent du terrain autour de la cible avant de retomber avec le coup.",
+    "gameplay_intent": "Écrasement de zone localisée et bref renversement.",
+    "visual_duration_target": "1,5 à 2 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_056",
+    "hero_name": "Reine de la Mer Renversée",
+    "rarity": "Calamité",
+    "ultimate_name": "L'Océan Debout",
+    "animation_brief": "Elle relève son grand trident ; une paroi d'eau verticale se forme derrière l'ennemi puis se replie vers lui comme un rideau.",
+    "gameplay_intent": "Rassemblement et coup de vague sur une petite zone.",
+    "visual_duration_target": "1,5 à 2 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_057",
+    "hero_name": "Soleil Dévoré",
+    "rarity": "Calamité",
+    "ultimate_name": "Éclipse Affamée",
+    "animation_brief": "Il ouvre sa faux en grand arc ; le soleil enfermé dans son torse s'obscurcit puis un croissant noir traverse les ennemis et revient se refermer.",
+    "gameplay_intent": "Grand balayage, absorption modérée de vie et affaiblissement.",
+    "visual_duration_target": "1,5 à 2 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_058",
+    "hero_name": "Titanide des Derniers Jours",
+    "rarity": "Calamité",
+    "ultimate_name": "La Dernière Terre",
+    "animation_brief": "Elle traîne son épée-menhir ; une crête de ruines de pierre se soulève devant elle, puis se fracture exactement au passage de sa lame.",
+    "gameplay_intent": "Lourds dégâts en ligne large et protection momentanée des alliés derrière elle.",
+    "visual_duration_target": "1,5 à 2 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_059",
+    "hero_name": "Aureon, Porteur de la Première Aube",
+    "rarity": "Transcendant",
+    "ultimate_name": "À la Première Lumière",
+    "animation_brief": "Il abaisse sa longue lance ; le demi-disque d'aube derrière lui dessine un horizon, et trois rayons fins avancent successivement depuis sa pointe.",
+    "gameplay_intent": "Triple percée lumineuse ciblée, bouclier bref aux alliés.",
+    "visual_duration_target": "1,7 à 2,2 s",
+    "production_status": "concept_proposed"
+  },
+  {
+    "hero_id": "hero_060",
+    "hero_name": "Elyria, Celle qui Marche Hors du Temps",
+    "rarity": "Transcendant",
+    "ultimate_name": "La Seconde qui Manque",
+    "animation_brief": "Elle incline sa glaive ; les anneaux armillaires s'arrêtent net tandis que deux silhouettes temporelles exécutent, à quelques pas d'écart, le même coup avant de se rejoindre.",
+    "gameplay_intent": "Deux frappes quasi simultanées et immobilisation très brève de la cible, sans arrêter le jeu.",
+    "visual_duration_target": "1,7 à 2,2 s",
+    "production_status": "concept_proposed"
+  }
+]
